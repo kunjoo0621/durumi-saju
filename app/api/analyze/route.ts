@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import JSON5 from "json5";
 
 // 목업 데이터 (개발용)
 const MOCK_DATA = {
@@ -319,7 +320,7 @@ export async function POST(request: NextRequest) {
         console.log("API 호출 성공");
         const cleaned = extractJson(res.text);
         try {
-          const parsed = JSON.parse(cleaned);
+          const parsed = JSON5.parse(cleaned);
           return NextResponse.json({ result: parsed });
         } catch (parseError) {
           console.warn("JSON 파싱 실패, 원문 반환");

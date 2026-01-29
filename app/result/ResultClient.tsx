@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import JSON5 from "json5";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
@@ -52,6 +53,19 @@ export default function ResultClient() {
   const [saved, setSaved] = useState(false);
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
+
+  const extractJson = (text: string) => {
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fenced?.[1]) {
+      return fenced[1].trim();
+    }
+    const first = text.indexOf("{");
+    const last = text.lastIndexOf("}");
+    if (first !== -1 && last !== -1 && last > first) {
+      return text.slice(first, last + 1).trim();
+    }
+    return text.trim();
+  };
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -165,7 +179,13 @@ export default function ResultClient() {
 
         // JSON 파싱 (서버에서 객체로 내려올 수도 있음)
         try {
-          const parsed = typeof data.result === "string" ? JSON.parse(data.result) : data.result;
+          let parsed: AnalysisResult;
+          if (typeof data.result === "string") {
+            const cleaned = extractJson(data.result);
+            parsed = JSON5.parse(cleaned);
+          } else {
+            parsed = data.result;
+          }
           setResult(parsed);
         } catch (e) {
           console.error("JSON 파싱 오류:", e);
