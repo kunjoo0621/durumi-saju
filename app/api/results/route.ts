@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       region,
       gender,
       relationshipStatus,
+      calendarType,
       result,
     } = body;
 
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
       region,
       gender,
       relationship_status: relationshipStatus,
+      calendar_type: calendarType || null,
       result,
     });
 

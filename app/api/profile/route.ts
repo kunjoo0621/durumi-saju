@@ -14,7 +14,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from("users")
-      .select("name, birth_date, birth_time, region, gender, relationship_status, employment_status")
+      .select("name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type")
       .eq("id", userId)
       .maybeSingle();
 
@@ -49,9 +49,10 @@ export async function POST(request: NextRequest) {
       gender,
       relationshipStatus,
       employmentStatus,
+      calendarType,
     } = body;
 
-    if (!name || !birthDate || !gender || !employmentStatus) {
+    if (!name || !birthDate || !gender || !employmentStatus || !calendarType) {
       return NextResponse.json({ error: "필수 입력값이 누락되었습니다." }, { status: 400 });
     }
 
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
         gender,
         relationship_status: relationshipStatus || null,
         employment_status: employmentStatus,
+        calendar_type: calendarType,
       })
       .eq("id", userId);
 

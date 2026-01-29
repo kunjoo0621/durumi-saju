@@ -12,6 +12,7 @@ type ProfileForm = {
   gender: string;
   relationshipStatus: string;
   employmentStatus: string;
+  calendarType: "solar" | "lunar";
 };
 
 const TIME_OPTIONS = [
@@ -62,6 +63,7 @@ export default function EditProfilePage() {
   const [showErrors, setShowErrors] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const attemptedSignInRef = useRef(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [form, setForm] = useState<ProfileForm>({
     name: "",
     birthDate: "",
@@ -70,6 +72,7 @@ export default function EditProfilePage() {
     gender: "",
     relationshipStatus: "",
     employmentStatus: "",
+    calendarType: "solar",
   });
 
   useEffect(() => {
@@ -117,6 +120,7 @@ export default function EditProfilePage() {
             gender: profile.gender || "",
             relationshipStatus: profile.relationship_status || "",
             employmentStatus: profile.employment_status || "",
+            calendarType: profile.calendar_type || "solar",
           });
         }
       } catch (error: any) {
@@ -136,6 +140,25 @@ export default function EditProfilePage() {
       cancelled = true;
     };
   }, [session, status]);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleResize = () => {
+      const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
+      setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
+    };
+
+    handleResize();
+    viewport.addEventListener("resize", handleResize);
+    viewport.addEventListener("scroll", handleResize);
+
+    return () => {
+      viewport.removeEventListener("resize", handleResize);
+      viewport.removeEventListener("scroll", handleResize);
+    };
+  }, []);
 
   const requiredErrors = useMemo(() => {
     const birthDigits = form.birthDate.replace(/\D/g, "");
@@ -172,6 +195,7 @@ export default function EditProfilePage() {
           gender: form.gender,
           relationshipStatus: form.relationshipStatus,
           employmentStatus: form.employmentStatus,
+          calendarType: form.calendarType,
         }),
       });
 
@@ -192,7 +216,7 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary text-text-primary">
+    <div className="h-[100dvh] bg-bg-primary text-text-primary flex flex-col">
       <header className="px-5 py-5 sticky top-0 z-[100] bg-bg-primary">
         <div className="max-w-[420px] mx-auto flex items-center">
           <button
@@ -215,8 +239,8 @@ export default function EditProfilePage() {
         </div>
       </header>
 
-      <main className="px-5 pb-32">
-        <div className="max-w-[420px] mx-auto space-y-7">
+      <main className="px-5 pb-32 flex-1">
+        <div className="max-w-[420px] mx-auto space-y-7 pt-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-text-secondary">
               <div className="w-8 h-8 border-2 border-[#333333] border-t-primary rounded-full animate-spin" />
@@ -255,6 +279,28 @@ export default function EditProfilePage() {
                 <label className="block text-[16px] text-white mb-2">
                   생년월일 <span className="text-primary">*</span>
                 </label>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {[
+                    { label: "양력", value: "solar" },
+                    { label: "음력", value: "lunar" },
+                  ].map((option) => {
+                    const selected = form.calendarType === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setForm({ ...form, calendarType: option.value as "solar" | "lunar" })}
+                        className={`h-11 rounded-xl text-[15px] font-semibold transition-colors ${
+                          selected
+                            ? "bg-primary text-white"
+                            : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -399,7 +445,10 @@ export default function EditProfilePage() {
       </main>
 
       {!loading && session?.user && (
-        <div className="fixed bottom-0 left-0 right-0 bg-bg-primary px-5 py-5">
+        <div
+          className="fixed left-0 right-0 bg-bg-primary px-5 py-5 transition-[bottom] duration-100 ease-out"
+          style={{ bottom: `${keyboardOffset}px` }}
+        >
           <div className="max-w-[420px] mx-auto">
             <button
               type="button"

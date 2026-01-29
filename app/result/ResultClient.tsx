@@ -18,6 +18,7 @@ import {
   getMainHiddenStem,
   type SajuData,
 } from "@/lib/utils/saju";
+import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 
 type AnalysisResult = {
   tier: {
@@ -49,6 +50,8 @@ export default function ResultClient() {
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
   const [saved, setSaved] = useState(false);
+  const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
+  const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -73,12 +76,29 @@ export default function ResultClient() {
 
           const birthDate = latest.birth_date as string | null;
           const birthTime = latest.birth_time as string | null;
+          const calendarType = (latest.calendar_type as CalendarType | null) || "solar";
+
+          setDisplayCalendarType(calendarType);
 
           if (birthDate) {
             const [y, m, d] = birthDate.split("-");
             const hour = birthTime ? parseInt(birthTime.split(":")[0] || "0") : undefined;
             const minute = birthTime ? parseInt(birthTime.split(":")[1] || "0") : undefined;
-            const saju = await calculateSaju(parseInt(y), parseInt(m), parseInt(d), hour, minute);
+            setDisplayBirthDate(formatDisplayDate(parseInt(y), parseInt(m), parseInt(d)));
+
+            let calcYear = parseInt(y);
+            let calcMonth = parseInt(m);
+            let calcDay = parseInt(d);
+            if (calendarType === "lunar") {
+              const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+              if (converted) {
+                calcYear = converted.year;
+                calcMonth = converted.month;
+                calcDay = converted.day;
+              }
+            }
+
+            const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
             setSajuData(saju);
           }
 
@@ -93,9 +113,24 @@ export default function ResultClient() {
         const birthHour = searchParams.get("birthHour") ? parseInt(searchParams.get("birthHour")!) : undefined;
         const birthMinute = searchParams.get("birthMinute") ? parseInt(searchParams.get("birthMinute")!) : undefined;
         const unknownBirthTime = searchParams.get("unknownBirthTime") === "true";
+        const calendarType = (searchParams.get("calendarType") as CalendarType) || "solar";
+
+        setDisplayCalendarType(calendarType);
+        setDisplayBirthDate(formatDisplayDate(birthYear, birthMonth, birthDay));
 
         // 사주팔자 계산
-        const saju = await calculateSaju(birthYear, birthMonth, birthDay, birthHour, birthMinute);
+        let calcYear = birthYear;
+        let calcMonth = birthMonth;
+        let calcDay = birthDay;
+        if (calendarType === "lunar") {
+          const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+          if (converted) {
+            calcYear = converted.year;
+            calcMonth = converted.month;
+            calcDay = converted.day;
+          }
+        }
+        const saju = await calculateSaju(calcYear, calcMonth, calcDay, birthHour, birthMinute);
         setSajuData(saju);
 
         const formData = {
@@ -103,6 +138,7 @@ export default function ResultClient() {
           birthYear: birthYear.toString(),
           birthMonth: birthMonth.toString(),
           birthDay: birthDay.toString(),
+          calendarType,
           birthHour: birthHour?.toString() || "",
           birthMinute: birthMinute?.toString() || "",
           birthLocation: searchParams.get("birthLocation"),
@@ -127,9 +163,9 @@ export default function ResultClient() {
           throw new Error(data.error || "분석에 실패했습니다.");
         }
 
-        // JSON 파싱
+        // JSON 파싱 (서버에서 객체로 내려올 수도 있음)
         try {
-          const parsed = JSON.parse(data.result);
+          const parsed = typeof data.result === "string" ? JSON.parse(data.result) : data.result;
           setResult(parsed);
         } catch (e) {
           console.error("JSON 파싱 오류:", e);
@@ -156,6 +192,7 @@ export default function ResultClient() {
       const birthDay = searchParams.get("birthDay") || "";
       const birthHour = searchParams.get("birthHour") || "";
       const birthMinute = searchParams.get("birthMinute") || "";
+      const calendarType = (searchParams.get("calendarType") as CalendarType) || "solar";
 
       const birthDate = birthYear && birthMonth && birthDay
         ? `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`
@@ -174,6 +211,7 @@ export default function ResultClient() {
             gender: searchParams.get("gender"),
             relationshipStatus: searchParams.get("relationshipStatus"),
             employmentStatus: searchParams.get("employmentStatus"),
+            calendarType,
             result,
           }),
         });
@@ -293,6 +331,11 @@ export default function ResultClient() {
           {/* 만세력 (사주팔자) */}
           {sajuData && (
             <div className="bg-bg-secondary rounded-3xl p-6 md:p-8 border-0">
+              {displayBirthDate && (
+                <p className="text-[14px] text-text-tertiary mb-4">
+                  ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
+                </p>
+              )}
               {(() => {
                 const dayStem = sajuData.day.heavenlyStem;
                 const pillars = [

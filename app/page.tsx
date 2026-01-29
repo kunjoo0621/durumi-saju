@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import MenuDrawer from "./MenuDrawer";
 
@@ -9,6 +9,7 @@ type FormData = {
   birthYear: string;
   birthMonth: string;
   birthDay: string;
+  calendarType: "solar" | "lunar";
   birthHour: string;
   birthMinute: string;
   birthLocation: string;
@@ -40,6 +41,7 @@ export default function Home() {
     birthYear: "",
     birthMonth: "",
     birthDay: "",
+    calendarType: "solar",
     birthHour: "",
     birthMinute: "",
     birthLocation: "",
@@ -52,6 +54,26 @@ export default function Home() {
   // 생년월일 포맷팅용 상태
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
   const [birthTimeDisplay, setBirthTimeDisplay] = useState("");
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleResize = () => {
+      const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
+      setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
+    };
+
+    handleResize();
+    viewport.addEventListener("resize", handleResize);
+    viewport.addEventListener("scroll", handleResize);
+
+    return () => {
+      viewport.removeEventListener("resize", handleResize);
+      viewport.removeEventListener("scroll", handleResize);
+    };
+  }, []);
 
   const totalSteps = questions.length;
 
@@ -73,6 +95,7 @@ export default function Home() {
       birthYear: formData.birthYear,
       birthMonth: formData.birthMonth,
       birthDay: formData.birthDay,
+      calendarType: formData.calendarType,
       birthHour: formData.birthHour,
       birthMinute: formData.birthMinute,
       birthLocation: formData.birthLocation,
@@ -185,20 +208,44 @@ export default function Home() {
     switch (question.id) {
       case "name":
         return (
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="예: 홍길동"
-            className="w-full text-[15px]"
-            autoFocus
-            aria-label="이름"
-          />
+          <div>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="예: 홍길동"
+              className="w-full text-[15px] h-[52px]"
+              autoFocus
+              aria-label="이름"
+            />
+          </div>
         );
 
       case "birthDateTime":
         return (
           <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "양력", value: "solar" },
+                { label: "음력", value: "lunar" },
+              ].map((option) => {
+                const selected = formData.calendarType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, calendarType: option.value as "solar" | "lunar" })}
+                    className={`h-11 rounded-xl text-[15px] font-semibold transition-colors ${
+                      selected
+                        ? "bg-primary text-white"
+                        : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
             {/* 생년월일 입력 */}
             <div>
               <label htmlFor="birthDate" style={{ display: 'block', fontSize: '12px', color: '#A3A3A3', marginBottom: '8px' }}>생년월일</label>
@@ -210,7 +257,7 @@ export default function Home() {
                 onChange={handleBirthDateChange}
                 placeholder="1995 / 06 / 21"
                 maxLength={14}
-                className="w-full text-[15px]"
+                className="w-full text-[15px] h-[52px]"
                 aria-label="생년월일"
               />
             </div>
@@ -227,7 +274,7 @@ export default function Home() {
                   onChange={handleBirthTimeChange}
                   placeholder="16 : 30"
                   maxLength={7}
-                  className="w-full text-[15px]"
+                  className="w-full text-[15px] h-[52px]"
                   aria-label="태어난 시간"
                 />
               </div>
@@ -359,7 +406,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col">
+    <div className="h-[100dvh] bg-bg-primary flex flex-col">
       {/* 헤더 */}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-bg-primary">
         <div className="max-w-[420px] mx-auto flex items-center justify-between">
@@ -394,11 +441,11 @@ export default function Home() {
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 flex flex-col justify-center px-6 pb-40 pt-8">
-        <div className="max-w-[420px] w-full mx-auto">
+      <main className="flex-1 px-5 pb-40">
+        <div className="max-w-[420px] w-full mx-auto pt-10">
           {/* 질문 */}
           <div>
-            <h2 className="text-question text-center font-aggro">
+            <h2 className="text-[24px] font-semibold text-white text-center font-aggro mb-6">
               {questions[currentStep].title}
             </h2>
           </div>
@@ -409,7 +456,10 @@ export default function Home() {
       </main>
 
       {/* 하단 고정 영역 (프로그레스바 + 다음 버튼) */}
-      <div className="sticky bottom-0 left-0 right-0 bg-bg-primary px-5 py-4">
+      <div
+        className="fixed left-0 right-0 bg-bg-primary px-5 py-4 transition-[bottom] duration-100 ease-out"
+        style={{ bottom: `${keyboardOffset}px` }}
+      >
         <div className="max-w-[420px] mx-auto space-y-4">
           <div className="flex items-center">
             <span className="text-[14px] text-text-secondary">{currentStep + 1} / {totalSteps}</span>

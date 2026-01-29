@@ -222,6 +222,7 @@ async function callGemini(model: string, prompt: string) {
       ],
       generationConfig: {
         maxOutputTokens: 4000,
+        response_mime_type: "application/json",
       },
     }),
   });
@@ -246,6 +247,21 @@ async function callGemini(model: string, prompt: string) {
   return { ok: true as const, text };
 }
 
+function extractJson(text: string) {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenced?.[1]) {
+    return fenced[1].trim();
+  }
+
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first !== -1 && last !== -1 && last > first) {
+    return text.slice(first, last + 1).trim();
+  }
+
+  return text.trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
@@ -263,8 +279,7 @@ export async function POST(request: NextRequest) {
       // 약간의 딜레이를 주어 실제 API 호출처럼 보이게
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const result = JSON.stringify(MOCK_DATA);
-      return NextResponse.json({ result });
+      return NextResponse.json({ result: MOCK_DATA });
     }
 
     // 실제 API 모드
@@ -283,6 +298,7 @@ export async function POST(request: NextRequest) {
     const userInfo = `
 이름: ${data.name}
 생년월일: ${data.birthYear}년 ${data.birthMonth}월 ${data.birthDay}일
+달력구분: ${data.calendarType === "lunar" ? "음력" : "양력"}
 출생시간: ${data.unknownBirthTime ? "모름" : `${data.birthHour}시 ${data.birthMinute}분`}
 출생지역: ${data.birthLocation}
 성별: ${data.gender}
@@ -301,7 +317,14 @@ export async function POST(request: NextRequest) {
       const res = await callGemini(model, prompt);
       if (res.ok) {
         console.log("API 호출 성공");
-        return NextResponse.json({ result: res.text });
+        const cleaned = extractJson(res.text);
+        try {
+          const parsed = JSON.parse(cleaned);
+          return NextResponse.json({ result: parsed });
+        } catch (parseError) {
+          console.warn("JSON 파싱 실패, 원문 반환");
+          return NextResponse.json({ result: cleaned });
+        }
       }
 
       lastError = res;
