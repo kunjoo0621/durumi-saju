@@ -1,5 +1,6 @@
 import { type NextAuthOptions } from "next-auth";
 import KakaoProvider from "next-auth/providers/kakao";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -24,6 +25,23 @@ export const authOptions: NextAuthOptions = {
         token.name = kakaoProfile.properties?.nickname || token.name;
         token.picture = kakaoProfile.properties?.profile_image || token.picture;
         token.email = kakaoProfile.kakao_account?.email || token.email;
+
+        const kakaoId = token.kakaoId;
+        const nickname = token.name || null;
+        if (kakaoId) {
+          const { data, error } = await supabaseAdmin
+            .from("users")
+            .upsert(
+              { kakao_id: kakaoId, nickname },
+              { onConflict: "kakao_id" }
+            )
+            .select("id")
+            .single();
+
+          if (!error && data?.id) {
+            token.supabaseUserId = data.id;
+          }
+        }
       }
       return token;
     },
@@ -33,7 +51,9 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email ?? session.user.email;
         session.user.image = token.picture ?? session.user.image;
         const kakaoId = typeof token.kakaoId === "string" ? token.kakaoId : undefined;
-        (session.user as { id?: string }).id = kakaoId || token.sub;
+        const supabaseUserId = typeof token.supabaseUserId === "string" ? token.supabaseUserId : undefined;
+        (session.user as { id?: string; supabaseId?: string }).id = kakaoId || token.sub;
+        (session.user as { supabaseId?: string }).supabaseId = supabaseUserId;
       }
       return session;
     },

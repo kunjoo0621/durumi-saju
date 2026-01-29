@@ -76,6 +76,17 @@ const SYSTEM_PROMPT = `[Role]
 - 사주 용어는 한자 병기 (예: 편관(偏官), 식신(食神))
 - "~하지 않았어요?", "~한 적 있죠?" 같은 공감 질문 넣기
 
+[사용자 입력 반영 규칙 - 필수]
+- 사용자가 입력한 연애 상태와 직업/직장 상태를 반드시 반영하세요.
+- 해당 정보가 있는 경우, 관련 섹션에서 직접 언급하고 맞춤 해석을 제공합니다.
+- 예시 문장 스타일:
+  - 연애 중: "현재 연애 중이시네요. 올해 연애운을 보면..."
+  - 솔로/미혼: "아직 인연을 찾고 계시네요. 좋은 인연이 올 시기는..."
+  - 직장인: "현재 직장에서의 운세를 보면..."
+  - 사업/프리랜서: "사업/프리랜서 관점에서 보면..."
+  - 학생: "학업운 관점에서 보면..."
+  - 취업 준비 중: "취업운을 살펴보면..."
+
 [섹션별 작성 규칙 - 매우 중요]
 각 섹션은 반드시 아래 구조로 4-6문장 이상 작성:
 
@@ -275,9 +286,10 @@ export async function POST(request: NextRequest) {
 출생시간: ${data.unknownBirthTime ? "모름" : `${data.birthHour}시 ${data.birthMinute}분`}
 출생지역: ${data.birthLocation}
 성별: ${data.gender}
-연애/결혼 상태: ${data.relationshipStatus}${sajuInfo}
+연애/결혼 상태: ${data.relationshipStatus}
+직업/직장 상태: ${data.employmentStatus || data.jobStatus || "미제공"}${sajuInfo}
 
-위 정보를 바탕으로 사주를 분석해주세요. 사주팔자가 제공된 경우 반드시 해당 정보를 기반으로 정확하게 분석하세요.
+위 정보를 바탕으로 사주를 분석해주세요. 연애/직업 정보가 제공된 경우 해당 맥락을 결과에 반영하세요. 사주팔자가 제공된 경우 반드시 해당 정보를 기반으로 정확하게 분석하세요.
     `.trim();
 
     const prompt = `${SYSTEM_PROMPT}\n\n[User]\n${userInfo}`;

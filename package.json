@@ -11,6 +11,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@gracefullight/saju": "^1.1.3",
+    "@supabase/supabase-js": "^2.93.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "next": "^15.1.6",

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import MenuDrawer from "./MenuDrawer";
 
 type FormData = {
   name: string;
@@ -13,6 +14,7 @@ type FormData = {
   birthLocation: string;
   gender: string;
   relationshipStatus: string;
+  employmentStatus: string;
   unknownBirthTime: boolean;
 };
 
@@ -22,6 +24,7 @@ const questions = [
   { id: "birthLocation", title: "어디서 태어나셨어요?", type: "location" },
   { id: "gender", title: "성별이 어떻게 되세요?", type: "select" },
   { id: "relationshipStatus", title: "현재 어떤 상태이신가요?", type: "select" },
+  { id: "employmentStatus", title: "현재 어떤 상태로 지내고 계신가요?", type: "select" },
 ];
 
 const LOCATIONS = [
@@ -42,6 +45,7 @@ export default function Home() {
     birthLocation: "",
     gender: "",
     relationshipStatus: "",
+    employmentStatus: "",
     unknownBirthTime: false,
   });
 
@@ -74,6 +78,7 @@ export default function Home() {
       birthLocation: formData.birthLocation,
       gender: formData.gender,
       relationshipStatus: formData.relationshipStatus,
+      employmentStatus: formData.employmentStatus,
       unknownBirthTime: formData.unknownBirthTime.toString(),
     });
 
@@ -167,6 +172,8 @@ export default function Home() {
         return formData.gender !== "";
       case "relationshipStatus":
         return formData.relationshipStatus !== "";
+      case "employmentStatus":
+        return formData.employmentStatus !== "";
       default:
         return false;
     }
@@ -324,6 +331,28 @@ export default function Home() {
           </div>
         );
 
+      case "employmentStatus":
+        return (
+          <div className="space-y-3" role="radiogroup" aria-label="현재 상태">
+            {["직장인", "사업·프리랜서", "학생", "취업 준비 중"].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFormData({ ...formData, employmentStatus: status })}
+                className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                  formData.employmentStatus === status
+                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
+                    : ""
+                }`}
+                role="radio"
+                aria-checked={formData.employmentStatus === status}
+              >
+                {formData.employmentStatus === status && <span className="mr-2" aria-hidden="true">✓</span>}
+                {status}
+              </button>
+            ))}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -332,7 +361,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       {/* 헤더 */}
-      <header className="px-6 py-5">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-bg-primary">
         <div className="max-w-[420px] mx-auto flex items-center justify-between">
           {/* 뒤로가기 버튼 */}
           {currentStep > 0 && (
@@ -358,9 +387,9 @@ export default function Home() {
           )}
           {currentStep === 0 && <div className="w-10" />}
 
-          <h1 className="text-title-3 text-text-primary">사주보는 두루묵</h1>
+          <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
 
-          <div className="w-10" />
+          <MenuDrawer />
         </div>
       </header>
 
@@ -369,10 +398,7 @@ export default function Home() {
         <div className="max-w-[420px] w-full mx-auto">
           {/* 질문 */}
           <div>
-            <p className="text-step">
-              {currentStep + 1} / {totalSteps}
-            </p>
-            <h2 className="text-question">
+            <h2 className="text-question text-center font-aggro">
               {questions[currentStep].title}
             </h2>
           </div>
@@ -383,34 +409,35 @@ export default function Home() {
       </main>
 
       {/* 하단 고정 영역 (프로그레스바 + 다음 버튼) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-bg-primary via-bg-primary/95 to-transparent backdrop-blur-sm px-6 py-6">
+      <div className="sticky bottom-0 left-0 right-0 bg-bg-primary px-5 py-4">
         <div className="max-w-[420px] mx-auto space-y-4">
-          {/* 프로그레스 바 */}
-          <div
-            style={{
-              width: '100%',
-              height: '4px',
-              backgroundColor: 'var(--bg-tertiary)',
-              borderRadius: '2px',
-              overflow: 'hidden'
-            }}
-            role="progressbar"
-            aria-valuenow={currentStep + 1}
-            aria-valuemin={1}
-            aria-valuemax={totalSteps}
-          >
+          <div className="flex items-center">
+            <span className="text-[14px] text-text-secondary">{currentStep + 1} / {totalSteps}</span>
             <div
+              className="ml-3 flex-1"
               style={{
-                height: '100%',
-                background: 'var(--primary)',
-                width: `${((currentStep + 1) / totalSteps) * 100}%`,
-                transition: 'all 0.5s ease-out',
-                borderRadius: '2px'
+                height: "4px",
+                backgroundColor: "var(--bg-tertiary)",
+                borderRadius: "2px",
+                overflow: "hidden",
               }}
-            />
+              role="progressbar"
+              aria-valuenow={currentStep + 1}
+              aria-valuemin={1}
+              aria-valuemax={totalSteps}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  background: "var(--primary)",
+                  width: `${((currentStep + 1) / totalSteps) * 100}%`,
+                  transition: "all 0.5s ease-out",
+                  borderRadius: "2px",
+                }}
+              />
+            </div>
           </div>
 
-          {/* 다음 버튼 */}
           <button
             onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
             disabled={!canProceed()}

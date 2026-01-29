@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import MenuDrawer from "../MenuDrawer";
 import {
   calculateSaju,
   formatSajuText,
@@ -40,15 +42,51 @@ type AnalysisResult = {
 export default function ResultClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const fetchResult = async () => {
       try {
+        const hasQuery = searchParams.get("birthYear") && searchParams.get("birthMonth") && searchParams.get("birthDay");
+
+        if (!hasQuery) {
+          const supabaseId = (session?.user as { supabaseId?: string } | undefined)?.supabaseId;
+          if (!supabaseId) {
+            throw new Error("조회할 결과가 없습니다.");
+          }
+
+          const res = await fetch("/api/results");
+          if (!res.ok) {
+            throw new Error("이전 결과를 불러오는데 실패했습니다.");
+          }
+          const data = await res.json();
+          const latest = data?.results?.[0];
+          if (!latest) {
+            throw new Error("저장된 결과가 없습니다.");
+          }
+
+          const birthDate = latest.birth_date as string | null;
+          const birthTime = latest.birth_time as string | null;
+
+          if (birthDate) {
+            const [y, m, d] = birthDate.split("-");
+            const hour = birthTime ? parseInt(birthTime.split(":")[0] || "0") : undefined;
+            const minute = birthTime ? parseInt(birthTime.split(":")[1] || "0") : undefined;
+            const saju = await calculateSaju(parseInt(y), parseInt(m), parseInt(d), hour, minute);
+            setSajuData(saju);
+          }
+
+          setResult(latest.result);
+          setLoading(false);
+          return;
+        }
+
         const birthYear = parseInt(searchParams.get("birthYear") || "0");
         const birthMonth = parseInt(searchParams.get("birthMonth") || "0");
         const birthDay = parseInt(searchParams.get("birthDay") || "0");
@@ -70,6 +108,7 @@ export default function ResultClient() {
           birthLocation: searchParams.get("birthLocation"),
           gender: searchParams.get("gender"),
           relationshipStatus: searchParams.get("relationshipStatus"),
+          employmentStatus: searchParams.get("employmentStatus"),
           unknownBirthTime: unknownBirthTime,
           saju: saju ? formatSajuText(saju) : null,
         };
@@ -105,7 +144,47 @@ export default function ResultClient() {
     };
 
     fetchResult();
-  }, [searchParams]);
+  }, [searchParams, session]);
+
+  useEffect(() => {
+    const saveResult = async () => {
+      const supabaseId = (session?.user as { supabaseId?: string } | undefined)?.supabaseId;
+      if (!result || saved || !supabaseId) return;
+
+      const birthYear = searchParams.get("birthYear") || "";
+      const birthMonth = searchParams.get("birthMonth") || "";
+      const birthDay = searchParams.get("birthDay") || "";
+      const birthHour = searchParams.get("birthHour") || "";
+      const birthMinute = searchParams.get("birthMinute") || "";
+
+      const birthDate = birthYear && birthMonth && birthDay
+        ? `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`
+        : null;
+      const birthTime = birthHour && birthMinute ? `${birthHour}:${birthMinute}` : null;
+
+      try {
+        await fetch("/api/results", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: searchParams.get("name"),
+            birthDate,
+            birthTime,
+            region: searchParams.get("birthLocation"),
+            gender: searchParams.get("gender"),
+            relationshipStatus: searchParams.get("relationshipStatus"),
+            employmentStatus: searchParams.get("employmentStatus"),
+            result,
+          }),
+        });
+        setSaved(true);
+      } catch {
+        // 저장 실패는 UX를 막지 않도록 조용히 무시
+      }
+    };
+
+    saveResult();
+  }, [result, saved, session, searchParams]);
 
   const toggleSection = (index: number) => {
     const newExpanded = new Set(expandedSections);
@@ -156,9 +235,11 @@ export default function ResultClient() {
   return (
     <div className="min-h-screen bg-bg-primary">
       {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-10" style={{ backgroundColor: '#0D0D0D' }}>
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-title-3 text-text-primary text-center">사주보는 두루묵</h1>
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-bg-primary">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <div className="w-10" />
+          <h1 className="text-title-3 text-text-primary text-center font-aggro">사주보는 두루미</h1>
+          <MenuDrawer />
         </div>
       </header>
 
