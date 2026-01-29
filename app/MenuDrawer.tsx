@@ -10,8 +10,45 @@ export default function MenuDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [checkingResults, setCheckingResults] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<"unknown" | "complete" | "incomplete">("unknown");
   const drawerRef = useRef<HTMLDivElement>(null);
   const lastActiveRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!session?.user) {
+      setProfileStatus("unknown");
+      return;
+    }
+
+    let cancelled = false;
+    const checkProfile = async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        const profile = data?.profile || {};
+        const requiredFilled = Boolean(
+          profile?.name &&
+          profile?.birth_date &&
+          profile?.gender &&
+          profile?.employment_status
+        );
+        if (!cancelled) {
+          setProfileStatus(requiredFilled ? "complete" : "incomplete");
+        }
+      } catch {
+        if (!cancelled) {
+          setProfileStatus("incomplete");
+        }
+      }
+    };
+
+    checkProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!isOpen || !session?.user) return;
@@ -90,6 +127,10 @@ export default function MenuDrawer() {
     closeMenu();
     router.push("/edit-profile");
   };
+
+  if (session?.user && profileStatus === "incomplete") {
+    return null;
+  }
 
   return (
     <>

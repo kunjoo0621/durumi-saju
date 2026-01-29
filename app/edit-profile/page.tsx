@@ -153,10 +153,16 @@ export default function EditProfilePage() {
     handleResize();
     viewport.addEventListener("resize", handleResize);
     viewport.addEventListener("scroll", handleResize);
+    const onFocusIn = () => handleResize();
+    const onFocusOut = () => setTimeout(handleResize, 50);
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
 
     return () => {
       viewport.removeEventListener("resize", handleResize);
       viewport.removeEventListener("scroll", handleResize);
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
     };
   }, []);
 
@@ -216,8 +222,8 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="h-[100dvh] bg-bg-primary text-text-primary flex flex-col">
-      <header className="px-5 py-5 sticky top-0 z-[100] bg-bg-primary">
+    <div className="h-[100dvh] bg-bg-primary text-text-primary flex flex-col overflow-hidden">
+      <header className="px-5 py-5 sticky top-0 z-[100] bg-bg-primary shrink-0">
         <div className="max-w-[420px] mx-auto flex items-center">
           <button
             type="button"
@@ -239,7 +245,7 @@ export default function EditProfilePage() {
         </div>
       </header>
 
-      <main className="px-5 pb-32 flex-1">
+      <main className="px-5 pb-32 flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-[420px] mx-auto space-y-7 pt-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-text-secondary">
@@ -446,7 +452,7 @@ export default function EditProfilePage() {
 
       {!loading && session?.user && (
         <div
-          className="fixed left-0 right-0 bg-bg-primary px-5 py-5 transition-[bottom] duration-100 ease-out"
+          className="fixed left-0 right-0 bg-bg-primary px-5 py-5 transition-[bottom] duration-150 ease-out"
           style={{ bottom: `${keyboardOffset}px` }}
         >
           <div className="max-w-[420px] mx-auto">

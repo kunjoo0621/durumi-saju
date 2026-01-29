@@ -55,6 +55,7 @@ export default function Home() {
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
   const [birthTimeDisplay, setBirthTimeDisplay] = useState("");
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const isKeyboardOpen = keyboardOffset > 0;
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -69,9 +70,16 @@ export default function Home() {
     viewport.addEventListener("resize", handleResize);
     viewport.addEventListener("scroll", handleResize);
 
+    const onFocusIn = () => handleResize();
+    const onFocusOut = () => setTimeout(handleResize, 50);
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
+
     return () => {
       viewport.removeEventListener("resize", handleResize);
       viewport.removeEventListener("scroll", handleResize);
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
     };
   }, []);
 
@@ -457,36 +465,38 @@ export default function Home() {
 
       {/* 하단 고정 영역 (프로그레스바 + 다음 버튼) */}
       <div
-        className="fixed left-0 right-0 bg-bg-primary px-5 py-4 transition-[bottom] duration-100 ease-out"
+        className="fixed left-0 right-0 bg-bg-primary px-5 py-4 transition-[bottom] duration-150 ease-out"
         style={{ bottom: `${keyboardOffset}px` }}
       >
         <div className="max-w-[420px] mx-auto space-y-4">
-          <div className="flex items-center">
-            <span className="text-[14px] text-text-secondary">{currentStep + 1} / {totalSteps}</span>
-            <div
-              className="ml-3 flex-1"
-              style={{
-                height: "4px",
-                backgroundColor: "var(--bg-tertiary)",
-                borderRadius: "2px",
-                overflow: "hidden",
-              }}
-              role="progressbar"
-              aria-valuenow={currentStep + 1}
-              aria-valuemin={1}
-              aria-valuemax={totalSteps}
-            >
+          {!isKeyboardOpen && (
+            <div className="flex items-center">
+              <span className="text-[14px] text-text-secondary">{currentStep + 1} / {totalSteps}</span>
               <div
+                className="ml-3 flex-1"
                 style={{
-                  height: "100%",
-                  background: "var(--primary)",
-                  width: `${((currentStep + 1) / totalSteps) * 100}%`,
-                  transition: "all 0.5s ease-out",
+                  height: "4px",
+                  backgroundColor: "var(--bg-tertiary)",
                   borderRadius: "2px",
+                  overflow: "hidden",
                 }}
-              />
+                role="progressbar"
+                aria-valuenow={currentStep + 1}
+                aria-valuemin={1}
+                aria-valuemax={totalSteps}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    background: "var(--primary)",
+                    width: `${((currentStep + 1) / totalSteps) * 100}%`,
+                    transition: "all 0.5s ease-out",
+                    borderRadius: "2px",
+                  }}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <button
             onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
