@@ -6,7 +6,36 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { supabaseId?: string } | undefined)?.supabaseId;
+    const sessionUser = session?.user as { supabaseId?: string; id?: string; name?: string } | undefined;
+    let userId = sessionUser?.supabaseId;
+    const kakaoId = sessionUser?.id;
+
+    if (!userId && kakaoId) {
+      const { data, error } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("kakao_id", kakaoId)
+        .maybeSingle();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!data) {
+        const inserted = await supabaseAdmin
+          .from("users")
+          .insert({ kakao_id: kakaoId, nickname: sessionUser?.name || null })
+          .select("id")
+          .single();
+
+        if (inserted.error) {
+          return NextResponse.json({ error: inserted.error.message }, { status: 500 });
+        }
+        userId = inserted.data?.id;
+      } else {
+        userId = data.id;
+      }
+    }
 
     if (!userId) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
@@ -52,7 +81,26 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    const userId = (session?.user as { supabaseId?: string } | undefined)?.supabaseId;
+    const sessionUser = session?.user as { supabaseId?: string; id?: string; name?: string } | undefined;
+    let userId = sessionUser?.supabaseId;
+    const kakaoId = sessionUser?.id;
+
+    if (!userId && kakaoId) {
+      const { data, error } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("kakao_id", kakaoId)
+        .maybeSingle();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (!data) {
+        return NextResponse.json({ results: [] });
+      }
+      userId = data.id;
+    }
 
     if (!userId) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
