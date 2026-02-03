@@ -13,6 +13,7 @@ const QUESTIONS = [
   { id: "gender", title: "성별이 어떻게 되세요?", type: "select" },
   { id: "relationshipStatus", title: "현재 어떤 상태이신가요?", type: "select" },
   { id: "employmentStatus", title: "현재 어떤 상태로 지내고 계신가요?", type: "select" },
+  { id: "coreFearAxis", title: "가장 피하고 싶은 상황은 무엇인가요?", type: "select" },
 ] as const;
 
 const LOCATIONS = [
@@ -28,6 +29,14 @@ const CALENDAR_OPTIONS = [
 
 const RELATIONSHIP_OPTIONS = ["솔로", "연애중", "기혼"] as const;
 const EMPLOYMENT_OPTIONS = ["직장인", "사업·프리랜서", "학생", "취업 준비 중"] as const;
+
+// 핵심 결핍/공포 축 선택지
+const CORE_FEAR_OPTIONS = [
+  { label: "무시/가치절하", value: "DISMISS" as const },
+  { label: "버려짐/관계 단절", value: "ABANDON" as const },
+  { label: "무능/실패 노출", value: "INCOMPETENT" as const },
+  { label: "통제 상실/불확실", value: "LOSS_OF_CONTROL" as const },
+] as const;
 
 export default function Home() {
   const router = useRouter();
@@ -49,6 +58,7 @@ export default function Home() {
     gender,
     relationshipStatus,
     employmentStatus,
+    coreFearAxis,
     unknownBirthTime,
   } = formData;
 
@@ -208,6 +218,8 @@ export default function Home() {
         return formData.relationshipStatus !== "";
       case "employmentStatus":
         return formData.employmentStatus !== "";
+      case "coreFearAxis":
+        return formData.coreFearAxis !== "";
       default:
         return false;
     }
@@ -402,6 +414,28 @@ export default function Home() {
               >
                 {formData.employmentStatus === status && <span className="mr-2" aria-hidden="true">✓</span>}
                 {status}
+              </button>
+            ))}
+          </div>
+        );
+
+      case "coreFearAxis":
+        return (
+          <div className="space-y-3" role="radiogroup" aria-label="핵심 공포 축">
+            {CORE_FEAR_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setField("coreFearAxis", option.value)}
+                className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                  formData.coreFearAxis === option.value
+                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
+                    : ""
+                }`}
+                role="radio"
+                aria-checked={formData.coreFearAxis === option.value}
+              >
+                {formData.coreFearAxis === option.value && <span className="mr-2" aria-hidden="true">✓</span>}
+                {option.label}
               </button>
             ))}
           </div>

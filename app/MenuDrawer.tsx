@@ -120,17 +120,13 @@ export default function MenuDrawer() {
 
   const handleMyResults = () => {
     closeMenu();
-    router.push("/result?history=1");
+    router.push("/my/results");
   };
 
   const handleEditInfo = () => {
     closeMenu();
     router.push("/edit-profile");
   };
-
-  if (session?.user && profileStatus === "incomplete") {
-    return null;
-  }
 
   return (
     <>
@@ -157,19 +153,24 @@ export default function MenuDrawer() {
           />
           <div
             ref={drawerRef}
-            className="absolute right-0 top-0 h-full w-[280px] bg-bg-secondary shadow-xl transition-transform duration-300 ease-out flex flex-col"
+            className="absolute right-0 top-0 h-full w-[280px] bg-background-secondary shadow-xl transition-transform duration-300 ease-out flex flex-col"
             style={{ transform: isOpen ? "translateX(0)" : "translateX(100%)" }}
             role="dialog"
             aria-modal="true"
           >
             {session?.user ? (
-              <div className="px-5 py-6 bg-bg-tertiary">
+              <div className="px-5 py-6 bg-background-tertiary">
                 <div className="text-[18px] font-semibold text-text-primary">
                   {session.user.name || "사용자"}님
                 </div>
+                {profileStatus === "incomplete" && (
+                  <p className="mt-2 text-[13px] text-text-secondary">
+                    정보 입력이 필요합니다
+                  </p>
+                )}
               </div>
             ) : (
-              <div className="px-5 py-6 bg-bg-tertiary">
+              <div className="px-5 py-6 bg-background-tertiary">
                 <div className="text-[18px] font-semibold text-text-primary">로그인이 필요해요</div>
                 <p className="mt-2 text-[14px] text-text-secondary">
                   내 사주 결과를 저장할 수 있어요
@@ -177,17 +178,17 @@ export default function MenuDrawer() {
               </div>
             )}
 
-            <div className="flex-1 border-t border-[#333333]">
+            <div className="flex-1 border-t border-border">
               {!session?.user && (
                 <button
                   type="button"
                   onClick={() => signIn("kakao")}
-                  className="mx-5 my-4 h-12 w-[calc(100%-40px)] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+                  className="mx-5 my-4 h-12 w-[calc(100%-40px)] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2"
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
                     <path
                       d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
-                      fill="#000000"
+                      fill="currentColor"
                     />
                   </svg>
                   카카오로 로그인
@@ -197,24 +198,27 @@ export default function MenuDrawer() {
               {session?.user && (
                 <div className="flex flex-col h-full">
                   <div>
-                    {hasResults && !checkingResults && (
-                      <button
-                        type="button"
-                        onClick={handleMyResults}
-                        className="w-full text-left px-5 py-4 text-[16px] text-white hover:bg-bg-tertiary"
-                      >
-                        내 사주 결과
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={handleMyResults}
+                      disabled={!hasResults || checkingResults}
+                      className={`w-full text-left px-5 py-4 text-[16px] transition-colors ${
+                        !hasResults || checkingResults
+                          ? "text-text-tertiary cursor-not-allowed"
+                          : "text-white hover:bg-background-tertiary"
+                      }`}
+                    >
+                      내 사주 결과
+                    </button>
                     <button
                       type="button"
                       onClick={handleEditInfo}
-                      className="w-full text-left px-5 py-4 text-[16px] text-white hover:bg-bg-tertiary"
+                      className="w-full text-left px-5 py-4 text-[16px] text-white hover:bg-background-tertiary transition-colors"
                     >
                       정보 수정
                     </button>
                   </div>
-                  <div className="mt-auto border-t border-[#333333]">
+                  <div className="mt-auto border-t border-border">
                     <button
                       type="button"
                       onClick={() => signOut({ callbackUrl: "/" })}

@@ -222,13 +222,13 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="h-[100dvh] bg-bg-primary text-text-primary flex flex-col overflow-hidden">
-      <header className="px-5 py-5 sticky top-0 z-[100] bg-bg-primary shrink-0">
+    <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col overflow-hidden">
+      <header className="px-5 py-5 sticky top-0 z-[100] bg-background-primary shrink-0">
         <div className="max-w-[420px] mx-auto flex items-center">
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-bg-secondary transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
             aria-label="뒤로가기"
           >
             <svg
@@ -249,7 +249,7 @@ export default function EditProfilePage() {
         <div className="max-w-[420px] mx-auto space-y-7 pt-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-text-secondary">
-              <div className="w-8 h-8 border-2 border-[#333333] border-t-primary rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
               <p className="mt-4 text-[14px] text-text-secondary">불러오는 중...</p>
             </div>
           ) : authRequired ? (
@@ -273,7 +273,7 @@ export default function EditProfilePage() {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="이름을 입력하세요"
+                  placeholder="예: 두루미"
                   className={`w-full h-[52px] text-[16px] ${showErrors && requiredErrors.name ? "input-error" : ""}`}
                 />
                 {showErrors && requiredErrors.name && (
@@ -299,7 +299,7 @@ export default function EditProfilePage() {
                         className={`h-11 rounded-xl text-[15px] font-semibold transition-colors ${
                           selected
                             ? "bg-primary text-white"
-                            : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
+                            : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
                         }`}
                       >
                         {option.label}
@@ -312,7 +312,7 @@ export default function EditProfilePage() {
                   inputMode="numeric"
                   value={form.birthDate}
                   onChange={(e) => setForm({ ...form, birthDate: formatBirthDate(e.target.value) })}
-                  placeholder="1990.05.15"
+                  placeholder="예: 1990.05.15"
                   maxLength={10}
                   className={`w-full h-[52px] text-[16px] ${showErrors && requiredErrors.birthDate ? "input-error" : ""}`}
                 />
@@ -349,7 +349,7 @@ export default function EditProfilePage() {
                         className={`h-12 rounded-xl text-[15px] font-semibold transition-colors ${
                           selected
                             ? "bg-primary text-white"
-                            : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
+                            : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
                         }`}
                         role="radio"
                         aria-checked={selected}
@@ -376,7 +376,7 @@ export default function EditProfilePage() {
                         className={`h-12 rounded-xl text-[15px] font-semibold transition-colors ${
                           selected
                             ? "bg-primary text-white"
-                            : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
+                            : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
                         }`}
                         role="radio"
                         aria-checked={selected}
@@ -404,7 +404,7 @@ export default function EditProfilePage() {
                         className={`h-12 rounded-xl text-[15px] font-semibold transition-colors ${
                           selected
                             ? "bg-primary text-white"
-                            : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
+                            : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
                         }`}
                         role="radio"
                         aria-checked={selected}
@@ -431,7 +431,7 @@ export default function EditProfilePage() {
                         className={`w-full h-12 rounded-xl text-[15px] font-semibold transition-colors ${
                           selected
                             ? "bg-primary text-white"
-                            : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
+                            : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
                         }`}
                         role="radio"
                         aria-checked={selected}
@@ -452,7 +452,7 @@ export default function EditProfilePage() {
 
       {!loading && session?.user && (
         <div
-          className="fixed left-0 right-0 bg-bg-primary px-5 py-5 transition-[bottom] duration-150 ease-out"
+          className="fixed left-0 right-0 bg-background-primary px-5 py-5 transition-[bottom] duration-150 ease-out"
           style={{ bottom: `${keyboardOffset}px` }}
         >
           <div className="max-w-[420px] mx-auto">
@@ -469,12 +469,12 @@ export default function EditProfilePage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-bg-tertiary text-white px-4 py-2 rounded-lg text-[14px] shadow-lg">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
           {toast}
         </div>
       )}
       {errorToast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-bg-tertiary text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-background-tertiary text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
           {errorToast}
         </div>
       )}

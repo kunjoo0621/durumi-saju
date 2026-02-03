@@ -44,6 +44,7 @@ export default function ResultClient() {
     gender,
     relationshipStatus,
     employmentStatus,
+    coreFearAxis,
     unknownBirthTime,
   } = inputs;
 
@@ -84,6 +85,7 @@ export default function ResultClient() {
               gender,
               relationshipStatus,
               employmentStatus,
+              coreFearAxis,
               unknownBirthTime,
             }
           : null;

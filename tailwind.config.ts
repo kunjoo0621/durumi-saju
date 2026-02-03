@@ -9,27 +9,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Legacy
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-
-        // Background
-        "bg-primary": "var(--bg-primary)",
-        "bg-secondary": "var(--bg-secondary)",
-        "bg-tertiary": "var(--bg-tertiary)",
-
-        // Text
-        "text-primary": "var(--text-primary)",
-        "text-secondary": "var(--text-secondary)",
-        "text-tertiary": "var(--text-tertiary)",
-
-        // Primary
-        primary: "var(--primary)",
-        "primary-hover": "var(--primary-hover)",
-        "primary-disabled": "#262626",
-
-        // Border
-        "border-default": "var(--border-default)",
+        background: {
+          primary: "rgb(var(--bg-primary) / <alpha-value>)",
+          secondary: "rgb(var(--bg-secondary) / <alpha-value>)",
+          tertiary: "rgb(var(--bg-tertiary) / <alpha-value>)",
+        },
+        text: {
+          primary: "rgb(var(--text-primary) / <alpha-value>)",
+          secondary: "rgb(var(--text-secondary) / <alpha-value>)",
+          tertiary: "rgb(var(--text-tertiary) / <alpha-value>)",
+        },
+        primary: {
+          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          hover: "rgb(var(--primary-hover) / <alpha-value>)",
+          kakao: "rgb(var(--c-kakao) / <alpha-value>)",
+          "rank-s": "rgb(var(--c-rank-s) / <alpha-value>)",
+        },
+        border: {
+          DEFAULT: "rgb(var(--border-default) / <alpha-value>)",
+        },
+        saju: {
+          wood: "rgb(var(--c-saju-wood) / <alpha-value>)",
+          fire: "rgb(var(--c-saju-fire) / <alpha-value>)",
+          earth: "rgb(var(--c-saju-earth) / <alpha-value>)",
+          metal: "rgb(var(--c-saju-metal) / <alpha-value>)",
+          water: "rgb(var(--c-saju-water) / <alpha-value>)",
+        },
       },
       fontSize: {
         // Major Third 1.25 Scale

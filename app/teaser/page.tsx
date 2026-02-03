@@ -31,6 +31,7 @@ export default function TeaserPage() {
     gender,
     relationshipStatus,
     employmentStatus,
+    coreFearAxis,
     unknownBirthTime,
   } = inputs;
   const [loading, setLoading] = useState(true);
@@ -62,9 +63,10 @@ export default function TeaserPage() {
       birthLocation &&
       gender &&
       relationshipStatus &&
-      employmentStatus
+      employmentStatus &&
+      coreFearAxis
     );
-  }, [name, birthYear, birthMonth, birthDay, birthLocation, gender, relationshipStatus, employmentStatus]);
+  }, [name, birthYear, birthMonth, birthDay, birthLocation, gender, relationshipStatus, employmentStatus, coreFearAxis]);
 
   const hasBirthInput = useMemo(() => {
     return Boolean(birthYear && birthMonth && birthDay);
@@ -181,6 +183,7 @@ export default function TeaserPage() {
                 gender,
                 relationshipStatus,
                 employmentStatus,
+                coreFearAxis,
                 unknownBirthTime,
                 mode: "teaser",
               }),
@@ -225,6 +228,7 @@ export default function TeaserPage() {
                 gender,
                 relationshipStatus,
                 employmentStatus,
+                coreFearAxis,
                 unknownBirthTime,
               }),
             });

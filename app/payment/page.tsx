@@ -35,6 +35,7 @@ function PaymentContent() {
     gender,
     relationshipStatus,
     employmentStatus,
+    coreFearAxis,
     unknownBirthTime,
   } = useInputStore();
 
@@ -62,9 +63,10 @@ function PaymentContent() {
       birthLocation &&
       gender &&
       relationshipStatus &&
-      employmentStatus
+      employmentStatus &&
+      coreFearAxis
     );
-  }, [name, birthYear, birthMonth, birthDay, birthLocation, gender, relationshipStatus, employmentStatus]);
+  }, [name, birthYear, birthMonth, birthDay, birthLocation, gender, relationshipStatus, employmentStatus, coreFearAxis]);
 
   const handlePay = async () => {
     if (!hasRequiredInput) {
@@ -173,6 +175,7 @@ function PaymentContent() {
             gender,
             relationshipStatus,
             employmentStatus,
+            coreFearAxis,
             unknownBirthTime,
             paymentKey,
             orderId: orderIdParam,
@@ -213,6 +216,7 @@ function PaymentContent() {
     gender,
     relationshipStatus,
     employmentStatus,
+    coreFearAxis,
     unknownBirthTime,
     returnToParam,
     router,

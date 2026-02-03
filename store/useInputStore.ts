@@ -14,6 +14,7 @@ export type AnalysisResult = {
     title: string;
     content: string;
   }>;
+  coreFearAxisBlock?: string;
 };
 
 export type TeaserResult = {
@@ -28,7 +29,11 @@ export type TeaserResult = {
     icon: string;
     title: string;
   }>;
+  coreFearAxisBlock?: string;
 };
+
+// 핵심 결핍/공포 축 타입
+export type CoreFearAxis = "DISMISS" | "ABANDON" | "INCOMPETENT" | "LOSS_OF_CONTROL";
 
 export type InputState = {
   name: string;
@@ -42,6 +47,7 @@ export type InputState = {
   gender: string;
   relationshipStatus: string;
   employmentStatus: string;
+  coreFearAxis: CoreFearAxis | "";
   unknownBirthTime: boolean;
   analysisResult: AnalysisResult | TeaserResult | null;
   setField: <K extends keyof InputState>(key: K, value: InputState[K]) => void;
@@ -62,6 +68,7 @@ const initialState = {
   gender: "",
   relationshipStatus: "",
   employmentStatus: "",
+  coreFearAxis: "" as CoreFearAxis | "",
   unknownBirthTime: false,
   analysisResult: null,
 };
@@ -123,6 +130,7 @@ export const useAllInputs = () =>
     gender: state.gender,
     relationshipStatus: state.relationshipStatus,
     employmentStatus: state.employmentStatus,
+    coreFearAxis: state.coreFearAxis,
     unknownBirthTime: state.unknownBirthTime,
   }));
 

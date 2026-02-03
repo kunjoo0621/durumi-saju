@@ -1,510 +1,157 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { signIn } from "next-auth/react";
 import MenuDrawer from "./MenuDrawer";
 
-type FormData = {
-  name: string;
-  birthYear: string;
-  birthMonth: string;
-  birthDay: string;
-  calendarType: "solar" | "lunar";
-  birthHour: string;
-  birthMinute: string;
-  birthLocation: string;
-  gender: string;
-  relationshipStatus: string;
-  employmentStatus: string;
-  unknownBirthTime: boolean;
-};
-
-const questions = [
-  { id: "name", title: "이름이 무엇인가요?", type: "text" },
-  { id: "birthDateTime", title: "언제 태어났어요?", type: "datetime" },
-  { id: "birthLocation", title: "어디서 태어나셨어요?", type: "location" },
-  { id: "gender", title: "성별이 어떻게 되세요?", type: "select" },
-  { id: "relationshipStatus", title: "현재 어떤 상태이신가요?", type: "select" },
-  { id: "employmentStatus", title: "현재 어떤 상태로 지내고 계신가요?", type: "select" },
+const BENEFITS = [
+  {
+    title: "결론부터 딱 말해줘요",
+    desc: "긴 설명 전에 등급으로 핵심부터 확인.",
+  },
+  {
+    title: "친근하고 재밌게",
+    desc: "친구가 말해주는 것처럼 술술 읽히게.",
+  },
+  {
+    title: "내 결과 저장",
+    desc: "로그인하면 결과를 안전하게 보관.",
+  },
 ];
 
-const LOCATIONS = [
-  "서울", "경기", "인천", "강원", "충북", "충남",
-  "대전", "세종", "전북", "전남", "광주", "경북",
-  "경남", "대구", "울산", "부산", "제주", "해외"
+const FLOW = ["정보 입력", "티저 확인", "카카오 로그인", "결제", "전체 결과 확인"];
+
+const FAQ = [
+  {
+    q: "사주 결과는 얼마나 정확한가요?",
+    a: "사주 원리 기반의 참고 자료로 제공됩니다. 핵심은 방향성을 얻는 데 있어요.",
+  },
+  {
+    q: "결제를 해야만 전체 결과가 보이나요?",
+    a: "네. 티저로 핵심만 보여드리고 전체 해석은 결제 후 열립니다.",
+  },
+  {
+    q: "로그인 없이도 볼 수 있나요?",
+    a: "티저는 로그인 없이 가능하며, 전체 결과 확인 시 로그인합니다.",
+  },
+  {
+    q: "정보는 안전하게 보관되나요?",
+    a: "필요한 정보만 저장하고, 병원 서비스 기준으로 관리합니다.",
+  },
 ];
 
-export default function Home() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    birthYear: "",
-    birthMonth: "",
-    birthDay: "",
-    calendarType: "solar",
-    birthHour: "",
-    birthMinute: "",
-    birthLocation: "",
-    gender: "",
-    relationshipStatus: "",
-    employmentStatus: "",
-    unknownBirthTime: false,
-  });
-
-  // 생년월일 포맷팅용 상태
-  const [birthDateDisplay, setBirthDateDisplay] = useState("");
-  const [birthTimeDisplay, setBirthTimeDisplay] = useState("");
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const isKeyboardOpen = keyboardOffset > 0;
-
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-
-    const handleResize = () => {
-      const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
-      setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
-    };
-
-    handleResize();
-    viewport.addEventListener("resize", handleResize);
-    viewport.addEventListener("scroll", handleResize);
-
-    const onFocusIn = () => handleResize();
-    const onFocusOut = () => setTimeout(handleResize, 50);
-    window.addEventListener("focusin", onFocusIn);
-    window.addEventListener("focusout", onFocusOut);
-
-    return () => {
-      viewport.removeEventListener("resize", handleResize);
-      viewport.removeEventListener("scroll", handleResize);
-      window.removeEventListener("focusin", onFocusIn);
-      window.removeEventListener("focusout", onFocusOut);
-    };
-  }, []);
-
-  const totalSteps = questions.length;
-
-  const handleNext = () => {
-    if (currentStep < totalSteps - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleSubmit = () => {
-    const params = new URLSearchParams({
-      name: formData.name,
-      birthYear: formData.birthYear,
-      birthMonth: formData.birthMonth,
-      birthDay: formData.birthDay,
-      calendarType: formData.calendarType,
-      birthHour: formData.birthHour,
-      birthMinute: formData.birthMinute,
-      birthLocation: formData.birthLocation,
-      gender: formData.gender,
-      relationshipStatus: formData.relationshipStatus,
-      employmentStatus: formData.employmentStatus,
-      unknownBirthTime: formData.unknownBirthTime.toString(),
-    });
-
-    signIn("kakao", { callbackUrl: `/result?${params.toString()}` });
-  };
-
-  // 생년월일 입력 처리
-  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, ""); // 숫자만 추출
-    let formatted = value;
-
-    if (value.length > 0) {
-      // YYYY / MM / DD 형식으로 포맷팅
-      if (value.length <= 4) {
-        formatted = value;
-      } else if (value.length <= 6) {
-        formatted = `${value.slice(0, 4)} / ${value.slice(4)}`;
-      } else {
-        formatted = `${value.slice(0, 4)} / ${value.slice(4, 6)} / ${value.slice(6, 8)}`;
-      }
-    }
-
-    setBirthDateDisplay(formatted);
-
-    // 실제 데이터 파싱
-    if (value.length >= 4) {
-      setFormData(prev => ({ ...prev, birthYear: value.slice(0, 4) }));
-    } else {
-      setFormData(prev => ({ ...prev, birthYear: "" }));
-    }
-
-    if (value.length >= 6) {
-      setFormData(prev => ({ ...prev, birthMonth: value.slice(4, 6) }));
-    } else {
-      setFormData(prev => ({ ...prev, birthMonth: "" }));
-    }
-
-    if (value.length >= 8) {
-      setFormData(prev => ({ ...prev, birthDay: value.slice(6, 8) }));
-    } else {
-      setFormData(prev => ({ ...prev, birthDay: "" }));
-    }
-  };
-
-  // 시간 입력 처리
-  const handleBirthTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, ""); // 숫자만 추출
-    let formatted = value;
-
-    if (value.length > 0) {
-      // HH : MM 형식으로 포맷팅
-      if (value.length <= 2) {
-        formatted = value;
-      } else {
-        formatted = `${value.slice(0, 2)} : ${value.slice(2, 4)}`;
-      }
-    }
-
-    setBirthTimeDisplay(formatted);
-
-    // 실제 데이터 파싱
-    if (value.length >= 2) {
-      setFormData(prev => ({ ...prev, birthHour: value.slice(0, 2) }));
-    } else {
-      setFormData(prev => ({ ...prev, birthHour: "" }));
-    }
-
-    if (value.length >= 4) {
-      setFormData(prev => ({ ...prev, birthMinute: value.slice(2, 4) }));
-    } else {
-      setFormData(prev => ({ ...prev, birthMinute: "" }));
-    }
-  };
-
-  const canProceed = () => {
-    const question = questions[currentStep];
-    switch (question.id) {
-      case "name":
-        return formData.name.trim() !== "";
-      case "birthDateTime":
-        // 생년월일은 필수, 시간은 unknownBirthTime이 true이거나 입력되어야 함
-        return (
-          formData.birthYear &&
-          formData.birthMonth &&
-          formData.birthDay &&
-          (formData.unknownBirthTime || (formData.birthHour && formData.birthMinute))
-        );
-      case "birthLocation":
-        return formData.birthLocation.trim() !== "";
-      case "gender":
-        return formData.gender !== "";
-      case "relationshipStatus":
-        return formData.relationshipStatus !== "";
-      case "employmentStatus":
-        return formData.employmentStatus !== "";
-      default:
-        return false;
-    }
-  };
-
-  const renderQuestion = () => {
-    const question = questions[currentStep];
-
-    switch (question.id) {
-      case "name":
-        return (
-          <div>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="예: 홍길동"
-              className="w-full text-[15px] h-[52px]"
-              autoFocus
-              aria-label="이름"
-            />
-          </div>
-        );
-
-      case "birthDateTime":
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "양력", value: "solar" },
-                { label: "음력", value: "lunar" },
-              ].map((option) => {
-                const selected = formData.calendarType === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, calendarType: option.value as "solar" | "lunar" })}
-                    className={`h-11 rounded-xl text-[15px] font-semibold transition-colors ${
-                      selected
-                        ? "bg-primary text-white"
-                        : "bg-bg-tertiary text-text-secondary hover:bg-[#303030]"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-            {/* 생년월일 입력 */}
-            <div>
-              <label htmlFor="birthDate" style={{ display: 'block', fontSize: '12px', color: '#A3A3A3', marginBottom: '8px' }}>생년월일</label>
-              <input
-                id="birthDate"
-                type="text"
-                inputMode="numeric"
-                value={birthDateDisplay}
-                onChange={handleBirthDateChange}
-                placeholder="1995 / 06 / 21"
-                maxLength={14}
-                className="w-full text-[15px] h-[52px]"
-                aria-label="생년월일"
-              />
-            </div>
-
-            {/* 시간 입력 */}
-            {!formData.unknownBirthTime && (
-              <div>
-                <label htmlFor="birthTime" style={{ display: 'block', fontSize: '12px', color: '#A3A3A3', marginBottom: '8px' }}>태어난 시간</label>
-                <input
-                  id="birthTime"
-                  type="text"
-                  inputMode="numeric"
-                  value={birthTimeDisplay}
-                  onChange={handleBirthTimeChange}
-                  placeholder="16 : 30"
-                  maxLength={7}
-                  className="w-full text-[15px] h-[52px]"
-                  aria-label="태어난 시간"
-                />
-              </div>
-            )}
-
-            {/* 시간 모름 버튼 */}
-            <button
-              type="button"
-              onClick={() => {
-                setFormData({
-                  ...formData,
-                  unknownBirthTime: !formData.unknownBirthTime,
-                  birthHour: "",
-                  birthMinute: "",
-                });
-                setBirthTimeDisplay("");
-              }}
-              className="btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200"
-              aria-pressed={formData.unknownBirthTime}
-            >
-              {formData.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
-            </button>
-          </div>
-        );
-
-      case "birthLocation":
-        return (
-          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="출생 지역">
-            {LOCATIONS.map((location) => (
-              <button
-                key={location}
-                onClick={() => {
-                  setFormData({ ...formData, birthLocation: location });
-                }}
-                className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-all duration-200 active:scale-[0.98] ${
-                  formData.birthLocation === location
-                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                    : ""
-                }`}
-                role="radio"
-                aria-checked={formData.birthLocation === location}
-              >
-                {formData.birthLocation === location && <span className="mr-1" aria-hidden="true">✓</span>}
-                {location}
-              </button>
-            ))}
-          </div>
-        );
-
-      case "gender":
-        return (
-          <div className="space-y-3" role="radiogroup" aria-label="성별">
-            <button
-              onClick={() => setFormData({ ...formData, gender: "남성" })}
-              className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
-                formData.gender === "남성"
-                  ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                  : ""
-              }`}
-              role="radio"
-              aria-checked={formData.gender === "남성"}
-            >
-              {formData.gender === "남성" && <span className="mr-2" aria-hidden="true">✓</span>}
-              남성
-            </button>
-            <button
-              onClick={() => setFormData({ ...formData, gender: "여성" })}
-              className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
-                formData.gender === "여성"
-                  ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                  : ""
-              }`}
-              role="radio"
-              aria-checked={formData.gender === "여성"}
-            >
-              {formData.gender === "여성" && <span className="mr-2" aria-hidden="true">✓</span>}
-              여성
-            </button>
-          </div>
-        );
-
-      case "relationshipStatus":
-        return (
-          <div className="space-y-3" role="radiogroup" aria-label="연애 상태">
-            {["솔로", "연애중", "기혼"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFormData({ ...formData, relationshipStatus: status })}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
-                  formData.relationshipStatus === status
-                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                    : ""
-                }`}
-                role="radio"
-                aria-checked={formData.relationshipStatus === status}
-              >
-                {formData.relationshipStatus === status && <span className="mr-2" aria-hidden="true">✓</span>}
-                {status}
-              </button>
-            ))}
-          </div>
-        );
-
-      case "employmentStatus":
-        return (
-          <div className="space-y-3" role="radiogroup" aria-label="현재 상태">
-            {["직장인", "사업·프리랜서", "학생", "취업 준비 중"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFormData({ ...formData, employmentStatus: status })}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
-                  formData.employmentStatus === status
-                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                    : ""
-                }`}
-                role="radio"
-                aria-checked={formData.employmentStatus === status}
-              >
-                {formData.employmentStatus === status && <span className="mr-2" aria-hidden="true">✓</span>}
-                {status}
-              </button>
-            ))}
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+export default function LandingPage() {
+  const callbackUrl = useMemo(() => "/start", []);
 
   return (
-    <div className="h-[100dvh] bg-bg-primary flex flex-col">
-      {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-bg-primary">
+    <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
+      <header className="sticky top-0 z-[100] bg-background-primary px-5 py-5">
         <div className="max-w-[420px] mx-auto flex items-center justify-between">
-          {/* 뒤로가기 버튼 */}
-          {currentStep > 0 && (
-            <button
-              onClick={handleBack}
-              className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-bg-secondary transition-colors"
-              aria-label="이전 단계로"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-          )}
-          {currentStep === 0 && <div className="w-10" />}
-
-          <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
-
+          <div className="w-10" />
+          <div className="text-title-3 font-aggro">사주보는 두루미</div>
           <MenuDrawer />
         </div>
       </header>
 
-      {/* 메인 콘텐츠 */}
-      <main className="flex-1 px-5 pb-40">
-        <div className="max-w-[420px] w-full mx-auto pt-10">
-          {/* 질문 */}
+      <main className="px-5 pb-[calc(120px+env(safe-area-inset-bottom))]">
+        <section className="max-w-[420px] mx-auto pt-10 space-y-6">
           <div>
-            <h2 className="text-[24px] font-semibold text-white text-center font-aggro mb-6">
-              {questions[currentStep].title}
-            </h2>
+            <p className="text-text-secondary text-[14px] mb-2">두루미의 사주 리포트</p>
+            <h1 className="text-[28px] font-aggro leading-snug">
+              등급으로 결론부터 보는 사주
+            </h1>
+            <p className="text-text-secondary text-[15px] mt-3">
+              입력 1분이면 끝. 먼저 “내 등급” 보고, 궁금하면 더 깊게 보자.
+            </p>
+            <p className="text-text-secondary text-[14px] mt-3">
+              로그인하면 결과를 저장하고, 결제 확인/환불 처리가 가능해요
+            </p>
+            <a
+              href={`/api/auth/signin/kakao?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              onClick={(event) => {
+                event.preventDefault();
+                signIn("kakao", { callbackUrl });
+              }}
+              className="mt-4 inline-flex items-center justify-center rounded-xl bg-background-secondary px-4 py-3 text-[14px] font-semibold text-text-primary"
+            >
+              카카오 로그인
+            </a>
           </div>
 
-          {/* 입력 영역 */}
-          <div>{renderQuestion()}</div>
-        </div>
+          <div className="bg-background-secondary rounded-2xl p-5 space-y-3">
+            <div className="text-[12px] text-text-secondary">등급 카드 예시</div>
+            <div className="rounded-xl bg-background-tertiary p-4">
+              <div className="text-[22px] font-semibold text-primary">재물운 A 등급</div>
+              <p className="text-text-secondary text-[14px] mt-2">
+                “성장 탄력이 좋은 타입. 기회는 올해 하반기부터 본격화됩니다.”
+              </p>
+            </div>
+            <div className="rounded-xl bg-background-tertiary p-4 text-text-secondary blur-sm">
+              연애운, 직장운, 건강운 해석이 더 길게 이어집니다...
+            </div>
+          </div>
+
+        </section>
+
+        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
+          <h2 className="text-[20px] font-semibold">왜 두루미?</h2>
+          <div className="grid gap-3">
+            {BENEFITS.map((item) => (
+              <div key={item.title} className="bg-background-secondary rounded-xl p-4">
+                <div className="text-[16px] font-semibold mb-1">{item.title}</div>
+                <p className="text-text-secondary text-[14px]">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
+          <h2 className="text-[20px] font-semibold">이용 흐름</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {FLOW.map((step, index) => (
+              <div
+                key={step}
+                className="bg-background-secondary rounded-xl p-4 text-center text-[13px] text-text-secondary"
+              >
+                <div className="text-text-primary font-semibold text-[16px] mb-1">
+                  {index + 1}
+                </div>
+                {step}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
+          <h2 className="text-[20px] font-semibold">FAQ</h2>
+          <div className="space-y-3">
+            {FAQ.map((item) => (
+              <div key={item.q} className="bg-background-secondary rounded-xl p-4">
+                <div className="text-text-primary font-semibold mb-1">{item.q}</div>
+                <p className="text-text-secondary text-[14px]">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
+          <h2 className="text-[20px] font-semibold">안심 안내</h2>
+          <div className="bg-background-secondary rounded-xl p-4 space-y-2 text-[14px] text-text-secondary">
+            <p>병원 서비스 기준으로 개인정보를 안전하게 관리합니다.</p>
+            <p>결제 이후에도 로그인하면 결과를 안전하게 보관할 수 있어요.</p>
+            <p>필요한 정보만 최소한으로 사용합니다.</p>
+          </div>
+        </section>
       </main>
 
-      {/* 하단 고정 영역 (프로그레스바 + 다음 버튼) */}
-      <div
-        className="fixed left-0 right-0 bg-bg-primary px-5 py-4 transition-[bottom] duration-150 ease-out"
-        style={{ bottom: `${keyboardOffset}px` }}
-      >
-        <div className="max-w-[420px] mx-auto space-y-4">
-          {!isKeyboardOpen && (
-            <div className="flex items-center">
-              <span className="text-[14px] text-text-secondary">{currentStep + 1} / {totalSteps}</span>
-              <div
-                className="ml-3 flex-1"
-                style={{
-                  height: "4px",
-                  backgroundColor: "var(--bg-tertiary)",
-                  borderRadius: "2px",
-                  overflow: "hidden",
-                }}
-                role="progressbar"
-                aria-valuenow={currentStep + 1}
-                aria-valuemin={1}
-                aria-valuemax={totalSteps}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    background: "var(--primary)",
-                    width: `${((currentStep + 1) / totalSteps) * 100}%`,
-                    transition: "all 0.5s ease-out",
-                    borderRadius: "2px",
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
-            disabled={!canProceed()}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+      <div className="fixed inset-x-0 bottom-0 z-[120] bg-background-primary/95 backdrop-blur px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+        <div className="max-w-[420px] mx-auto">
+          <a
+            href="/start"
+            className="block w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200 bg-primary text-text-primary text-center border-0 outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
           >
-            {currentStep === totalSteps - 1 ? "결과 보기" : "다음"}
-          </button>
+            사주 보러가기
+          </a>
         </div>
       </div>
     </div>
