@@ -1,6 +1,22 @@
 import { createDateFnsAdapter } from "@gracefullight/saju/adapters/date-fns";
 import { getFourPillars } from "@gracefullight/saju";
 
+// 어댑터 싱글톤 캐시 - 매번 생성하지 않음
+let cachedAdapter: Awaited<ReturnType<typeof createDateFnsAdapter>> | null = null;
+let adapterPromise: Promise<Awaited<ReturnType<typeof createDateFnsAdapter>>> | null = null;
+
+async function getAdapter() {
+  if (cachedAdapter) return cachedAdapter;
+  if (adapterPromise) return adapterPromise;
+
+  adapterPromise = createDateFnsAdapter().then((adapter) => {
+    cachedAdapter = adapter;
+    return adapter;
+  });
+
+  return adapterPromise;
+}
+
 export type SajuPillar = {
   heavenlyStem: string;
   earthlyBranch: string;
@@ -146,22 +162,32 @@ const ELEMENT_CONTROLS: Record<ElementType, ElementType> = {
   water: "fire",
 };
 
-// 오행별 색상
-export const ELEMENT_COLORS: Record<ElementType, string> = {
-  wood: "#4ADE80", // 초록
-  fire: "#FF6B6B", // 빨강
-  earth: "#FBBF24", // 노랑
-  metal: "#E5E5E5", // 흰색/연회색
-  water: "#60A5FA", // 파랑
+// 오행별 Tailwind 클래스
+export const ELEMENT_TEXT_CLASSES: Record<ElementType, string> = {
+  wood: "text-saju-wood",
+  fire: "text-saju-fire",
+  earth: "text-saju-earth",
+  metal: "text-saju-metal",
+  water: "text-saju-water",
 };
 
-export const ELEMENT_BG_COLORS: Record<ElementType, string> = {
-  wood: "#1A2E1A",
-  fire: "#2E1A1A",
-  earth: "#2E2A1A",
-  metal: "#262626",
-  water: "#1A1A2E",
+export const ELEMENT_BG_CLASSES: Record<ElementType, string> = {
+  wood: "bg-saju-wood/12",
+  fire: "bg-saju-fire/12",
+  earth: "bg-saju-earth/12",
+  metal: "bg-saju-metal/12",
+  water: "bg-saju-water/12",
 };
+
+export function getElementTextClass(element?: ElementType | null) {
+  if (!element) return "text-saju-metal";
+  return ELEMENT_TEXT_CLASSES[element];
+}
+
+export function getElementBgClass(element?: ElementType | null) {
+  if (!element) return "bg-background-tertiary";
+  return ELEMENT_BG_CLASSES[element];
+}
 
 /**
  * 사주팔자 계산
@@ -181,8 +207,8 @@ export async function calculateSaju(
     // Date 객체 생성
     const birthDate = new Date(year, month - 1, day, birthHour, birthMinute);
 
-    // DateFns 어댑터 생성
-    const adapter = await createDateFnsAdapter();
+    // 캐시된 어댑터 사용
+    const adapter = await getAdapter();
 
     // DateFnsDate 형식으로 변환
     const dateFnsDate = {
@@ -316,4 +342,46 @@ export function getTenGod(dayStem: string, targetStem: string): string | null {
  */
 export function formatSajuText(saju: SajuData): string {
   return `년주: ${saju.year.heavenlyStem}${saju.year.earthlyBranch}(${saju.year.heavenlyStem}${saju.year.earthlyBranch}), 월주: ${saju.month.heavenlyStem}${saju.month.earthlyBranch}(${saju.month.heavenlyStem}${saju.month.earthlyBranch}), 일주: ${saju.day.heavenlyStem}${saju.day.earthlyBranch}(${saju.day.heavenlyStem}${saju.day.earthlyBranch}), 시주: ${saju.hour.heavenlyStem}${saju.hour.earthlyBranch}(${saju.hour.heavenlyStem}${saju.hour.earthlyBranch})`;
+}
+
+/**
+ * 사주 데이터에서 모든 십성/오행 정보를 한번에 계산 (캐싱용)
+ */
+export type PillarDisplayData = {
+  key: string;
+  label: string;
+  stem: string;
+  branch: string;
+  stemElement: ElementType | null;
+  branchElement: ElementType | null;
+  stemLabel: string;
+  branchLabel: string;
+  stemTenGod: string | null;
+  branchTenGod: string | null;
+};
+
+export function computePillarDisplayData(sajuData: SajuData): PillarDisplayData[] {
+  const dayStem = sajuData.day.heavenlyStem;
+  const pillarsRaw = [
+    { key: "hour", label: "생시", data: sajuData.hour },
+    { key: "day", label: "생일", data: sajuData.day },
+    { key: "month", label: "생월", data: sajuData.month },
+    { key: "year", label: "생년", data: sajuData.year },
+  ];
+
+  return pillarsRaw.map(({ key, label, data }) => {
+    const mainHiddenStem = getMainHiddenStem(data.earthlyBranch);
+    return {
+      key,
+      label,
+      stem: data.heavenlyStem,
+      branch: data.earthlyBranch,
+      stemElement: getHeavenlyStemElement(data.heavenlyStem),
+      branchElement: getEarthlyBranchElement(data.earthlyBranch),
+      stemLabel: getStemLabel(data.heavenlyStem),
+      branchLabel: getBranchLabel(data.earthlyBranch),
+      stemTenGod: getTenGod(dayStem, data.heavenlyStem),
+      branchTenGod: mainHiddenStem ? getTenGod(dayStem, mainHiddenStem) : null,
+    };
+  });
 }
