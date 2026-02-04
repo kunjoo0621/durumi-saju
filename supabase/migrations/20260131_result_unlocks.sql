@@ -16,6 +16,9 @@ create unique index if not exists result_unlocks_order_unique
 create index if not exists result_unlocks_result_idx
   on public.result_unlocks (result_id);
 
+alter table public.saju_results add column if not exists core_fear_axis text;
+alter table public.saju_results add column if not exists saju_text text;
+
 create or replace function public.process_payment_unlock(
   p_user_id uuid,
   p_order_id text,
@@ -30,6 +33,8 @@ create or replace function public.process_payment_unlock(
   p_relationship_status text,
   p_employment_status text,
   p_calendar_type text,
+  p_core_fear_axis text,
+  p_saju_text text,
   p_teaser jsonb,
   p_full jsonb
 )
@@ -78,6 +83,8 @@ begin
     relationship_status,
     employment_status,
     calendar_type,
+    core_fear_axis,
+    saju_text,
     teaser_json,
     full_json,
     unlocked_at
@@ -92,6 +99,8 @@ begin
     p_relationship_status,
     p_employment_status,
     p_calendar_type,
+    p_core_fear_axis,
+    p_saju_text,
     p_teaser,
     p_full,
     now()
@@ -100,6 +109,8 @@ begin
   do update set
     teaser_json = excluded.teaser_json,
     full_json = excluded.full_json,
+    core_fear_axis = excluded.core_fear_axis,
+    saju_text = excluded.saju_text,
     unlocked_at = now()
   returning id into v_result_id;
 

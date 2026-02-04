@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { buildInputHash, buildTeaserFromFull, runFullAnalysis, type InputPayload } from "@/lib/analysis";
+import { buildInputHash, buildTeaserFromFull, resolveSajuText, runFullAnalysis, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
 
 export async function POST(request: NextRequest) {
@@ -11,6 +11,8 @@ export async function POST(request: NextRequest) {
       orderId?: string;
       paymentKey?: string;
       amount?: number;
+      paymentStatus?: string;
+      paymentMethod?: string;
     };
     const input = body as InputPayload;
     if (
@@ -32,42 +34,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
     }
 
-    if (!body.orderId || !body.paymentKey || !body.amount) {
-      return NextResponse.json({ error: "결제 정보가 부족합니다." }, { status: 400 });
+    const mockPayment = process.env.USE_MOCK_PAYMENT === "true";
+    let paymentMethod = body.paymentMethod || "mock";
+    let amount = Number(body.amount ?? 1000);
+
+    if (mockPayment) {
+      if (!body.orderId || body.paymentStatus !== "success") {
+        return NextResponse.json({ error: "결제가 완료되지 않았습니다." }, { status: 402 });
+      }
+    } else {
+      if (!body.orderId || !body.paymentKey || !body.amount) {
+        return NextResponse.json({ error: "결제 정보가 부족합니다." }, { status: 400 });
+      }
+
+      if (Number(body.amount) !== 1000) {
+        return NextResponse.json({ error: "결제 금액이 올바르지 않습니다." }, { status: 400 });
+      }
+
+      const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
+      if (!tossSecretKey) {
+        return NextResponse.json({ error: "결제 설정이 누락되었습니다." }, { status: 500 });
+      }
+
+      const authHeader = Buffer.from(`${tossSecretKey}:`).toString("base64");
+      const confirmResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${authHeader}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentKey: body.paymentKey,
+          orderId: body.orderId,
+          amount: Number(body.amount),
+        }),
+      });
+
+      const confirmData = await confirmResponse.json().catch(() => ({}));
+      if (!confirmResponse.ok) {
+        return NextResponse.json(
+          { error: confirmData?.message || "결제 승인에 실패했습니다." },
+          { status: 400 }
+        );
+      }
+
+      paymentMethod = confirmData?.method || "toss";
+      amount = Number(body.amount);
     }
-
-    if (Number(body.amount) !== 1000) {
-      return NextResponse.json({ error: "결제 금액이 올바르지 않습니다." }, { status: 400 });
-    }
-
-    const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
-    if (!tossSecretKey) {
-      return NextResponse.json({ error: "결제 설정이 누락되었습니다." }, { status: 500 });
-    }
-
-    const authHeader = Buffer.from(`${tossSecretKey}:`).toString("base64");
-    const confirmResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${authHeader}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        paymentKey: body.paymentKey,
-        orderId: body.orderId,
-        amount: Number(body.amount),
-      }),
-    });
-
-    const confirmData = await confirmResponse.json().catch(() => ({}));
-    if (!confirmResponse.ok) {
-      return NextResponse.json(
-        { error: confirmData?.message || "결제 승인에 실패했습니다." },
-        { status: 400 }
-      );
-    }
-
-    const paymentMethod = confirmData?.method || "toss";
 
     const inputHash = buildInputHash(input);
 
@@ -123,7 +136,8 @@ export async function POST(request: NextRequest) {
       forceUnlock = true;
     }
 
-    const full = await runFullAnalysis(input);
+    const sajuText = await resolveSajuText(input);
+    const full = await runFullAnalysis({ ...input, saju: sajuText || input.saju });
     const teaser = buildTeaserFromFull(full);
 
     const birthDate =
@@ -150,6 +164,8 @@ export async function POST(request: NextRequest) {
             relationship_status: input.relationshipStatus,
             employment_status: input.employmentStatus,
             calendar_type: input.calendarType,
+            core_fear_axis: input.coreFearAxis || null,
+            saju_text: sajuText,
             teaser_json: teaser,
             full_json: full,
             unlocked_at: new Date().toISOString(),
@@ -188,7 +204,7 @@ export async function POST(request: NextRequest) {
       p_user_id: userId,
       p_order_id: body.orderId,
       p_method: paymentMethod,
-      p_amount: 1000,
+      p_amount: amount,
       p_input_hash: inputHash,
       p_name: input.name,
       p_birth_date: birthDate,
@@ -198,6 +214,8 @@ export async function POST(request: NextRequest) {
       p_relationship_status: input.relationshipStatus,
       p_employment_status: input.employmentStatus,
       p_calendar_type: input.calendarType,
+      p_core_fear_axis: input.coreFearAxis || null,
+      p_saju_text: sajuText,
       p_teaser: teaser,
       p_full: full,
     });

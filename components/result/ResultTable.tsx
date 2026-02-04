@@ -19,7 +19,7 @@ const CoreFearAxisBlock = memo(function CoreFearAxisBlock({
     <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border-0">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xl">🎯</span>
-        <h3 className="text-title-3 text-text-primary font-semibold">핵심 축</h3>
+        <h3 className="text-title-3 text-text-primary font-semibold">요즘 1등 이슈</h3>
       </div>
       <div className="space-y-3">
         {paragraphs.map((paragraph, index) => (

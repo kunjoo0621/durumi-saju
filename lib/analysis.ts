@@ -1,5 +1,7 @@
 import JSON5 from "json5";
 import crypto from "crypto";
+import { calculateSaju, formatSajuText } from "@/lib/utils/saju";
+import { convertLunarToSolar } from "@/lib/utils/lunar";
 
 export type AnalysisResult = {
   tier: {
@@ -55,10 +57,10 @@ export type InputPayload = {
 
 // 핵심 공포 축 라벨
 export const CORE_FEAR_LABELS: Record<CoreFearAxis, string> = {
-  DISMISS: "무시/가치절하",
-  ABANDON: "버려짐/관계 단절",
-  INCOMPETENT: "무능/실패 노출",
-  LOSS_OF_CONTROL: "통제 상실/불확실",
+  DISMISS: "인간관계",
+  ABANDON: "이직·커리어",
+  INCOMPETENT: "돈·재정",
+  LOSS_OF_CONTROL: "건강·컨디션",
 };
 
 // 핵심 공포 축 중립 템플릿
@@ -70,74 +72,74 @@ export const CORE_FEAR_TEMPLATES: Record<CoreFearAxis, {
 }> = {
   DISMISS: {
     inference:
-      "이 축을 선택한 경우, 타인에게 인정받지 못하거나 무시당하는 상황에서 불안이 촉발될 수 있습니다. " +
-      "이로 인해 자신의 가치를 증명하려는 행동이 자주 나타나며, 성취나 외적 평가에 민감해지는 경향이 있습니다.",
+      "요즘 고민 1순위가 인간관계라면, ‘거리감’과 ‘소속감’ 사이에서 균형을 찾고 있을 가능성이 큽니다. " +
+      "말 한마디나 분위기 변화에 민감해질 수 있고, 관계의 온도를 자주 점검하게 될 수 있어요.",
     strongWeak:
-      "이 축이 강하면 칭찬과 인정에 크게 반응하고, 약하면 외부 평가에 덜 흔들리는 편입니다.",
+      "이 고민이 강하면 작은 오해도 크게 느껴지고, 약하면 관계를 유연하게 바라보는 편입니다.",
     relationshipBranch: {
-      솔로: "혼자일 때 자신의 매력이나 가치에 의문을 품기 쉽습니다.",
-      연애중: "파트너의 관심이 줄어들면 자신이 덜 중요해졌다고 느낄 수 있습니다.",
-      기혼: "배우자의 무관심이 자존감에 영향을 줄 수 있습니다.",
+      솔로: "새 만남의 시작에서 ‘우리 대화 잘 맞나?’가 핵심 포인트가 될 수 있습니다.",
+      연애중: "연락 빈도나 말투 변화에 예민해지기 쉬운 타이밍입니다.",
+      기혼: "역할 분담이나 소통 방식이 관계 만족도를 좌우할 수 있습니다.",
     },
     employmentBranch: {
-      직장인: "상사나 동료의 피드백에 예민하게 반응할 수 있습니다.",
-      "사업·프리랜서": "클라이언트의 평가가 자기 가치와 직결되는 느낌을 받을 수 있습니다.",
-      학생: "성적이나 교수의 평가가 자신감에 크게 영향을 줄 수 있습니다.",
-      "취업 준비 중": "불합격 통보가 자신의 능력 전체를 부정당한 것처럼 느껴질 수 있습니다.",
+      직장인: "팀 내 관계와 커뮤니케이션 방식이 스트레스 요인일 수 있습니다.",
+      "사업·프리랜서": "고객과의 신뢰 관리가 성과만큼 중요하게 느껴질 수 있습니다.",
+      학생: "친구/동아리 관계에서 거리감이 고민으로 이어질 수 있습니다.",
+      "취업 준비 중": "면접/네트워킹에서의 첫인상과 관계 형성이 핵심일 수 있습니다.",
     },
   },
   ABANDON: {
     inference:
-      "이 축을 선택한 경우, 관계가 끊기거나 혼자 남겨지는 상황에서 불안이 촉발될 수 있습니다. " +
-      "이로 인해 관계 유지에 많은 에너지를 쏟거나, 거리를 두는 상대에게 집착하는 패턴이 나타날 수 있습니다.",
+      "요즘 커리어가 고민 1순위라면, ‘지금 방향이 맞나?’라는 질문이 자주 떠오를 수 있어요. " +
+      "성장 속도, 평가, 방향 전환(이직/전환)에 대한 관심이 커질 수 있습니다.",
     strongWeak:
-      "이 축이 강하면 관계 변화에 민감하고, 약하면 혼자 있는 시간도 편하게 받아들이는 편입니다.",
+      "이 고민이 강하면 작은 피드백에도 커리어 전체가 흔들리는 느낌이 들 수 있고, 약하면 장기 플랜으로 차분히 가는 편입니다.",
     relationshipBranch: {
-      솔로: "새로운 관계를 시작하는 것보다 거절당할 가능성을 더 크게 느낄 수 있습니다.",
-      연애중: "파트너의 연락이 뜸해지면 관계가 끝날 것 같은 불안이 올 수 있습니다.",
-      기혼: "배우자와의 정서적 거리감이 생기면 강한 불안을 느낄 수 있습니다.",
+      솔로: "일에 몰입하면서 연애/만남 우선순위가 내려갈 수 있습니다.",
+      연애중: "커리어 고민이 커지면 데이트/시간 배분에 민감해질 수 있습니다.",
+      기혼: "가정의 안정과 커리어 변화 사이에서 선택의 무게가 커질 수 있습니다.",
     },
     employmentBranch: {
-      직장인: "팀에서 소외되거나 배제되는 느낌에 예민할 수 있습니다.",
-      "사업·프리랜서": "장기 클라이언트와의 관계 종료가 큰 상실로 느껴질 수 있습니다.",
-      학생: "친구 그룹에서 빠지거나 따돌림에 대한 걱정이 있을 수 있습니다.",
-      "취업 준비 중": "면접 탈락이 사회에서 배제된 느낌으로 연결될 수 있습니다.",
+      직장인: "이직 타이밍, 승진 루트, 역할 변화가 핵심 고민이 될 수 있습니다.",
+      "사업·프리랜서": "프로젝트 파이프라인과 브랜딩 방향이 중요해질 수 있습니다.",
+      학생: "전공/진로 선택과 인턴 경험이 커리어 방향의 힌트가 될 수 있습니다.",
+      "취업 준비 중": "지원 전략, 포트폴리오, 합격 신호에 집중하게 될 수 있습니다.",
     },
   },
   INCOMPETENT: {
     inference:
-      "이 축을 선택한 경우, 자신의 무능함이 드러나거나 실패가 노출되는 상황에서 불안이 촉발될 수 있습니다. " +
-      "이로 인해 완벽주의적 성향이 나타나거나, 새로운 도전을 회피하는 패턴이 생길 수 있습니다.",
+      "요즘 돈/재정이 고민 1순위라면, 수입과 지출의 흐름이 더 예민하게 느껴질 수 있습니다. " +
+      "‘지금 잘 굴러가고 있나?’를 계속 체크하는 시기일 수 있어요.",
     strongWeak:
-      "이 축이 강하면 실수에 대한 두려움이 크고, 약하면 실패를 성장의 일부로 받아들이는 편입니다.",
+      "이 고민이 강하면 작은 지출에도 불안이 커지고, 약하면 돈을 도구로 차분히 관리하는 편입니다.",
     relationshipBranch: {
-      솔로: "연애 실패 경험이 자신의 능력 부족으로 해석될 수 있습니다.",
-      연애중: "파트너 앞에서 부족한 모습을 보이는 것이 부담될 수 있습니다.",
-      기혼: "배우자나 가족에게 좋은 모습을 유지해야 한다는 압박을 느낄 수 있습니다.",
+      솔로: "자기계발/취미 비용과 저축 사이의 균형이 고민일 수 있습니다.",
+      연애중: "데이트 비용, 미래 자금에 대한 합의가 중요해질 수 있습니다.",
+      기혼: "가계/대출/자녀 교육비 등 장기 계획이 핵심이 될 수 있습니다.",
     },
     employmentBranch: {
-      직장인: "업무 실수나 성과 부진이 큰 스트레스 요인이 될 수 있습니다.",
-      "사업·프리랜서": "사업 실패가 자신의 전문성 전체를 부정하는 것처럼 느껴질 수 있습니다.",
-      학생: "시험이나 발표에서의 실패가 과도한 자기비판으로 이어질 수 있습니다.",
-      "취업 준비 중": "취업 실패가 능력 부족의 증거로 느껴질 수 있습니다.",
+      직장인: "연봉/성과급/복지가 재정 안정감에 큰 영향을 줄 수 있습니다.",
+      "사업·프리랜서": "매출 변동과 현금흐름 관리가 가장 큰 이슈가 될 수 있습니다.",
+      학생: "알바/용돈 등 단기 재정 계획이 고민이 될 수 있습니다.",
+      "취업 준비 중": "준비 비용과 공백 기간의 지출이 부담이 될 수 있습니다.",
     },
   },
   LOSS_OF_CONTROL: {
     inference:
-      "이 축을 선택한 경우, 상황을 통제할 수 없거나 미래가 불확실한 상황에서 불안이 촉발될 수 있습니다. " +
-      "이로 인해 계획을 철저히 세우거나, 예상치 못한 변화에 강하게 저항하는 패턴이 나타날 수 있습니다.",
+      "요즘 건강/컨디션이 고민 1순위라면, 몸의 신호와 생활 리듬을 더 예민하게 체감하고 있을 수 있습니다. " +
+      "컨디션이 곧 하루 성과를 좌우한다고 느껴질 수 있어요.",
     strongWeak:
-      "이 축이 강하면 예측 가능성을 중시하고, 약하면 즉흥적인 상황에도 유연하게 대처하는 편입니다.",
+      "이 고민이 강하면 작은 피로에도 불안해지고, 약하면 루틴을 안정적으로 유지하는 편입니다.",
     relationshipBranch: {
-      솔로: "연애의 불확실성 자체가 시작을 망설이게 하는 요인이 될 수 있습니다.",
-      연애중: "관계의 방향이 불분명하면 불안이 커질 수 있습니다.",
-      기혼: "예상치 못한 가정 내 변화에 스트레스를 받을 수 있습니다.",
+      솔로: "생활 패턴을 지키는 것이 중요해지는 시기일 수 있습니다.",
+      연애중: "약속/일정 조율이 컨디션 관리에 영향을 줄 수 있습니다.",
+      기혼: "가족 건강과 생활 리듬 관리가 우선순위가 될 수 있습니다.",
     },
     employmentBranch: {
-      직장인: "조직 변화나 갑작스러운 업무 변경이 큰 스트레스가 될 수 있습니다.",
-      "사업·프리랜서": "불안정한 수입과 예측 불가능한 상황이 부담될 수 있습니다.",
-      학생: "진로의 불확실성이나 갑작스러운 일정 변경이 스트레스가 될 수 있습니다.",
-      "취업 준비 중": "취업 시장의 불확실성이 지속적인 불안 요인이 될 수 있습니다.",
+      직장인: "야근/수면 부족이 컨디션에 직접 영향을 줄 수 있습니다.",
+      "사업·프리랜서": "불규칙한 일정이 컨디션 관리의 큰 변수일 수 있습니다.",
+      학생: "시험/과제 시즌에 컨디션 기복이 심해질 수 있습니다.",
+      "취업 준비 중": "루틴 관리가 멘탈/체력 유지의 핵심이 될 수 있습니다.",
     },
   },
 };
@@ -180,32 +182,40 @@ const MOCK_DATA: AnalysisResult = {
 };
 
 const SYSTEM_PROMPT = `[Role]
-당신은 '운명 데이터 분석가'입니다. 사주를 데이터처럼 분석해서 등급과 수치로 보여주되, 설명은 친구한테 말하듯 재밌고 술술 읽히게 합니다.
+당신은 '두루미 사주 결과 디렉터'입니다. 사주(만세력)를 데이터처럼 분석해 등급/점수로 보여주고, 설명은 MZ 세대가 읽기 쉬운 톤으로 재밌고 술술 읽히게 합니다.
 
 [핵심 컨셉]
 - 등급과 퍼센트로 객관화 (S/A/B/C/D 등급, 상위 N%)
 - 카테고리별 점수 시각화
-- 설명은 비유와 스토리텔링으로 재밌게
-- 좋은 말 60% + 팩트폭력 40%
+- 설명은 비유/스토리텔링 + 현실적인 디테일
+- 좋은 말 60% + 팩트 40% (과장/단정 금지)
 
 [문체 규칙]
-- 반말과 존댓말 적절히 섞기
-- 이모지 사용 OK
+- 반말/존댓말 적절히 섞기 (가볍고 자연스럽게)
+- 이모지 사용 OK (과도하게 쓰지 않기)
 - 마크다운 문법(**bold**, ## 등) 절대 사용 금지
 - "ㅋㅋ", "ㄹㅇ" 같은 인터넷 용어 금지
 - 사주 용어는 한자 병기 (예: 편관(偏官), 식신(食神))
-- "~하지 않았어요?", "~한 적 있죠?" 같은 공감 질문 넣기
+- "~하지 않았어요?", "~한 적 있죠?" 같은 공감 질문 1~2개 포함
 
 [사용자 입력 반영 규칙 - 필수]
-- 사용자가 입력한 연애 상태와 직업/직장 상태를 반드시 반영하세요.
-- 해당 정보가 있는 경우, 관련 섹션에서 직접 언급하고 맞춤 해석을 제공합니다.
+아래 입력값을 모두 자연스럽게 반영하세요. 누락 금지.
+- 사주팔자(만세력) 정보
+- 성별
+- 연애/결혼 상태
+- 직업/직장 상태
+- 요즘 1등 이슈(고민)
+
+반영 방식:
+- 최소 2개 섹션에서 직접 언급
+- 요즘 1등 이슈는 적어도 1개 섹션에서 명확히 연결
+- 성별/연애/직장 상태는 문장 속에 자연스럽게 녹여서 설명
 
 [섹션별 작성 규칙 - 매우 중요]
 각 섹션은 반드시 아래 구조로 4-6문장 이상 작성:
-
-1. 사주 근거 먼저 제시 (1-2문장)
-2. 현대적 해석 (2-3문장)
-3. 구체적 팩트나 조언 (1-2문장)
+1) 사주 근거 먼저 제시 (1-2문장)
+2) 현대적 해석 (2-3문장)
+3) 구체적 포인트/행동 팁 (1-2문장)
 
 [Output Format - JSON]
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.
@@ -228,13 +238,13 @@ const SYSTEM_PROMPT = `[Role]
     {
       "icon": "🎭",
       "title": "타고난 DNA",
-      "content": "사주 근거 → 현대적 해석 → 조언"
+      "content": "사주 근거 → 현대적 해석 → 팁"
     }
   ]
 }`;
 
 const TEASER_PROMPT = `[Role]
-당신은 '운명 데이터 분석가'입니다. 사주를 데이터처럼 분석해서 등급과 수치로만 간단히 요약합니다.
+당신은 '두루미 사주 결과 디렉터'입니다. 사주를 데이터처럼 분석해서 등급과 수치로만 간단히 요약합니다.
 
 [핵심 컨셉]
 - 등급과 퍼센트로 객관화 (S/A/B/C/D 등급, 상위 N%)
@@ -244,6 +254,7 @@ const TEASER_PROMPT = `[Role]
 [문체 규칙]
 - 마크다운 문법(**bold**, ## 등) 절대 사용 금지
 - 불필요한 텍스트 금지, JSON만 반환
+- 본문(content) 생성 금지 (섹션 제목/아이콘만)
 
 [Output Format - JSON]
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.
@@ -357,6 +368,40 @@ export function buildInputHash(input: InputPayload) {
   return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
+export async function resolveSajuText(input: InputPayload) {
+  const existing = input.saju?.trim();
+  if (existing) return existing;
+
+  const year = Number(input.birthYear);
+  const month = Number(input.birthMonth);
+  const day = Number(input.birthDay);
+  if (!year || !month || !day) return null;
+
+  let calcYear = year;
+  let calcMonth = month;
+  let calcDay = day;
+
+  if (input.calendarType === "lunar") {
+    const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+    if (!converted) return null;
+    calcYear = converted.year;
+    calcMonth = converted.month;
+    calcDay = converted.day;
+  }
+
+  const hour = input.unknownBirthTime ? undefined : Number(input.birthHour || "0");
+  const minute = input.unknownBirthTime ? undefined : Number(input.birthMinute || "0");
+
+  try {
+    const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
+    if (!saju) return null;
+    return formatSajuText(saju);
+  } catch (error) {
+    console.warn("[SAJU] failed to resolve saju text", error);
+    return null;
+  }
+}
+
 // 핵심 공포 축 블록 생성 함수
 export function buildCoreFearAxisBlock(
   axis: CoreFearAxis,
@@ -366,7 +411,7 @@ export function buildCoreFearAxisBlock(
   const template = CORE_FEAR_TEMPLATES[axis];
   const label = CORE_FEAR_LABELS[axis];
 
-  let result = `선택한 축: ${label}\n\n`;
+  let result = `선택한 고민: ${label}\n\n`;
   result += template.inference + "\n\n";
   result += template.strongWeak;
 
@@ -428,7 +473,11 @@ export async function runFullAnalysis(input: InputPayload) {
     throw new Error("API 키가 설정되지 않았습니다.");
   }
 
-  const sajuInfo = input.saju ? `\n사주팔자: ${input.saju}` : "";
+  const resolvedSajuText = await resolveSajuText(input);
+  const sajuInfo = resolvedSajuText ? `\n사주팔자: ${resolvedSajuText}` : "";
+  const coreFearLabel = input.coreFearAxis
+    ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
+    : "미선택";
   const userInfo = `
 이름: ${input.name}
 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일
@@ -438,6 +487,7 @@ export async function runFullAnalysis(input: InputPayload) {
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}
+요즘 1등 이슈: ${coreFearLabel}
 
 위 정보를 바탕으로 사주를 분석해주세요. 연애/직업 정보가 제공된 경우 해당 맥락을 결과에 반영하세요.
   `.trim();
@@ -491,6 +541,11 @@ export async function runTeaserAnalysis(input: InputPayload) {
     throw new Error("API 키가 설정되지 않았습니다.");
   }
 
+  const resolvedSajuText = await resolveSajuText(input);
+  const sajuInfo = resolvedSajuText ? `\n사주팔자: ${resolvedSajuText}` : "";
+  const coreFearLabel = input.coreFearAxis
+    ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
+    : "미선택";
   const userInfo = `
 이름: ${input.name}
 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일
@@ -499,7 +554,8 @@ export async function runTeaserAnalysis(input: InputPayload) {
 출생지역: ${input.birthLocation}
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
-직업/직장 상태: ${input.employmentStatus || "미제공"}
+직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}
+요즘 1등 이슈: ${coreFearLabel}
   `.trim();
 
   const prompt = `${TEASER_PROMPT}\n\n[User]\n${userInfo}`;

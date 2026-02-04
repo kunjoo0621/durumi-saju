@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     let query = supabaseAdmin
       .from("saju_results")
       .select(
-        "full_json, unlocked_at, name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type"
+        "full_json, unlocked_at, name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type, core_fear_axis, saju_text"
       )
       .eq("user_id", userId)
       .order("unlocked_at", { ascending: false, nullsFirst: false })
@@ -119,6 +119,8 @@ export async function POST(request: NextRequest) {
         relationshipStatus: data.relationship_status,
         employmentStatus: data.employment_status,
         calendarType: data.calendar_type,
+        coreFearAxis: data.core_fear_axis,
+        sajuText: data.saju_text,
       },
     });
   } catch (error: any) {

@@ -52,6 +52,7 @@ function PaymentContent() {
   const amountParam = searchParams?.get("amount");
   const returnToParam = searchParams?.get("returnTo");
   const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
+  const mockPayment = process.env.NEXT_PUBLIC_USE_MOCK_PAYMENT === "true";
   const amount = 1000;
 
   const hasRequiredInput = useMemo(() => {
@@ -74,7 +75,7 @@ function PaymentContent() {
       return;
     }
 
-    if (!widgets) {
+    if (!mockPayment && !widgets) {
       setError("결제 위젯을 준비 중입니다. 잠시만 기다려주세요.");
       return;
     }
@@ -91,6 +92,43 @@ function PaymentContent() {
     setError(null);
 
     try {
+      if (mockPayment) {
+        const res = await fetch("/api/payment/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            birthYear,
+            birthMonth,
+            birthDay,
+            calendarType,
+            birthHour,
+            birthMinute,
+            birthLocation,
+            gender,
+            relationshipStatus,
+            employmentStatus,
+            coreFearAxis,
+            unknownBirthTime,
+            paymentMethod: "mock",
+            orderId: safeOrderId,
+            amount,
+            paymentStatus: "success",
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || "결제 처리에 실패했습니다.");
+        }
+
+        sessionStorage.setItem("sajuJustPaid", "1");
+        sessionStorage.removeItem("sajuOrderId");
+        const target = returnTo && returnTo.startsWith("/") ? returnTo : "/result";
+        router.push(target);
+        return;
+      }
+
       const origin = window.location.origin;
       const successUrl = `${origin}/payment?returnTo=${encodeURIComponent(
         returnTo && returnTo.startsWith("/") ? returnTo : "/result"
@@ -131,6 +169,7 @@ function PaymentContent() {
   }, [returnToParam]);
 
   useEffect(() => {
+    if (mockPayment) return;
     if (!sdkReady || !clientKey || paymentKey) return;
     if (!window || !(window as any).TossPayments) return;
 
@@ -154,6 +193,7 @@ function PaymentContent() {
   }, [sdkReady, clientKey, paymentKey, session?.user, orderId]);
 
   useEffect(() => {
+    if (mockPayment) return;
     if (!paymentKey || !orderIdParam || !amountParam) return;
     if (confirming) return;
     const run = async () => {
@@ -224,11 +264,13 @@ function PaymentContent() {
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
-      <Script
-        src="https://js.tosspayments.com/v2/standard"
-        strategy="afterInteractive"
-        onLoad={() => setSdkReady(true)}
-      />
+      {!mockPayment && (
+        <Script
+          src="https://js.tosspayments.com/v2/standard"
+          strategy="afterInteractive"
+          onLoad={() => setSdkReady(true)}
+        />
+      )}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
         <div className="max-w-[420px] mx-auto flex items-center justify-between">
           <button
@@ -256,13 +298,22 @@ function PaymentContent() {
 
           <div className="rounded-2xl bg-background-secondary p-5 text-left space-y-3">
             <div className="text-[14px] text-text-secondary">결제 수단</div>
-            {!clientKey && (
+            {mockPayment && (
+              <div className="text-[13px] text-text-tertiary">
+                테스트 결제로 바로 진행됩니다.
+              </div>
+            )}
+            {!mockPayment && !clientKey && (
               <div className="text-[13px] text-text-tertiary">
                 결제 키가 설정되지 않았습니다. 환경변수를 확인해주세요.
               </div>
             )}
-            <div id="payment-method" className="rounded-xl overflow-hidden" />
-            <div id="payment-agreement" className="rounded-xl overflow-hidden" />
+            {!mockPayment && (
+              <>
+                <div id="payment-method" className="rounded-xl overflow-hidden" />
+                <div id="payment-agreement" className="rounded-xl overflow-hidden" />
+              </>
+            )}
           </div>
 
           {error && (
@@ -277,7 +328,7 @@ function PaymentContent() {
         <div className="max-w-[420px] mx-auto">
           <button
             onClick={handlePay}
-            disabled={paying || confirming || !widgetReady}
+            disabled={paying || confirming || (!mockPayment && !widgetReady)}
             className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
           >
             {confirming ? "결제 확인 중..." : paying ? "결제창 여는 중..." : "결제하기"}
