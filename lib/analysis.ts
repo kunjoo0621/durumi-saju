@@ -3,6 +3,14 @@ import crypto from "crypto";
 import { calculateSaju, formatSajuText } from "@/lib/utils/saju";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 
+export type AnalysisScores = {
+  재물운: number;
+  연애운: number;
+  직장운: number;
+  건강운: number;
+  대인운: number;
+};
+
 export type AnalysisResult = {
   tier: {
     grade: string;
@@ -10,13 +18,13 @@ export type AnalysisResult = {
     title: string;
     description: string;
   };
-  scores: Record<string, { score: number; grade: string }>;
+  scores: AnalysisScores;
   sections: Array<{
     icon: string;
     title: string;
     content: string;
   }>;
-  coreFearAxisBlock?: string;
+  coreFearAxisBlock: string;
 };
 
 export type TeaserSection = {
@@ -31,9 +39,9 @@ export type TeaserResult = {
     title: string;
     description: string;
   };
-  scores: Record<string, { score: number; grade: string }>;
+  scores: AnalysisScores;
   sections: TeaserSection[];
-  coreFearAxisBlock?: string;
+  coreFearAxisBlock: string;
 };
 
 export type CoreFearAxis = "DISMISS" | "ABANDON" | "INCOMPETENT" | "LOSS_OF_CONTROL";
@@ -54,6 +62,45 @@ export type InputPayload = {
   unknownBirthTime: boolean;
   saju?: string | null;
 };
+
+const DEFAULT_CORE_FEAR_BLOCK =
+  "선택한 고민: 미선택\n\n요즘 고민 선택이 없어 일반적인 기준으로 요약했어요.";
+
+function normalizeScoreValue(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (value && typeof value === "object" && "score" in value) {
+    const raw = (value as { score?: unknown }).score;
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return raw;
+    }
+  }
+  return 0;
+}
+
+export function normalizeScores(scores: unknown): AnalysisScores {
+  const record = (scores && typeof scores === "object" ? scores : {}) as Record<string, unknown>;
+  return {
+    재물운: normalizeScoreValue(record["재물운"]),
+    연애운: normalizeScoreValue(record["연애운"]),
+    직장운: normalizeScoreValue(record["직장운"]),
+    건강운: normalizeScoreValue(record["건강운"]),
+    대인운: normalizeScoreValue(record["대인운"]),
+  };
+}
+
+function resolveCoreFearAxisBlock(input: InputPayload, existing?: string | null): string {
+  if (existing && existing.trim()) return existing;
+  if (input.coreFearAxis) {
+    return buildCoreFearAxisBlock(
+      input.coreFearAxis as CoreFearAxis,
+      input.relationshipStatus,
+      input.employmentStatus
+    );
+  }
+  return DEFAULT_CORE_FEAR_BLOCK;
+}
 
 // 핵심 공포 축 라벨
 export const CORE_FEAR_LABELS: Record<CoreFearAxis, string> = {
@@ -153,12 +200,14 @@ const MOCK_DATA: AnalysisResult = {
       "잠재력은 충분한데 방향성이 애매할 때가 많아요. 한 분야에 집중하면 탑티어까지 올라갈 수 있는 사람인데, 이것저것 손대다가 에너지가 분산되는 경향이 있어요. 일단 한 우물만 파면 진짜 대박 나는 타입입니다.",
   },
   scores: {
-    재물운: { score: 78, grade: "B+" },
-    연애운: { score: 65, grade: "B" },
-    직장운: { score: 82, grade: "A" },
-    건강운: { score: 70, grade: "B+" },
-    대인운: { score: 88, grade: "A" },
+    재물운: 78,
+    연애운: 65,
+    직장운: 82,
+    건강운: 70,
+    대인운: 88,
   },
+  coreFearAxisBlock:
+    "선택한 고민: 돈·재정\n\n요즘 돈의 흐름이 더 크게 느껴질 수 있어요. 작은 지출도 신경 쓰이고, ‘지금 이게 맞나?’라는 체크가 잦아지는 시기입니다.\n\n재정은 ‘흐름 관리’에서 승부가 나요. 지출을 줄이기보다, 고정비 구조와 수입 리듬을 먼저 정리해보는 게 빠릅니다.",
   sections: [
     {
       icon: "🎭",
@@ -178,70 +227,243 @@ const MOCK_DATA: AnalysisResult = {
       content:
         "당신은 정관(正官)보다 편관(偏官)이 있는 사주예요. 정석적이고 안정적인 사랑보다는 좀 드라마틱한 관계를 겪을 가능성이 높아요. 소개팅보다는 우연히 만난 사람한테 끌리고, 뻔한 데이트보다 색다른 경험 같이 하는 게 재밌잖아요? 그런데 이게 양날의 칼이라서, 초반엔 재밌는데 오래 가려면 루틴이 필요한데 그게 안 맞는 거예요. 잘 맞는 타입은 당신만큼 자유롭지만 책임감은 있는 사람. 너무 평범하거나 보수적인 사람은 답답해서 못 견딥니다. 결혼은 늦어도 30대 중후반에 잘 맞는 사람 만나면 안정되니 조급해하지 마세요.",
     },
+    {
+      icon: "🏢",
+      title: "직장 & 커리어",
+      content:
+        "직장운은 확장성과 책임감이 동시에 강조되는 흐름이에요. 단기간에 업무를 끌어올리는 힘이 있어서 성과가 빨리 보이는 편입니다. 다만 방향을 바꾸기 전에 한 사이클을 끝내는 게 필요합니다. 이직은 ‘확실한 역할 변화’가 있을 때 더 유리하고, 지금은 핵심 역량을 하나 정해서 깊게 파는 게 더 빠르게 올라가는 길입니다.",
+    },
+    {
+      icon: "🧠",
+      title: "멘탈 & 컨디션",
+      content:
+        "건강운은 기본 체력은 괜찮지만 리듬이 깨질 때 컨디션이 급격히 흔들리는 타입이에요. 수면/식사 루틴이 한 번 틀어지면 회복에 시간이 걸릴 수 있습니다. 지금은 운동보다 ‘수면 고정’이 우선입니다. 하루 일정이 많을수록 루틴을 단단히 잡는 게 장기적으로 효율적이에요.",
+    },
+    {
+      icon: "🧑‍🤝‍🧑",
+      title: "대인 관계 흐름",
+      content:
+        "사람과의 거리를 재는 감각이 예민한 편이라, 가까워지는 속도와 타이밍이 중요합니다. 처음엔 조심스럽지만 한 번 신뢰가 쌓이면 깊어지는 구조예요. 지금은 ‘너무 빨리 맞추려는 습관’을 줄이고, 일정한 간격의 소통을 유지하는 게 관계 안정에 도움이 됩니다.",
+    },
+    {
+      icon: "🚧",
+      title: "리스크 관리",
+      content:
+        "속도가 빠른 대신 실수도 빨리 나오는 구조라서, 체크리스트가 있는지 없는지가 결과를 가릅니다. 특히 돈/일 관련 결정에서 ‘충동’이 섞이면 흔들릴 수 있어요. 지금은 결정 직전에 하루만 보류하는 습관을 붙이면 리스크가 크게 줄어듭니다.",
+    },
+    {
+      icon: "✅",
+      title: "현실적인 결론",
+      content:
+        "요약하면, 잠재력은 충분한데 방향성과 루틴이 관건이에요. 한 번만 정리하면 크게 뻗을 수 있는 타입입니다. 다음 2주 동안은 일정, 지출, 업무 우선순위를 ‘한 장’으로 정리해두면 결과가 눈에 보이게 안정될 거예요.",
+    },
   ],
 };
 
-const SYSTEM_PROMPT = `[Role]
-당신은 '두루미 사주 결과 디렉터'입니다. 사주(만세력)를 데이터처럼 분석해 등급/점수로 보여주고, 설명은 MZ 세대가 읽기 쉬운 톤으로 재밌고 술술 읽히게 합니다.
+const SYSTEM_PROMPT = `
 
-[핵심 컨셉]
-- 등급과 퍼센트로 객관화 (S/A/B/C/D 등급, 상위 N%)
-- 카테고리별 점수 시각화
-- 설명은 비유/스토리텔링 + 현실적인 디테일
-- 좋은 말 60% + 팩트 40% (과장/단정 금지)
+너는 ‘사주보는 두루미’의 사주 결과 생성기다.
+이 서비스는 “기분 맞춰주는 위로”가 아니라 “만세력 텍스트 기반으로 타고난 구조를 냉정하게 판정하는 리포트”다.
+결과는 사주아이처럼 ‘길고 잘 읽히는 본문’을 기본값으로 제공한다. (Z세대 타겟: 리듬/은유/직설 강화)
 
-[문체 규칙]
-- 반말/존댓말 적절히 섞기 (가볍고 자연스럽게)
-- 이모지 사용 OK (과도하게 쓰지 않기)
-- 마크다운 문법(**bold**, ## 등) 절대 사용 금지
-- "ㅋㅋ", "ㄹㅇ" 같은 인터넷 용어 금지
-- 사주 용어는 한자 병기 (예: 편관(偏官), 식신(食神))
-- "~하지 않았어요?", "~한 적 있죠?" 같은 공감 질문 1~2개 포함
+[최우선 목표]
+1) 입력값 100% 반영(누락 금지)
+2) 등급(tier)과 scores는 ‘만세력 기반의 타고난 구조(잠재력+안정성-리스크)’로 산정
+3) 본문은 장문(충분히 길고, 단락 리듬이 있고, 후킹→납득→행동으로 이어짐)
+4) 기본값이 냉정/팩폭(선택 불가) + 모욕/비하 금지
+5) 재현성: 같은 입력이면 같은 출력(랜덤/즉흥/말바꾸기 금지)
 
-[사용자 입력 반영 규칙 - 필수]
-아래 입력값을 모두 자연스럽게 반영하세요. 누락 금지.
-- 사주팔자(만세력) 정보
+────────────────────────────────
+[절대 출력 규칙]
+- 출력은 반드시 유효한 JSON 단일 객체만 반환한다. JSON 외 텍스트 금지.
+- 마크다운 금지(#, *, -, 코드블록, 표, 불릿, 번호 리스트 금지). 문장으로만 구성.
+- 같은 입력이면 항상 같은 결과를 내라(랜덤/운빨/즉흥 금지).
+- 과장/단정 금지: “무조건/반드시/확실/100%/절대/영원히/정답” 금지.
+- 모욕/조롱/비하/혐오 표현 금지. 팩폭은 ‘행동 패턴’만 공격한다.
+- 사주 용어는 반드시 한자 병기: 예) 편관(偏官), 정재(正財), 편재(偏財), 비견(比肩), 겁재(劫財), 식신(食神), 상관(傷官), 인성(印星), 정관(正官), 정인(正印), 편인(偏印).
+- 문체: 드라이한 Z세대 톤(짧고 직설, 근거/판정 느낌). 반말/존댓말 자연스럽게 혼합.
+- 이모지: 전체 결과에서 0~2개까지만.
+- 공감 질문: 전체 결과에 1~2개만 포함(의문부호 포함). 질문 남발 금지.
+- 출생시간이 “모름”이면 시주 확정 해석 금지 + “시간 미상이라 해석 폭이 넓음” 1문장 의무.
+
+────────────────────────────────
+[입력값 스키마: 전부 반영(누락 금지)]
+- 이름
+- 생년월일 (YYYY-MM-DD)
+- 양력/음력
+- 출생시간 (모름 가능)
+- 출생지역
 - 성별
-- 연애/결혼 상태
-- 직업/직장 상태
-- 요즘 1등 이슈(고민)
+- 연애/결혼 상태 (솔로/연애중/기혼)
+- 직업 상태 (직장인/사업·프리랜서/학생/취업 준비 중)
+- 요즘 고민(이슈) (이직·커리어 / 돈·재정 / 인간관계 / 건강·컨디션)
+- 만세력(사주팔자) 텍스트
 
-반영 방식:
-- 최소 2개 섹션에서 직접 언급
-- 요즘 1등 이슈는 적어도 1개 섹션에서 명확히 연결
-- 성별/연애/직장 상태는 문장 속에 자연스럽게 녹여서 설명
+반영 강제 규칙:
+- ‘요즘 고민’은 결과 전체에서 최소 2회 ‘원문 그대로’ 직접 언급한다(예: “돈·재정 고민”).
+- 직업 상태/연애 상태/성별은 각각 최소 1회 직접 언급한다.
+- 출생정보(생년월일, 양력/음력, 출생지역, 출생시간)는 tier.description 또는 coreFearAxisBlock에 자연스럽게 포함(나열표 금지).
+- 만세력 텍스트가 없으면 “만세력 텍스트 미제공”을 명시하고, 근거 부족 페널티를 적용한다.
 
-[섹션별 작성 규칙 - 매우 중요]
-각 섹션은 반드시 아래 구조로 4-6문장 이상 작성:
-1) 사주 근거 먼저 제시 (1-2문장)
-2) 현대적 해석 (2-3문장)
-3) 구체적 포인트/행동 팁 (1-2문장)
-
-[Output Format - JSON]
-반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.
-
+────────────────────────────────
+[출력 JSON 스키마(고정)]
 {
-  "tier": {
-    "grade": "A+",
-    "percentile": 8,
-    "title": "비유적 한 줄 요약",
-    "description": "2-3문장 핵심 설명"
-  },
-  "scores": {
-    "재물운": { "score": 85, "grade": "A" },
-    "연애운": { "score": 72, "grade": "B+" },
-    "직장운": { "score": 68, "grade": "B" },
-    "건강운": { "score": 90, "grade": "A+" },
-    "대인운": { "score": 75, "grade": "B+" }
-  },
-  "sections": [
-    {
-      "icon": "🎭",
-      "title": "타고난 DNA",
-      "content": "사주 근거 → 현대적 해석 → 팁"
-    }
-  ]
-}`;
+  "tier": { "grade": string, "percentile": number, "title": string, "description": string },
+  "scores": { "재물운": number, "연애운": number, "직장운": number, "건강운": number, "대인운": number },
+  "sections": [ { "icon": string, "title": string, "content": string } ],
+  "coreFearAxisBlock": string
+}
+
+────────────────────────────────
+[장문 출력 규칙(길이/리듬 고정)]
+- sections 개수는 반드시 8개로 고정한다(항상 8).
+- 각 section.content는 “장문”이어야 한다.
+  - 각 섹션 content 길이 목표: 한국어 기준 700~1200자(대략).
+  - 8개 섹션 합산 목표: 6000~9500자(대략).
+  - 지나치게 짧으면 실패로 간주한다(단, 실제 재시도는 호출 코드가 수행한다).
+- 각 section.content는 반드시 아래 순서를 지킨다(라벨은 금지, 문장 흐름으로 구현):
+  (0) 후킹 1문장: 비유/은유 1개 포함, 강한 대비/반전 느낌
+  (1) 브릿지 1문장: “이 말이 나오는 이유는 …” 형태로 근거로 연결
+  (2) 사주 근거 파트: 만세력 텍스트에서 뽑은 ‘명시된’ 키워드 2~5개만 사용(없으면 “만세력 텍스트 미제공”을 근거로 삼고 과해석 금지)
+  (3) 현대적 해석 파트: 사용자의 직업/연애 상태/요즘 고민과 연결해서 5~9문장 정도로 충분히 풀어쓴다
+  (4) 현실 예시 파트: “직장인이라면/솔로라면/돈·재정 고민이라면” 같은 구체 상황 예시를 1~2개 반드시 포함한다
+  (5) 행동 팁 파트: 오늘~2주 내 실행 가능한 ‘측정 가능한 행동’ 3~5개를 문장으로 제시한다(불릿 금지)
+
+- icon은 이모지 1개만(섹션마다 1개).
+- title은 8~18자 내외, 강한 제목형(도발적이되 모욕 금지).
+
+────────────────────────────────
+[후킹(은유) 생성 규칙 — Z세대 타겟 강화 + 중복 방지]
+후킹은 “문학적 은유 + 현실 직설”의 조합이다. 아래 규칙을 모두 지킨다.
+
+1) 길이
+- 후킹 1문장은 22~55자 범위 권장.
+
+2) 형식(선택형 템플릿 중 1개만)
+- “A인 줄 알았는데, 실은 B.”
+- “겉은 A인데, 속은 B.”
+- “A처럼 보이지만, 알고 보면 B.”
+- “A가 강점인데, 동시에 B가 리스크.”
+
+3) 은유 사전(섹션별로 서로 다른 군을 사용)
+- 자연/기후: 사막, 오아시스, 댐, 장마, 안개, 태풍, 역류, 마른바람
+- 물리/기계: 브레이크, 기어, 엔진, 과열, 배터리, 누수, 회로, 노이즈
+- 도시/생활: 출근길, 지하철, 교통체증, 야근, 카드값, 마감, 알림 폭주
+- 디지털/인터넷: 캐시, 버퍼링, 리셋, 백업, 스크롤, 알고리즘, 푸시 알림
+- 스포츠/게임: 쿨타임, 콤보, 랭크, 페널티, 듀얼, 운영, 메타
+
+4) 금지 은유
+- 병/정신질환/범죄를 연상시키는 은유 금지
+- 외모 평가, 성적 비유, 특정 집단 비하 은유 금지
+- “천재/괴물/미친” 같은 극단 찬양/낙인 표현 금지
+
+5) 중복 방지
+- 8개 섹션의 후킹은 ‘핵심 은유 명사’가 중복되면 안 된다.
+- 동일 템플릿 연속 2회 사용 금지.
+- 같은 은유군을 2회 이상 쓰되, 명사는 반드시 바꾼다.
+
+6) 브릿지 강제
+- 후킹 직후에는 반드시 “이 말이 나오는 이유는 …” 문장으로 근거로 착지시킨다.
+
+────────────────────────────────
+[팩폭(선택 불가) 규칙: 강하게, 하지만 공정하게]
+- 팩폭은 총 3회 의무 포함한다.
+  1) coreFearAxisBlock에 1회(강도 hard)
+  2) sections 중 “경고/새는 구멍/리스크” 성격 섹션에 1회(강도 hard)
+  3) sections 중 “결론/요약/현실 판정” 성격 섹션에 1회(강도 mid)
+- 팩폭은 인격/가치 판단 금지, 행동 패턴과 선택의 결과만 지적한다.
+- 팩폭은 반드시 아래 3단 포맷을 지킨다(문장 3개로 고정):
+  (1) 팩폭 1문장(짧고 단호, 35자 내외 권장)
+  (2) “이 말이 나오는 이유는 …” 근거 1~2개(입력/만세력에서 ‘명시된’ 신호만)
+  (3) “그래서 2주만 …” 행동 2개(측정 가능)
+
+팩폭 템플릿(형태 고정):
+- “지금 문제는 A가 아니라 B야.”
+- “네가 원하는 건 해결이 아니라 ‘잠깐 안심’이야.”
+- “이 패턴은 당장은 편한데, 장기 비용이 커.”
+
+절대 금지:
+- 비하/조롱 단어, 관계 단절 유도, 혐오 표현
+
+────────────────────────────────
+[만세력 기반 등급/점수 산정: 잠재력+안정성-리스크 종합(타고난 운 베이스)]
+중요: tier와 scores는 오직 만세력 텍스트에 명시된 신호로만 계산한다(추측 금지).
+요즘 고민/직업/연애는 sections 해석과 행동 팁에 반영한다(등급 베이스로 쓰지 않는다).
+
+(1) 만세력 신호 추출(텍스트에서 “있는 것만”)
+- 오행 분포 숫자: “수(3)”, “금(2)” 같은 괄호 숫자 패턴
+- 신강/신약: “신강”, “신약”
+- 십성/용어: 비견(比肩), 겁재(劫財), 식신(食神), 상관(傷官), 정재(正財), 편재(偏財), 정관(正官), 편관(偏官), 정인(正印), 편인(偏印), 인성(印星)
+- 구조: 합/충/형/파/해, 격/용신/희신/조후
+- 살: 도화/홍염/역마/화개/현침살(과해석 금지, 영향 작게)
+
+(2) PotentialScore(잠재력/상한): 시작 50, 범위 35~85
++5 정관(正官) 또는 편관(偏官)
++5 정재(正財) 또는 편재(偏財)
++4 식신(食神) 또는 상관(傷官)
++3 인성(印星)/정인(正印)/편인(偏印)
++3 “신강”
++2 오행 숫자 표기가 있고 5개 중 4개 이상이 1 이상
++2 격/용신/희신/조후 등 구조 설명 키워드
+-4 오행 숫자 표기 없음
+
+(3) StabilityScore(안정성/지속력): 시작 50, 범위 35~85
++6 오행 숫자 표기 있고 최다-최소 ≤ 2
++4 “합”
++3 정관(正官)
++2 정재(正財)
++2 인성(印星)
+-8 오행 4 이상 쏠림(숫자 명시 시)
+-6 오행 0 결핍(숫자 명시 시)
+-4 “충” 또는 “형”
+-3 “파” 또는 “해”
+-3 “신약”
+-4 오행 숫자 표기 없음
+
+(4) RiskScore(리스크): 시작 45, 범위 35~85(높을수록 위험)
++6 비견(比肩) 또는 겁재(劫財)
++5 편관(偏官)+충/형 동시
++4 상관(傷官)+정관/편관 동시
++4 “충” 또는 “형”
++2 살 키워드 2개 이상(아주 약하게)
++2 오행 쏠림/결핍이 숫자로 명시(존재 시만)
+
+(5) composite(등급 원값)
+composite = round(0.45*PotentialScore + 0.45*StabilityScore - 0.35*RiskScore)
+
+(6) 근거 부족 페널티
+- 만세력 텍스트가 비었거나,
+  (오행 숫자 / 십성 키워드 / 신강·신약 / 합충형파해) 등장 종류가 2종 미만이면:
+  composite = composite - 6
+  grade 최대 B
+- 출생시간 “모름”이면 composite = composite - 1
+
+(7) 상한 규칙(“좋게만” 방지)
+- RiskScore ≥ 70이면 grade 최대 B
+- RiskScore ≥ 78이면 grade 최대 C
+- StabilityScore ≤ 45이면 grade 최대 B
+
+(8) 등급 컷
+S: composite ≥ 78
+A: 70~77
+B: 62~69
+C: 54~61
+D: ≤ 53
+
+(9) percentile
+percentile = clamp(composite, 40, 90)
+
+(10) scores(5개 운 점수)도 만세력 기반
+- 각 점수 시작값 58, 범위 35~90 정수.
+- 재물운: +6 정재, +4 편재, +3 식신, -4 비견/겁재, -3 오행 결핍/쏠림(숫자 명시)
+- 직장운: +6 정관, +3 편관, +2 인성, -3 상관, -2 편관+충/형 동시
+- 연애운: +3 도화/홍염(약하게), -2 충/형, -2 비견/겁재
+- 건강운: +2 식신/인성, -4 편관+충/형, -3 오행 결핍/쏠림(숫자)
+- 대인운: +2 인성/정관, +1 합, -3 비견/겁재, -2 상관, -2 충/형
+- 공통: 오행 결핍 또는 4이상 쏠림이 숫자로 명시되면 모든 scores -1
+- 근거 부족(위 조건)이면 scores를 50~68로 클램프
+
+`;
 
 const TEASER_PROMPT = `[Role]
 당신은 '두루미 사주 결과 디렉터'입니다. 사주를 데이터처럼 분석해서 등급과 수치로만 간단히 요약합니다.
@@ -436,6 +658,7 @@ export function buildTeaserFromFull(full: AnalysisResult): TeaserResult {
       icon: section.icon,
       title: section.title,
     })),
+    coreFearAxisBlock: full.coreFearAxisBlock,
   };
 }
 
@@ -459,13 +682,7 @@ export async function runFullAnalysis(input: InputPayload) {
   const useMock = process.env.USE_MOCK === "true";
   if (useMock) {
     const mockResult = { ...MOCK_DATA };
-    if (input.coreFearAxis) {
-      mockResult.coreFearAxisBlock = buildCoreFearAxisBlock(
-        input.coreFearAxis as CoreFearAxis,
-        input.relationshipStatus,
-        input.employmentStatus
-      );
-    }
+    mockResult.coreFearAxisBlock = resolveCoreFearAxisBlock(input, mockResult.coreFearAxisBlock);
     return mockResult;
   }
 
@@ -501,16 +718,8 @@ export async function runFullAnalysis(input: InputPayload) {
     if (res.ok) {
       const cleaned = extractJson(res.text);
       const parsed = JSON5.parse(cleaned) as AnalysisResult;
-
-      // 핵심 공포 축 블록 추가
-      if (input.coreFearAxis) {
-        parsed.coreFearAxisBlock = buildCoreFearAxisBlock(
-          input.coreFearAxis as CoreFearAxis,
-          input.relationshipStatus,
-          input.employmentStatus
-        );
-      }
-
+      parsed.scores = normalizeScores(parsed.scores);
+      parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
       return parsed;
     }
 
@@ -527,13 +736,7 @@ export async function runTeaserAnalysis(input: InputPayload) {
   const useMock = process.env.USE_MOCK === "true";
   if (useMock) {
     const teaser = buildTeaserFromFull(MOCK_DATA);
-    if (input.coreFearAxis) {
-      teaser.coreFearAxisBlock = buildCoreFearAxisBlock(
-        input.coreFearAxis as CoreFearAxis,
-        input.relationshipStatus,
-        input.employmentStatus
-      );
-    }
+    teaser.coreFearAxisBlock = resolveCoreFearAxisBlock(input, teaser.coreFearAxisBlock);
     return teaser;
   }
 
@@ -567,16 +770,8 @@ export async function runTeaserAnalysis(input: InputPayload) {
     if (res.ok) {
       const cleaned = extractJson(res.text);
       const parsed = JSON5.parse(cleaned) as TeaserResult;
-
-      // 핵심 공포 축 블록 추가
-      if (input.coreFearAxis) {
-        parsed.coreFearAxisBlock = buildCoreFearAxisBlock(
-          input.coreFearAxis as CoreFearAxis,
-          input.relationshipStatus,
-          input.employmentStatus
-        );
-      }
-
+      parsed.scores = normalizeScores(parsed.scores);
+      parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
       return parsed;
     }
 

@@ -10,6 +10,7 @@ import SajuChart from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
+import { normalizeScores } from "@/lib/analysis";
 
 // JSON 추출 함수를 컴포넌트 외부로 이동 (매 렌더링마다 재생성 방지)
 const extractJson = (text: string) => {
@@ -23,6 +24,13 @@ const extractJson = (text: string) => {
     return text.slice(first, last + 1).trim();
   }
   return text.trim();
+};
+
+const CORE_FEAR_LABELS: Record<string, string> = {
+  DISMISS: "인간관계",
+  ABANDON: "이직·커리어",
+  INCOMPETENT: "돈·재정",
+  LOSS_OF_CONTROL: "건강·컨디션",
 };
 
 export default function ResultClient() {
@@ -111,7 +119,14 @@ export default function ResultClient() {
         }
 
         const data = await res.json();
-        const parsed = typeof data.result === "string" ? JSON5.parse(extractJson(data.result)) : data.result;
+        const parsed =
+          typeof data.result === "string" ? JSON5.parse(extractJson(data.result)) : data.result;
+        parsed.scores = normalizeScores(parsed.scores);
+        if (!parsed.coreFearAxisBlock || !parsed.coreFearAxisBlock.trim()) {
+          const axis = data.input?.coreFearAxis;
+          const label = axis ? CORE_FEAR_LABELS[String(axis)] || String(axis) : "미선택";
+          parsed.coreFearAxisBlock = `선택한 고민: ${label}\n\n요즘 고민 선택이 없어 일반적인 기준으로 요약했어요.`;
+        }
         setResult(parsed);
 
         const inputBirthDate = data.input?.birthDate;

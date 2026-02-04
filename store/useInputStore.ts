@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+export type AnalysisScores = {
+  재물운: number;
+  연애운: number;
+  직장운: number;
+  건강운: number;
+  대인운: number;
+};
+
 export type AnalysisResult = {
   tier: {
     grade: string;
@@ -8,13 +16,13 @@ export type AnalysisResult = {
     title: string;
     description: string;
   };
-  scores: Record<string, { score: number; grade: string }>;
+  scores: AnalysisScores;
   sections: Array<{
     icon: string;
     title: string;
     content: string;
   }>;
-  coreFearAxisBlock?: string;
+  coreFearAxisBlock: string;
 };
 
 export type TeaserResult = {
@@ -24,12 +32,12 @@ export type TeaserResult = {
     title: string;
     description: string;
   };
-  scores: Record<string, { score: number; grade: string }>;
+  scores: AnalysisScores;
   sections: Array<{
     icon: string;
     title: string;
   }>;
-  coreFearAxisBlock?: string;
+  coreFearAxisBlock: string;
 };
 
 // 핵심 결핍/공포 축 타입

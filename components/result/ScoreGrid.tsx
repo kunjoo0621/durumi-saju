@@ -3,19 +3,26 @@
 import { memo } from "react";
 
 type ScoreGridProps = {
-  scores: Record<string, { score: number; grade: string }>;
+  scores: Record<string, number>;
+};
+
+export const scoreToGrade = (score: number) => {
+  if (score >= 90) return "A+";
+  if (score >= 80) return "A";
+  if (score >= 70) return "B";
+  if (score >= 60) return "C";
+  return "D";
 };
 
 // 개별 스코어 카드 - 메모이즈
 const ScoreCard = memo(function ScoreCard({
   category,
   score,
-  grade,
 }: {
   category: string;
   score: number;
-  grade: string;
 }) {
+  const grade = scoreToGrade(score);
   return (
     <div className="rounded-2xl bg-background-primary/40 p-4">
       <div className="flex items-center justify-between mb-3">
@@ -47,12 +54,11 @@ function ScoreGridInner({ scores }: ScoreGridProps) {
   return (
     <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border-0">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {Object.entries(scores).map(([category, data]) => (
+        {Object.entries(scores).map(([category, score]) => (
           <ScoreCard
             key={category}
             category={category}
-            score={data.score}
-            grade={data.grade}
+            score={score}
           />
         ))}
       </div>

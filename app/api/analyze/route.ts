@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assertNoContentKey, buildInputHash, runTeaserAnalysis, type InputPayload } from "@/lib/analysis";
+import {
+  assertNoContentKey,
+  buildInputHash,
+  buildCoreFearAxisBlock,
+  normalizeScores,
+  runTeaserAnalysis,
+  type CoreFearAxis,
+  type InputPayload,
+} from "@/lib/analysis";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
 
@@ -33,6 +41,21 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (cached.data?.result_json) {
+      const cachedResult = cached.data.result_json as any;
+      const fallbackCoreFear = input.coreFearAxis
+        ? buildCoreFearAxisBlock(
+            input.coreFearAxis as CoreFearAxis,
+            input.relationshipStatus,
+            input.employmentStatus
+          )
+        : "선택한 고민: 미선택\n\n요즘 고민 선택이 없어 일반적인 기준으로 요약했어요.";
+      const normalized = {
+        ...cachedResult,
+        scores: normalizeScores(cachedResult?.scores),
+        coreFearAxisBlock: cachedResult?.coreFearAxisBlock?.trim()
+          ? cachedResult.coreFearAxisBlock
+          : fallbackCoreFear,
+      };
       try {
         await supabaseAdmin
           .from("teaser_cache")
@@ -42,7 +65,7 @@ export async function POST(request: NextRequest) {
       } catch {
         // ignore cache hit update failures
       }
-      return NextResponse.json({ result: cached.data.result_json, mode: "teaser", cached: true });
+      return NextResponse.json({ result: normalized, mode: "teaser", cached: true });
     }
 
     const teaser = await runTeaserAnalysis(input);
