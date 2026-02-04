@@ -9,6 +9,7 @@ import SajuChart from "@/components/saju/SajuChart";
 import { useInputStore, useAllInputs, useStoreActions, type TeaserResult } from "@/store/useInputStore";
 import { calculateSaju, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
+import { MOCK_RESULT } from "@/lib/mockResult";
 
 export default function TeaserPage() {
   const router = useRouter();
@@ -42,9 +43,11 @@ export default function TeaserPage() {
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
+  const previewFull = process.env.NEXT_PUBLIC_PREVIEW_RESULT === "true";
 
-  const sanitizedResult = useMemo(() => {
-    if (!analysisResult) return null;
+  const displayResult = useMemo(() => {
+    if (!analysisResult) return previewFull ? MOCK_RESULT : null;
+    if (previewFull) return analysisResult;
     return {
       ...analysisResult,
       sections: (analysisResult.sections || []).map((section) => ({
@@ -52,7 +55,7 @@ export default function TeaserPage() {
         title: section.title,
       })),
     } as TeaserResult;
-  }, [analysisResult]);
+  }, [analysisResult, previewFull]);
 
   const hasRequiredInput = useMemo(() => {
     return (
@@ -163,6 +166,16 @@ export default function TeaserPage() {
         promises.push(sajuPromise);
       }
 
+      if (previewFull) {
+        if (!analysisResult) {
+          setAnalysisResult(MOCK_RESULT);
+        }
+        if (!cancelled) {
+          setLoading(false);
+        }
+        return;
+      }
+
       // 2. API 분석 (결과가 없을 때만)
       if (!analysisResult && !pendingAnalysis.current) {
         pendingAnalysis.current = true;
@@ -268,7 +281,7 @@ export default function TeaserPage() {
       cancelled = true;
     };
     // inputHash를 사용하여 의존성 단순화
-  }, [hasRequiredInput, hasBirthInput, inputHash, analysisResult, session?.user, router, setAnalysisResult]);
+  }, [hasRequiredInput, hasBirthInput, inputHash, analysisResult, session?.user, router, setAnalysisResult, previewFull]);
 
   const handleUnlock = async () => {
     if (alreadyUnlocked && unlockedResultId) {
@@ -332,29 +345,31 @@ export default function TeaserPage() {
             </div>
           )}
 
-          {!loading && !error && sanitizedResult && (
+          {!loading && !error && displayResult && (
             <ResultTable
-              result={sanitizedResult}
-              locked
+              result={displayResult}
+              locked={!previewFull}
               onUnlock={handleUnlock}
               unlockLabel={alreadyUnlocked ? "전체 결과 다시 보기" : "1,000원으로 전체 결과 보기"}
-              statusLabel="잠금"
+              statusLabel={previewFull ? "언락" : "잠금"}
               initialExpandedCount={0}
             />
           )}
         </div>
       </main>
 
-      <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <div className="max-w-[420px] mx-auto">
-          <button
-            onClick={handleUnlock}
-            className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200 bg-primary text-text-primary"
-          >
-            {alreadyUnlocked ? "전체 결과 다시 보기" : "1,000원으로 전체 결과 보기"}
-          </button>
+      {!previewFull && (
+        <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+          <div className="max-w-[420px] mx-auto">
+            <button
+              onClick={handleUnlock}
+              className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200 bg-primary text-text-primary"
+            >
+              {alreadyUnlocked ? "전체 결과 다시 보기" : "1,000원으로 전체 결과 보기"}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
