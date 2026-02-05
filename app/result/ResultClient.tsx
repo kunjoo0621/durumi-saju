@@ -10,7 +10,7 @@ import SajuChart from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
-import { normalizeScores } from "@/lib/analysis";
+import { normalizeScores } from "@/lib/resultSchema";
 
 // JSON 추출 함수를 컴포넌트 외부로 이동 (매 렌더링마다 재생성 방지)
 const extractJson = (text: string) => {
