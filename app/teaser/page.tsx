@@ -47,6 +47,7 @@ export default function TeaserPage() {
 
   const displayResult = useMemo(() => {
     if (!analysisResult) return previewFull ? MOCK_RESULT : null;
+    if (typeof analysisResult !== "object") return previewFull ? MOCK_RESULT : null;
     if (previewFull) return analysisResult;
     return {
       ...analysisResult,

@@ -4,6 +4,7 @@ import { memo, useMemo } from "react";
 import ScoreGrid from "./ScoreGrid";
 import SectionList, { type ResultSection } from "./SectionList";
 import type { AnalysisResult, TeaserResult } from "@/store/useInputStore";
+import { normalizeScores } from "@/lib/resultSchema";
 
 const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
 
@@ -52,14 +53,62 @@ export default function ResultTable({
   statusLabel,
   initialExpandedCount = 0,
 }: ResultTableProps) {
+  const safeTier = useMemo(() => {
+    const raw = (result as Partial<AnalysisResult>)?.tier;
+    return {
+      grade:
+        typeof raw?.grade === "string" && raw.grade.trim()
+          ? raw.grade
+          : "C",
+      percentile:
+        typeof raw?.percentile === "number" && Number.isFinite(raw.percentile)
+          ? raw.percentile
+          : 50,
+      title:
+        typeof raw?.title === "string" && raw.title.trim()
+          ? raw.title
+          : "기본 결과 요약",
+      description:
+        typeof raw?.description === "string" && raw.description.trim()
+          ? raw.description
+          : "결과를 정리하는 중입니다.",
+    };
+  }, [result]);
+
+  const safeScores = useMemo(() => normalizeScores((result as Partial<AnalysisResult>)?.scores), [result]);
+
+  const safeCoreFearAxisBlock = useMemo(() => {
+    const raw = (result as Partial<AnalysisResult>)?.coreFearAxisBlock;
+    return typeof raw === "string" && raw.trim() ? raw : "";
+  }, [result]);
+
+  const safeSections = useMemo(() => {
+    const raw = (result as Partial<AnalysisResult>)?.sections;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((section, index) => {
+        const icon = typeof section?.icon === "string" && section.icon.trim() ? section.icon : "🧩";
+        const title =
+          typeof section?.title === "string" && section.title.trim()
+            ? section.title
+            : `분석 섹션 ${index + 1}`;
+        const content =
+          typeof section?.content === "string" && section.content.trim()
+            ? section.content
+            : undefined;
+        return { icon, title, content };
+      })
+      .slice(0, 8);
+  }, [result]);
+
   const gradeKey = useMemo(() => {
-    const grade = result.tier.grade.trim().toUpperCase();
+    const grade = safeTier.grade.trim().toUpperCase();
     if (grade.startsWith("S")) return "S";
     if (grade.startsWith("A")) return "A";
     if (grade.startsWith("B")) return "B";
     if (grade.startsWith("C")) return "C";
     return "D";
-  }, [result.tier.grade]);
+  }, [safeTier.grade]);
 
   const gradeBackgrounds: Record<string, string> = {
     S: "bg-primary-rank-s/15",
@@ -82,8 +131,6 @@ export default function ResultTable({
     언락: "bg-saju-wood/15 text-saju-wood",
   };
 
-  const sections = (result.sections || []) as ResultSection[];
-
   const badgeLabel: "무료" | "잠금" | "언락" = statusLabel || (locked ? "잠금" : "언락");
 
   return (
@@ -93,24 +140,24 @@ export default function ResultTable({
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-[12px] font-semibold ${badgeStyles[badgeLabel]}`}>
             {badgeLabel}
           </span>
-          <span className="text-[12px] text-text-secondary">상위 {result.tier.percentile}%</span>
+          <span className="text-[12px] text-text-secondary">상위 {safeTier.percentile}%</span>
         </div>
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className={`text-5xl md:text-6xl font-bold ${gradeTextColors[gradeKey]}`}>{result.tier.grade}</div>
-          <div className="text-title-3 text-text-primary">{result.tier.title}</div>
-          <p className="text-body-2 text-text-secondary max-w-md">{result.tier.description}</p>
+          <div className={`text-5xl md:text-6xl font-bold ${gradeTextColors[gradeKey]}`}>{safeTier.grade}</div>
+          <div className="text-title-3 text-text-primary">{safeTier.title}</div>
+          <p className="text-body-2 text-text-secondary max-w-md">{safeTier.description}</p>
         </div>
       </div>
 
       {/* 핵심 공포 축 블록 - 등급/상위 n% 아래에 표시 */}
-      {result.coreFearAxisBlock && (
-        <CoreFearAxisBlock content={result.coreFearAxisBlock} />
+      {safeCoreFearAxisBlock && (
+        <CoreFearAxisBlock content={safeCoreFearAxisBlock} />
       )}
 
-      <ScoreGrid scores={result.scores} />
+      <ScoreGrid scores={safeScores} />
 
       <SectionList
-        sections={sections}
+        sections={safeSections as ResultSection[]}
         locked={locked}
         onUnlock={onUnlock}
         unlockLabel={unlockLabel}
