@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
-import JSON5 from "json5";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import ResultTable from "@/components/result/ResultTable";
@@ -11,20 +10,7 @@ import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
-
-// JSON 추출 함수를 컴포넌트 외부로 이동 (매 렌더링마다 재생성 방지)
-const extractJson = (text: string) => {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenced?.[1]) {
-    return fenced[1].trim();
-  }
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first !== -1 && last !== -1 && last > first) {
-    return text.slice(first, last + 1).trim();
-  }
-  return text.trim();
-};
+import { parseJson5Loose } from "@/lib/json5Utils";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -120,7 +106,9 @@ export default function ResultClient() {
 
         const data = await res.json();
         const parsed =
-          typeof data.result === "string" ? JSON5.parse(extractJson(data.result)) : data.result;
+          typeof data.result === "string"
+            ? parseJson5Loose<AnalysisResult>(data.result)
+            : (data.result as AnalysisResult);
         parsed.scores = normalizeScores(parsed.scores);
         if (!parsed.coreFearAxisBlock || !parsed.coreFearAxisBlock.trim()) {
           const axis = data.input?.coreFearAxis;
@@ -179,7 +167,12 @@ export default function ResultClient() {
           setError("입력 정보가 없어 결과를 표시할 수 없습니다.");
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+        const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
+        if (typeof message === "string" && message.includes("JSON5")) {
+          setError("결과 데이터 형식이 올바르지 않습니다. 잠시 후 다시 시도해 주세요.");
+          return;
+        }
+        setError(message);
       } finally {
         setLoading(false);
       }

@@ -1,8 +1,8 @@
-import JSON5 from "json5";
 import crypto from "crypto";
 import { calculateSaju, formatSajuText } from "@/lib/utils/saju";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 import { normalizeScores, type AnalysisScores } from "@/lib/resultSchema";
+import { parseJson5Loose } from "@/lib/json5Utils";
 
 export { normalizeScores } from "@/lib/resultSchema";
 
@@ -741,19 +741,6 @@ const DEFAULT_MODELS = [
   "gemini-2.5-pro",
 ];
 
-function extractJson(text: string) {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenced?.[1]) {
-    return fenced[1].trim();
-  }
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first !== -1 && last !== -1 && last > first) {
-    return text.slice(first, last + 1).trim();
-  }
-  return text.trim();
-}
-
 type GeminiSdkModel = {
   generateContent: (request: {
     contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>;
@@ -1045,12 +1032,23 @@ export async function runFullAnalysis(input: InputPayload) {
     }
     const res = await callGemini(model, userInfo);
     if (res.ok) {
-      const cleaned = extractJson(res.text);
-      const parsed = JSON5.parse(cleaned) as AnalysisResult;
-      parsed.scores = normalizeScores(parsed.scores);
-      parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
-      parsed.sections = enforceRiskSectionPackpok(input, parsed.sections);
-      return parsed;
+      try {
+        const parsed = parseJson5Loose<AnalysisResult>(res.text);
+        parsed.scores = normalizeScores(parsed.scores);
+        parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
+        parsed.sections = enforceRiskSectionPackpok(input, parsed.sections);
+        return parsed;
+      } catch (error: any) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[ANALYSIS_DEBUG] Invalid JSON from model", { model, message: error?.message });
+        }
+        lastError = {
+          status: 502,
+          apiStatus: "INVALID_JSON",
+          message: "분석 결과 형식이 불완전합니다. 잠시 후 다시 시도해주세요.",
+        };
+        continue;
+      }
     }
 
     lastError = res;
@@ -1097,11 +1095,22 @@ export async function runTeaserAnalysis(input: InputPayload) {
   for (const model of models) {
     const res = await callGemini(model, userInfo, TEASER_PROMPT);
     if (res.ok) {
-      const cleaned = extractJson(res.text);
-      const parsed = JSON5.parse(cleaned) as TeaserResult;
-      parsed.scores = normalizeScores(parsed.scores);
-      parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
-      return parsed;
+      try {
+        const parsed = parseJson5Loose<TeaserResult>(res.text);
+        parsed.scores = normalizeScores(parsed.scores);
+        parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
+        return parsed;
+      } catch (error: any) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[ANALYSIS_DEBUG] Invalid teaser JSON from model", { model, message: error?.message });
+        }
+        lastError = {
+          status: 502,
+          apiStatus: "INVALID_JSON",
+          message: "분석 결과 형식이 불완전합니다. 잠시 후 다시 시도해주세요.",
+        };
+        continue;
+      }
     }
 
     lastError = res;

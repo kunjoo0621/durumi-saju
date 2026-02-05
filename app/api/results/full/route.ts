@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
+import { parseJson5Loose } from "@/lib/json5Utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,8 +107,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "결과를 찾을 수 없습니다." }, { status: 404 });
     }
 
+    let parsedResult: unknown = data.full_json;
+    if (typeof parsedResult === "string") {
+      try {
+        parsedResult = parseJson5Loose(parsedResult);
+      } catch (parseError: any) {
+        console.warn("[RESULTS_FULL] Failed to parse stored full_json", {
+          userId,
+          resultId: resolvedResultId,
+          message: parseError?.message,
+        });
+        return NextResponse.json(
+          { error: "저장된 결과 데이터가 손상되어 불러올 수 없습니다. 다시 분석해주세요." },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({
-      result: data.full_json,
+      result: parsedResult,
       unlockedAt: data.unlocked_at,
       access: "user",
       input: {
