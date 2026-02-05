@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useId, useMemo, useState } from "react";
 
 type ScoreGridProps = {
   scores: Record<string, number>;
@@ -12,10 +12,11 @@ const CATEGORY_ORDER: CategoryName[] = ["재물운", "연애운", "직장운", "
 
 const FILL_DURATION_MS = 820;
 const STEP_DELAY_MS = 60;
-const SEGMENT_GAP_DEG = 8;
-const INNER_RADIUS = 38;
-const OUTER_RADIUS = 138;
-const LABEL_RADIUS = 92;
+const LABEL_RADIUS = 86;
+const BASE_ANGLE_OFFSET = -90;
+const PETAL_INNER_PIVOT_Y = -36;
+const PETAL_PATH =
+  "M -42 -36 C -58 -40 -70 -52 -74 -70 L -87 -121 C -90 -139 -80 -150 -62 -152 L 62 -152 C 80 -150 90 -139 87 -121 L 74 -70 C 70 -52 58 -40 42 -36 C 27 -30 -27 -30 -42 -36 Z";
 const SOFT_FILL_COLORS = ["#f6eff4", "#f6f0f7", "#f5eef9", "#f4edfa", "#f7f1f6"];
 
 function clampScore(raw: number): number {
@@ -39,30 +40,8 @@ function polarToCartesian(radius: number, angleDeg: number) {
   };
 }
 
-function createRingSegmentPath(
-  innerRadius: number,
-  outerRadius: number,
-  startAngle: number,
-  endAngle: number
-) {
-  if (outerRadius <= innerRadius) return "";
-
-  const startOuter = polarToCartesian(outerRadius, startAngle);
-  const endOuter = polarToCartesian(outerRadius, endAngle);
-  const endInner = polarToCartesian(innerRadius, endAngle);
-  const startInner = polarToCartesian(innerRadius, startAngle);
-  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-
-  return [
-    `M ${startOuter.x} ${startOuter.y}`,
-    `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${endOuter.x} ${endOuter.y}`,
-    `L ${endInner.x} ${endInner.y}`,
-    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${startInner.x} ${startInner.y}`,
-    "Z",
-  ].join(" ");
-}
-
 function ScoreGridInner({ scores }: ScoreGridProps) {
+  const uid = useId().replace(/:/g, "");
   const normalizedScores = useMemo(
     () =>
       CATEGORY_ORDER.map((category) => ({
@@ -131,51 +110,48 @@ function ScoreGridInner({ scores }: ScoreGridProps) {
           className="h-auto w-full"
           aria-label="카테고리별 5-꽃잎 점수 게이지"
         >
+          <defs>
+            {normalizedScores.map((item, index) => {
+              const clipId = `${uid}-petal-clip-${index}`;
+              return (
+                <clipPath id={clipId} key={`${item.category}-${clipId}`}>
+                  <path d={PETAL_PATH} />
+                </clipPath>
+              );
+            })}
+          </defs>
+
           {normalizedScores.map((item, index) => {
-            const segmentSize = 360 / normalizedScores.length;
-            const startAngle = -90 + index * segmentSize + SEGMENT_GAP_DEG / 2;
-            const endAngle = startAngle + segmentSize - SEGMENT_GAP_DEG;
-            const midAngle = (startAngle + endAngle) / 2;
+            const angle = BASE_ANGLE_OFFSET + index * (360 / normalizedScores.length);
+            const midAngle = angle;
             const targetRatio = targetRatios[index] || 0;
             const animatedRatio = animatedRatios[index] || 0;
-            const animatedOuterRadius =
-              INNER_RADIUS + (OUTER_RADIUS - INNER_RADIUS) * animatedRatio;
-
-            const basePath = createRingSegmentPath(
-              INNER_RADIUS,
-              OUTER_RADIUS,
-              startAngle,
-              endAngle
-            );
-            const fillPath = createRingSegmentPath(
-              INNER_RADIUS + 1.5,
-              animatedOuterRadius,
-              startAngle + 0.7,
-              endAngle - 0.7
-            );
-
             const labelPoint = polarToCartesian(LABEL_RADIUS, midAngle);
             const localProgress = targetRatio > 0 ? animatedRatio / targetRatio : 1;
             const labelOpacity = clamp((localProgress - 0.52) / 0.2, 0, 1);
+            const clipId = `${uid}-petal-clip-${index}`;
+            const fillTransform = `translate(0 ${PETAL_INNER_PIVOT_Y}) scale(1 ${animatedRatio}) translate(0 ${-PETAL_INNER_PIVOT_Y})`;
 
             return (
               <g key={item.category}>
-                <path
-                  d={basePath}
-                  fill="rgba(132, 130, 136, 0.55)"
-                  stroke="rgba(255,255,255,0.08)"
-                  strokeWidth="1.4"
-                  strokeLinejoin="round"
-                />
-                {fillPath && (
+                <g transform={`rotate(${angle})`}>
                   <path
-                    d={fillPath}
-                    fill={SOFT_FILL_COLORS[index % SOFT_FILL_COLORS.length]}
-                    stroke="rgba(255,255,255,0.12)"
-                    strokeWidth="1"
+                    d={PETAL_PATH}
+                    fill="rgba(122, 120, 128, 0.56)"
+                    stroke="rgba(255,255,255,0.085)"
+                    strokeWidth="1.4"
                     strokeLinejoin="round"
                   />
-                )}
+                  <path
+                    d={PETAL_PATH}
+                    fill={SOFT_FILL_COLORS[index % SOFT_FILL_COLORS.length]}
+                    stroke="rgba(255,255,255,0.14)"
+                    strokeWidth="1.1"
+                    strokeLinejoin="round"
+                    clipPath={`url(#${clipId})`}
+                    transform={fillTransform}
+                  />
+                </g>
                 <g
                   transform={`translate(${labelPoint.x}, ${labelPoint.y})`}
                   style={{ opacity: labelOpacity }}
@@ -206,7 +182,7 @@ function ScoreGridInner({ scores }: ScoreGridProps) {
           <circle
             cx="0"
             cy="0"
-            r={INNER_RADIUS - 7}
+            r={28}
             fill="rgba(18, 18, 23, 0.95)"
             stroke="rgba(255,255,255,0.07)"
             strokeWidth="1.2"
