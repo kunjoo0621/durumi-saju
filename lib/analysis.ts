@@ -58,19 +58,277 @@ export type InputPayload = {
   saju?: string | null;
 };
 
-const DEFAULT_CORE_FEAR_BLOCK =
-  "선택한 고민: 미선택\n\n요즘 고민 선택이 없어 일반적인 기준으로 요약했어요.";
+const ALLOWED_FEAR_LABELS = ["돈·재정", "이직·커리어", "인간관계", "건강·컨디션"] as const;
+
+export function validatePackpok(text: string): boolean {
+  const normalized = text?.trim() ?? "";
+  if (!normalized) return false;
+  return normalized.includes("이 말이 나오는 이유는") && normalized.includes("그래서 2주만");
+}
+
+function resolveCoreFearLabel(input: InputPayload): string {
+  const axis = input.coreFearAxis;
+
+  if (axis && axis in CORE_FEAR_LABELS) {
+    return CORE_FEAR_LABELS[axis as CoreFearAxis];
+  }
+
+  if (typeof axis === "string") {
+    const normalized = axis.trim();
+    if ((ALLOWED_FEAR_LABELS as readonly string[]).includes(normalized)) {
+      return normalized;
+    }
+  }
+
+  return "미선택";
+}
+
+const METAPHOR_HOOK_POOLS: Record<string, string[]> = {
+  "돈·재정": [
+    "새는 수도꼭지 앞에서 물통만 바꾸는 느낌이라 바닥이 계속 젖어.",
+    "통장 잔고보다 지출 습관이 더 시끄럽게 울려서 계획이 자주 밀려.",
+    "지갑을 닫아도 결제 알림이 먼저 달리는 흐름이라 리듬이 깨져.",
+    "수입은 들어오는데 지출 루트가 지도를 벗어난 느낌으로 흘러가.",
+    "예산표를 접어두면 카드 명세서가 하루 우선순위를 대신 정해.",
+    "돈을 모으려는데 작은 결제가 틈으로 계속 새어나가는 구조야.",
+    "이번 달 목표보다 자동결제가 먼저 도착해서 선택권을 줄여.",
+    "현금흐름을 놓치면 마음의 소음이 먼저 커져서 판단을 흔들어.",
+  ],
+  "이직·커리어": [
+    "지도 없이 달리면 속도는 나는데 방향은 잃어서 피로만 먼저 남아.",
+    "일은 계속 하고 있는데 커리어는 방치된 서랍처럼 쌓여만 가.",
+    "성과는 쌓이는데 다음 스텝은 비어 있는 화면처럼 멈춰 있어.",
+    "바쁜 일정 속에서 경력 설계가 뒤로 밀려 방향 감각이 흐려져.",
+    "할 일은 많은데 커리어 기준표는 접혀 있어서 선택이 흔들려.",
+    "프로젝트는 끝나는데 포지션 방향은 아직 흐릿해서 체감이 약해.",
+    "이직 생각은 빠른데 준비 루틴은 느리게 따라와 타이밍이 어긋나.",
+    "일의 양은 늘어도 경력의 축은 고정되지 않아 누수가 생겨.",
+  ],
+  인간관계: [
+    "문이 없는 울타리는 결국 다 들어오게 돼서 에너지 누수가 커져.",
+    "다정함이 경계 없이 새면 피로가 이자를 붙여 돌아오는 구조야.",
+    "관계를 지키려다 내 일정이 먼저 무너지는 흐름이 반복되고 있어.",
+    "대화는 많아도 경계선이 흐리면 감정 소모가 크게 남아버려.",
+    "부탁을 다 받다 보면 내 리듬이 먼저 깨져서 집중이 흩어져.",
+    "분위기를 맞추는 동안 내 에너지는 조용히 줄어드는 패턴이야.",
+    "관계의 온도는 높은데 거리 조절이 늦어져 피로가 먼저 쌓여.",
+    "좋은 의도만으로 버티면 피로가 빠르게 누적되어 판단이 흐려져.",
+  ],
+  "건강·컨디션": [
+    "배터리 경고등 켜놓고 화면 밝기만 올리는 중이라 소모가 빨라져.",
+    "회복 버튼이 없는 하루를 반복하는 느낌이라 속도가 자꾸 꺾여.",
+    "잠을 미루는 밤이 쌓이면 낮 집중력이 먼저 빠져서 효율이 낮아져.",
+    "컨디션 관리 없이 일정만 늘리면 몸이 먼저 흔들려 신호를 보내.",
+    "피로를 넘기다 보면 작은 무기력이 기본값처럼 자리 잡아.",
+    "하루는 굴러가도 회복 루틴이 없으면 다음 날 리듬이 깨져.",
+    "몸의 신호를 미루면 일정 밀도가 먼저 무너져 체감이 크게 와.",
+    "컨디션 적자를 방치하면 집중 시간이 먼저 줄어들어 흐름이 깨져.",
+  ],
+  미선택: [
+    "흐르는 강을 막아두면 결국 다른 데서 넘쳐서 정리가 더 어려워져.",
+    "정리 안 된 루틴은 조용히 발목을 잡아 선택 속도를 계속 늦춰.",
+    "우선순위를 비워두면 급한 일이 하루 전체를 대신 설계하게 돼.",
+    "계획 없는 하루가 쌓이면 선택 비용이 커져서 피로가 먼저 와.",
+    "작은 미루기가 반복되면 일정 전체가 뒤로 밀려 체감 부담이 커져.",
+    "기록 없는 루틴은 감각에 기대게 만들고 흔들림을 점점 키워.",
+    "정리 없이 달리면 속도보다 누수가 먼저 보여 흐름이 무너져.",
+    "기준 없는 선택이 이어지면 피로가 먼저 결과를 만들어버려.",
+  ],
+};
+
+const FUTURE_SENTENCE_POOLS: Record<string, string[]> = {
+  "돈·재정": [
+    "앞으로 3~6개월은 지출 기록이 끊기는 주간마다 현금흐름 불안이 바로 커질 가능성이 높아.",
+    "당분간은 고정비 정리가 늦어질수록 예산보다 카드 명세서가 먼저 결정을 주도할 거야.",
+    "이번 분기엔 충동 결제를 늦추는 루틴이 없으면 저축 속도가 체감보다 더 천천히 붙어.",
+    "가까운 시기에(1~3개월) 결제 기준표를 못 세우면 작은 누수가 월말 압박으로 번질 수 있어.",
+  ],
+  "이직·커리어": [
+    "앞으로 3~6개월은 지원 기준이 없을수록 이직 속도보다 피로도가 더 빨리 쌓일 가능성이 커.",
+    "당분간은 포트폴리오 업데이트 주기가 느리면 기회가 와도 연결 속도가 늦어질 거야.",
+    "이번 분기엔 커리어 우선순위를 못 고정하면 성과는 쌓여도 방향성 체감은 약해질 수 있어.",
+    "가까운 시기에(1~3개월) 목표 포지션 정의가 흐리면 준비 시간 대비 전환 효율이 떨어질 수 있어.",
+  ],
+  인간관계: [
+    "앞으로 3~6개월은 경계 문장이 없을수록 관계 피로가 일정 전체로 번질 가능성이 높아.",
+    "당분간은 부탁 수락 기준이 모호하면 좋은 관계도 부담으로 바뀌는 순간이 늘어날 거야.",
+    "이번 분기엔 감정 소모를 기록하지 않으면 대화 횟수와 만족도가 반대로 움직일 수 있어.",
+    "가까운 시기에(1~3개월) 거리 조절을 미루면 작은 오해가 반복 패턴으로 굳어질 가능성이 있어.",
+  ],
+  "건강·컨디션": [
+    "앞으로 3~6개월은 수면 리듬이 흔들리는 주간마다 집중력 저하가 더 자주 눈에 띌 가능성이 커.",
+    "당분간은 회복 루틴이 비면 일정 밀도보다 피로 누적 속도가 더 빨라질 거야.",
+    "이번 분기엔 카페인과 취침 시간을 함께 관리하지 않으면 컨디션 변동폭이 커질 수 있어.",
+    "가까운 시기에(1~3개월) 회복 기준을 못 세우면 무기력 구간이 반복 패턴으로 굳어질 수 있어.",
+  ],
+  미선택: [
+    "앞으로 3~6개월은 루틴이 비는 주간마다 우선순위 혼선이 더 크게 체감될 가능성이 높아.",
+    "당분간은 기록 없는 일정 운영이 이어지면 급한 일 중심의 반복이 더 잦아질 거야.",
+    "이번 분기엔 하루 기준표가 없으면 집중 시간보다 전환 비용이 더 크게 늘어날 수 있어.",
+    "가까운 시기에(1~3개월) 기본 루틴을 못 고정하면 작은 누수가 큰 피로로 연결될 가능성이 있어.",
+  ],
+};
+
+const MYEONGRI_TERMS_BY_LABEL: Record<string, string[]> = {
+  "돈·재정": ["정재(正財)", "겁재(劫財)", "비견(比肩)", "식신(食神)"],
+  "이직·커리어": ["정관(正官)", "편관(偏官)", "상관(傷官)", "편인(偏印)"],
+  인간관계: ["비견(比肩)", "겁재(劫財)", "정인(正印)", "상관(傷官)"],
+  "건강·컨디션": ["편관(偏官)", "인성(印星)", "식신(食神)", "상관(傷官)"],
+  미선택: ["정관(正官)", "정재(正財)", "비견(比肩)", "인성(印星)"],
+};
+
+function pickFromPool(
+  input: InputPayload,
+  label: string,
+  scope: "core" | "risk" | "conclusion",
+  channel: "hook" | "future" | "term",
+  pool: string[]
+) {
+  if (!pool.length) return "";
+  const seed = `${buildInputHash(input)}:${label}:${scope}:${channel}`;
+  const hashHex = crypto.createHash("sha256").update(seed).digest("hex");
+  const idx = parseInt(hashHex.slice(0, 8), 16) % pool.length;
+  return pool[idx];
+}
+
+function pickMetaphorHook(input: InputPayload, label: string, scope: "core" | "risk" | "conclusion") {
+  const pool = METAPHOR_HOOK_POOLS[label] || METAPHOR_HOOK_POOLS.미선택;
+  return pickFromPool(input, label, scope, "hook", pool);
+}
+
+function pickFutureSentence(input: InputPayload, label: string, scope: "core" | "risk" | "conclusion") {
+  const pool = FUTURE_SENTENCE_POOLS[label] || FUTURE_SENTENCE_POOLS.미선택;
+  return pickFromPool(input, label, scope, "future", pool);
+}
+
+function pickMyungriTerms(input: InputPayload, label: string, scope: "core" | "risk" | "conclusion") {
+  const pool = MYEONGRI_TERMS_BY_LABEL[label] || MYEONGRI_TERMS_BY_LABEL.미선택;
+  const first = pickFromPool(input, label, scope, "term", pool);
+  const secondPool = pool.filter((item) => item !== first);
+  const second = pickFromPool(input, label, scope, "term", secondPool);
+  return second ? [first, second] : [first];
+}
+
+function getABPairByLabel(label: string): { a: string; b: string } {
+  const abMap: Record<string, { a: string; b: string }> = {
+    "돈·재정": { a: "통장 잔고", b: "지출을 관리하는 루틴의 부재" },
+    "이직·커리어": { a: "이직 타이밍", b: "커리어 기준 없는 선택 패턴" },
+    인간관계: { a: "상대 반응", b: "경계 없는 관계 패턴" },
+    "건강·컨디션": { a: "하루 컨디션", b: "회복 루틴의 붕괴" },
+    미선택: { a: "운세 점수", b: "일상 관리 루틴의 부재" },
+  };
+  return abMap[label] || abMap.미선택;
+}
+
+function getActionSentenceByLabel(label: string): string {
+  const actionSentenceMap: Record<string, string> = {
+    "돈·재정":
+      "그래서 2주만 이번 주에 고정지출·변동지출을 7일 기록하고, 다음 주에 상위 3개 지출 항목 한도를 10% 줄여 실행한다.",
+    "이직·커리어":
+      "그래서 2주만 이번 주에 경력기술서와 포트폴리오를 1회 업데이트하고, 다음 주에 목표 포지션 5곳에 지원해 결과를 기록한다.",
+    인간관계:
+      "그래서 2주만 이번 주에 피로한 관계 2건의 경계 문장을 정리하고, 다음 주에 필요한 1명과 30분 대화를 실행한다.",
+    "건강·컨디션":
+      "그래서 2주만 이번 주에 수면·카페인·운동 시간을 7일 기록하고, 다음 주에 취침 시간을 30분 앞당겨 5일 유지한다.",
+    미선택:
+      "그래서 2주만 이번 주에 수면·지출·집중시간을 7일 기록하고, 다음 주에 완료율이 낮은 루틴 2개를 고정해서 실행한다.",
+  };
+  return (
+    actionSentenceMap[label] ||
+    "그래서 2주만 이번 주에 하루 계획 3개를 기록하고, 다음 주에 완료율 70% 기준으로 루틴 2개를 고정한다."
+  );
+}
+
+function getTruthSentenceByLabel(label: string): string {
+  const truthMap: Record<string, string> = {
+    "돈·재정": "불편한 진실은, 기록 없는 지출은 스트레스가 아니라 반복 비용이 된다는 점이야.",
+    "이직·커리어": "불편한 진실은, 기준 없는 지원은 경험이 쌓여도 방향성을 남기지 못한다는 점이야.",
+    인간관계: "불편한 진실은, 경계 없이 맞춰주면 관계가 좋아지는 게 아니라 피로만 누적된다는 점이야.",
+    "건강·컨디션": "불편한 진실은, 회복 루틴을 미루면 집중력 저하가 기본 상태가 된다는 점이야.",
+    미선택: "불편한 진실은, 루틴 없이 버틴 하루가 다음 주의 혼란을 그대로 키운다는 점이야.",
+  };
+  return truthMap[label] || truthMap.미선택;
+}
+
+function buildForcedPackpokContent(
+  input: InputPayload,
+  scope: "core" | "risk" | "conclusion"
+): string {
+  const label = resolveCoreFearLabel(input);
+  const relationship = input.relationshipStatus || "상태 미상";
+  const employment = input.employmentStatus || "상태 미상";
+
+  const hookSentence = pickMetaphorHook(input, label, scope);
+  const picked = getABPairByLabel(label);
+  const [term1, term2] = pickMyungriTerms(input, label, scope);
+  const termText = term2 ? `${term1}, ${term2}` : term1;
+  const firstSentence = `지금 문제는 ${picked.a}가 아니라 ${picked.b}야.`;
+  const secondSentence = `이 말이 나오는 이유는 ${employment}이고 ${relationship} 상태에서 ${label} 고민이 반복되고, ${termText} 흐름이 동시에 흔들리기 때문이야.`;
+  const thirdSentence = pickFutureSentence(input, label, scope);
+  const fourthSentence = getActionSentenceByLabel(label);
+  const fifthSentence = getTruthSentenceByLabel(label);
+
+  const lines = [`${hookSentence}`, `선택한 고민: ${label}`, firstSentence, secondSentence, thirdSentence, fourthSentence, fifthSentence];
+  return lines.join("\n");
+}
+
+function buildForcedCoreFearAxisBlock(input: InputPayload): string {
+  return buildForcedPackpokContent(input, "core");
+}
+
+function resolveRiskSectionIndex(sections: AnalysisResult["sections"]): number {
+  const riskKeywords = /(리스크)/;
+  const riskSimilarKeywords = /(경고|위험|새는|누수|위기)/;
+  const riskIcons = new Set(["⚠️", "🚨", "🛑", "🔥", "🕳️", "⛔", "☠️"]);
+
+  const titleHit = sections.findIndex((section) => riskKeywords.test(String(section?.title || "")));
+  if (titleHit >= 0) return titleHit;
+
+  const similarHit = sections.findIndex(
+    (section) =>
+      riskSimilarKeywords.test(String(section?.title || "")) ||
+      riskSimilarKeywords.test(String(section?.content || ""))
+  );
+  if (similarHit >= 0) return similarHit;
+
+  const iconHit = sections.findIndex((section) => riskIcons.has(String(section?.icon || "")));
+  if (iconHit >= 0) return iconHit;
+
+  if (sections.length === 0) return -1;
+  if (sections.length === 1) return 0;
+  return sections.length - 2;
+}
+
+function resolveConclusionSectionIndex(sections: AnalysisResult["sections"]): number {
+  const conclusionKeywords = /(결론|요약|정리|한 줄)/;
+
+  const titleHit = sections.findIndex((section) => conclusionKeywords.test(String(section?.title || "")));
+  if (titleHit >= 0) return titleHit;
+
+  return sections.length > 0 ? sections.length - 1 : -1;
+}
+
+function enforceRiskSectionPackpok(input: InputPayload, sections: AnalysisResult["sections"]) {
+  if (!Array.isArray(sections) || sections.length === 0) return sections;
+  const nextSections = [...sections];
+  const targetIndexes = [resolveRiskSectionIndex(sections), resolveConclusionSectionIndex(sections)];
+  const uniqueIndexes = [...new Set(targetIndexes)].filter((idx) => idx >= 0);
+
+  uniqueIndexes.forEach((idx) => {
+    const target = nextSections[idx];
+    if (target?.content && validatePackpok(target.content)) return;
+    const scope = idx === targetIndexes[0] ? "risk" : "conclusion";
+    nextSections[idx] = {
+      ...target,
+      content: buildForcedPackpokContent(input, scope),
+    };
+  });
+
+  return nextSections;
+}
 
 function resolveCoreFearAxisBlock(input: InputPayload, existing?: string | null): string {
-  if (existing && existing.trim()) return existing;
-  if (input.coreFearAxis) {
-    return buildCoreFearAxisBlock(
-      input.coreFearAxis as CoreFearAxis,
-      input.relationshipStatus,
-      input.employmentStatus
-    );
-  }
-  return DEFAULT_CORE_FEAR_BLOCK;
+  return buildForcedCoreFearAxisBlock(input);
 }
 
 // 핵심 공포 축 라벨
@@ -338,6 +596,10 @@ const SYSTEM_PROMPT = `
 
 ────────────────────────────────
 [팩폭(선택 불가) 규칙: 강하게, 하지만 공정하게]
+- 금지: 결과 전체에서 "괜찮아/잘하고 있어/충분해/응원해/힘내" 같은 위로·응원 문장을 쓰지 마라.
+- 각 섹션의 결론 문장(마지막 문장)은 반드시 현실 판정(불편한 진실 1개)을 포함해야 한다. 완곡하게 돌리지 말고 직설로 쓴다.
+- 팩폭 3문장 중 첫 문장은 반드시 "지금 문제는 A가 아니라 B야." 템플릿을 사용한다(A,B는 상황에 맞게 채움).
+- 행동 팁은 "하면 좋다" 금지. "이번 주에 A를 하고, 다음 주에 B를 한다"처럼 실행을 단정형으로 쓰되, 운명 단정(무조건/반드시 인생 망함)은 금지한다.
 - 팩폭은 총 3회 의무 포함한다.
   1) coreFearAxisBlock에 1회(강도 hard)
   2) sections 중 “경고/새는 구멍/리스크” 성격 섹션에 1회(강도 hard)
@@ -492,7 +754,93 @@ function extractJson(text: string) {
   return text.trim();
 }
 
-async function callGemini(model: string, prompt: string) {
+type GeminiSdkModel = {
+  generateContent: (request: {
+    contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>;
+    generationConfig?: {
+      maxOutputTokens?: number;
+      responseMimeType?: string;
+    };
+  }) => Promise<{
+    response?: {
+      text?: () => string;
+      candidates?: Array<{
+        content?: {
+          parts?: Array<{ text?: string }>;
+        };
+      }>;
+    };
+  }>;
+};
+
+let googleAiClientPromise: Promise<any | null> | null = null;
+
+async function getGeminiSdkModel(model: string, systemText: string): Promise<GeminiSdkModel | null> {
+  if (!googleAiClientPromise) {
+    googleAiClientPromise = (async () => {
+      try {
+        const dynamicImport = new Function("moduleName", "return import(moduleName)") as (
+          moduleName: string
+        ) => Promise<any>;
+        const sdk = await dynamicImport("@google/generative-ai");
+        const GoogleGenerativeAI = sdk?.GoogleGenerativeAI;
+        const apiKey = process.env.GEMINI_API_KEY || "";
+        if (!GoogleGenerativeAI || !apiKey) return null;
+        return new GoogleGenerativeAI(apiKey);
+      } catch {
+        return null;
+      }
+    })();
+  }
+
+  const client = await googleAiClientPromise;
+  if (!client) return null;
+
+  return client.getGenerativeModel({
+    model,
+    systemInstruction: systemText,
+  }) as GeminiSdkModel;
+}
+
+async function callGemini(
+  model: string,
+  userInfo: string,
+  systemPrompt: string = SYSTEM_PROMPT
+) {
+  const sdkModel = await getGeminiSdkModel(model, systemPrompt);
+  if (sdkModel) {
+    try {
+      const data = await sdkModel.generateContent({
+        contents: [{ role: "user", parts: [{ text: userInfo }] }],
+        generationConfig: {
+          maxOutputTokens: 4000,
+          responseMimeType: "application/json",
+        },
+      });
+
+      const response = data?.response;
+      const textFromMethod = response?.text?.()?.trim();
+      const textFromParts = response?.candidates?.[0]?.content?.parts
+        ?.map((part) => part.text || "")
+        .join("")
+        .trim();
+      const text = textFromMethod || textFromParts;
+
+      if (!text) {
+        return { ok: false as const, status: 500, apiStatus: undefined, message: "빈 응답" };
+      }
+
+      return { ok: true as const, text };
+    } catch (error: any) {
+      return {
+        ok: false as const,
+        status: Number(error?.status) || 500,
+        apiStatus: error?.status || error?.code,
+        message: error?.message || "Gemini SDK error",
+      };
+    }
+  }
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const response = await fetch(url, {
     method: "POST",
@@ -501,7 +849,10 @@ async function callGemini(model: string, prompt: string) {
       "x-goog-api-key": process.env.GEMINI_API_KEY || "",
     },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [
+        { role: "user", parts: [{ text: userInfo }] },
+      ],
       generationConfig: {
         maxOutputTokens: 4000,
         response_mime_type: "application/json",
@@ -654,6 +1005,7 @@ export async function runFullAnalysis(input: InputPayload) {
   if (useMock) {
     const mockResult = { ...MOCK_DATA };
     mockResult.coreFearAxisBlock = resolveCoreFearAxisBlock(input, mockResult.coreFearAxisBlock);
+    mockResult.sections = enforceRiskSectionPackpok(input, mockResult.sections);
     return mockResult;
   }
 
@@ -680,17 +1032,24 @@ export async function runFullAnalysis(input: InputPayload) {
 위 정보를 바탕으로 사주를 분석해주세요. 연애/직업 정보가 제공된 경우 해당 맥락을 결과에 반영하세요.
   `.trim();
 
-  const prompt = `${SYSTEM_PROMPT}\n\n[User]\n${userInfo}`;
   const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
   let lastError: { status?: number; apiStatus?: string; message?: string } | null = null;
 
   for (const model of models) {
-    const res = await callGemini(model, prompt);
+    if (process.env.NODE_ENV !== "production") {
+      console.info("[ANALYSIS_DEBUG] Full analysis prompt check", {
+        systemPromptLength: SYSTEM_PROMPT.length,
+        userInfoLength: userInfo.length,
+        hasPackpokRule: SYSTEM_PROMPT.includes("[팩폭(선택 불가) 규칙"),
+      });
+    }
+    const res = await callGemini(model, userInfo);
     if (res.ok) {
       const cleaned = extractJson(res.text);
       const parsed = JSON5.parse(cleaned) as AnalysisResult;
       parsed.scores = normalizeScores(parsed.scores);
       parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
+      parsed.sections = enforceRiskSectionPackpok(input, parsed.sections);
       return parsed;
     }
 
@@ -732,12 +1091,11 @@ export async function runTeaserAnalysis(input: InputPayload) {
 요즘 1등 이슈: ${coreFearLabel}
   `.trim();
 
-  const prompt = `${TEASER_PROMPT}\n\n[User]\n${userInfo}`;
   const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
   let lastError: { status?: number; apiStatus?: string; message?: string } | null = null;
 
   for (const model of models) {
-    const res = await callGemini(model, prompt);
+    const res = await callGemini(model, userInfo, TEASER_PROMPT);
     if (res.ok) {
       const cleaned = extractJson(res.text);
       const parsed = JSON5.parse(cleaned) as TeaserResult;

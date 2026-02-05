@@ -8,14 +8,79 @@ type SectionBodyProps = {
 };
 
 const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
+const SELECTED_ISSUE_PREFIX = "선택한 고민:";
+
+function parseStructuredContent(content: string) {
+  const lines = content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length < 3) return null;
+
+  const selectedLineIndex = lines.findIndex((line) => line.startsWith(SELECTED_ISSUE_PREFIX));
+  if (selectedLineIndex <= 0) return null;
+
+  const hookLine = lines[0];
+  const selectedLine = lines[selectedLineIndex];
+  const selectedIssue = selectedLine.replace(SELECTED_ISSUE_PREFIX, "").trim();
+  const bodyLines = lines.filter((_, index) => index !== 0 && index !== selectedLineIndex);
+
+  if (!hookLine || bodyLines.length === 0) return null;
+
+  return {
+    hookLine,
+    selectedIssue: selectedIssue || "미선택",
+    bodyLines,
+  };
+}
 
 export default function SectionBody({ content, locked = false, onUnlock, unlockLabel }: SectionBodyProps) {
-  if (!locked && typeof content === "string") {
+  if (!locked && typeof content === "string" && content.trim()) {
+    const structured = parseStructuredContent(content);
+
+    if (!structured) {
+      return (
+        <p className="text-body-2 text-text-primary leading-relaxed whitespace-pre-wrap">
+          {content}
+        </p>
+      );
+    }
+
     return (
-      <p className="text-body-2 text-text-primary leading-relaxed whitespace-pre-wrap">
-        {content}
-      </p>
+      <div className="space-y-4">
+        <p
+          className="text-[23px] leading-[1.35] font-semibold text-text-primary"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {structured.hookLine}
+        </p>
+
+        <div>
+          <p className="text-[11px] text-text-tertiary tracking-[0.08em] uppercase">
+            선택한 고민:
+          </p>
+          <p className="text-[14px] text-text-secondary mt-1">{structured.selectedIssue}</p>
+        </div>
+
+        <div className="space-y-2">
+          {structured.bodyLines.map((line, index) => (
+            <p key={`${line}-${index}`} className="text-body-2 text-text-primary leading-relaxed whitespace-pre-wrap">
+              {line}
+            </p>
+          ))}
+        </div>
+      </div>
     );
+  }
+
+  if (!locked) {
+    return <p className="text-body-2 text-text-secondary">내용이 없습니다.</p>;
   }
 
   return (
