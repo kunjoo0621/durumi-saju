@@ -72,7 +72,7 @@ export default function CoinsPage() {
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
       <header className="sticky top-0 z-[100] bg-background-primary px-5 py-5">
-        <div className="max-w-[420px] mx-auto flex items-center justify-between">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
             onClick={() => router.back()}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
@@ -88,7 +88,7 @@ export default function CoinsPage() {
       </header>
 
       <main className="flex-1 px-5 pb-40">
-        <div className="max-w-[420px] mx-auto pt-10 space-y-6">
+        <div className="max-w-[640px] mx-auto pt-10 space-y-6">
           <div className="bg-background-secondary rounded-2xl p-5 space-y-2">
             <div className="text-[18px] font-semibold">1코인 = 1,000원</div>
             <p className="text-[14px] text-text-secondary">{subtitle}</p>
@@ -104,7 +104,7 @@ export default function CoinsPage() {
       </main>
 
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <div className="max-w-[420px] mx-auto">
+        <div className="max-w-[640px] mx-auto">
           <button
             onClick={handlePurchase}
             disabled={loading}

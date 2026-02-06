@@ -201,7 +201,7 @@ export default function ResultClient() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
-        <div className="max-w-md w-full text-center">
+        <div className="max-w-[640px] w-full text-center">
           <div className="mb-6">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" aria-label="로딩 중" />
           </div>
@@ -215,7 +215,7 @@ export default function ResultClient() {
   if (requiresLogin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
-        <div className="max-w-md w-full text-center">
+        <div className="max-w-[640px] w-full text-center">
           <div className="mb-6 text-6xl" aria-hidden="true">🔒</div>
           <h2 className="text-title-2 text-text-primary mb-4">재조회는 로그인 후 가능합니다</h2>
           <p className="text-body-2 text-text-secondary mb-8">
@@ -235,7 +235,7 @@ export default function ResultClient() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
-        <div className="max-w-md w-full text-center">
+        <div className="max-w-[640px] w-full text-center">
           <div className="mb-6 text-6xl" aria-hidden="true">⚠️</div>
           <h2 className="text-title-2 text-text-primary mb-4">분석에 실패했습니다</h2>
           <p className="text-body-2 text-text-secondary mb-8">{error}</p>
@@ -258,7 +258,7 @@ export default function ResultClient() {
     <div className="min-h-screen bg-background-primary">
       {/* 헤더 */}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
           <h1 className="text-title-3 text-text-primary text-center font-aggro">사주보는 두루미</h1>
           <MenuDrawer />
@@ -267,7 +267,7 @@ export default function ResultClient() {
 
       {/* 메인 콘텐츠 */}
       <main className="px-6 py-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="max-w-[640px] mx-auto space-y-6">
           {!session?.user && (
             <div className="rounded-2xl bg-background-secondary p-4 text-text-secondary flex flex-col gap-3">
               <p className="text-[14px]">
@@ -300,7 +300,7 @@ export default function ResultClient() {
 
       {/* 다시 보기 버튼 */}
       <div className="px-6 py-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[640px] mx-auto">
           <button
             onClick={() => router.push("/start")}
             className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
@@ -312,7 +312,7 @@ export default function ResultClient() {
 
       {/* 푸터 */}
       <footer className="px-6 py-12">
-        <div className="max-w-6xl mx-auto text-center">
+        <div className="max-w-[640px] mx-auto text-center">
           <p className="text-[11px] text-text-tertiary">
             이 분석은 AI를 활용한 참고 자료입니다.
             <br />

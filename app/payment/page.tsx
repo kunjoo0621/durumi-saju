@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import Script from "next/script";
 import MenuDrawer from "../MenuDrawer";
-import { useInputStore } from "@/store/useInputStore";
 
 // 로딩 컴포넌트
 function PaymentLoading() {
@@ -23,21 +22,6 @@ function PaymentContent() {
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [returnTo, setReturnTo] = useState<string | null>(null);
-  const {
-    name,
-    birthYear,
-    birthMonth,
-    birthDay,
-    calendarType,
-    birthHour,
-    birthMinute,
-    birthLocation,
-    gender,
-    relationshipStatus,
-    employmentStatus,
-    coreFearAxis,
-    unknownBirthTime,
-  } = useInputStore();
 
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,27 +35,14 @@ function PaymentContent() {
   const orderIdParam = searchParams?.get("orderId");
   const amountParam = searchParams?.get("amount");
   const returnToParam = searchParams?.get("returnTo");
+  const sessionIdParam = searchParams?.get("sessionId");
   const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
   const mockPayment = process.env.NEXT_PUBLIC_USE_MOCK_PAYMENT === "true";
   const amount = 1000;
 
-  const hasRequiredInput = useMemo(() => {
-    return (
-      name.trim() &&
-      birthYear &&
-      birthMonth &&
-      birthDay &&
-      birthLocation &&
-      gender &&
-      relationshipStatus &&
-      employmentStatus &&
-      coreFearAxis
-    );
-  }, [name, birthYear, birthMonth, birthDay, birthLocation, gender, relationshipStatus, employmentStatus, coreFearAxis]);
-
   const handlePay = async () => {
-    if (!hasRequiredInput) {
-      router.push("/start");
+    if (!sessionIdParam) {
+      router.push("/checkout");
       return;
     }
 
@@ -97,19 +68,7 @@ function PaymentContent() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name,
-            birthYear,
-            birthMonth,
-            birthDay,
-            calendarType,
-            birthHour,
-            birthMinute,
-            birthLocation,
-            gender,
-            relationshipStatus,
-            employmentStatus,
-            coreFearAxis,
-            unknownBirthTime,
+            sessionId: sessionIdParam,
             paymentMethod: "mock",
             orderId: safeOrderId,
             amount,
@@ -132,15 +91,15 @@ function PaymentContent() {
       const origin = window.location.origin;
       const successUrl = `${origin}/payment?returnTo=${encodeURIComponent(
         returnTo && returnTo.startsWith("/") ? returnTo : "/result"
-      )}`;
-      const failUrl = `${origin}/teaser?error=payment`;
+      )}&sessionId=${encodeURIComponent(sessionIdParam)}`;
+      const failUrl = `${origin}/checkout?error=payment`;
 
       await widgets.requestPayment({
         orderId: safeOrderId,
         orderName: "사주 전체 결과",
         successUrl,
         failUrl,
-        customerName: name || "두루미",
+        customerName: session?.user?.name || "두루미",
       });
     } catch (err: any) {
       setError(err?.message || "결제창 호출에 실패했습니다.");
@@ -151,13 +110,20 @@ function PaymentContent() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      signIn("kakao", { callbackUrl: "/payment?returnTo=/result" });
+      const callback = `/payment?returnTo=${encodeURIComponent(
+        returnToParam && returnToParam.startsWith("/") ? returnToParam : "/result"
+      )}${sessionIdParam ? `&sessionId=${encodeURIComponent(sessionIdParam)}` : ""}`;
+      signIn("kakao", { callbackUrl: callback });
     }
-  }, [status]);
+  }, [status, returnToParam, sessionIdParam]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     setReturnTo(returnToParam);
+    if (!sessionIdParam) {
+      router.replace("/checkout");
+      return;
+    }
     const stored = sessionStorage.getItem("sajuOrderId");
     if (stored) {
       setOrderId(stored);
@@ -166,7 +132,7 @@ function PaymentContent() {
     const generated = window.crypto?.randomUUID?.() || `order_${Date.now()}`;
     sessionStorage.setItem("sajuOrderId", generated);
     setOrderId(generated);
-  }, [returnToParam]);
+  }, [returnToParam, sessionIdParam, router]);
 
   useEffect(() => {
     if (mockPayment) return;
@@ -190,11 +156,11 @@ function PaymentContent() {
     };
 
     init();
-  }, [sdkReady, clientKey, paymentKey, session?.user, orderId]);
+  }, [sdkReady, clientKey, paymentKey, session?.user, orderId, mockPayment]);
 
   useEffect(() => {
     if (mockPayment) return;
-    if (!paymentKey || !orderIdParam || !amountParam) return;
+    if (!paymentKey || !orderIdParam || !amountParam || !sessionIdParam) return;
     if (confirming) return;
     const run = async () => {
       setConfirming(true);
@@ -204,19 +170,7 @@ function PaymentContent() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name,
-            birthYear,
-            birthMonth,
-            birthDay,
-            calendarType,
-            birthHour,
-            birthMinute,
-            birthLocation,
-            gender,
-            relationshipStatus,
-            employmentStatus,
-            coreFearAxis,
-            unknownBirthTime,
+            sessionId: sessionIdParam,
             paymentKey,
             orderId: orderIdParam,
             amount: Number(amountParam),
@@ -241,23 +195,12 @@ function PaymentContent() {
 
     run();
   }, [
+    mockPayment,
     paymentKey,
     orderIdParam,
     amountParam,
     confirming,
-    name,
-    birthYear,
-    birthMonth,
-    birthDay,
-    calendarType,
-    birthHour,
-    birthMinute,
-    birthLocation,
-    gender,
-    relationshipStatus,
-    employmentStatus,
-    coreFearAxis,
-    unknownBirthTime,
+    sessionIdParam,
     returnToParam,
     router,
   ]);
@@ -272,7 +215,7 @@ function PaymentContent() {
         />
       )}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
-        <div className="max-w-[420px] mx-auto flex items-center justify-between">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
             onClick={() => router.back()}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
@@ -288,7 +231,7 @@ function PaymentContent() {
       </header>
 
       <main className="flex-1 px-5 pb-48">
-        <div className="max-w-[420px] w-full mx-auto pt-10 space-y-6 text-center">
+        <div className="max-w-[640px] w-full mx-auto pt-10 space-y-6 text-center">
           <h2 className="text-[24px] font-semibold text-text-primary font-aggro">
             전체 결과를 소장하려면 결제가 필요합니다
           </h2>
@@ -321,14 +264,19 @@ function PaymentContent() {
               {error}
             </div>
           )}
+          {!sessionIdParam && !error && (
+            <div className="rounded-xl bg-background-secondary px-4 py-3 text-text-secondary">
+              결제 정보가 만료되었습니다. 이전 화면으로 이동합니다.
+            </div>
+          )}
         </div>
       </main>
 
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <div className="max-w-[420px] mx-auto">
+        <div className="max-w-[640px] mx-auto">
           <button
             onClick={handlePay}
-            disabled={paying || confirming || (!mockPayment && !widgetReady)}
+            disabled={paying || confirming || !sessionIdParam || (!mockPayment && !widgetReady)}
             className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
           >
             {confirming ? "결제 확인 중..." : paying ? "결제창 여는 중..." : "결제하기"}

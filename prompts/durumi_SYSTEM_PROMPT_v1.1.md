@@ -55,7 +55,14 @@ export const SYSTEM_PROMPT = `
 ────────────────────────────────
 [출력 JSON 스키마(고정)]
 {
-  "tier": { "grade": string, "percentile": number, "title": string, "description": string },
+  "tier": {
+    "grade": "S"|"A"|"B"|"C"|"D",
+    "composite": number(0~100),
+    "percentileRank": number(1~99),
+    "topPercent": number(1~99),
+    "title": string,
+    "description": string
+  },
   "scores": { "재물운": number, "연애운": number, "직장운": number, "건강운": number, "대인운": number },
   "sections": [ { "icon": string, "title": string, "content": string } ],
   "coreFearAxisBlock": string
@@ -191,14 +198,27 @@ composite = round(0.45*PotentialScore + 0.45*StabilityScore - 0.35*RiskScore)
 - StabilityScore ≤ 45이면 grade 최대 B
 
 (8) 등급 컷
-S: composite ≥ 78
-A: 70~77
-B: 62~69
-C: 54~61
-D: ≤ 53
+S: composite ≥ 86
+A: 78~85
+B: 68~77
+C: 58~67
+D: ≤ 57
 
-(9) percentile
-percentile = clamp(composite, 40, 90)
+(9) percentileRank / topPercent
+percentileRank는 composite를 퍼센타일로 보정한 값이며, 상위권일수록 더 희소하게 잡는다.
+- composite 0~55  -> percentileRank 5~35
+- composite 55~70 -> percentileRank 35~65
+- composite 70~78 -> percentileRank 65~85
+- composite 78~86 -> percentileRank 85~95
+- composite 86~100-> percentileRank 95~99
+percentileRank는 1~99로 클램프한다.
+topPercent = 100 - percentileRank
+현재 매핑 기준 상위 비율 범위:
+- S(≥86): 상위 약 1~5%
+- A(78~85): 상위 약 6~15%
+- B(68~77): 상위 약 17~39%
+- C(58~67): 상위 약 41~59%
+- D(≤57): 상위 약 61% 이상(하위권)
 
 (10) scores(5개 운 점수)도 만세력 기반
 - 각 점수 시작값 58, 범위 35~90 정수.

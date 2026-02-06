@@ -1,157 +1,190 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import MenuDrawer from "./MenuDrawer";
 
-const BENEFITS = [
+type LandingSection = {
+  key: string;
+  title: string;
+  bodyLines: [string, string];
+  accent: "brand" | "violet" | "indigo";
+};
+
+const SECTIONS: LandingSection[] = [
   {
-    title: "결론부터 딱 말해줘요",
-    desc: "긴 설명 전에 등급으로 핵심부터 확인.",
+    key: "intro",
+    title: "사주보는 두루미",
+    bodyLines: ["비싼데 뻔한 사주 말고,", "천원으로 내 사주 등급부터 확인해요."],
+    accent: "brand",
   },
   {
-    title: "친근하고 재밌게",
-    desc: "친구가 말해주는 것처럼 술술 읽히게.",
+    key: "analysis",
+    title: "등급만 던지고 끝내지 않아요",
+    bodyLines: ["등급 → 근거 → 해석을 한 번에 정리해요.", "마지막엔 2주 실행 팁까지 줘요."],
+    accent: "violet",
   },
   {
-    title: "내 결과 저장",
-    desc: "로그인하면 결과를 안전하게 보관.",
+    key: "battle",
+    title: "누가 더 좋은 사주인지, 딱 정리",
+    bodyLines: ["2,000원으로 둘을 비교해요.", "결과는 등급으로 깔끔하게 보여줘요."],
+    accent: "indigo",
   },
 ];
 
-const FLOW = ["정보 입력", "티저 확인", "카카오 로그인", "결제", "전체 결과 확인"];
-
-const FAQ = [
-  {
-    q: "사주 결과는 얼마나 정확한가요?",
-    a: "사주 원리 기반의 참고 자료로 제공됩니다. 핵심은 방향성을 얻는 데 있어요.",
-  },
-  {
-    q: "결제를 해야만 전체 결과가 보이나요?",
-    a: "네. 티저로 핵심만 보여드리고 전체 해석은 결제 후 열립니다.",
-  },
-  {
-    q: "로그인 없이도 볼 수 있나요?",
-    a: "티저는 로그인 없이 가능하며, 전체 결과 확인 시 로그인합니다.",
-  },
-  {
-    q: "정보는 안전하게 보관되나요?",
-    a: "필요한 정보만 저장하고, 병원 서비스 기준으로 관리합니다.",
-  },
-];
-
-export default function LandingPage() {
-  const callbackUrl = useMemo(() => "/start", []);
+function SectionGlow({ accent }: { accent: LandingSection["accent"] }) {
+  const gradient =
+    accent === "brand"
+      ? "bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary),0.22)_0%,transparent_62%)]"
+      : accent === "violet"
+        ? "bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.18)_0%,transparent_62%)]"
+        : "bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.18)_0%,transparent_62%)]";
 
   return (
-    <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
-      <header className="sticky top-0 z-[100] bg-background-primary px-5 py-5">
-        <div className="max-w-[420px] mx-auto flex items-center justify-between">
+    <div
+      aria-hidden="true"
+      className={`pointer-events-none absolute inset-x-0 top-0 h-[260px] opacity-80 blur-2xl ${gradient}`}
+    />
+  );
+}
+
+function ImagePlaceholder({
+  accent,
+  src,
+  alt,
+  priority,
+}: {
+  accent: LandingSection["accent"];
+  src?: string;
+  alt?: string;
+  priority?: boolean;
+}) {
+  const orbA =
+    accent === "brand"
+      ? "bg-[radial-gradient(circle_at_center,rgba(var(--primary),0.26)_0%,transparent_64%)]"
+      : accent === "violet"
+        ? "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.22)_0%,transparent_64%)]"
+        : "bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.20)_0%,transparent_64%)]";
+
+  const orbB =
+    accent === "brand"
+      ? "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14)_0%,transparent_70%)]"
+      : accent === "violet"
+        ? "bg-[radial-gradient(circle_at_center,rgba(var(--primary),0.14)_0%,transparent_70%)]"
+        : "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.12)_0%,transparent_70%)]";
+
+  return (
+    <div className="mx-auto w-full max-w-[640px]">
+      <div className="relative h-[240px] w-full overflow-hidden rounded-[24px] border border-white/10 bg-zinc-900 sm:h-[300px] lg:h-[340px]">
+        <div className="absolute -left-24 -top-24 h-[340px] w-[340px] rounded-full blur-3xl opacity-90 sm:-left-28 sm:-top-28 sm:h-[380px] sm:w-[380px]">
+          <div className={`h-full w-full ${orbA}`} />
+        </div>
+        <div className="absolute -bottom-28 -right-24 h-[360px] w-[360px] rounded-full blur-3xl opacity-75 sm:-bottom-32 sm:-right-28 sm:h-[420px] sm:w-[420px]">
+          <div className={`h-full w-full ${orbB}`} />
+        </div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_32%,rgba(255,255,255,0.08)_0%,transparent_62%)] opacity-70" />
+        {src ? (
+          <Image
+            src={src}
+            alt={alt || ""}
+            fill
+            priority={priority}
+            sizes="(max-width: 640px) 100vw, 640px"
+            className="object-cover"
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export default function LandingPage() {
+  const callbackUrl = useMemo(() => "/menu", []);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 0);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleStart = () => {
+    signIn("kakao", { callbackUrl });
+  };
+
+  return (
+    <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white">
+      <header
+        className={`sticky top-0 z-[120] px-5 py-4 transition-all duration-300 ${
+          isScrolled
+            ? "bg-white/[0.08] backdrop-blur-md border-b border-white/10"
+            : "bg-transparent border-b border-transparent"
+        }`}
+      >
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
-          <div className="text-title-3 font-aggro">사주보는 두루미</div>
+          <h1 className="text-title-3 font-aggro text-white">사주보는 두루미</h1>
           <MenuDrawer />
         </div>
       </header>
 
-      <main className="px-5 pb-[calc(120px+env(safe-area-inset-bottom))]">
-        <section className="max-w-[420px] mx-auto pt-10 space-y-6">
-          <div>
-            <p className="text-text-secondary text-[14px] mb-2">두루미의 사주 리포트</p>
-            <h1 className="text-[28px] font-aggro leading-snug">
-              등급으로 결론부터 보는 사주
-            </h1>
-            <p className="text-text-secondary text-[15px] mt-3">
-              입력 1분이면 끝. 먼저 “내 등급” 보고, 궁금하면 더 깊게 보자.
-            </p>
-            <p className="text-text-secondary text-[14px] mt-3">
-              로그인하면 결과를 저장하고, 결제 확인/환불 처리가 가능해요
-            </p>
-            <a
-              href={`/api/auth/signin/kakao?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-              onClick={(event) => {
-                event.preventDefault();
-                signIn("kakao", { callbackUrl });
-              }}
-              className="mt-4 inline-flex items-center justify-center rounded-xl bg-background-secondary px-4 py-3 text-[14px] font-semibold text-text-primary"
-            >
-              카카오 로그인
-            </a>
-          </div>
+      <main className="pb-[calc(180px+env(safe-area-inset-bottom))]">
+        {SECTIONS.map((section) => (
+          <section key={section.key} className="relative py-16 md:py-20">
+            <SectionGlow accent={section.accent} />
 
-          <div className="bg-background-secondary rounded-2xl p-5 space-y-3">
-            <div className="text-[12px] text-text-secondary">등급 카드 예시</div>
-            <div className="rounded-xl bg-background-tertiary p-4">
-              <div className="text-[22px] font-semibold text-primary">재물운 A 등급</div>
-              <p className="text-text-secondary text-[14px] mt-2">
-                “성장 탄력이 좋은 타입. 기회는 올해 하반기부터 본격화됩니다.”
+            <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
+              <h2 className="font-aggro text-white text-[32px] leading-[1.15] sm:text-[40px]">
+                {section.title}
+              </h2>
+              <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">
+                <span className="block">{section.bodyLines[0]}</span>
+                <span className="block">{section.bodyLines[1]}</span>
               </p>
+
+              <div className="mt-10">
+                <ImagePlaceholder
+                  accent={section.accent}
+                  src={
+                    section.key === "intro"
+                      ? "/images/landing/section-01.png"
+                      : section.key === "battle"
+                        ? "/images/landing/section-03.png"
+                        : undefined
+                  }
+                  alt={
+                    section.key === "intro"
+                      ? "사주보는 두루미 소개 이미지"
+                      : section.key === "battle"
+                        ? "1:1 사주배틀 소개 이미지"
+                        : undefined
+                  }
+                  priority={section.key === "intro"}
+                />
+              </div>
             </div>
-            <div className="rounded-xl bg-background-tertiary p-4 text-text-secondary blur-sm">
-              연애운, 직장운, 건강운 해석이 더 길게 이어집니다...
-            </div>
-          </div>
-
-        </section>
-
-        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
-          <h2 className="text-[20px] font-semibold">왜 두루미?</h2>
-          <div className="grid gap-3">
-            {BENEFITS.map((item) => (
-              <div key={item.title} className="bg-background-secondary rounded-xl p-4">
-                <div className="text-[16px] font-semibold mb-1">{item.title}</div>
-                <p className="text-text-secondary text-[14px]">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
-          <h2 className="text-[20px] font-semibold">이용 흐름</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {FLOW.map((step, index) => (
-              <div
-                key={step}
-                className="bg-background-secondary rounded-xl p-4 text-center text-[13px] text-text-secondary"
-              >
-                <div className="text-text-primary font-semibold text-[16px] mb-1">
-                  {index + 1}
-                </div>
-                {step}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
-          <h2 className="text-[20px] font-semibold">FAQ</h2>
-          <div className="space-y-3">
-            {FAQ.map((item) => (
-              <div key={item.q} className="bg-background-secondary rounded-xl p-4">
-                <div className="text-text-primary font-semibold mb-1">{item.q}</div>
-                <p className="text-text-secondary text-[14px]">{item.a}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="max-w-[420px] mx-auto pt-12 space-y-4">
-          <h2 className="text-[20px] font-semibold">안심 안내</h2>
-          <div className="bg-background-secondary rounded-xl p-4 space-y-2 text-[14px] text-text-secondary">
-            <p>병원 서비스 기준으로 개인정보를 안전하게 관리합니다.</p>
-            <p>결제 이후에도 로그인하면 결과를 안전하게 보관할 수 있어요.</p>
-            <p>필요한 정보만 최소한으로 사용합니다.</p>
-          </div>
-        </section>
+          </section>
+        ))}
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-[120] bg-background-primary/95 backdrop-blur px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <div className="max-w-[420px] mx-auto">
-          <a
-            href="/start"
-            className="block w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200 bg-primary text-text-primary text-center border-0 outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+      <div className="fixed inset-x-0 bottom-0 z-[130] bg-[linear-gradient(0deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_calc(70px+env(safe-area-inset-bottom)),rgba(0,0,0,0)_100%)] px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+        <div className="max-w-[640px] mx-auto">
+          <p className="mb-2 text-center text-[12px] text-zinc-400">로그인하면 결과가 저장돼요</p>
+          <button
+            type="button"
+            onClick={handleStart}
+            className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
           >
-            사주 보러가기
-          </a>
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
+              <path
+                d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
+                fill="currentColor"
+              />
+            </svg>
+            카카오로 시작하기
+          </button>
         </div>
       </div>
     </div>

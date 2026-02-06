@@ -6,6 +6,11 @@ import { getSupabaseUserId } from "@/lib/server/user";
 
 export async function POST(request: NextRequest) {
   try {
+    const mockPayment = process.env.USE_MOCK_PAYMENT === "true";
+    if (!mockPayment) {
+      return NextResponse.json({ error: "Deprecated" }, { status: 410 });
+    }
+
     const session = await getServerSession(authOptions);
     const userId = await getSupabaseUserId(session);
     if (!userId) {
@@ -14,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const amount = Number(body?.amount ?? 1);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 10) {
       return NextResponse.json({ error: "유효하지 않은 수량입니다." }, { status: 400 });
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useId, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 type ScoreGridProps = {
   scores: Record<string, number>;
@@ -12,12 +12,19 @@ const CATEGORY_ORDER: CategoryName[] = ["재물운", "연애운", "직장운", "
 
 const FILL_DURATION_MS = 820;
 const STEP_DELAY_MS = 60;
-const LABEL_RADIUS = 86;
+const LABEL_RADIUS = 87;
 const BASE_ANGLE_OFFSET = -90;
-const PETAL_INNER_PIVOT_Y = -36;
+const PETAL_FILL_PIVOT_Y = -26;
 const PETAL_PATH =
-  "M -42 -36 C -58 -40 -70 -52 -74 -70 L -87 -121 C -90 -139 -80 -150 -62 -152 L 62 -152 C 80 -150 90 -139 87 -121 L 74 -70 C 70 -52 58 -40 42 -36 C 27 -30 -27 -30 -42 -36 Z";
-const SOFT_FILL_COLORS = ["#f6eff4", "#f6f0f7", "#f5eef9", "#f4edfa", "#f7f1f6"];
+  "M -54 -34 C -68 -39 -80 -52 -86 -70 L -95 -118 C -98 -137 -87 -148 -68 -152 L 68 -152 C 87 -148 98 -137 95 -118 L 86 -70 C 80 -52 68 -39 54 -34 C 40 -29 -40 -29 -54 -34 Z";
+const TRACK_COLORS = [
+  "rgba(116, 114, 120, 0.62)",
+  "rgba(126, 123, 132, 0.56)",
+  "rgba(116, 114, 120, 0.62)",
+  "rgba(126, 123, 132, 0.56)",
+  "rgba(116, 114, 120, 0.62)",
+];
+const SOFT_FILL_COLORS = ["#f6ecef", "#f8eef1", "#f7edf2", "#f8edf4", "#f7eef3"];
 
 function clampScore(raw: number): number {
   if (!Number.isFinite(raw)) return 0;
@@ -41,7 +48,6 @@ function polarToCartesian(radius: number, angleDeg: number) {
 }
 
 function ScoreGridInner({ scores }: ScoreGridProps) {
-  const uid = useId().replace(/:/g, "");
   const normalizedScores = useMemo(
     () =>
       CATEGORY_ORDER.map((category) => ({
@@ -99,28 +105,16 @@ function ScoreGridInner({ scores }: ScoreGridProps) {
 
   return (
     <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4">
         <h3 className="text-title-3 text-text-primary font-semibold">카테고리별 등급</h3>
-        <span className="text-[12px] text-text-secondary">점수 기반 5-꽃잎</span>
       </div>
 
-      <div className="mx-auto w-full max-w-[420px]">
+      <div className="mx-auto w-full">
         <svg
           viewBox="-170 -170 340 340"
           className="h-auto w-full"
           aria-label="카테고리별 5-꽃잎 점수 게이지"
         >
-          <defs>
-            {normalizedScores.map((item, index) => {
-              const clipId = `${uid}-petal-clip-${index}`;
-              return (
-                <clipPath id={clipId} key={`${item.category}-${clipId}`}>
-                  <path d={PETAL_PATH} />
-                </clipPath>
-              );
-            })}
-          </defs>
-
           {normalizedScores.map((item, index) => {
             const angle = BASE_ANGLE_OFFSET + index * (360 / normalizedScores.length);
             const midAngle = angle;
@@ -129,28 +123,28 @@ function ScoreGridInner({ scores }: ScoreGridProps) {
             const labelPoint = polarToCartesian(LABEL_RADIUS, midAngle);
             const localProgress = targetRatio > 0 ? animatedRatio / targetRatio : 1;
             const labelOpacity = clamp((localProgress - 0.52) / 0.2, 0, 1);
-            const clipId = `${uid}-petal-clip-${index}`;
-            const fillTransform = `translate(0 ${PETAL_INNER_PIVOT_Y}) scale(1 ${animatedRatio}) translate(0 ${-PETAL_INNER_PIVOT_Y})`;
+            const fillTransform = `translate(0 ${PETAL_FILL_PIVOT_Y}) scale(1 ${animatedRatio}) translate(0 ${-PETAL_FILL_PIVOT_Y})`;
 
             return (
               <g key={item.category}>
                 <g transform={`rotate(${angle})`}>
                   <path
                     d={PETAL_PATH}
-                    fill="rgba(122, 120, 128, 0.56)"
-                    stroke="rgba(255,255,255,0.085)"
+                    fill={TRACK_COLORS[index % TRACK_COLORS.length]}
+                    stroke="rgba(16,16,18,0.74)"
                     strokeWidth="1.4"
                     strokeLinejoin="round"
                   />
-                  <path
-                    d={PETAL_PATH}
-                    fill={SOFT_FILL_COLORS[index % SOFT_FILL_COLORS.length]}
-                    stroke="rgba(255,255,255,0.14)"
-                    strokeWidth="1.1"
-                    strokeLinejoin="round"
-                    clipPath={`url(#${clipId})`}
-                    transform={fillTransform}
-                  />
+                  <g transform="translate(0 -8) scale(0.84)">
+                    <path
+                      d={PETAL_PATH}
+                      fill={SOFT_FILL_COLORS[index % SOFT_FILL_COLORS.length]}
+                      stroke="rgba(255,255,255,0.18)"
+                      strokeWidth="1.05"
+                      strokeLinejoin="round"
+                      transform={fillTransform}
+                    />
+                  </g>
                 </g>
                 <g
                   transform={`translate(${labelPoint.x}, ${labelPoint.y})`}
@@ -158,19 +152,19 @@ function ScoreGridInner({ scores }: ScoreGridProps) {
                 >
                   <text
                     x="0"
-                    y="-4"
+                    y="-5"
                     textAnchor="middle"
-                    className="fill-text-primary"
-                    style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}
+                    fill="rgba(28,28,33,0.95)"
+                    style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em" }}
                   >
                     {item.score}
                   </text>
                   <text
                     x="0"
-                    y="20"
+                    y="16"
                     textAnchor="middle"
-                    className="fill-text-secondary"
-                    style={{ fontSize: 14, fontWeight: 600 }}
+                    fill="rgba(40,40,46,0.92)"
+                    style={{ fontSize: 12.5, fontWeight: 600 }}
                   >
                     {item.category}
                   </text>
@@ -178,15 +172,6 @@ function ScoreGridInner({ scores }: ScoreGridProps) {
               </g>
             );
           })}
-
-          <circle
-            cx="0"
-            cy="0"
-            r={28}
-            fill="rgba(18, 18, 23, 0.95)"
-            stroke="rgba(255,255,255,0.07)"
-            strokeWidth="1.2"
-          />
         </svg>
       </div>
     </div>

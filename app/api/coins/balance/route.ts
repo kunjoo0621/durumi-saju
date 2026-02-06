@@ -14,7 +14,11 @@ export async function GET() {
 
     await supabaseAdmin
       .from("profiles")
-      .upsert({ user_id: userId, coin_balance: 0 }, { onConflict: "user_id" });
+      // Ensure a profile row exists, but never overwrite an existing balance.
+      .upsert(
+        { user_id: userId, coin_balance: 0 },
+        { onConflict: "user_id", ignoreDuplicates: true }
+      );
 
     const { data, error } = await supabaseAdmin
       .from("profiles")

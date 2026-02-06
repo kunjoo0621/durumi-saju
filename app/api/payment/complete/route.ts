@@ -5,33 +5,89 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, buildTeaserFromFull, resolveSajuText, runFullAnalysis, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
 
+type PaymentCompleteBody = {
+  sessionId?: string;
+  orderId?: string;
+  paymentKey?: string;
+  amount?: number;
+  paymentStatus?: string;
+  paymentMethod?: string;
+};
+
+function hasRequiredInput(input: InputPayload) {
+  if (
+    !input?.name ||
+    !input.birthYear ||
+    !input.birthMonth ||
+    !input.birthDay ||
+    !input.birthLocation ||
+    !input.gender ||
+    !input.relationshipStatus ||
+    !input.employmentStatus ||
+    !input.coreFearAxis
+  ) {
+    return false;
+  }
+
+  if (!input.unknownBirthTime && (!input.birthHour || !input.birthMinute)) {
+    return false;
+  }
+
+  return true;
+}
+
+async function markSessionConsumed(userId: string, sessionId: string) {
+  await supabaseAdmin
+    .from("prepayment_sessions")
+    .update({
+      status: "consumed",
+      consumed_at: new Date().toISOString(),
+    })
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .eq("status", "pending");
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as InputPayload & {
-      orderId?: string;
-      paymentKey?: string;
-      amount?: number;
-      paymentStatus?: string;
-      paymentMethod?: string;
-    };
-    const input = body as InputPayload;
-    if (
-      !input?.name ||
-      !input.birthYear ||
-      !input.birthMonth ||
-      !input.birthDay ||
-      !input.birthLocation ||
-      !input.gender ||
-      !input.relationshipStatus ||
-      !input.employmentStatus
-    ) {
-      return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
+    const body = (await request.json()) as PaymentCompleteBody;
+    if (!body.sessionId) {
+      return NextResponse.json({ error: "결제 세션이 필요합니다." }, { status: 400 });
     }
 
     const session = await getServerSession(authOptions);
     const userId = await getSupabaseUserId(session);
     if (!userId) {
       return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    }
+
+    const pendingSession = await supabaseAdmin
+      .from("prepayment_sessions")
+      .select("id, input_hash, payload, status, expires_at")
+      .eq("id", body.sessionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pendingSession.error) {
+      return NextResponse.json({ error: pendingSession.error.message }, { status: 500 });
+    }
+
+    const sessionRow = pendingSession.data;
+    if (!sessionRow) {
+      return NextResponse.json({ error: "결제 세션을 찾을 수 없습니다." }, { status: 404 });
+    }
+
+    if (
+      sessionRow.status === "pending" &&
+      sessionRow.expires_at &&
+      new Date(sessionRow.expires_at).getTime() < Date.now()
+    ) {
+      return NextResponse.json({ error: "결제 세션이 만료되었습니다." }, { status: 410 });
+    }
+
+    const input = sessionRow.payload as InputPayload;
+    if (!hasRequiredInput(input)) {
+      return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
     }
 
     const mockPayment = process.env.USE_MOCK_PAYMENT === "true";
@@ -82,7 +138,10 @@ export async function POST(request: NextRequest) {
       amount = Number(body.amount);
     }
 
-    const inputHash = buildInputHash(input);
+    const inputHash =
+      typeof sessionRow.input_hash === "string" && sessionRow.input_hash
+        ? sessionRow.input_hash
+        : buildInputHash(input);
 
     const existingUnlock = await supabaseAdmin
       .from("result_unlocks")
@@ -92,6 +151,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existingUnlock.data?.result_id) {
+      await markSessionConsumed(userId, body.sessionId);
       return NextResponse.json({ ok: true, reused: true });
     }
 
@@ -131,6 +191,8 @@ export async function POST(request: NextRequest) {
         if (unlockUpsert.error) {
           return NextResponse.json({ error: unlockUpsert.error.message }, { status: 500 });
         }
+
+        await markSessionConsumed(userId, body.sessionId);
         return NextResponse.json({ ok: true, reused: true });
       }
       forceUnlock = true;
@@ -197,6 +259,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: unlockUpsert.error.message }, { status: 500 });
       }
 
+      await markSessionConsumed(userId, body.sessionId);
       return NextResponse.json({ ok: true, reused: true });
     }
 
@@ -223,6 +286,8 @@ export async function POST(request: NextRequest) {
     if (rpc.error) {
       return NextResponse.json({ error: rpc.error.message }, { status: 500 });
     }
+
+    await markSessionConsumed(userId, body.sessionId);
 
     const payload = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
     return NextResponse.json({ ok: true, reused: Boolean(payload?.reused) });

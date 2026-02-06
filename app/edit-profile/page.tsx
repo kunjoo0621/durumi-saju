@@ -224,7 +224,7 @@ export default function EditProfilePage() {
   return (
     <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col overflow-hidden">
       <header className="px-5 py-5 sticky top-0 z-[100] bg-background-primary shrink-0">
-        <div className="max-w-[420px] mx-auto flex items-center">
+        <div className="max-w-[640px] mx-auto flex items-center">
           <button
             type="button"
             onClick={() => router.back()}
@@ -246,7 +246,7 @@ export default function EditProfilePage() {
       </header>
 
       <main className="px-5 pb-32 flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-[420px] mx-auto space-y-7 pt-10">
+        <div className="max-w-[640px] mx-auto space-y-7 pt-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-text-secondary">
               <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
@@ -455,7 +455,7 @@ export default function EditProfilePage() {
           className="fixed left-0 right-0 bg-background-primary px-5 py-5 transition-[bottom] duration-150 ease-out"
           style={{ bottom: `${keyboardOffset}px` }}
         >
-          <div className="max-w-[420px] mx-auto">
+          <div className="max-w-[640px] mx-auto">
             <button
               type="button"
               onClick={handleSave}

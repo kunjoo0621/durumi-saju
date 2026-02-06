@@ -40,7 +40,9 @@ export async function GET() {
     const resultIds = unlocks.map((item) => item.result_id);
     const { data: results, error } = await supabaseAdmin
       .from("saju_results")
-      .select("id, input_hash, teaser_json, unlocked_at, created_at")
+      .select(
+        "id, name, birth_date, birth_time, region, gender, calendar_type, unlocked_at, created_at"
+      )
       .eq("user_id", userId)
       .in("id", resultIds);
 

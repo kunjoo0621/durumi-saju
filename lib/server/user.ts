@@ -9,29 +9,16 @@ export async function getSupabaseUserId(session?: Session | null) {
   if (userId) return userId;
   if (!kakaoId) return null;
 
+  // Single upsert avoids a race where two concurrent requests try to create the same user.
   const { data, error } = await supabaseAdmin
     .from("users")
-    .select("id")
-    .eq("kakao_id", kakaoId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (data?.id) {
-    return data.id;
-  }
-
-  const inserted = await supabaseAdmin
-    .from("users")
-    .insert({ kakao_id: kakaoId, nickname: sessionUser?.name || null })
+    .upsert(
+      { kakao_id: kakaoId, nickname: sessionUser?.name || null },
+      { onConflict: "kakao_id" }
+    )
     .select("id")
     .single();
 
-  if (inserted.error) {
-    throw new Error(inserted.error.message);
-  }
-
-  return inserted.data?.id || null;
+  if (error) throw new Error(error.message);
+  return data?.id || null;
 }

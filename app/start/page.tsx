@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAllInputs, useStoreActions } from "@/store/useInputStore";
 import MenuDrawer from "../MenuDrawer";
@@ -145,7 +145,7 @@ export default function Home() {
   };
 
   const handleSubmit = () => {
-    router.push("/teaser");
+    router.push("/checkout");
   };
 
   // 생년월일 입력 처리
@@ -450,7 +450,7 @@ export default function Home() {
     <div className="h-[100dvh] bg-background-primary flex flex-col">
       {/* 헤더 */}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
-        <div className="max-w-[420px] mx-auto flex items-center justify-between">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
           {/* 뒤로가기 버튼 */}
           {currentStep > 0 && (
             <button
@@ -483,7 +483,7 @@ export default function Home() {
 
       {/* 메인 콘텐츠 */}
       <main className="flex-1 px-5 pb-40">
-        <div className="max-w-[420px] w-full mx-auto pt-10">
+        <div className="max-w-[640px] w-full mx-auto pt-10">
           {/* 질문 */}
           <div>
             <h2 className="text-[24px] font-semibold text-white text-center font-aggro mb-6">
@@ -501,7 +501,7 @@ export default function Home() {
         className="fixed left-0 right-0 bg-background-primary px-5 py-4 transition-[bottom] duration-150 ease-out"
         style={{ bottom: `${keyboardOffset}px` }}
       >
-        <div className="max-w-[420px] mx-auto space-y-4">
+        <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
             <span className="text-[14px] text-text-secondary">{currentStep + 1} / {totalSteps}</span>
             <div
@@ -523,7 +523,7 @@ export default function Home() {
             disabled={!canProceed()}
             className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
           >
-            {currentStep === totalSteps - 1 ? "결과 보기" : "다음"}
+            다음
           </button>
         </div>
       </div>

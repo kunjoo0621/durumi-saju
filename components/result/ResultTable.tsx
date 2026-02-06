@@ -1,10 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import ScoreGrid from "./ScoreGrid";
-import SectionList, { type ResultSection } from "./SectionList";
+import CategoryRadarChart, { type CategoryItem, type CategoryKey } from "./CategoryRadarChart";
+import OverallGradeBadgeSlot, { type OverallGradeLabel } from "./OverallGradeBadgeSlot";
+import SectionList from "./SectionList";
 import type { AnalysisResult, TeaserResult } from "@/store/useInputStore";
-import { normalizeScores } from "@/lib/resultSchema";
+import {
+  clampValue,
+  COMPOSITE_GRADE_CUTOFFS,
+  gradeFromComposite,
+  normalizeComposite,
+  percentileRankFromComposite,
+  topPercentFromPercentileRank,
+} from "@/lib/gradeSystem";
 
 const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
 
@@ -33,7 +41,10 @@ const LEGACY_GRADE_STYLES = {
 
 type LegacyGradeKey = keyof typeof LEGACY_GRADE_STYLES;
 
-const LEGACY_GRADE_ORDER = Object.keys(LEGACY_GRADE_STYLES);
+const LEGACY_GRADE_LABELS: LegacyGradeKey[] = ["S", "A", "B", "C", "D"];
+
+const LEGACY_GRADE_ORDER = [...LEGACY_GRADE_LABELS];
+
 
 type ResultTableProps = {
   result: AnalysisResult | TeaserResult;
@@ -50,61 +61,6 @@ const badgeStyles: Record<"무료" | "잠금" | "언락", string> = {
   언락: "bg-saju-wood/15 text-saju-wood",
 };
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function normalizeGradeLabels(input: unknown): string[] {
-  if (!Array.isArray(input)) return [];
-  const labels = input
-    .map((item) => {
-      if (typeof item === "string") return item.trim();
-      if (!item || typeof item !== "object") return "";
-      const raw =
-        (item as { label?: unknown }).label ??
-        (item as { name?: unknown }).name ??
-        (item as { key?: unknown }).key;
-      return typeof raw === "string" ? raw.trim() : "";
-    })
-    .filter(Boolean);
-  return [...new Set(labels)];
-}
-
-function extractGradeLabelsFromResult(input: AnalysisResult | TeaserResult): string[] | null {
-  const payload = input as Record<string, unknown>;
-  const tier = (payload.tier as Record<string, unknown> | undefined) || {};
-  const tierMeta = (tier.meta as Record<string, unknown> | undefined) || {};
-  const meta = (payload.meta as Record<string, unknown> | undefined) || {};
-  const gradeMeta = (payload.gradeMeta as Record<string, unknown> | undefined) || {};
-  const gradeSystem = (payload.gradeSystem as Record<string, unknown> | undefined) || {};
-
-  const candidates: unknown[] = [
-    tier.gradeLabels,
-    tier.labels,
-    tier.gradeOrder,
-    tierMeta.gradeLabels,
-    tierMeta.labels,
-    tierMeta.gradeOrder,
-    payload.gradeLabels,
-    payload.gradeOrder,
-    meta.gradeLabels,
-    meta.labels,
-    gradeMeta.labels,
-    gradeMeta.gradeLabels,
-    gradeSystem.labels,
-    gradeSystem.order,
-  ];
-
-  for (const candidate of candidates) {
-    const labels = normalizeGradeLabels(candidate);
-    if (labels.length > 0) {
-      return labels;
-    }
-  }
-
-  return null;
-}
-
 function resolveLegacyGradeKey(grade: string): LegacyGradeKey {
   const upperGrade = grade.trim().toUpperCase();
   const key = LEGACY_GRADE_ORDER.find((label) => upperGrade.startsWith(label));
@@ -112,82 +68,6 @@ function resolveLegacyGradeKey(grade: string): LegacyGradeKey {
     return key as LegacyGradeKey;
   }
   return "D";
-}
-
-function resolveGradeIndex(grade: string, labels: string[]): number {
-  if (!labels.length) return -1;
-  const upperGrade = grade.trim().toUpperCase();
-  const normalized = labels.map((label) => label.trim().toUpperCase());
-
-  const exact = normalized.findIndex((label) => label === upperGrade);
-  if (exact >= 0) return exact;
-
-  const startsWith = normalized.findIndex(
-    (label) => upperGrade.startsWith(label) || label.startsWith(upperGrade)
-  );
-  if (startsWith >= 0) return startsWith;
-
-  return -1;
-}
-
-function DistributionGraph({
-  markerPercent,
-  markerLabel,
-  gradeLabels,
-}: {
-  markerPercent: number;
-  markerLabel: string;
-  gradeLabels: string[] | null;
-}) {
-  const normalizedX = clamp(markerPercent / 100, 0, 1);
-  const bellHeightFactor = Math.exp(-12 * (normalizedX - 0.5) * (normalizedX - 0.5));
-  const markerBottom = 20 + bellHeightFactor * 58;
-
-  return (
-    <div className="mt-6">
-      <div className="relative h-[150px] rounded-2xl bg-background-primary/40 border border-white/5 overflow-hidden px-3">
-        <svg
-          className="absolute inset-0 h-full w-full"
-          viewBox="0 0 320 150"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M10 112 C 70 112, 96 24, 160 24 C 224 24, 250 112, 310 112"
-            fill="none"
-            stroke="rgba(255, 109, 166, 0.85)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <line x1="10" y1="112" x2="310" y2="112" stroke="rgba(255,255,255,0.16)" strokeWidth="1" />
-        </svg>
-        <div
-          className="absolute"
-          style={{
-            left: `calc(${markerPercent}% - 8px)`,
-            bottom: `${markerBottom}px`,
-          }}
-        >
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[11px] leading-none text-primary font-semibold whitespace-nowrap">{markerLabel}</span>
-            <span className="h-4 w-4 rounded-full bg-primary border-2 border-background-primary shadow-[0_0_0_3px_rgba(255,255,255,0.09)]" />
-          </div>
-        </div>
-      </div>
-      {gradeLabels && gradeLabels.length > 1 && (
-        <div
-          className="mt-3 grid gap-2"
-          style={{ gridTemplateColumns: `repeat(${gradeLabels.length}, minmax(0, 1fr))` }}
-        >
-          {gradeLabels.map((label) => (
-            <span key={label} className="text-center text-[11px] text-text-tertiary">
-              {label}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ResultTable({
@@ -200,10 +80,28 @@ export default function ResultTable({
 }: ResultTableProps) {
   const safeTier = useMemo(() => {
     const raw = (result as Partial<AnalysisResult>)?.tier;
+    const compositeBase =
+      typeof raw?.composite === "number" && Number.isFinite(raw.composite)
+        ? raw.composite
+        : typeof (raw as { percentile?: unknown })?.percentile === "number" &&
+            Number.isFinite((raw as { percentile?: number }).percentile)
+          ? (raw as { percentile?: number }).percentile ?? 0
+          : 0;
+    const composite = normalizeComposite(compositeBase);
+    const gradeCandidate = typeof raw?.grade === "string" ? raw.grade.trim().toUpperCase() : "";
+    const grade = ["S", "A", "B", "C", "D"].includes(gradeCandidate[0])
+      ? gradeCandidate[0]
+      : gradeFromComposite(composite, COMPOSITE_GRADE_CUTOFFS);
+    const percentileRank =
+      typeof raw?.percentileRank === "number" && Number.isFinite(raw.percentileRank)
+        ? clampValue(Math.round(raw.percentileRank), 1, 99)
+        : percentileRankFromComposite(composite);
+    const topPercent = topPercentFromPercentileRank(percentileRank);
     return {
-      grade: typeof raw?.grade === "string" && raw.grade.trim() ? raw.grade : "C",
-      percentile:
-        typeof raw?.percentile === "number" && Number.isFinite(raw.percentile) ? raw.percentile : 50,
+      grade,
+      composite,
+      percentileRank,
+      topPercent,
       title: typeof raw?.title === "string" && raw.title.trim() ? raw.title : "기본 결과 요약",
       description:
         typeof raw?.description === "string" && raw.description.trim()
@@ -211,11 +109,6 @@ export default function ResultTable({
           : "결과를 정리하는 중입니다.",
     };
   }, [result]);
-
-  const safeScores = useMemo(
-    () => normalizeScores((result as Partial<AnalysisResult>)?.scores),
-    [result]
-  );
 
   const safeCoreFearAxisBlock = useMemo(() => {
     const raw = (result as Partial<AnalysisResult>)?.coreFearAxisBlock;
@@ -240,35 +133,32 @@ export default function ResultTable({
       });
   }, [result]);
 
-  const gradeLabels = useMemo(() => {
-    const fromApi = extractGradeLabelsFromResult(result);
-    if (fromApi && fromApi.length > 0) {
-      return fromApi;
-    }
-
-    const fromExistingCode = [...LEGACY_GRADE_ORDER];
-    if (fromExistingCode.length > 0) {
-      return fromExistingCode;
-    }
-
-    return null;
-  }, [result]);
-
-  const markerPercent = useMemo(() => {
-    if (Number.isFinite(safeTier.percentile)) {
-      return clamp(100 - safeTier.percentile, 0, 100);
-    }
-    if (gradeLabels && gradeLabels.length > 1) {
-      const index = resolveGradeIndex(safeTier.grade, gradeLabels);
-      if (index >= 0) {
-        return (index / (gradeLabels.length - 1)) * 100;
-      }
-    }
-    return 50;
-  }, [safeTier.percentile, safeTier.grade, gradeLabels]);
-
   const gradeKey = useMemo(() => resolveLegacyGradeKey(safeTier.grade), [safeTier.grade]);
   const gradeStyle = LEGACY_GRADE_STYLES[gradeKey];
+
+  const categories = useMemo<CategoryItem[]>(() => {
+    const rawScores = (result as Partial<AnalysisResult>)?.scores as Record<string, unknown> | undefined;
+    const resolveScore = (value: unknown) => {
+      if (typeof value === "number" && Number.isFinite(value)) return { score: value };
+      if (value && typeof value === "object") {
+        const rawScore = (value as { score?: unknown }).score;
+        const rawGrade = (value as { grade?: unknown }).grade;
+        return {
+          score: typeof rawScore === "number" && Number.isFinite(rawScore) ? rawScore : 0,
+          grade: typeof rawGrade === "string" && rawGrade.trim() ? rawGrade.trim() : undefined,
+        };
+      }
+      return { score: 0 };
+    };
+
+    const orderedKeys: CategoryKey[] = ["재물운", "연애운", "직장운", "건강운", "대인운"];
+    return orderedKeys.map((key) => {
+      const value = resolveScore(rawScores?.[key]);
+      const score = typeof value.score === "number" ? value.score : 0;
+      const grade = value.grade || gradeFromComposite(score, COMPOSITE_GRADE_CUTOFFS);
+      return { key, score, grade };
+    });
+  }, [result]);
 
   const composedSections = useMemo(() => {
     const riskPattern = /(리스크|위험|경고|누수)/;
@@ -311,21 +201,33 @@ export default function ResultTable({
             >
               {badgeLabel}
             </span>
-            <span className="text-[12px] text-text-secondary">상위 {safeTier.percentile}%</span>
           </div>
-          <div className="mt-6 flex flex-col gap-3">
-            <div className={`text-5xl md:text-6xl font-bold ${gradeStyle.text}`}>{safeTier.grade}</div>
-            <div className="text-title-3 text-text-primary">{safeTier.title}</div>
-            <p className="text-body-2 text-text-secondary leading-relaxed">{safeTier.description}</p>
+          <div className="mt-6 flex flex-col items-center text-center gap-3">
+            <OverallGradeBadgeSlot
+              grade={safeTier.grade as OverallGradeLabel}
+              badgeSrc={null}
+              // TODO: 배지 이미지 전달받으면 badgeSrc 연결
+              size={152}
+            />
+            <div className={`text-6xl md:text-7xl font-bold leading-none ${gradeStyle.text}`}>
+              {safeTier.grade}
+            </div>
+            <div className="text-[13px] font-semibold text-text-secondary">
+              상위 {safeTier.topPercent}%
+            </div>
+            <div
+              className="max-w-[26ch] text-[20px] leading-tight font-semibold text-text-primary"
+              style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+            >
+              {safeTier.title}
+            </div>
+            <p className="max-w-[52ch] text-body-2 text-text-secondary leading-relaxed">
+              {safeTier.description}
+            </p>
           </div>
-          <DistributionGraph
-            markerPercent={markerPercent}
-            markerLabel={`${safeTier.grade} · 현재 위치`}
-            gradeLabels={gradeLabels}
-          />
         </div>
 
-        <ScoreGrid scores={safeScores} />
+        <CategoryRadarChart categories={categories} />
       </div>
 
       <SectionList

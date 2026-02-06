@@ -1,15 +1,23 @@
 import crypto from "crypto";
-import { calculateSaju, formatSajuText } from "@/lib/utils/saju";
-import { convertLunarToSolar } from "@/lib/utils/lunar";
 import { normalizeScores, type AnalysisScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
+import {
+  clampValue,
+  COMPOSITE_GRADE_CUTOFFS,
+  gradeFromComposite,
+  normalizeComposite,
+  percentileRankFromComposite,
+  topPercentFromPercentileRank,
+} from "@/lib/gradeSystem";
 
 export { normalizeScores } from "@/lib/resultSchema";
 
 export type AnalysisResult = {
   tier: {
     grade: string;
-    percentile: number;
+    composite: number;
+    percentileRank: number;
+    topPercent: number;
     title: string;
     description: string;
   };
@@ -30,7 +38,9 @@ export type TeaserSection = {
 export type TeaserResult = {
   tier: {
     grade: string;
-    percentile: number;
+    composite: number;
+    percentileRank: number;
+    topPercent: number;
     title: string;
     description: string;
   };
@@ -38,6 +48,38 @@ export type TeaserResult = {
   sections: TeaserSection[];
   coreFearAxisBlock: string;
 };
+
+function normalizeTier(tier: Partial<AnalysisResult["tier"]> | undefined | null) {
+  const rawGrade = typeof tier?.grade === "string" ? tier.grade.trim().toUpperCase() : "";
+  const compositeBase =
+    typeof tier?.composite === "number" && Number.isFinite(tier.composite)
+      ? tier.composite
+      : typeof (tier as { percentile?: unknown })?.percentile === "number" &&
+          Number.isFinite((tier as { percentile?: number }).percentile)
+        ? (tier as { percentile?: number }).percentile ?? 0
+        : 0;
+  const composite = normalizeComposite(compositeBase);
+  const normalizedGrade = ["S", "A", "B", "C", "D"].includes(rawGrade[0])
+    ? rawGrade[0]
+    : gradeFromComposite(composite, COMPOSITE_GRADE_CUTOFFS);
+  const percentileRank =
+    typeof tier?.percentileRank === "number" && Number.isFinite(tier.percentileRank)
+      ? clampValue(Math.round(tier.percentileRank), 1, 99)
+      : percentileRankFromComposite(composite);
+  const topPercent = topPercentFromPercentileRank(percentileRank);
+
+  return {
+    grade: normalizedGrade,
+    composite,
+    percentileRank,
+    topPercent,
+    title: typeof tier?.title === "string" && tier.title.trim() ? tier.title : "기본 결과 요약",
+    description:
+      typeof tier?.description === "string" && tier.description.trim()
+        ? tier.description
+        : "결과를 정리하는 중입니다.",
+  };
+}
 
 export type CoreFearAxis = "DISMISS" | "ABANDON" | "INCOMPETENT" | "LOSS_OF_CONTROL";
 
@@ -181,31 +223,47 @@ function pickFromPool(
   input: InputPayload,
   label: string,
   scope: "core" | "risk" | "conclusion",
-  channel: "hook" | "future" | "term",
-  pool: string[]
+  channel: "hook" | "future" | "term" | "punch",
+  pool: string[],
+  seedSalt = ""
 ) {
   if (!pool.length) return "";
-  const seed = `${buildInputHash(input)}:${label}:${scope}:${channel}`;
+  const seed = `${buildInputHash(input)}:${label}:${scope}:${channel}:${seedSalt}`;
   const hashHex = crypto.createHash("sha256").update(seed).digest("hex");
   const idx = parseInt(hashHex.slice(0, 8), 16) % pool.length;
   return pool[idx];
 }
 
-function pickMetaphorHook(input: InputPayload, label: string, scope: "core" | "risk" | "conclusion") {
+function pickMetaphorHook(
+  input: InputPayload,
+  label: string,
+  scope: "core" | "risk" | "conclusion",
+  seedSalt = ""
+) {
   const pool = METAPHOR_HOOK_POOLS[label] || METAPHOR_HOOK_POOLS.미선택;
-  return pickFromPool(input, label, scope, "hook", pool);
+  return pickFromPool(input, label, scope, "hook", pool, seedSalt);
 }
 
-function pickFutureSentence(input: InputPayload, label: string, scope: "core" | "risk" | "conclusion") {
+function pickFutureSentence(
+  input: InputPayload,
+  label: string,
+  scope: "core" | "risk" | "conclusion",
+  seedSalt = ""
+) {
   const pool = FUTURE_SENTENCE_POOLS[label] || FUTURE_SENTENCE_POOLS.미선택;
-  return pickFromPool(input, label, scope, "future", pool);
+  return pickFromPool(input, label, scope, "future", pool, seedSalt);
 }
 
-function pickMyungriTerms(input: InputPayload, label: string, scope: "core" | "risk" | "conclusion") {
+function pickMyungriTerms(
+  input: InputPayload,
+  label: string,
+  scope: "core" | "risk" | "conclusion",
+  seedSalt = ""
+) {
   const pool = MYEONGRI_TERMS_BY_LABEL[label] || MYEONGRI_TERMS_BY_LABEL.미선택;
-  const first = pickFromPool(input, label, scope, "term", pool);
+  const first = pickFromPool(input, label, scope, "term", pool, seedSalt);
   const secondPool = pool.filter((item) => item !== first);
-  const second = pickFromPool(input, label, scope, "term", secondPool);
+  const second = pickFromPool(input, label, scope, "term", secondPool, `${seedSalt}:second`);
   return second ? [first, second] : [first];
 }
 
@@ -239,92 +297,710 @@ function getActionSentenceByLabel(label: string): string {
   );
 }
 
-function getTruthSentenceByLabel(label: string): string {
-  const truthMap: Record<string, string> = {
-    "돈·재정": "불편한 진실은, 기록 없는 지출은 스트레스가 아니라 반복 비용이 된다는 점이야.",
-    "이직·커리어": "불편한 진실은, 기준 없는 지원은 경험이 쌓여도 방향성을 남기지 못한다는 점이야.",
-    인간관계: "불편한 진실은, 경계 없이 맞춰주면 관계가 좋아지는 게 아니라 피로만 누적된다는 점이야.",
-    "건강·컨디션": "불편한 진실은, 회복 루틴을 미루면 집중력 저하가 기본 상태가 된다는 점이야.",
-    미선택: "불편한 진실은, 루틴 없이 버틴 하루가 다음 주의 혼란을 그대로 키운다는 점이야.",
-  };
-  return truthMap[label] || truthMap.미선택;
+type SectionScope = "core" | "risk" | "conclusion";
+
+const FORBIDDEN_LABELS = ["돈·재정", "이직·커리어", "인간관계", "건강·컨디션", "미선택"] as const;
+
+const REALITY_WORDS_BY_LABEL: Record<string, string[]> = {
+  "돈·재정": ["지출", "고정비", "카드", "저축", "투자", "현금흐름", "예산", "통장", "부채"],
+  "이직·커리어": ["이직", "연봉", "포지션", "평가", "성과", "성장", "커리어", "업무강도", "조직"],
+  인간관계: ["경계", "거리", "맞춰줌", "눈치", "갈등", "피로", "연락", "대화", "서운함"],
+  "건강·컨디션": ["수면", "피로", "회복", "소화", "두통", "카페인", "운동", "면역", "컨디션"],
+  미선택: ["루틴", "우선순위", "기록", "집중", "번아웃", "리듬", "관리"],
+};
+
+const EXAGGERATED_WORD_REGEX = /(무조건|반드시|절대|영원히|100%|확실)/g;
+const EMOJI_REGEX = /\p{Extended_Pictographic}/gu;
+const HANJA_TERM_REGEX = /[가-힣]{1,10}\(\p{Script=Han}{1,6}\)/u;
+const RISK_TITLE_REGEX = /(리스크)/;
+const RISK_SIMILAR_REGEX = /(경고|위험|새는|누수|위기)/;
+const CONCLUSION_TITLE_REGEX = /(결론|요약|정리|한 줄)/;
+const RISK_ICONS = new Set(["⚠️", "🚨", "🛑", "🔥", "🕳️", "⛔", "☠️"]);
+
+const PUNCHLINE_SENTENCE_POOLS: Record<string, string[]> = {
+  "돈·재정": [
+    "기록 없는 지출은 결국 통장보다 선택권부터 비워.",
+    "버는 힘보다 새는 루트가 빠르면 월말 압박이 먼저 와.",
+    "결제 기준이 없으면 수입이 늘어도 체감 안정은 늦어져.",
+    "지출 통제는 의지가 아니라 시스템으로만 고정돼.",
+  ],
+  "이직·커리어": [
+    "기준 없는 지원은 경력보다 피로부터 남겨.",
+    "방향 없는 성실함은 성과가 쌓여도 전환이 막혀.",
+    "준비 없는 타이밍 집착은 기회를 와도 흘려보내.",
+    "커리어는 속도보다 기준표가 먼저 만들어.",
+  ],
+  인간관계: [
+    "경계 없는 친절은 결국 네 일정부터 무너뜨려.",
+    "관계 피로를 미루면 중요한 일의 집중력이 먼저 빠져.",
+    "부탁을 다 받으면 신뢰보다 소진이 먼저 쌓여.",
+    "거리 조절 없는 다정함은 오래 버티지 못해.",
+  ],
+  "건강·컨디션": [
+    "회복을 미루면 성실함보다 소진이 먼저 앞서.",
+    "수면이 무너지면 의지보다 집중 시간이 먼저 줄어.",
+    "컨디션 적자를 방치하면 일정 전체가 뒤틀려.",
+    "몸 신호를 무시하면 효율이 아니라 비용만 남아.",
+  ],
+  미선택: [
+    "루틴 없는 버티기는 결국 다음 주를 더 비싸게 만들어.",
+    "기준 없는 하루는 급한 일에게 일정 주도권을 넘겨.",
+    "정리 없는 실행은 속도보다 누수만 키워.",
+    "기록이 없으면 개선도 없고 피로만 반복돼.",
+  ],
+};
+
+type SectionTheme =
+  | "natal"
+  | "personality"
+  | "finance"
+  | "romance"
+  | "career"
+  | "health"
+  | "risk"
+  | "conclusion";
+
+const SECTION_THEME_ORDER: SectionTheme[] = [
+  "natal",
+  "personality",
+  "finance",
+  "romance",
+  "career",
+  "health",
+  "risk",
+  "conclusion",
+];
+
+const SECTION_THEME_SEEDS: Array<{ icon: string; title: string }> = [
+  { icon: "🧭", title: "타고난 구조" },
+  { icon: "🧩", title: "대인/성격 패턴" },
+  { icon: "💰", title: "재물" },
+  { icon: "💞", title: "연애" },
+  { icon: "💼", title: "직장" },
+  { icon: "🩺", title: "건강" },
+  { icon: "🚧", title: "리스크 관리" },
+  { icon: "✅", title: "현실적인 결론" },
+];
+
+const THEME_WORDS_BY_SECTION: Record<SectionTheme, string[]> = {
+  natal: ["원국", "기질", "결정축", "반응속도", "완급조절", "습관패턴", "집중축", "회복탄성"],
+  personality: ["말투", "경계", "거리", "맞춰줌", "눈치", "갈등", "대화", "서운함"],
+  finance: ["지출", "고정비", "카드", "저축", "투자", "현금흐름", "예산", "부채"],
+  romance: ["거리감", "연락 텀", "서운함", "기대치", "표현", "의존", "밀당", "대화"],
+  career: ["평가", "성과", "업무강도", "기한", "상사", "팀", "역할", "이직"],
+  health: ["수면", "회복", "피로", "카페인", "운동", "소화", "두통", "컨디션"],
+  risk: ["새는 구멍", "충동", "누수", "방심", "반복실수", "지연", "미루기", "과소평가"],
+  conclusion: ["핵심 판정", "우선순위", "실행축", "정리", "마감선", "기준", "리듬", "한 줄"],
+};
+
+const THEME_HOOK_POOLS: Record<SectionTheme, string[]> = {
+  natal: [
+    "기본 엔진은 탄탄한데 조향 기준이 흐리면 같은 패턴을 다시 밟기 쉬워.",
+    "타고난 추진력은 충분한데 멈추는 지점이 없어서 피로가 먼저 올라와.",
+    "기질 자체는 강한데 완급조절이 늦으면 좋은 카드도 값이 떨어져.",
+    "원국의 장점은 분명한데 반응 순서가 꼬이면 체감 성과가 줄어들어.",
+  ],
+  personality: [
+    "말은 부드러운데 경계선이 약하면 관계 피로가 조용히 쌓여.",
+    "대화량은 충분한데 거리 조절이 늦으면 서운함이 먼저 커져.",
+    "맞춰주는 속도는 빠른데 기준 문장이 없어서 갈등이 반복돼.",
+    "눈치는 빠른 편인데 경계 설정이 늦어 감정 소모가 커져.",
+  ],
+  finance: [
+    "수입보다 지출 순서가 흔들리면 통제감이 먼저 무너져.",
+    "카드 결제 흐름이 예산보다 앞서면 저축 리듬이 깨져.",
+    "현금흐름이 보이는데도 고정비가 크면 선택권이 줄어들어.",
+    "투자 판단보다 지출 관리가 느리면 월말 압박이 커져.",
+  ],
+  romance: [
+    "마음은 분명한데 표현 타이밍이 늦으면 거리감이 벌어져.",
+    "관계 의지는 있는데 연락 텀이 흔들리면 기대치가 어긋나.",
+    "좋은 감정이 있어도 밀당 패턴이 길면 신뢰가 약해져.",
+    "대화가 이어져도 의존과 경계가 섞이면 리듬이 깨져.",
+  ],
+  career: [
+    "일은 많이 하는데 평가 기준이 모호하면 성과가 흐려져.",
+    "업무강도는 높은데 역할 정리가 없으면 피로만 남아.",
+    "기한은 맞추는데 성장 축이 없어서 커리어 체감이 약해져.",
+    "팀 내 기여는 큰데 이동 전략이 없으면 기회가 늦어져.",
+  ],
+  health: [
+    "일정은 굴러가는데 수면 축이 흔들리면 회복이 멈춰.",
+    "카페인으로 버티는 날이 늘면 피로가 다음 주로 이월돼.",
+    "운동 루틴이 끊기면 컨디션 변동폭이 먼저 커져.",
+    "소화와 두통 신호를 미루면 집중 시간이 빠르게 줄어.",
+  ],
+  risk: [
+    "작은 새는 구멍을 방치하면 큰 손실은 순식간에 붙어.",
+    "충동 판단이 한 번 열리면 누수 패턴은 빠르게 고정돼.",
+    "방심이 길어지면 반복실수가 일정 전체를 밀어.",
+    "미루기가 겹치면 리스크는 조용히 복리로 커져.",
+  ],
+  conclusion: [
+    "지금은 감정이 아니라 기준으로 판정해야 손실을 줄여.",
+    "핵심은 더 열심히가 아니라 우선순위 고정이야.",
+    "결론은 단순해, 실행축이 없으면 좋은 해석도 무력해.",
+    "마지막 판정은 방향보다 반복 가능한 루틴이 이겨.",
+  ],
+};
+
+const THEME_FUTURE_POOLS: Record<SectionTheme, string[]> = {
+  natal: [
+    "앞으로 3~6개월은 반응 순서를 고정할수록 같은 실수를 빠르게 줄일 수 있어.",
+    "당분간은 기질 강점을 하나로 묶을수록 성과 편차가 줄어들 거야.",
+    "이번 분기엔 완급 기준을 먼저 세우면 선택 속도보다 정확도가 먼저 올라가.",
+    "가까운 시기에(1~3개월) 루틴 축을 고정하면 피로 누적이 눈에 띄게 줄어.",
+  ],
+  personality: [
+    "앞으로 3~6개월은 경계 문장이 선명할수록 관계 피로가 빠르게 줄어들어.",
+    "당분간은 연락 기준이 없으면 작은 오해가 반복될 가능성이 커.",
+    "이번 분기엔 거리 조절을 고정하면 서운함보다 대화 효율이 먼저 올라가.",
+    "가까운 시기에(1~3개월) 맞춰줌 비율을 낮추면 감정 소모가 확실히 줄어.",
+  ],
+  finance: [
+    "앞으로 3~6개월은 현금흐름 기록이 끊길수록 지출 누수가 빠르게 커질 수 있어.",
+    "당분간은 고정비 정리가 늦으면 저축보다 카드 청구가 먼저 체감될 거야.",
+    "이번 분기엔 예산 상한을 고정하면 투자 판단의 정확도도 함께 올라가.",
+    "가까운 시기에(1~3개월) 지출 루틴을 못 묶으면 월말 압박이 반복될 가능성이 높아.",
+  ],
+  romance: [
+    "앞으로 3~6개월은 표현 타이밍이 늦을수록 거리감이 더 크게 체감될 수 있어.",
+    "당분간은 연락 텀 기준이 없으면 서운함이 갈등으로 번질 가능성이 커.",
+    "이번 분기엔 기대치 합의를 먼저 하면 밀당 소모가 확실히 줄어들어.",
+    "가까운 시기에(1~3개월) 의존과 경계를 구분하지 않으면 대화 효율이 떨어질 수 있어.",
+  ],
+  career: [
+    "앞으로 3~6개월은 역할 정의가 모호할수록 평가 편차가 커질 가능성이 높아.",
+    "당분간은 기한 관리보다 우선순위 정리가 늦으면 성과 체감이 약해질 거야.",
+    "이번 분기엔 업무강도와 회복 리듬을 같이 잡아야 지속 가능한 성장이 가능해.",
+    "가까운 시기에(1~3개월) 이동 기준을 못 세우면 이직 판단이 더 흔들릴 수 있어.",
+  ],
+  health: [
+    "앞으로 3~6개월은 수면 고정이 안 되면 컨디션 편차가 더 커질 가능성이 높아.",
+    "당분간은 회복 루틴이 없으면 카페인 의존이 피로를 더 길게 끌고 갈 거야.",
+    "이번 분기엔 운동 강도보다 빈도를 고정해야 체력 회복이 먼저 붙어.",
+    "가까운 시기에(1~3개월) 소화와 두통 신호를 무시하면 집중 시간이 더 줄 수 있어.",
+  ],
+  risk: [
+    "앞으로 3~6개월은 작은 누수를 즉시 막을수록 큰 리스크 전이를 줄일 수 있어.",
+    "당분간은 충동 트리거를 기록하지 않으면 같은 실수가 반복될 가능성이 커.",
+    "이번 분기엔 새는 구멍 1개만 막아도 전체 손실 곡선이 완만해질 수 있어.",
+    "가까운 시기에(1~3개월) 방심 구간을 방치하면 리스크 비용이 빠르게 커질 수 있어.",
+  ],
+  conclusion: [
+    "앞으로 3~6개월은 우선순위를 고정할수록 감정 변동보다 실행 결과가 먼저 안정돼.",
+    "당분간은 한 줄 기준을 지키면 흔들리는 날에도 방향 이탈이 줄어들 거야.",
+    "이번 분기엔 판단보다 실행축 관리가 결과 편차를 줄이는 핵심이야.",
+    "가까운 시기에(1~3개월) 마감선을 고정하면 누수보다 회복 속도가 빨라질 수 있어.",
+  ],
+};
+
+const THEME_ACTION_POOLS: Record<SectionTheme, string[]> = {
+  natal: [
+    "그래서 2주만 이번 주에 하루 의사결정 3건을 기록하고, 다음 주에 반복된 반응 1개를 중단하는 규칙을 실행한다.",
+    "그래서 2주만 이번 주에 집중 시간대를 7일 기록하고, 다음 주에 피로가 큰 시간대의 일정 1개를 이동한다.",
+  ],
+  personality: [
+    "그래서 2주만 이번 주에 피로한 대화 2건의 경계 문장을 적고, 다음 주에 1건은 연락 텀을 늘려 실행한다.",
+    "그래서 2주만 이번 주에 갈등 신호를 7일 기록하고, 다음 주에 맞춰줌 비율을 20% 줄이는 대화 규칙을 적용한다.",
+  ],
+  finance: [
+    "그래서 2주만 이번 주에 고정비·변동비를 7일 기록하고, 다음 주에 상위 지출 3개 한도를 10% 줄여 실행한다.",
+    "그래서 2주만 이번 주에 카드 사용을 카테고리별로 분리하고, 다음 주에 자동이체 2건을 저축 우선 순서로 재배치한다.",
+  ],
+  romance: [
+    "그래서 2주만 이번 주에 연락 텀과 서운함 트리거를 7일 기록하고, 다음 주에 기대치 문장 1개를 명확히 전달한다.",
+    "그래서 2주만 이번 주에 대화 중 끊기는 지점을 5회 기록하고, 다음 주에 표현 문장 2개를 먼저 제시해 실행한다.",
+  ],
+  career: [
+    "그래서 2주만 이번 주에 업무 우선순위 3개와 성과 지표를 기록하고, 다음 주에 역할 경계를 상사와 1회 정리한다.",
+    "그래서 2주만 이번 주에 기한 지연 원인 3건을 적고, 다음 주에 팀 협업 규칙 1개를 고정해 실행한다.",
+  ],
+  health: [
+    "그래서 2주만 이번 주에 수면·카페인·운동 시간을 7일 기록하고, 다음 주에 취침 시간을 30분 앞당겨 5일 유지한다.",
+    "그래서 2주만 이번 주에 두통·소화 신호를 7일 기록하고, 다음 주에 회복 루틴 2개를 같은 시간에 고정한다.",
+  ],
+  risk: [
+    "그래서 2주만 이번 주에 누수 지점 3개를 기록하고, 다음 주에 가장 큰 새는 구멍 1개를 즉시 차단해 실행한다.",
+    "그래서 2주만 이번 주에 충동 트리거를 7일 추적하고, 다음 주에 방심 구간 2개에 차단 규칙을 설정한다.",
+  ],
+  conclusion: [
+    "그래서 2주만 이번 주에 핵심 판정 기준 1줄을 매일 확인하고, 다음 주에 우선순위 3개만 고정해 실행한다.",
+    "그래서 2주만 이번 주에 흔들린 판단 3건을 기록하고, 다음 주에 같은 상황 대응 규칙 1개를 반복 적용한다.",
+  ],
+};
+
+const THEME_PUNCHLINE_POOLS: Record<SectionTheme, string[]> = {
+  natal: [
+    "타고난 강점은 설계가 붙을 때만 결과로 남아.",
+    "기질은 운명이 아니라 반복 규칙으로 다뤄야 해.",
+    "패턴을 못 끊으면 재능도 소모품이 돼.",
+    "원국 해석보다 실행 순서가 결과를 가른다.",
+  ],
+  personality: [
+    "경계 없는 호의는 결국 관계를 약하게 만든다.",
+    "대화의 양보다 기준 문장 하나가 갈등을 줄여.",
+    "맞춰줌이 계속되면 서운함은 반드시 누적돼.",
+    "거리 조절을 미루면 신뢰도 같이 흔들린다.",
+  ],
+  finance: [
+    "수입보다 지출 순서를 잡아야 통제감이 돌아와.",
+    "돈 문제의 본질은 금액보다 흐름 설계야.",
+    "저축은 의지가 아니라 예산 구조에서 결정돼.",
+    "결제 기준이 없으면 통장 잔고는 늘 흔들려.",
+  ],
+  romance: [
+    "연애의 핵심은 감정보다 표현 타이밍이야.",
+    "거리감은 사랑 부족보다 기준 부재에서 커져.",
+    "밀당이 길어지면 기대치가 먼저 무너져.",
+    "관계는 해석보다 명확한 문장이 지킨다.",
+  ],
+  career: [
+    "성과는 노력량보다 기준 정리에서 먼저 나온다.",
+    "평가가 흔들릴 때는 역할 경계부터 고정해야 해.",
+    "업무강도만 높이면 성장 대신 소진이 남아.",
+    "이동 타이밍보다 준비 루틴이 커리어를 지켜.",
+  ],
+  health: [
+    "회복 없는 성실함은 결국 몸이 거부한다.",
+    "수면이 무너지면 집중력은 반드시 흔들려.",
+    "컨디션 관리는 선택이 아니라 기본 비용이야.",
+    "몸 신호를 미루면 일정 전체가 늦게 무너져.",
+  ],
+  risk: [
+    "리스크는 한 번의 실수보다 반복 방치에서 커져.",
+    "새는 구멍을 막지 않으면 모든 계획이 젖는다.",
+    "충동을 기록하지 않으면 누수는 멈추지 않아.",
+    "방심은 작은 문제를 큰 비용으로 바꾼다.",
+  ],
+  conclusion: [
+    "결론은 단호해야 실행이 흔들리지 않아.",
+    "핵심 판정이 서면 나머지는 정리된다.",
+    "한 줄 기준이 없으면 좋은 분석도 소용없어.",
+    "지금 필요한 건 더 많은 정보가 아니라 고정된 실행축이야.",
+  ],
+};
+
+const THEME_AB_PAIRS: Record<SectionTheme, { a: string; b: string }> = {
+  natal: { a: "타고난 재능", b: "반응 순서를 설계하지 않은 반복 패턴" },
+  personality: { a: "상대의 표정", b: "경계 없는 맞춰줌 패턴" },
+  finance: { a: "월급 크기", b: "지출 순서를 고정하지 않은 구조" },
+  romance: { a: "상대 마음 추측", b: "거리감과 표현 기준의 불일치" },
+  career: { a: "업무량", b: "평가 기준과 역할 정리의 부재" },
+  health: { a: "하루 컨디션", b: "수면과 회복 루틴의 끊김" },
+  risk: { a: "운의 기복", b: "누수 트리거를 방치한 반복" },
+  conclusion: { a: "기분 좋은 해석", b: "실행 기준이 없는 판단" },
+};
+
+const THEME_MYEONGRI_TERMS: Record<SectionTheme, string[]> = {
+  natal: ["일간(日干)", "월지(月支)", "용신(用神)", "기신(忌神)"],
+  personality: ["비견(比肩)", "겁재(劫財)", "식신(食神)", "상관(傷官)"],
+  finance: ["정재(正財)", "편재(偏財)", "비견(比肩)", "겁재(劫財)"],
+  romance: ["정관(正官)", "편관(偏官)", "합(合)", "충(沖)"],
+  career: ["정관(正官)", "편관(偏官)", "인성(印星)", "상관(傷官)"],
+  health: ["인성(印星)", "식신(食神)", "칠살(七殺)", "편관(偏官)"],
+  risk: ["충(沖)", "형(刑)", "파(破)", "합(合)"],
+  conclusion: ["용신(用神)", "희신(喜神)", "기신(忌神)", "월지(月支)"],
+};
+
+const AXIS_BRIDGE_TEMPLATES = [
+  "{axis} 압박이 {theme} 흐름의 방아쇠로 붙고",
+  "{axis} 긴장이 {theme} 판단을 먼저 흔들고",
+  "{axis} 부담이 {theme} 선택 속도를 늦추고",
+  "{axis} 신호가 {theme} 리듬을 갑자기 꺾고",
+];
+
+const SINGLE_USE_PHRASES = ["하루 선택 비용"];
+
+function countEmoji(text: string) {
+  const matches = text.match(EMOJI_REGEX);
+  return matches ? matches.length : 0;
 }
 
-function buildForcedPackpokContent(
+function countSentences(text: string) {
+  const matches = text.match(/[^.!?。！？\n]+[.!?。！？]?/g);
+  if (!matches) return 0;
+  return matches.map((item) => item.trim()).filter(Boolean).length;
+}
+
+function getLastNonEmptyLine(text: string) {
+  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  return lines.length ? lines[lines.length - 1] : "";
+}
+
+function isPunchlineLine(line: string) {
+  const normalized = line.trim();
+  if (!normalized) return false;
+  if (normalized.includes("그래서 2주만") || normalized.includes("이 말이 나오는 이유는")) return false;
+  if (normalized.includes("다는 점이야")) return false;
+  if (normalized.length < 10 || normalized.length > 64) return false;
+  return /[.!?]$/.test(normalized) || /(다|야)$/.test(normalized);
+}
+
+function withSubjectParticle(text: string) {
+  if (!text) return text;
+  const lastChar = text[text.length - 1];
+  const code = lastChar.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) {
+    return `${text}가`;
+  }
+  const hasBatchim = (code - 0xac00) % 28 !== 0;
+  return `${text}${hasBatchim ? "이" : "가"}`;
+}
+
+function withCopula(text: string) {
+  if (!text) return text;
+  const lastChar = text[text.length - 1];
+  const code = lastChar.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) {
+    return `${text}야`;
+  }
+  const hasBatchim = (code - 0xac00) % 28 !== 0;
+  return `${text}${hasBatchim ? "이야" : "야"}`;
+}
+
+function withRoParticle(text: string) {
+  if (!text) return text;
+  const lastChar = text[text.length - 1];
+  const code = lastChar.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) {
+    return `${text}로`;
+  }
+  const hasBatchim = (code - 0xac00) % 28 !== 0;
+  const endsWithRieul = (code - 0xac00) % 28 === 8;
+  return `${text}${hasBatchim && !endsWithRieul ? "으로" : "로"}`;
+}
+
+function normalizeHookSentence(raw: string) {
+  let normalized = raw
+    .replace(EMOJI_REGEX, "")
+    .replace(EXAGGERATED_WORD_REGEX, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    normalized = "흐름은 보이는데 기준이 흔들려서 판단이 자꾸 밀려.";
+  }
+
+  if (!/[.!?]$/.test(normalized)) {
+    normalized = `${normalized}.`;
+  }
+
+  if (normalized.length > 60) {
+    normalized = `${normalized.slice(0, 60).replace(/[.!?]+$/, "")}.`;
+  }
+
+  return normalized;
+}
+
+function pickRealityKeywords(
   input: InputPayload,
-  scope: "core" | "risk" | "conclusion"
-): string {
+  label: string,
+  scope: SectionScope,
+  seedSalt = ""
+) {
+  const pool = REALITY_WORDS_BY_LABEL[label] || REALITY_WORDS_BY_LABEL.미선택;
+  const seed = `${buildInputHash(input)}:${label}:${scope}:reality:${seedSalt}`;
+  const hashHex = crypto.createHash("sha256").update(seed).digest("hex");
+  const count = 2 + (parseInt(hashHex.slice(0, 2), 16) % 3); // 2~4
+  const start = parseInt(hashHex.slice(2, 10), 16) % pool.length;
+  const picked: string[] = [];
+
+  for (let offset = 0; offset < pool.length && picked.length < count; offset += 1) {
+    const candidate = pool[(start + offset) % pool.length];
+    if (!picked.includes(candidate)) {
+      picked.push(candidate);
+    }
+  }
+
+  return picked.length ? picked : pool.slice(0, 2);
+}
+
+function replaceForbiddenLabelsWithRealityWords(text: string, input: InputPayload, seedSalt = "") {
+  let normalized = String(text || "");
+  FORBIDDEN_LABELS.forEach((label, index) => {
+    if (normalized.includes(label)) {
+      const replacement = pickRealityKeywords(input, label, "core", `${seedSalt}:${index}`)
+        .slice(0, 2)
+        .join("·");
+      normalized = normalized.split(label).join(replacement);
+    }
+  });
+  return normalized;
+}
+
+export function validateNoLabelLeak(text: string): boolean {
+  const normalized = String(text || "");
+  return FORBIDDEN_LABELS.every((label) => !normalized.includes(label));
+}
+
+export function validateSectionFormat(content: string): boolean {
+  const normalized = content?.trim() ?? "";
+  if (!normalized) return false;
+
+  if (countSentences(normalized) < 5) return false;
+  if (!normalized.includes("이 말이 나오는 이유는")) return false;
+  if (!normalized.includes("그래서 2주만")) return false;
+  if (!HANJA_TERM_REGEX.test(normalized)) return false;
+  if (countEmoji(normalized) > 2) return false;
+
+  const lastLine = getLastNonEmptyLine(normalized);
+  if (!(lastLine.includes("불편한 진실은") || isPunchlineLine(lastLine))) return false;
+
+  return true;
+}
+
+function getSectionTheme(sectionIndex: number): SectionTheme {
+  if (sectionIndex < 0) return SECTION_THEME_ORDER[0];
+  if (sectionIndex >= SECTION_THEME_ORDER.length) return SECTION_THEME_ORDER[SECTION_THEME_ORDER.length - 1];
+  return SECTION_THEME_ORDER[sectionIndex];
+}
+
+function pickFromThemePool(
+  input: InputPayload,
+  theme: SectionTheme,
+  channel: "hook" | "future" | "term" | "action" | "punch" | "bridge",
+  pool: string[],
+  seedSalt = ""
+) {
+  if (!pool.length) return "";
+  const seed = `${buildInputHash(input)}:${theme}:${channel}:${seedSalt}`;
+  const hashHex = crypto.createHash("sha256").update(seed).digest("hex");
+  const idx = parseInt(hashHex.slice(0, 8), 16) % pool.length;
+  return pool[idx];
+}
+
+function pickKeywordsFromPool(input: InputPayload, theme: SectionTheme, pool: string[], seedSalt = "", min = 2, max = 4) {
+  if (!pool.length) return [];
+  const seed = `${buildInputHash(input)}:${theme}:keywords:${seedSalt}`;
+  const hashHex = crypto.createHash("sha256").update(seed).digest("hex");
+  const count = Math.min(max, Math.max(min, min + (parseInt(hashHex.slice(0, 2), 16) % (max - min + 1))));
+  const start = parseInt(hashHex.slice(2, 10), 16) % pool.length;
+  const picked: string[] = [];
+  for (let offset = 0; offset < pool.length && picked.length < count; offset += 1) {
+    const candidate = pool[(start + offset) % pool.length];
+    if (!picked.includes(candidate)) picked.push(candidate);
+  }
+  return picked.length ? picked : pool.slice(0, min);
+}
+
+function pickThemeKeywords(input: InputPayload, theme: SectionTheme, seedSalt = "") {
+  return pickKeywordsFromPool(input, theme, THEME_WORDS_BY_SECTION[theme], seedSalt, 2, 4);
+}
+
+function pickAxisKeywords(input: InputPayload, theme: SectionTheme, seedSalt = "") {
   const label = resolveCoreFearLabel(input);
-  const relationship = input.relationshipStatus || "상태 미상";
-  const employment = input.employmentStatus || "상태 미상";
+  const pool = REALITY_WORDS_BY_LABEL[label] || REALITY_WORDS_BY_LABEL.미선택;
+  return pickKeywordsFromPool(input, theme, pool, seedSalt, 2, 2);
+}
 
-  const hookSentence = pickMetaphorHook(input, label, scope);
-  const picked = getABPairByLabel(label);
-  const [term1, term2] = pickMyungriTerms(input, label, scope);
+function pickThemeTerms(input: InputPayload, theme: SectionTheme, seedSalt = "") {
+  const pool = THEME_MYEONGRI_TERMS[theme];
+  const first = pickFromThemePool(input, theme, "term", pool, `${seedSalt}:first`);
+  const secondPool = pool.filter((item) => item !== first);
+  const second = pickFromThemePool(input, theme, "term", secondPool, `${seedSalt}:second`);
+  return second ? [first, second] : [first];
+}
+
+function resolveGenderContext(gender?: string) {
+  const normalized = String(gender || "").trim();
+  if (normalized === "여성") return "여성";
+  if (normalized === "남성") return "남성";
+  return "중립";
+}
+
+function buildAxisBridgeClause(input: InputPayload, theme: SectionTheme, themeWord: string, seedSalt = "") {
+  const axisWords = pickAxisKeywords(input, theme, seedSalt);
+  const template = pickFromThemePool(input, theme, "bridge", AXIS_BRIDGE_TEMPLATES, seedSalt);
+  const axis = axisWords.join("·");
+  return template.replace("{axis}", axis).replace("{theme}", themeWord);
+}
+
+export function validateSectionDuplication(contents: string[]): { ok: boolean; reason: string } {
+  const normalizedContents = contents.map((content) => String(content || ""));
+  const perSectionLines = normalizedContents.map((content) =>
+    content
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+  );
+
+  for (let left = 0; left < perSectionLines.length; left += 1) {
+    for (let right = left + 1; right < perSectionLines.length; right += 1) {
+      const leftRange = perSectionLines[left].slice(2, 7);
+      const rightRange = perSectionLines[right].slice(2, 7);
+      const overlap = leftRange.filter((line) => rightRange.includes(line)).length;
+      if (overlap >= 2) {
+        return {
+          ok: false,
+          reason: `섹션 ${left}와 ${right}의 3~7줄 중 ${overlap}줄이 동일`,
+        };
+      }
+    }
+  }
+
+  for (const phrase of SINGLE_USE_PHRASES) {
+    const occurrence = normalizedContents.filter((content) => content.includes(phrase)).length;
+    if (occurrence > 1) {
+      return {
+        ok: false,
+        reason: `문장 조각 '${phrase}'가 ${occurrence}회 반복`,
+      };
+    }
+  }
+
+  return { ok: true, reason: "통과" };
+}
+
+function buildForcedSectionContent(input: InputPayload, theme: SectionTheme, sectionIndex: number): string {
+  const relationship = input.relationshipStatus || "미기재";
+  const employment = input.employmentStatus || "미기재";
+  const genderContext = resolveGenderContext(input.gender);
+  const seedSalt = `${theme}:${sectionIndex}`;
+  const keywords = pickThemeKeywords(input, theme, seedSalt);
+  const [themeWord1, themeWord2] = keywords.length >= 2 ? keywords : [keywords[0] || "패턴", keywords[1] || "기준"];
+  const [term1, term2] = pickThemeTerms(input, theme, seedSalt);
   const termText = term2 ? `${term1}, ${term2}` : term1;
-  const firstSentence = `지금 문제는 ${picked.a}가 아니라 ${picked.b}야.`;
-  const secondSentence = `이 말이 나오는 이유는 ${employment}이고 ${relationship} 상태에서 ${label} 고민이 반복되고, ${termText} 흐름이 동시에 흔들리기 때문이야.`;
-  const thirdSentence = pickFutureSentence(input, label, scope);
-  const fourthSentence = getActionSentenceByLabel(label);
-  const fifthSentence = getTruthSentenceByLabel(label);
+  const hookSentence = normalizeHookSentence(
+    pickFromThemePool(input, theme, "hook", THEME_HOOK_POOLS[theme], seedSalt)
+  );
+  const ab = THEME_AB_PAIRS[theme];
+  const axisBridgeClause = buildAxisBridgeClause(input, theme, themeWord1, seedSalt);
+  const futureSentence = pickFromThemePool(input, theme, "future", THEME_FUTURE_POOLS[theme], seedSalt);
+  const actionSentence = pickFromThemePool(input, theme, "action", THEME_ACTION_POOLS[theme], seedSalt);
+  const punchline = pickFromThemePool(input, theme, "punch", THEME_PUNCHLINE_POOLS[theme], seedSalt);
 
-  const lines = [`${hookSentence}`, `선택한 고민: ${label}`, firstSentence, secondSentence, thirdSentence, fourthSentence, fifthSentence];
-  return lines.join("\n");
+  const lines = [
+    hookSentence,
+    `${keywords.join("·")} 축이 흔들리면 판단 순서가 뒤집히기 쉬워.`,
+    `지금 문제는 ${withSubjectParticle(ab.a)} 아니라 ${withCopula(ab.b)}.`,
+    `이 말이 나오는 이유는 직업 상태가 ${employment}이고 연애 상태가 ${relationship}이며 성별 맥락은 ${withRoParticle(genderContext)} 입력됐고, ${axisBridgeClause} ${themeWord2} 부담이 반복되며 ${termText} 신호가 동시에 걸리기 때문이야.`,
+    futureSentence,
+    actionSentence,
+    punchline,
+  ];
+
+  return replaceForbiddenLabelsWithRealityWords(lines.join("\n"), input, seedSalt);
 }
 
 function buildForcedCoreFearAxisBlock(input: InputPayload): string {
-  return buildForcedPackpokContent(input, "core");
-}
-
-function resolveRiskSectionIndex(sections: AnalysisResult["sections"]): number {
-  const riskKeywords = /(리스크)/;
-  const riskSimilarKeywords = /(경고|위험|새는|누수|위기)/;
-  const riskIcons = new Set(["⚠️", "🚨", "🛑", "🔥", "🕳️", "⛔", "☠️"]);
-
-  const titleHit = sections.findIndex((section) => riskKeywords.test(String(section?.title || "")));
-  if (titleHit >= 0) return titleHit;
-
-  const similarHit = sections.findIndex(
-    (section) =>
-      riskSimilarKeywords.test(String(section?.title || "")) ||
-      riskSimilarKeywords.test(String(section?.content || ""))
-  );
-  if (similarHit >= 0) return similarHit;
-
-  const iconHit = sections.findIndex((section) => riskIcons.has(String(section?.icon || "")));
-  if (iconHit >= 0) return iconHit;
-
-  if (sections.length === 0) return -1;
-  if (sections.length === 1) return 0;
-  return sections.length - 2;
-}
-
-function resolveConclusionSectionIndex(sections: AnalysisResult["sections"]): number {
-  const conclusionKeywords = /(결론|요약|정리|한 줄)/;
-
-  const titleHit = sections.findIndex((section) => conclusionKeywords.test(String(section?.title || "")));
-  if (titleHit >= 0) return titleHit;
-
-  return sections.length > 0 ? sections.length - 1 : -1;
+  return buildForcedSectionContent(input, "natal", -1);
 }
 
 function enforceRiskSectionPackpok(input: InputPayload, sections: AnalysisResult["sections"]) {
-  if (!Array.isArray(sections) || sections.length === 0) return sections;
-  const nextSections = [...sections];
-  const targetIndexes = [resolveRiskSectionIndex(sections), resolveConclusionSectionIndex(sections)];
-  const uniqueIndexes = [...new Set(targetIndexes)].filter((idx) => idx >= 0);
+  const sourceSections = Array.isArray(sections) ? [...sections] : [];
 
-  uniqueIndexes.forEach((idx) => {
-    const target = nextSections[idx];
-    if (target?.content && validatePackpok(target.content)) return;
-    const scope = idx === targetIndexes[0] ? "risk" : "conclusion";
-    nextSections[idx] = {
-      ...target,
-      content: buildForcedPackpokContent(input, scope),
+  const seededSections = Array.from({ length: 8 }).map((_, index) => {
+    const base = sourceSections[index];
+    const seed = SECTION_THEME_SEEDS[index];
+    const title = replaceForbiddenLabelsWithRealityWords(String(seed.title), input, `title:${index}`);
+    const content = replaceForbiddenLabelsWithRealityWords(
+      typeof base?.content === "string" ? base.content : "",
+      input,
+      `content:${index}`
+    );
+    const invalid = !validateSectionFormat(content) || !validateNoLabelLeak(content);
+    return {
+      icon: seed.icon,
+      title: title || seed.title,
+      content,
+      invalid,
     };
   });
 
-  return nextSections;
+  let forceAll = false;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const candidate = seededSections.map((section, index) => {
+      const theme = getSectionTheme(index);
+      let content = section.content;
+      if (forceAll || section.invalid) {
+        content = buildForcedSectionContent(input, theme, index + attempt * 17);
+      }
+      content = replaceForbiddenLabelsWithRealityWords(content, input, `attempt:${attempt}:section:${index}`);
+      if (!validateSectionFormat(content) || !validateNoLabelLeak(content)) {
+        content = buildForcedSectionContent(input, theme, index + attempt * 101 + 7);
+      }
+
+      return {
+        icon: section.icon,
+        title: section.title,
+        content,
+      };
+    });
+
+    const duplication = validateSectionDuplication(candidate.map((section) => section.content));
+    const formatOK = candidate.every(
+      (section) => validateSectionFormat(section.content) && validateNoLabelLeak(section.content)
+    );
+    if (duplication.ok && formatOK) {
+      return candidate;
+    }
+
+    forceAll = true;
+  }
+
+  return seededSections.map((section, index) => {
+    const theme = getSectionTheme(index);
+    const content = buildForcedSectionContent(input, theme, index + 999);
+    return {
+      icon: section.icon,
+      title: section.title,
+      content: replaceForbiddenLabelsWithRealityWords(content, input, `fallback:${index}`),
+    };
+  });
+}
+
+function enforceNoLabelLeakAcrossResult(input: InputPayload, result: AnalysisResult): AnalysisResult {
+  const safeTier = {
+    ...result.tier,
+    title: replaceForbiddenLabelsWithRealityWords(String(result.tier?.title || ""), input, "tier-title"),
+    description: replaceForbiddenLabelsWithRealityWords(
+      String(result.tier?.description || ""),
+      input,
+      "tier-description"
+    ),
+  };
+
+  let safeCoreFear = replaceForbiddenLabelsWithRealityWords(
+    String(result.coreFearAxisBlock || ""),
+    input,
+    "coreFear"
+  );
+  if (!validateSectionFormat(safeCoreFear) || !validateNoLabelLeak(safeCoreFear)) {
+    safeCoreFear = buildForcedCoreFearAxisBlock(input);
+  }
+  safeCoreFear = replaceForbiddenLabelsWithRealityWords(safeCoreFear, input, "coreFear-final");
+
+  const safeSections = enforceRiskSectionPackpok(input, result.sections).map((section, index) => {
+    const safeTitle = replaceForbiddenLabelsWithRealityWords(
+      String(section?.title || ""),
+      input,
+      `final-title:${index}`
+    );
+    let safeContent = replaceForbiddenLabelsWithRealityWords(
+      String(section?.content || ""),
+      input,
+      `final-content:${index}`
+    );
+
+    if (!validateSectionFormat(safeContent) || !validateNoLabelLeak(safeContent)) {
+      safeContent = buildForcedSectionContent(input, getSectionTheme(index), index);
+    }
+
+    return {
+      ...section,
+      title: safeTitle || `분석 섹션 ${index + 1}`,
+      content: replaceForbiddenLabelsWithRealityWords(safeContent, input, `final-content-post:${index}`),
+    };
+  });
+
+  return {
+    ...result,
+    tier: safeTier,
+    coreFearAxisBlock: safeCoreFear,
+    sections: safeSections,
+  };
 }
 
 function resolveCoreFearAxisBlock(input: InputPayload, existing?: string | null): string {
@@ -422,8 +1098,10 @@ export const CORE_FEAR_TEMPLATES: Record<CoreFearAxis, {
 
 const MOCK_DATA: AnalysisResult = {
   tier: {
-    grade: "A-",
-    percentile: 15,
+    grade: "A",
+    composite: 82,
+    percentileRank: 90,
+    topPercent: 10,
     title: "엔진은 강력한데 핸들이 좀 헐거운 스포츠카",
     description:
       "잠재력은 충분한데 방향성이 애매할 때가 많아요. 한 분야에 집중하면 탑티어까지 올라갈 수 있는 사람인데, 이것저것 손대다가 에너지가 분산되는 경향이 있어요. 일단 한 우물만 파면 진짜 대박 나는 타입입니다.",
@@ -537,7 +1215,14 @@ const SYSTEM_PROMPT = `
 ────────────────────────────────
 [출력 JSON 스키마(고정)]
 {
-  "tier": { "grade": string, "percentile": number, "title": string, "description": string },
+  "tier": {
+    "grade": "S"|"A"|"B"|"C"|"D",
+    "composite": number(0~100),
+    "percentileRank": number(1~99),
+    "topPercent": number(1~99),
+    "title": string,
+    "description": string
+  },
   "scores": { "재물운": number, "연애운": number, "직장운": number, "건강운": number, "대인운": number },
   "sections": [ { "icon": string, "title": string, "content": string } ],
   "coreFearAxisBlock": string
@@ -677,14 +1362,28 @@ composite = round(0.45*PotentialScore + 0.45*StabilityScore - 0.35*RiskScore)
 - StabilityScore ≤ 45이면 grade 최대 B
 
 (8) 등급 컷
-S: composite ≥ 78
-A: 70~77
-B: 62~69
-C: 54~61
-D: ≤ 53
+S: composite ≥ 86
+A: 78~85
+B: 68~77
+C: 58~67
+D: ≤ 57
 
-(9) percentile
-percentile = clamp(composite, 40, 90)
+(9) percentileRank / topPercent
+percentileRank는 composite를 퍼센타일로 보정한 값이며, 상위권일수록 더 희소하게 잡는다.
+구간별 선형 보정(냉정한 평가):
+- composite 0~55  -> percentileRank 5~35
+- composite 55~70 -> percentileRank 35~65
+- composite 70~78 -> percentileRank 65~85
+- composite 78~86 -> percentileRank 85~95
+- composite 86~100-> percentileRank 95~99
+percentileRank는 1~99로 클램프한다.
+topPercent = 100 - percentileRank
+현재 매핑 기준 상위 비율 범위:
+- S(≥86): 상위 약 1~5%
+- A(78~85): 상위 약 6~15%
+- B(68~77): 상위 약 17~39%
+- C(58~67): 상위 약 41~59%
+- D(≤57): 상위 약 61% 이상(하위권)
 
 (10) scores(5개 운 점수)도 만세력 기반
 - 각 점수 시작값 58, 범위 35~90 정수.
@@ -702,7 +1401,7 @@ const TEASER_PROMPT = `[Role]
 당신은 '두루미 사주 결과 디렉터'입니다. 사주를 데이터처럼 분석해서 등급과 수치로만 간단히 요약합니다.
 
 [핵심 컨셉]
-- 등급과 퍼센트로 객관화 (S/A/B/C/D 등급, 상위 N%)
+- 등급과 상위 비율로 객관화 (S/A/B/C/D 등급, 상위 N%)
 - 카테고리별 점수 시각화
 - 섹션은 제목/아이콘만 제공 (본문 설명 금지)
 
@@ -716,17 +1415,19 @@ const TEASER_PROMPT = `[Role]
 
 {
   "tier": {
-    "grade": "A+",
-    "percentile": 8,
+    "grade": "A",
+    "composite": 82,
+    "percentileRank": 92,
+    "topPercent": 8,
     "title": "비유적 한 줄 요약",
     "description": "2-3문장 핵심 설명"
   },
   "scores": {
     "재물운": { "score": 85, "grade": "A" },
-    "연애운": { "score": 72, "grade": "B+" },
+    "연애운": { "score": 72, "grade": "B" },
     "직장운": { "score": 68, "grade": "B" },
-    "건강운": { "score": 90, "grade": "A+" },
-    "대인운": { "score": 75, "grade": "B+" }
+    "건강운": { "score": 90, "grade": "A" },
+    "대인운": { "score": 75, "grade": "B" }
   },
   "sections": [
     { "icon": "🎭", "title": "타고난 DNA" },
@@ -913,6 +1614,7 @@ export async function resolveSajuText(input: InputPayload) {
   let calcDay = day;
 
   if (input.calendarType === "lunar") {
+    const { convertLunarToSolar } = await import("@/lib/utils/lunar");
     const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
     if (!converted) return null;
     calcYear = converted.year;
@@ -924,6 +1626,7 @@ export async function resolveSajuText(input: InputPayload) {
   const minute = input.unknownBirthTime ? undefined : Number(input.birthMinute || "0");
 
   try {
+    const { calculateSaju, formatSajuText } = await import("@/lib/utils/saju");
     const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
     if (!saju) return null;
     return formatSajuText(saju);
@@ -961,7 +1664,7 @@ export function buildCoreFearAxisBlock(
 
 export function buildTeaserFromFull(full: AnalysisResult): TeaserResult {
   return {
-    tier: full.tier,
+    tier: normalizeTier(full.tier),
     scores: full.scores,
     sections: (full.sections || []).map((section) => ({
       icon: section.icon,
@@ -991,9 +1694,10 @@ export async function runFullAnalysis(input: InputPayload) {
   const useMock = process.env.USE_MOCK === "true";
   if (useMock) {
     const mockResult = { ...MOCK_DATA };
+    mockResult.tier = normalizeTier(mockResult.tier);
     mockResult.coreFearAxisBlock = resolveCoreFearAxisBlock(input, mockResult.coreFearAxisBlock);
     mockResult.sections = enforceRiskSectionPackpok(input, mockResult.sections);
-    return mockResult;
+    return enforceNoLabelLeakAcrossResult(input, mockResult as AnalysisResult);
   }
 
   if (!process.env.GEMINI_API_KEY) {
@@ -1034,10 +1738,11 @@ export async function runFullAnalysis(input: InputPayload) {
     if (res.ok) {
       try {
         const parsed = parseJson5Loose<AnalysisResult>(res.text);
+        parsed.tier = normalizeTier(parsed.tier);
         parsed.scores = normalizeScores(parsed.scores);
         parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
         parsed.sections = enforceRiskSectionPackpok(input, parsed.sections);
-        return parsed;
+        return enforceNoLabelLeakAcrossResult(input, parsed);
       } catch (error: any) {
         if (process.env.NODE_ENV !== "production") {
           console.warn("[ANALYSIS_DEBUG] Invalid JSON from model", { model, message: error?.message });
@@ -1064,6 +1769,7 @@ export async function runTeaserAnalysis(input: InputPayload) {
   const useMock = process.env.USE_MOCK === "true";
   if (useMock) {
     const teaser = buildTeaserFromFull(MOCK_DATA);
+    teaser.tier = normalizeTier(teaser.tier);
     teaser.coreFearAxisBlock = resolveCoreFearAxisBlock(input, teaser.coreFearAxisBlock);
     return teaser;
   }
@@ -1097,6 +1803,7 @@ export async function runTeaserAnalysis(input: InputPayload) {
     if (res.ok) {
       try {
         const parsed = parseJson5Loose<TeaserResult>(res.text);
+        parsed.tier = normalizeTier(parsed.tier);
         parsed.scores = normalizeScores(parsed.scores);
         parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
         return parsed;

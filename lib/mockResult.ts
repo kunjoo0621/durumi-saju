@@ -2,8 +2,10 @@ import type { AnalysisResult } from "@/store/useInputStore";
 
 export const MOCK_RESULT: AnalysisResult = {
   tier: {
-    grade: "A-",
-    percentile: 14,
+    grade: "A",
+    composite: 82,
+    percentileRank: 90,
+    topPercent: 10,
     title: "속도는 빠른데 방향은 자주 바뀌는 타입",
     description:
       "잠재력은 강한데 집중력이 분산되기 쉬운 편이에요. 한 번 목표를 잡으면 생각보다 크게 뚫고 올라갑니다.",

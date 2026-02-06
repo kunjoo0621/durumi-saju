@@ -12,7 +12,9 @@ export type AnalysisScores = {
 export type AnalysisResult = {
   tier: {
     grade: string;
-    percentile: number;
+    composite: number;
+    percentileRank: number;
+    topPercent: number;
     title: string;
     description: string;
   };
@@ -28,7 +30,9 @@ export type AnalysisResult = {
 export type TeaserResult = {
   tier: {
     grade: string;
-    percentile: number;
+    composite: number;
+    percentileRank: number;
+    topPercent: number;
     title: string;
     description: string;
   };

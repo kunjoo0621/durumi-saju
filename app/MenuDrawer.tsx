@@ -134,7 +134,7 @@ export default function MenuDrawer() {
         type="button"
         aria-label="메뉴 열기"
         onClick={() => setIsOpen(true)}
-        className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:opacity-80 transition-opacity"
+        className="w-10 h-10 flex items-center justify-center rounded-lg text-white hover:bg-zinc-800/40 transition-colors"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M4 6h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -153,32 +153,32 @@ export default function MenuDrawer() {
           />
           <div
             ref={drawerRef}
-            className="absolute right-0 top-0 h-full w-[280px] bg-background-secondary shadow-xl transition-transform duration-300 ease-out flex flex-col"
+            className="absolute right-0 top-0 h-full w-[280px] bg-zinc-900 shadow-xl transition-transform duration-300 ease-out flex flex-col border-l border-white/10"
             style={{ transform: isOpen ? "translateX(0)" : "translateX(100%)" }}
             role="dialog"
             aria-modal="true"
           >
             {session?.user ? (
-              <div className="px-5 py-6 bg-background-tertiary">
-                <div className="text-[18px] font-semibold text-text-primary">
+              <div className="px-5 py-6 bg-zinc-800">
+                <div className="text-[18px] font-semibold text-white">
                   {session.user.name || "사용자"}님
                 </div>
                 {profileStatus === "incomplete" && (
-                  <p className="mt-2 text-[13px] text-text-secondary">
+                  <p className="mt-2 text-[13px] text-zinc-400">
                     정보 입력이 필요합니다
                   </p>
                 )}
               </div>
             ) : (
-              <div className="px-5 py-6 bg-background-tertiary">
-                <div className="text-[18px] font-semibold text-text-primary">로그인이 필요해요</div>
-                <p className="mt-2 text-[14px] text-text-secondary">
+              <div className="px-5 py-6 bg-zinc-800">
+                <div className="text-[18px] font-semibold text-white">로그인이 필요해요</div>
+                <p className="mt-2 text-[14px] text-zinc-400">
                   내 사주 결과를 저장할 수 있어요
                 </p>
               </div>
             )}
 
-            <div className="flex-1 border-t border-border">
+            <div className="flex-1 border-t border-white/10">
               {!session?.user && (
                 <button
                   type="button"
@@ -204,8 +204,8 @@ export default function MenuDrawer() {
                       disabled={!hasResults || checkingResults}
                       className={`w-full text-left px-5 py-4 text-[16px] transition-colors ${
                         !hasResults || checkingResults
-                          ? "text-text-tertiary cursor-not-allowed"
-                          : "text-white hover:bg-background-tertiary"
+                          ? "text-zinc-400/50 cursor-not-allowed"
+                          : "text-white hover:bg-zinc-800"
                       }`}
                     >
                       내 사주 결과
@@ -213,16 +213,16 @@ export default function MenuDrawer() {
                     <button
                       type="button"
                       onClick={handleEditInfo}
-                      className="w-full text-left px-5 py-4 text-[16px] text-white hover:bg-background-tertiary transition-colors"
+                      className="w-full text-left px-5 py-4 text-[16px] text-white hover:bg-zinc-800 transition-colors"
                     >
                       정보 수정
                     </button>
                   </div>
-                  <div className="mt-auto border-t border-border">
+                  <div className="mt-auto border-t border-white/10">
                     <button
                       type="button"
                       onClick={() => signOut({ callbackUrl: "/" })}
-                      className="w-full text-left px-5 py-4 text-[16px] text-text-secondary hover:text-white"
+                      className="w-full text-left px-5 py-4 text-[16px] text-zinc-400 hover:text-white"
                     >
                       로그아웃
                     </button>

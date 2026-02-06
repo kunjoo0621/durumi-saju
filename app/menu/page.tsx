@@ -17,8 +17,10 @@ export default function MenuPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-background-primary flex items-center justify-center px-5">
-        <div className="text-text-secondary text-[14px]">로그인 확인 중...</div>
+      <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] flex items-center justify-center px-5">
+        <div className="max-w-[640px] mx-auto w-full text-center text-[14px] text-zinc-400">
+          로그인 확인 중...
+        </div>
       </div>
     );
   }
@@ -28,43 +30,96 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
-      <header className="sticky top-0 z-[100] bg-background-primary px-5 py-5">
-        <div className="max-w-xl mx-auto flex items-center justify-between">
+    <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white flex flex-col">
+      <header className="sticky top-0 z-[100] bg-[rgb(var(--c-dark-bg))] px-5 py-5 border-b border-white/5">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
-          <h1 className="text-title-3 font-aggro">메뉴 선택</h1>
+          <h1 className="text-title-3 font-aggro text-white">메뉴 선택</h1>
           <MenuDrawer />
         </div>
       </header>
 
       <main className="flex-1 px-5 pb-12">
-        <section className="max-w-xl mx-auto pt-12 space-y-5">
+        <section className="max-w-[640px] mx-auto pt-10 space-y-4">
           <button
             type="button"
             onClick={() => router.push("/my/results")}
-            className="group w-full overflow-hidden rounded-2xl border border-white/10 bg-background-secondary/60 text-left transition-all duration-200 hover:border-white/20 hover:bg-background-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="group w-full rounded-2xl border border-white/10 bg-zinc-900 text-left transition-colors duration-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            <div className="relative h-[160px] w-full overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(var(--primary),0.35)_0%,rgba(var(--primary),0.08)_42%,transparent_70%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_40%,rgba(255,255,255,0.12)_0%,transparent_55%)]" />
-              <div className="absolute inset-0 opacity-60 blur-2xl bg-[conic-gradient(from_200deg_at_30%_40%,rgba(var(--primary),0.25),transparent_35%,rgba(255,255,255,0.12),transparent_70%)]" />
-            </div>
-            <div className="space-y-3 px-5 py-5">
-              <div className="text-[18px] font-semibold">내 사주 보러가기</div>
-              <p className="text-[14px] leading-relaxed text-text-secondary">
-                <span className="block">1,000원으로 내 사주 등급을 확인해요.</span>
-                <span className="block">근거 + 2주 행동팁까지 한 번에 받아요.</span>
-              </p>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <span className="rounded-full border border-white/10 bg-background-primary/70 px-3 py-1 text-[12px] text-text-secondary">
-                  등급
-                </span>
-                <span className="rounded-full border border-white/10 bg-background-primary/70 px-3 py-1 text-[12px] text-text-secondary">
-                  근거
-                </span>
-                <span className="rounded-full border border-white/10 bg-background-primary/70 px-3 py-1 text-[12px] text-text-secondary">
-                  2주 행동팁
-                </span>
+            <div className="px-5 py-6">
+              <div className="flex items-start gap-4">
+                <div className="mt-0.5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-zinc-800/60">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                    className="text-white"
+                  >
+                    <path
+                      d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M12 7.5v9"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M8.5 10.25h7"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-[18px] leading-tight font-aggro text-white">
+                      내 사주 보러가기
+                    </div>
+                    <span className="btn-primary mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        className="text-white"
+                      >
+                        <path
+                          d="M9 18l6-6-6-6"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
+                    <span className="block">1,000원으로 내 사주 등급을 확인해요.</span>
+                    <span className="block">근거 + 2주 행동팁까지 한 번에 받아요.</span>
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-white/10 bg-[rgb(var(--c-dark-bg))] px-3 py-1 text-[12px] text-zinc-400">
+                      등급
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-[rgb(var(--c-dark-bg))] px-3 py-1 text-[12px] text-zinc-400">
+                      근거
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-[rgb(var(--c-dark-bg))] px-3 py-1 text-[12px] text-zinc-400">
+                      2주 행동팁
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </button>
@@ -72,29 +127,88 @@ export default function MenuPage() {
           <button
             type="button"
             onClick={() => router.push("/battle")}
-            className="group w-full overflow-hidden rounded-2xl border border-white/10 bg-background-secondary/60 text-left transition-all duration-200 hover:border-white/20 hover:bg-background-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="group w-full rounded-2xl border border-white/10 bg-zinc-900 text-left transition-colors duration-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            <div className="relative h-[160px] w-full overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_30%,rgba(255,255,255,0.12)_0%,transparent_55%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(var(--primary),0.3)_0%,rgba(var(--primary),0.1)_45%,transparent_70%)]" />
-              <div className="absolute inset-0 opacity-50 blur-2xl bg-[conic-gradient(from_120deg_at_70%_50%,rgba(var(--primary),0.2),transparent_35%,rgba(255,255,255,0.1),transparent_75%)]" />
-            </div>
-            <div className="space-y-3 px-5 py-5">
-              <div className="text-[18px] font-semibold">1:1 사주배틀</div>
-              <p className="text-[14px] leading-relaxed text-text-secondary">
-                <span className="block">2,000원으로 누가 더 좋은 사주인지 대결해요.</span>
-                <span className="block">결과는 등급으로 깔끔하게 정리해요.</span>
-              </p>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <span className="rounded-full border border-white/10 bg-background-primary/70 px-3 py-1 text-[12px] text-text-secondary">
-                  비교
-                </span>
-                <span className="rounded-full border border-white/10 bg-background-primary/70 px-3 py-1 text-[12px] text-text-secondary">
-                  대결
-                </span>
-                <span className="rounded-full border border-white/10 bg-background-primary/70 px-3 py-1 text-[12px] text-text-secondary">
-                  결과표
-                </span>
+            <div className="px-5 py-6">
+              <div className="flex items-start gap-4">
+                <div className="mt-0.5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-zinc-800/60">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                    className="text-white"
+                  >
+                    <path
+                      d="M7 7h10v10H7V7z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M9.5 9.5h5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M9.5 12h2.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M9.5 14.5h4"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-[18px] leading-tight font-aggro text-white">
+                      1:1 사주배틀
+                    </div>
+                    <span className="btn-primary mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        className="text-white"
+                      >
+                        <path
+                          d="M9 18l6-6-6-6"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
+                    <span className="block">2,000원으로 누가 더 좋은 사주인지 대결해요.</span>
+                    <span className="block">결과는 등급으로 깔끔하게 정리해요.</span>
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-white/10 bg-[rgb(var(--c-dark-bg))] px-3 py-1 text-[12px] text-zinc-400">
+                      비교
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-[rgb(var(--c-dark-bg))] px-3 py-1 text-[12px] text-zinc-400">
+                      대결
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-[rgb(var(--c-dark-bg))] px-3 py-1 text-[12px] text-zinc-400">
+                      결과표
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </button>
