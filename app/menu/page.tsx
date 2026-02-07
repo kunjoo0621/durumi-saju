@@ -8,6 +8,7 @@ import MenuDrawer from "../MenuDrawer";
 export default function MenuPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const isBattleDisabled = true;
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -126,12 +127,29 @@ export default function MenuPage() {
 
           <button
             type="button"
-            onClick={() => router.push("/battle")}
-            className="group w-full rounded-2xl border border-white/10 bg-zinc-900 text-left transition-colors duration-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            disabled={isBattleDisabled}
+            onClick={() => {
+              if (isBattleDisabled) return;
+              router.push("/battle");
+            }}
+            className={[
+              "w-full rounded-2xl border border-white/10 bg-zinc-900 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+              isBattleDisabled ? "cursor-not-allowed opacity-55" : "group hover:bg-zinc-800",
+            ].join(" ")}
           >
-            <div className="px-5 py-6">
+            <div className="relative px-5 py-6">
+              {isBattleDisabled && (
+                <div className="absolute right-5 top-5 rounded-full border border-white/10 bg-[rgb(var(--c-dark-bg))] px-3 py-1 text-[12px] text-zinc-400">
+                  준비 중
+                </div>
+              )}
               <div className="flex items-start gap-4">
-                <div className="mt-0.5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-zinc-800/60">
+                <div
+                  className={[
+                    "mt-0.5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10",
+                    isBattleDisabled ? "bg-zinc-800/30" : "bg-zinc-800/60",
+                  ].join(" ")}
+                >
                   <svg
                     width="20"
                     height="20"
@@ -172,14 +190,21 @@ export default function MenuPage() {
                     <div className="text-[18px] leading-tight font-aggro text-white">
                       1:1 사주배틀
                     </div>
-                    <span className="btn-primary mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5">
+                    <span
+                      className={[
+                        "mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200",
+                        isBattleDisabled
+                          ? "border border-white/10 bg-zinc-800/40 text-zinc-400"
+                          : "btn-primary group-hover:translate-x-0.5",
+                      ].join(" ")}
+                    >
                       <svg
                         width="18"
                         height="18"
                         viewBox="0 0 24 24"
                         fill="none"
                         aria-hidden="true"
-                        className="text-white"
+                        className={isBattleDisabled ? "text-zinc-400" : "text-white"}
                       >
                         <path
                           d="M9 18l6-6-6-6"

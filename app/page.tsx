@@ -9,7 +9,7 @@ type LandingSection = {
   key: string;
   title: string;
   bodyLines: [string, string];
-  accent: "brand" | "violet" | "indigo";
+  accent: "brand" | "neutral";
 };
 
 const SECTIONS: LandingSection[] = [
@@ -23,13 +23,13 @@ const SECTIONS: LandingSection[] = [
     key: "analysis",
     title: "등급만 던지고 끝내지 않아요",
     bodyLines: ["등급 → 근거 → 해석을 한 번에 정리해요.", "마지막엔 2주 실행 팁까지 줘요."],
-    accent: "violet",
+    accent: "neutral",
   },
   {
     key: "battle",
     title: "누가 더 좋은 사주인지, 딱 정리",
     bodyLines: ["2,000원으로 둘을 비교해요.", "결과는 등급으로 깔끔하게 보여줘요."],
-    accent: "indigo",
+    accent: "neutral",
   },
 ];
 
@@ -37,9 +37,7 @@ function SectionGlow({ accent }: { accent: LandingSection["accent"] }) {
   const gradient =
     accent === "brand"
       ? "bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary),0.22)_0%,transparent_62%)]"
-      : accent === "violet"
-        ? "bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.18)_0%,transparent_62%)]"
-        : "bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.18)_0%,transparent_62%)]";
+      : "bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.08)_0%,transparent_62%)]";
 
   return (
     <div
@@ -63,16 +61,12 @@ function ImagePlaceholder({
   const orbA =
     accent === "brand"
       ? "bg-[radial-gradient(circle_at_center,rgba(var(--primary),0.26)_0%,transparent_64%)]"
-      : accent === "violet"
-        ? "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.22)_0%,transparent_64%)]"
-        : "bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.20)_0%,transparent_64%)]";
+      : "bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.10)_0%,transparent_64%)]";
 
   const orbB =
     accent === "brand"
-      ? "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.14)_0%,transparent_70%)]"
-      : accent === "violet"
-        ? "bg-[radial-gradient(circle_at_center,rgba(var(--primary),0.14)_0%,transparent_70%)]"
-        : "bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.12)_0%,transparent_70%)]";
+      ? "bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08)_0%,transparent_70%)]"
+      : "bg-[radial-gradient(circle_at_center,rgba(var(--primary),0.12)_0%,transparent_70%)]";
 
   return (
     <div className="mx-auto w-full max-w-[640px]">
@@ -150,6 +144,8 @@ export default function LandingPage() {
                   src={
                     section.key === "intro"
                       ? "/images/landing/section-01.png"
+                      : section.key === "analysis"
+                        ? "/images/landing/section-02.png"
                       : section.key === "battle"
                         ? "/images/landing/section-03.png"
                         : undefined
@@ -157,6 +153,8 @@ export default function LandingPage() {
                   alt={
                     section.key === "intro"
                       ? "사주보는 두루미 소개 이미지"
+                      : section.key === "analysis"
+                        ? "사주 결과 구성 소개 이미지"
                       : section.key === "battle"
                         ? "1:1 사주배틀 소개 이미지"
                         : undefined
@@ -175,7 +173,7 @@ export default function LandingPage() {
           <button
             type="button"
             onClick={handleStart}
-            className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+            className="w-full h-[54px] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
               <path

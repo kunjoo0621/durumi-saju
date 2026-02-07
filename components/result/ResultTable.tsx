@@ -193,7 +193,7 @@ export default function ResultTable({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <div className={`rounded-3xl p-6 md:p-8 border border-white/5 ${gradeStyle.background}`}>
           <div className="flex items-center justify-between">
             <span
