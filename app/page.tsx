@@ -154,7 +154,7 @@ export default function LandingPage() {
                     section.key === "intro"
                       ? "사주보는 두루미 소개 이미지"
                       : section.key === "analysis"
-                        ? "사주 결과 구성 소개 이미지"
+                        ? "사주 분석 소개 이미지"
                       : section.key === "battle"
                         ? "1:1 사주배틀 소개 이미지"
                         : undefined
