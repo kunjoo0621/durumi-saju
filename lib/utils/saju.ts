@@ -1,5 +1,17 @@
 import { createDateFnsAdapter } from "@gracefullight/saju/adapters/date-fns";
 import { getFourPillars } from "@gracefullight/saju";
+import {
+  BRANCH_INFO as ENRICH_BRANCH_INFO,
+  STEM_ELEMENT as ENRICH_STEM_ELEMENT,
+  analyzeElementBalance,
+  calculateElementDistribution,
+  calculateTenStars,
+  findRelationships,
+  findShinsal,
+  formatEnrichedSajuText,
+  judgeStrength,
+  type EnrichedSajuData,
+} from "./saju-enrichment";
 
 // 어댑터 싱글톤 캐시 - 매번 생성하지 않음
 let cachedAdapter: Awaited<ReturnType<typeof createDateFnsAdapter>> | null = null;
@@ -340,8 +352,62 @@ export function getTenGod(dayStem: string, targetStem: string): string | null {
 /**
  * 사주팔자를 텍스트 형식으로 변환
  */
-export function formatSajuText(saju: SajuData): string {
-  return `년주: ${saju.year.heavenlyStem}${saju.year.earthlyBranch}(${saju.year.heavenlyStem}${saju.year.earthlyBranch}), 월주: ${saju.month.heavenlyStem}${saju.month.earthlyBranch}(${saju.month.heavenlyStem}${saju.month.earthlyBranch}), 일주: ${saju.day.heavenlyStem}${saju.day.earthlyBranch}(${saju.day.heavenlyStem}${saju.day.earthlyBranch}), 시주: ${saju.hour.heavenlyStem}${saju.hour.earthlyBranch}(${saju.hour.heavenlyStem}${saju.hour.earthlyBranch})`;
+export function formatSajuText(saju: SajuData, opts?: { isTimeUnknown?: boolean }): string {
+  const isTimeUnknown = Boolean(opts?.isTimeUnknown);
+
+  const yearStem = saju.year.heavenlyStem;
+  const yearBranch = saju.year.earthlyBranch;
+  const monthStem = saju.month.heavenlyStem;
+  const monthBranch = saju.month.earthlyBranch;
+  const dayStem = saju.day.heavenlyStem;
+  const dayBranch = saju.day.earthlyBranch;
+  const hourStem = saju.hour.heavenlyStem;
+  const hourBranch = saju.hour.earthlyBranch;
+
+  const formatPillar = (stem: string, branch: string) => {
+    const stemK = ENRICH_STEM_ELEMENT[stem]?.korean || "";
+    const branchK = ENRICH_BRANCH_INFO[branch]?.korean || "";
+    return `${stem}${branch}(${stemK}${branchK})`;
+  };
+
+  const stems = [yearStem, monthStem, dayStem];
+  const branches = [yearBranch, monthBranch, dayBranch];
+  if (!isTimeUnknown) {
+    stems.push(hourStem);
+    branches.push(hourBranch);
+  }
+
+  const dayMaster = ENRICH_STEM_ELEMENT[dayStem];
+  const elementDist = calculateElementDistribution(stems, branches);
+  const elementAnalysis = analyzeElementBalance(elementDist);
+  const strength = judgeStrength(dayMaster.element, elementDist, stems.length + branches.length, isTimeUnknown);
+  const tenStars = calculateTenStars(stems, branches);
+  const relationships = findRelationships(branches);
+  const shinsal = findShinsal(dayBranch, dayStem, branches);
+
+  const enriched: EnrichedSajuData = {
+    pillars: {
+      year: formatPillar(yearStem, yearBranch),
+      month: formatPillar(monthStem, monthBranch),
+      day: formatPillar(dayStem, dayBranch),
+      hour: isTimeUnknown ? null : formatPillar(hourStem, hourBranch),
+    },
+    dayMaster: {
+      stem: dayStem,
+      element: dayMaster.element,
+      yinYang: dayMaster.yin_yang,
+      korean: dayMaster.korean,
+    },
+    elementDist,
+    elementAnalysis,
+    strength,
+    tenStars,
+    relationships,
+    shinsal,
+    isTimeUnknown,
+  };
+
+  return formatEnrichedSajuText(enriched);
 }
 
 /**

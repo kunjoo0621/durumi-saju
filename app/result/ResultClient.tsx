@@ -180,7 +180,7 @@ export default function ResultClient() {
 
     fetchResult();
     // inputHash를 사용하여 의존성 단순화 (불필요한 재실행 방지)
-  }, [inputHash, resultIdParam]);
+  }, [inputHash, resultIdParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (typeof window === "undefined") return;
