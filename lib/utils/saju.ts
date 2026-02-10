@@ -13,6 +13,8 @@ import {
   type EnrichedSajuData,
 } from "./saju-enrichment";
 
+export { formatEnrichedSajuText } from "./saju-enrichment";
+
 // 어댑터 싱글톤 캐시 - 매번 생성하지 않음
 let cachedAdapter: Awaited<ReturnType<typeof createDateFnsAdapter>> | null = null;
 let adapterPromise: Promise<Awaited<ReturnType<typeof createDateFnsAdapter>>> | null = null;
@@ -352,7 +354,7 @@ export function getTenGod(dayStem: string, targetStem: string): string | null {
 /**
  * 사주팔자를 텍스트 형식으로 변환
  */
-export function formatSajuText(saju: SajuData, opts?: { isTimeUnknown?: boolean }): string {
+export function enrichSajuData(saju: SajuData, opts?: { isTimeUnknown?: boolean }): EnrichedSajuData {
   const isTimeUnknown = Boolean(opts?.isTimeUnknown);
 
   const yearStem = saju.year.heavenlyStem;
@@ -385,7 +387,7 @@ export function formatSajuText(saju: SajuData, opts?: { isTimeUnknown?: boolean 
   const relationships = findRelationships(branches);
   const shinsal = findShinsal(dayBranch, dayStem, branches);
 
-  const enriched: EnrichedSajuData = {
+  return {
     pillars: {
       year: formatPillar(yearStem, yearBranch),
       month: formatPillar(monthStem, monthBranch),
@@ -406,8 +408,13 @@ export function formatSajuText(saju: SajuData, opts?: { isTimeUnknown?: boolean 
     shinsal,
     isTimeUnknown,
   };
+}
 
-  return formatEnrichedSajuText(enriched);
+/**
+ * 사주팔자를 텍스트 형식으로 변환 (enriched 포맷)
+ */
+export function formatSajuText(saju: SajuData, opts?: { isTimeUnknown?: boolean }): string {
+  return formatEnrichedSajuText(enrichSajuData(saju, opts));
 }
 
 /**

@@ -9,6 +9,12 @@ import {
   percentileRankFromComposite,
   topPercentFromPercentileRank,
 } from "@/lib/gradeSystem";
+import {
+  assembleFinalResult,
+  calculateServerScoring,
+  scoreToGrade,
+  type GeminiTextOnlyResponse,
+} from "@/lib/utils/saju-scoring";
 
 export { normalizeScores } from "@/lib/resultSchema";
 
@@ -1214,16 +1220,16 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
 [출력 JSON 스키마(고정)]
 {
   "tier": {
-    "grade": "S"|"A"|"B"|"C"|"D",
-    "composite": number(0~100),
-    "percentileRank": number(1~99),
-    "topPercent": number(1~99),
-    "title": string,
-    "description": string
+    "grade": (서버 확정값 그대로 출력),
+    "composite": (서버 확정값 그대로 출력),
+    "percentileRank": (서버 확정값 그대로 출력),
+    "topPercent": (서버 확정값 그대로 출력),
+    "title": string (네가 생성),
+    "description": string (네가 생성)
   },
-  "scores": { "재물운": number, "연애운": number, "직장운": number, "건강운": number, "대인운": number },
-  "sections": [ { "icon": string, "title": string, "content": string } ],
-  "coreFearAxisBlock": string
+  "scores": (서버 확정값 그대로 출력),
+  "sections": [ { "icon": string, "title": string, "content": string } ] (네가 생성),
+  "coreFearAxisBlock": string (네가 생성)
 }
 
 tier.title: 15~25자. 이 사주를 한 줄로 요약한 날카로운 제목. 예시: "엔진은 좋은데 브레이크가 없는 팔자", "돈 버는 재주는 있는데 새는 구멍이 더 큰 구조".
@@ -1440,84 +1446,16 @@ sections 개수는 반드시 8개.
 - 예시(X): "재정 계획을 세워본다.", "자신을 돌아본다.", "긍정적으로 생각한다."
 
 ────────────────────────────────
-[만세력 기반 등급/점수 산정]
+[등급/점수: 서버에서 계산된 확정값 사용]
 
-중요: tier와 scores는 오직 만세력 텍스트에 명시된 데이터로만 산정(추측 금지).
-요즘 고민/직업/연애는 sections 해석과 행동 팁에만 반영(등급 베이스로 쓰지 않는다).
+중요: 입력에 [서버 계산 결과] 블록이 포함되어 있다. 이 값은 서버에서 만세력 데이터 기반으로 계산한 확정값이다.
 
-(1) 만세력 데이터 읽기(텍스트에 있는 것만 사용)
-필수 데이터(있으면 반드시 사용):
-- 오행 분포 숫자: "목(3) 화(2) 토(1) 금(0) 수(2)" 패턴
-- 신강/신약: "신강", "신약"
-- 십성 목록: 비견(比肩), 겁재(劫財), 식신(食神), 상관(傷官), 정재(正財), 편재(偏財), 정관(正官), 편관(偏官), 정인(正印), 편인(偏印)
-- 합충형: 합/충/형 키워드
-- 신살: 도화살/역마살/화개살/현침살
-
-(2) PotentialScore(잠재력): 시작 50, 범위 35~85
-+5 정관(正官) 또는 편관(偏官) 존재
-+5 정재(正財) 또는 편재(偏財) 존재
-+4 식신(食神) 또는 상관(傷官) 존재
-+3 인성(정인/편인) 존재
-+3 "신강"
-+2 오행 5개 중 4개 이상이 1 이상(균형)
--4 오행 분포 숫자 없음
-
-(3) StabilityScore(안정성): 시작 50, 범위 35~85
-+6 오행 최대-최소 차이 ≤ 2
-+4 합(合) 존재
-+3 정관(正官) 존재
-+2 정재(正財) 존재
-+2 인성 존재
--8 오행 1개가 4 이상 쏠림
--6 오행 0 결핍
--4 충(沖) 또는 형(刑) 존재
--3 "신약"
--4 오행 분포 숫자 없음
-
-(4) RiskScore(리스크): 시작 45, 범위 35~85
-+6 비견(比肩) 또는 겁재(劫財) 존재
-+5 편관(偏官) + 충/형 동시
-+4 상관(傷官) + 관성(정관/편관) 동시
-+4 충(沖) 또는 형(刑) 존재
-+2 신살 2개 이상
-+2 오행 쏠림/결핍 존재
-
-(5) composite = round(0.45 × PotentialScore + 0.45 × StabilityScore - 0.35 × RiskScore)
-
-(6) 근거 부족 페널티
-만세력 텍스트가 비었거나, (오행 숫자 / 십성 / 신강·신약 / 합충형) 중 등장 종류가 2종 미만:
-  composite = composite - 6, grade 최대 B
-출생시간 "모름": composite = composite - 1
-
-(7) 상한 규칙
-RiskScore ≥ 70 → grade 최대 B
-RiskScore ≥ 78 → grade 최대 C
-StabilityScore ≤ 45 → grade 최대 B
-
-(8) 등급 컷
-S: composite ≥ 86
-A: 78~85
-B: 68~77
-C: 58~67
-D: ≤ 57
-
-(9) percentileRank / topPercent
-composite → percentileRank 선형 보정:
-  0~55 → 5~35
-  55~70 → 35~65
-  70~78 → 65~85
-  78~86 → 85~95
-  86~100 → 95~99
-percentileRank 1~99 클램프. topPercent = 100 - percentileRank.
-
-(10) scores(5개 운 점수): 각 시작값 58, 범위 35~90 정수.
-재물운: +6 정재, +4 편재, +3 식신, -4 비견/겁재, -3 오행 결핍/쏠림
-직장운: +6 정관, +3 편관, +2 인성, -3 상관, -2 편관+충/형 동시
-연애운: +3 도화살/홍염, -2 충/형, -2 비견/겁재
-건강운: +2 식신/인성, -4 편관+충/형, -3 오행 결핍/쏠림
-대인운: +2 인성/정관, +1 합, -3 비견/겁재, -2 상관, -2 충/형
-공통: 오행 결핍/4이상 쏠림 명시 시 모든 scores -1
-근거 부족이면 scores를 50~68로 클램프
+너의 역할:
+- tier.grade, tier.composite, tier.percentileRank, tier.topPercent, scores 숫자는 서버 값을 그대로 출력한다. 변경/재계산 금지.
+- tier.title, tier.description, sections, coreFearAxisBlock은 네가 생성한다.
+- 텍스트를 쓸 때 서버가 준 점수/등급을 근거로 서술한다. 예: "직장운이 B인 이유는 정관(正官)이 버티고 있어서야. 근데 나머지가 전부 D인 건..."
+- 점수가 낮은 카테고리일수록 해당 섹션의 팩폭 강도를 높인다. D등급 카테고리 섹션은 반드시 날카롭게.
+- 점수가 높은 카테고리여도 무조건 칭찬하지 않는다. "B라서 괜찮다"가 아니라 "B인데 A는 못 가는 이유가 있어."
 
 ────────────────────────────────
 [품질 자가 체크: 생성 후 반드시 확인. 위반 시 해당 섹션 재작성]
@@ -1535,42 +1473,34 @@ percentileRank 1~99 클램프. topPercent = 100 - percentileRank.
 `;
 
 const TEASER_PROMPT = `[Role]
-당신은 '두루미 사주 결과 디렉터'입니다. 사주를 데이터처럼 분석해서 등급과 수치로만 간단히 요약합니다.
+너는 '사주보는 두루미'의 티저(맛보기) 텍스트 생성기다.
 
-[핵심 컨셉]
-- 등급과 상위 비율로 객관화 (S/A/B/C/D 등급, 상위 N%)
-- 카테고리별 점수 시각화
-- 섹션은 제목/아이콘만 제공 (본문 설명 금지)
+[목표]
+- 서버가 계산한 점수/등급은 이미 확정값이다. 너는 텍스트만 만든다.
+- sections는 제목/아이콘만 제공한다(본문 content 금지).
 
-[문체 규칙]
-- 마크다운 문법(**bold**, ## 등) 절대 사용 금지
-- 불필요한 텍스트 금지, JSON만 반환
-- 본문(content) 생성 금지 (섹션 제목/아이콘만)
+[절대 규칙]
+- 유효한 JSON 단일 객체만 반환. JSON 외 텍스트 금지.
+- 마크다운 금지.
+- sections의 각 항목에 "content" 키를 절대 넣지 마라.
 
 [Output Format - JSON]
-반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요.
-
 {
   "tier": {
-    "grade": "A",
-    "composite": 82,
-    "percentileRank": 92,
-    "topPercent": 8,
-    "title": "비유적 한 줄 요약",
-    "description": "2-3문장 핵심 설명"
-  },
-  "scores": {
-    "재물운": { "score": 85, "grade": "A" },
-    "연애운": { "score": 72, "grade": "B" },
-    "직장운": { "score": 68, "grade": "B" },
-    "건강운": { "score": 90, "grade": "A" },
-    "대인운": { "score": 75, "grade": "B" }
+    "title": "15~25자 한 줄 요약",
+    "description": "2~3문장 요약"
   },
   "sections": [
-    { "icon": "🎭", "title": "타고난 DNA" },
-    { "icon": "💰", "title": "돈과의 케미" },
-    { "icon": "💕", "title": "연애 성적표" }
-  ]
+    { "icon": "🧭", "title": "타고난 구조" },
+    { "icon": "🧩", "title": "대인/성격 패턴" },
+    { "icon": "💰", "title": "재물" },
+    { "icon": "💞", "title": "연애" },
+    { "icon": "💼", "title": "직장" },
+    { "icon": "🩺", "title": "건강" },
+    { "icon": "🚧", "title": "리스크 관리" },
+    { "icon": "✅", "title": "현실적인 결론" }
+  ],
+  "coreFearAxisBlock": "1~3문장 요약(선택)"
 }`;
 
 const DEFAULT_MODELS = [
@@ -1776,6 +1706,52 @@ export async function resolveSajuText(input: InputPayload) {
   }
 }
 
+async function resolveSajuEnrichedData(input: InputPayload): Promise<{
+  sajuText: string | null;
+  enriched: any | null;
+}> {
+  const existing = input.saju?.trim() || null;
+
+  const year = Number(input.birthYear);
+  const month = Number(input.birthMonth);
+  const day = Number(input.birthDay);
+  if (!year || !month || !day) {
+    return { sajuText: existing, enriched: null };
+  }
+
+  let calcYear = year;
+  let calcMonth = month;
+  let calcDay = day;
+
+  if (input.calendarType === "lunar") {
+    try {
+      const { convertLunarToSolar } = await import("@/lib/utils/lunar");
+      const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+      if (!converted) return { sajuText: existing, enriched: null };
+      calcYear = converted.year;
+      calcMonth = converted.month;
+      calcDay = converted.day;
+    } catch {
+      return { sajuText: existing, enriched: null };
+    }
+  }
+
+  const hour = input.unknownBirthTime ? undefined : Number(input.birthHour || "0");
+  const minute = input.unknownBirthTime ? undefined : Number(input.birthMinute || "0");
+
+  try {
+    const { calculateSaju, enrichSajuData, formatEnrichedSajuText } = await import("@/lib/utils/saju");
+    const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
+    if (!saju) return { sajuText: existing, enriched: null };
+    const enriched = enrichSajuData(saju, { isTimeUnknown: Boolean(input.unknownBirthTime) });
+    const sajuText = formatEnrichedSajuText(enriched);
+    return { sajuText, enriched };
+  } catch (error) {
+    console.warn("[SAJU] failed to resolve saju enriched data", error);
+    return { sajuText: existing, enriched: null };
+  }
+}
+
 // 핵심 공포 축 블록 생성 함수
 export function buildCoreFearAxisBlock(
   axis: CoreFearAxis,
@@ -1843,8 +1819,19 @@ export async function runFullAnalysis(input: InputPayload) {
     throw new Error("API 키가 설정되지 않았습니다.");
   }
 
-  const resolvedSajuText = await resolveSajuText(input);
+  const { sajuText: resolvedSajuText, enriched } = await resolveSajuEnrichedData(input);
   const sajuInfo = resolvedSajuText ? `\n사주팔자: ${resolvedSajuText}` : "";
+
+  const serverScoring = calculateServerScoring(enriched);
+  const serverTier = serverScoring.tier;
+  const serverScores = serverScoring.scores;
+  const serverScoreSummary = `종합등급: ${serverTier.grade} (composite: ${serverTier.composite}, 상위 ${serverTier.topPercent}%)\n재물운: ${serverScores.재물운} (${scoreToGrade(
+    serverScores.재물운
+  )}) / 연애운: ${serverScores.연애운} (${scoreToGrade(serverScores.연애운)}) / 직장운: ${
+    serverScores.직장운
+  } (${scoreToGrade(serverScores.직장운)}) / 건강운: ${serverScores.건강운} (${scoreToGrade(
+    serverScores.건강운
+  )}) / 대인운: ${serverScores.대인운} (${scoreToGrade(serverScores.대인운)})`;
   const coreFearLabel = input.coreFearAxis
     ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
     : "미선택";
@@ -1858,6 +1845,10 @@ export async function runFullAnalysis(input: InputPayload) {
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}
 요즘 1등 이슈: ${coreFearLabel}
+
+[서버 계산 결과]
+${serverScoreSummary}
+위 점수/등급은 확정값이다. 텍스트 생성 시 이 값을 근거로 서술하되, 점수 자체를 변경하지 마라.
 
 위 정보를 바탕으로 사주를 분석해주세요. 연애/직업 정보가 제공된 경우 해당 맥락을 결과에 반영하세요.
   `.trim();
@@ -1876,11 +1867,41 @@ export async function runFullAnalysis(input: InputPayload) {
     const res = await callGemini(model, userInfo);
     if (res.ok) {
       try {
-        const parsed = parseJson5Loose<AnalysisResult>(res.text);
-        parsed.tier = normalizeTier(parsed.tier);
-        parsed.scores = normalizeScores(parsed.scores);
-        parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
-        return enforceNoLabelLeakAcrossResult(input, parsed);
+        const parsed = parseJson5Loose<any>(res.text);
+
+        const geminiText: GeminiTextOnlyResponse = {
+          tier: {
+            title:
+              typeof parsed?.tier?.title === "string" && parsed.tier.title.trim()
+                ? parsed.tier.title
+                : "기본 결과 요약",
+            description:
+              typeof parsed?.tier?.description === "string" && parsed.tier.description.trim()
+                ? parsed.tier.description
+                : "결과를 정리하는 중입니다.",
+          },
+          sections: Array.isArray(parsed?.sections)
+            ? parsed.sections
+                .filter(Boolean)
+                .map((section: any, index: number) => ({
+                  icon:
+                    typeof section?.icon === "string" && section.icon.trim()
+                      ? section.icon
+                      : SECTION_THEME_SEEDS[index]?.icon || "🧩",
+                  title:
+                    typeof section?.title === "string" && section.title.trim()
+                      ? section.title
+                      : SECTION_THEME_SEEDS[index]?.title || `분석 섹션 ${index + 1}`,
+                  content: typeof section?.content === "string" ? section.content : "",
+                }))
+            : [],
+          coreFearAxisBlock: typeof parsed?.coreFearAxisBlock === "string" ? parsed.coreFearAxisBlock : "",
+        };
+
+        const assembled = assembleFinalResult(serverTier, serverScores, geminiText) as unknown as AnalysisResult;
+        assembled.coreFearAxisBlock = resolveCoreFearAxisBlock(input, assembled.coreFearAxisBlock);
+        assembled.scores = normalizeScores(serverScores);
+        return enforceNoLabelLeakAcrossResult(input, assembled);
       } catch (error: any) {
         if (process.env.NODE_ENV !== "production") {
           console.warn("[ANALYSIS_DEBUG] Invalid JSON from model", { model, message: error?.message });
@@ -1916,8 +1937,19 @@ export async function runTeaserAnalysis(input: InputPayload) {
     throw new Error("API 키가 설정되지 않았습니다.");
   }
 
-  const resolvedSajuText = await resolveSajuText(input);
+  const { sajuText: resolvedSajuText, enriched } = await resolveSajuEnrichedData(input);
   const sajuInfo = resolvedSajuText ? `\n사주팔자: ${resolvedSajuText}` : "";
+
+  const serverScoring = calculateServerScoring(enriched);
+  const serverTier = serverScoring.tier;
+  const serverScores = serverScoring.scores;
+  const serverScoreSummary = `종합등급: ${serverTier.grade} (composite: ${serverTier.composite}, 상위 ${serverTier.topPercent}%)\n재물운: ${serverScores.재물운} (${scoreToGrade(
+    serverScores.재물운
+  )}) / 연애운: ${serverScores.연애운} (${scoreToGrade(serverScores.연애운)}) / 직장운: ${
+    serverScores.직장운
+  } (${scoreToGrade(serverScores.직장운)}) / 건강운: ${serverScores.건강운} (${scoreToGrade(
+    serverScores.건강운
+  )}) / 대인운: ${serverScores.대인운} (${scoreToGrade(serverScores.대인운)})`;
   const coreFearLabel = input.coreFearAxis
     ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
     : "미선택";
@@ -1931,6 +1963,10 @@ export async function runTeaserAnalysis(input: InputPayload) {
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}
 요즘 1등 이슈: ${coreFearLabel}
+
+[서버 계산 결과]
+${serverScoreSummary}
+위 점수/등급은 확정값이다. 텍스트 생성 시 이 값을 근거로 서술하되, 점수 자체를 변경하지 마라.
   `.trim();
 
   const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
@@ -1940,11 +1976,44 @@ export async function runTeaserAnalysis(input: InputPayload) {
     const res = await callGemini(model, userInfo, TEASER_PROMPT);
     if (res.ok) {
       try {
-        const parsed = parseJson5Loose<TeaserResult>(res.text);
-        parsed.tier = normalizeTier(parsed.tier);
-        parsed.scores = normalizeScores(parsed.scores);
-        parsed.coreFearAxisBlock = resolveCoreFearAxisBlock(input, parsed.coreFearAxisBlock);
-        return parsed;
+        const parsed = parseJson5Loose<any>(res.text);
+
+        const safeTier = {
+          ...serverTier,
+          title:
+            typeof parsed?.tier?.title === "string" && parsed.tier.title.trim()
+              ? parsed.tier.title
+              : "기본 결과 요약",
+          description:
+            typeof parsed?.tier?.description === "string" && parsed.tier.description.trim()
+              ? parsed.tier.description
+              : "결과를 정리하는 중입니다.",
+        };
+
+        const rawSections: Array<any> = Array.isArray(parsed?.sections) ? parsed.sections : [];
+        const safeSections = rawSections.map((section: any, index: number) => {
+          const fallbackIcon = SECTION_THEME_SEEDS[index]?.icon || "🧩";
+          const fallbackTitle = SECTION_THEME_SEEDS[index]?.title || `분석 섹션 ${index + 1}`;
+          return {
+            icon: typeof section?.icon === "string" && section.icon.trim() ? section.icon : fallbackIcon,
+            title: sanitizeTextForOutput(input, section?.title, `teaser-title:${index}`) || fallbackTitle,
+          };
+        });
+
+        const teaser: TeaserResult = {
+          tier: {
+            ...serverTier,
+            title: sanitizeTextForOutput(input, safeTier.title, "teaser-tier-title") || "기본 결과 요약",
+            description:
+              sanitizeTextForOutput(input, safeTier.description, "teaser-tier-desc") ||
+              "결과를 정리하는 중입니다.",
+          } as any,
+          scores: normalizeScores(serverScores),
+          sections: safeSections,
+          coreFearAxisBlock: resolveCoreFearAxisBlock(input, parsed?.coreFearAxisBlock),
+        };
+
+        return teaser;
       } catch (error: any) {
         if (process.env.NODE_ENV !== "production") {
           console.warn("[ANALYSIS_DEBUG] Invalid teaser JSON from model", { model, message: error?.message });
