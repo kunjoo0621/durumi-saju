@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
@@ -63,6 +63,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
   }, [categories]);
 
   const [progress, setProgress] = useState(0);
+  const hasAnimatedRef = useRef(false);
 
   const scoreHash = useMemo(
     () => orderedCategories.map((item) => `${item.key}:${item.score}:${item.grade}`).join("|"),
@@ -70,6 +71,11 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
   );
 
   useEffect(() => {
+    if (hasAnimatedRef.current) {
+      setProgress(1);
+      return;
+    }
+
     const prefersReducedMotion =
       typeof window !== "undefined" &&
       window.matchMedia &&
@@ -77,10 +83,12 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
 
     if (prefersReducedMotion) {
       setProgress(1);
+      hasAnimatedRef.current = true;
       return;
     }
 
     setProgress(0);
+    hasAnimatedRef.current = true;
     let frame = 0;
     const startedAt = performance.now();
     const duration = 480;

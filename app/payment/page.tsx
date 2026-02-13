@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import Script from "next/script";
@@ -29,6 +29,7 @@ function PaymentContent() {
   const [widgets, setWidgets] = useState<any>(null);
   const [widgetReady, setWidgetReady] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const confirmingRef = useRef(false);
   const [sdkReady, setSdkReady] = useState(false);
 
   const paymentKey = searchParams?.get("paymentKey");
@@ -161,7 +162,8 @@ function PaymentContent() {
   useEffect(() => {
     if (mockPayment) return;
     if (!paymentKey || !orderIdParam || !amountParam || !sessionIdParam) return;
-    if (confirming) return;
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
     const run = async () => {
       setConfirming(true);
       setError(null);
@@ -188,22 +190,14 @@ function PaymentContent() {
         router.replace(target);
       } catch (err: any) {
         setError(err?.message || "결제 확인 중 오류가 발생했습니다.");
+        confirmingRef.current = false;
       } finally {
         setConfirming(false);
       }
     };
 
     run();
-  }, [
-    mockPayment,
-    paymentKey,
-    orderIdParam,
-    amountParam,
-    confirming,
-    sessionIdParam,
-    returnToParam,
-    router,
-  ]);
+  }, [mockPayment, paymentKey, orderIdParam, amountParam, sessionIdParam, returnToParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
@@ -212,12 +206,13 @@ function PaymentContent() {
           src="https://js.tosspayments.com/v2/standard"
           strategy="afterInteractive"
           onLoad={() => setSdkReady(true)}
+          onError={() => setError("결제 모듈을 불러오지 못했어요. 페이지를 새로고침해 주세요.")}
         />
       )}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push("/checkout")}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
             aria-label="이전 화면"
           >
@@ -253,8 +248,14 @@ function PaymentContent() {
             )}
             {!mockPayment && (
               <>
-                <div id="payment-method" className="rounded-xl overflow-hidden" />
-                <div id="payment-agreement" className="rounded-xl overflow-hidden" />
+                <div id="payment-method" className="rounded-xl overflow-hidden min-h-[200px]">
+                  {!widgetReady && (
+                    <div className="flex items-center justify-center h-[200px] text-[13px] text-text-tertiary">
+                      결제 수단을 불러오는 중…
+                    </div>
+                  )}
+                </div>
+                <div id="payment-agreement" className="rounded-xl overflow-hidden min-h-[80px]" />
               </>
             )}
           </div>
@@ -279,7 +280,7 @@ function PaymentContent() {
             disabled={paying || confirming || !sessionIdParam || (!mockPayment && !widgetReady)}
             className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
           >
-            {confirming ? "결제 확인 중..." : paying ? "결제창 여는 중..." : "결제하기"}
+            {confirming ? "결제 확인 중..." : paying ? "결제창 여는 중..." : "1,000원 결제하기"}
           </button>
         </div>
       </div>

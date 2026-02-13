@@ -85,12 +85,20 @@ function CheckoutContent() {
     }
   };
 
+  if (!hasRequiredInput) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center px-5">
+        <div className="text-text-secondary text-[14px]">이동 중...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push("/start")}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
             aria-label="이전 화면"
           >
@@ -107,6 +115,51 @@ function CheckoutContent() {
         <div className="max-w-[640px] mx-auto pt-20 space-y-4">
           <p className="text-[18px] font-semibold">전체 결과표 + 8개 섹션 리포트가 열려요</p>
           <p className="text-[15px] text-text-secondary">결과는 계정에 저장돼서 다시 볼 수 있어요</p>
+
+          <div className="rounded-2xl bg-background-secondary p-5 space-y-2">
+            <div className="text-[14px] text-text-secondary">입력 정보 확인</div>
+            <dl className="space-y-1.5 text-[14px]">
+              {inputs.name && (
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">이름</dt>
+                  <dd className="text-text-primary font-medium">{inputs.name}</dd>
+                </div>
+              )}
+              {inputs.birthYear && inputs.birthMonth && inputs.birthDay && (
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">생년월일</dt>
+                  <dd className="text-text-primary font-medium">
+                    {inputs.calendarType === "lunar" ? "음력 " : ""}{inputs.birthYear}.{inputs.birthMonth}.{inputs.birthDay}
+                  </dd>
+                </div>
+              )}
+              {!inputs.unknownBirthTime && inputs.birthHour && inputs.birthMinute && (
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">태어난 시간</dt>
+                  <dd className="text-text-primary font-medium">{inputs.birthHour}:{inputs.birthMinute}</dd>
+                </div>
+              )}
+              {inputs.unknownBirthTime && (
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">태어난 시간</dt>
+                  <dd className="text-text-primary font-medium">모름</dd>
+                </div>
+              )}
+              {inputs.birthLocation && (
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">출생지</dt>
+                  <dd className="text-text-primary font-medium">{inputs.birthLocation}</dd>
+                </div>
+              )}
+              {inputs.gender && (
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">성별</dt>
+                  <dd className="text-text-primary font-medium">{inputs.gender}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
           {error && (
             <div className="rounded-xl bg-background-secondary px-4 py-3 text-[14px] text-text-secondary">
               {error}

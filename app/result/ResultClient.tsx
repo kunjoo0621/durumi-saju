@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import ResultTable from "@/components/result/ResultTable";
@@ -45,6 +45,7 @@ export default function ResultClient() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [paidButFailed, setPaidButFailed] = useState(false);
 
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
   const [requiresLogin, setRequiresLogin] = useState(false);
@@ -53,36 +54,64 @@ export default function ResultClient() {
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
   const [allowedByPayment, setAllowedByPayment] = useState(false);
 
+  // 로딩 단계 표시
+  const LOADING_STEPS = [
+    { message: "사주 데이터를 계산하고 있어요", delay: 0 },
+    { message: "해석을 작성하고 있어요", delay: 5000 },
+    { message: "마무리하고 있어요", delay: 12000 },
+  ];
+  const [loadingStep, setLoadingStep] = useState(0);
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    if (!loading) {
+      loadingTimerRef.current.forEach(clearTimeout);
+      loadingTimerRef.current = [];
+      setLoadingStep(0);
+      return;
+    }
+    setLoadingStep(0);
+    const timers = LOADING_STEPS.slice(1).map((step, i) =>
+      setTimeout(() => setLoadingStep(i + 1), step.delay)
+    );
+    loadingTimerRef.current = timers;
+    return () => timers.forEach(clearTimeout);
+  }, [loading]);
+
   // 입력값 해시 - 의존성 최적화
   const inputHash = useMemo(
     () => JSON.stringify(inputs),
     [inputs]
   );
 
-  useEffect(() => {
-    const fetchResult = async () => {
-      try {
-        setLoading(true);
-        setRequiresLogin(false);
+  const fetchResult = useCallback(async () => {
+    try {
+      setLoading(true);
+      setRequiresLogin(false);
+      setError("");
+      setPaidButFailed(false);
 
-        const hasStoreInput = Boolean(birthYear && birthMonth && birthDay);
-        const payload = hasStoreInput
-          ? {
-              name,
-              birthYear,
-              birthMonth,
-              birthDay,
-              calendarType,
-              birthHour,
-              birthMinute,
-              birthLocation,
-              gender,
-              relationshipStatus,
-              employmentStatus,
-              coreFearAxis,
-              unknownBirthTime,
-            }
+      const hasStoreInput = Boolean(birthYear && birthMonth && birthDay);
+      const payload = hasStoreInput
+        ? {
+            name,
+            birthYear,
+            birthMonth,
+            birthDay,
+            calendarType,
+            birthHour,
+            birthMinute,
+            birthLocation,
+            gender,
+            relationshipStatus,
+            employmentStatus,
+            coreFearAxis,
+            unknownBirthTime,
+          }
           : null;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         const res = await fetch("/api/results/full", {
           method: "POST",
@@ -91,7 +120,10 @@ export default function ResultClient() {
             ...(payload || {}),
             ...(resultIdParam ? { resultId: resultIdParam } : {}),
           }),
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (res.status === 401) {
           setRequiresLogin(true);
@@ -167,20 +199,33 @@ export default function ResultClient() {
           setError("입력 정보가 없어 결과를 표시할 수 없습니다.");
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
-        if (typeof message === "string" && message.includes("JSON5")) {
-          setError("결과 데이터 형식이 올바르지 않습니다. 잠시 후 다시 시도해 주세요.");
-          return;
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("분석이 오래 걸리고 있어요. 다시 시도해 주세요.");
+        const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
+        if (justPaid || allowedByPayment) {
+          setPaidButFailed(true);
         }
-        setError(message);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
+      const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
+      if (typeof message === "string" && message.includes("JSON5")) {
+        setError("결과 데이터 형식이 올바르지 않습니다. 잠시 후 다시 시도해 주세요.");
+      } else {
+        setError(message);
+      }
+      // 결제 직후 실패인 경우 구분
+      const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
+      if (justPaid || allowedByPayment) {
+        setPaidButFailed(true);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [inputHash, resultIdParam, allowedByPayment]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
     fetchResult();
-    // inputHash를 사용하여 의존성 단순화 (불필요한 재실행 방지)
-  }, [inputHash, resultIdParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchResult]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -205,8 +250,8 @@ export default function ResultClient() {
           <div className="mb-6">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" aria-label="로딩 중" />
           </div>
-          <h2 className="text-title-2 text-text-primary mb-2">운명을 분석하고 있어요</h2>
-          <p className="text-body-2 text-text-secondary">잠시만 기다려주세요...</p>
+          <h2 className="text-title-2 text-text-primary mb-2">{LOADING_STEPS[loadingStep].message}</h2>
+          <p className="text-body-2 text-text-secondary">보통 10~20초 정도 걸려요</p>
         </div>
       </div>
     );
@@ -238,13 +283,31 @@ export default function ResultClient() {
         <div className="max-w-[640px] w-full text-center">
           <div className="mb-6 text-6xl" aria-hidden="true">⚠️</div>
           <h2 className="text-title-2 text-text-primary mb-4">분석에 실패했습니다</h2>
-          <p className="text-body-2 text-text-secondary mb-8">{error}</p>
-          <button
-            onClick={() => router.push("/start")}
-            className="btn-primary px-8 py-4 rounded-2xl text-button-md transition-colors"
-          >
-            처음으로 돌아가기
-          </button>
+          <p className="text-body-2 text-text-secondary mb-4">{error}</p>
+          {paidButFailed && (
+            <p className="text-body-2 text-text-secondary mb-8">
+              결제는 완료되었어요. 추가 결제 없이 다시 시도할 수 있어요.
+            </p>
+          )}
+          <div className="space-y-3">
+            {paidButFailed && (
+              <button
+                onClick={() => fetchResult()}
+                className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+              >
+                다시 시도
+              </button>
+            )}
+            <button
+              onClick={() => router.push(paidButFailed ? "/menu" : "/start")}
+              className={paidButFailed
+                ? "w-full px-8 py-4 rounded-2xl text-button-md text-text-secondary border border-white/10 bg-background-secondary transition-colors"
+                : "btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+              }
+            >
+              {paidButFailed ? "메뉴로 돌아가기" : "처음으로 돌아가기"}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -255,7 +318,7 @@ export default function ResultClient() {
   }
 
   return (
-    <div className="min-h-screen bg-background-primary">
+    <div className="min-h-screen bg-background-primary animate-fadeIn">
       {/* 헤더 */}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">

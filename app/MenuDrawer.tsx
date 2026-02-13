@@ -147,14 +147,13 @@ export default function MenuDrawer() {
         <div className="fixed inset-0 z-50">
           <button
             type="button"
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 animate-fadeIn"
             onClick={closeMenu}
             aria-label="메뉴 닫기"
           />
           <div
             ref={drawerRef}
-            className="absolute right-0 top-0 h-full w-[280px] bg-zinc-900 shadow-xl transition-transform duration-300 ease-out flex flex-col border-l border-white/10"
-            style={{ transform: isOpen ? "translateX(0)" : "translateX(100%)" }}
+            className="absolute right-0 top-0 h-full w-[280px] bg-zinc-900 shadow-xl animate-slideIn flex flex-col border-l border-white/10"
             role="dialog"
             aria-modal="true"
           >

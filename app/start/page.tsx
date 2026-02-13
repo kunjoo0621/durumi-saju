@@ -65,8 +65,31 @@ export default function Home() {
   // 생년월일 포맷팅용 상태
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
   const [birthTimeDisplay, setBirthTimeDisplay] = useState("");
+  const [birthDateError, setBirthDateError] = useState("");
+  const [birthTimeError, setBirthTimeError] = useState("");
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const isKeyboardOpen = keyboardOffset > 0;
+
+  const validateBirthDate = (year: string, month: string, day: string): string => {
+    if (!year || !month || !day) return "";
+    const y = Number(year);
+    const m = Number(month);
+    const d = Number(day);
+    if (y < 1900 || y > new Date().getFullYear()) return "올바른 연도를 입력해 주세요";
+    if (m < 1 || m > 12) return "월은 01~12 사이로 입력해 주세요";
+    const maxDay = new Date(y, m, 0).getDate();
+    if (d < 1 || d > maxDay) return `${m}월은 ${maxDay}일까지만 있어요`;
+    return "";
+  };
+
+  const validateBirthTime = (hour: string, minute: string): string => {
+    if (!hour || !minute) return "";
+    const h = Number(hour);
+    const min = Number(minute);
+    if (h < 0 || h > 23) return "시는 00~23 사이로 입력해 주세요";
+    if (min < 0 || min > 59) return "분은 00~59 사이로 입력해 주세요";
+    return "";
+  };
 
   useEffect(() => {
     const digits = `${birthYear}${birthMonth}${birthDay}`;
@@ -167,11 +190,17 @@ export default function Home() {
     setBirthDateDisplay(formatted);
 
     // 실제 데이터 파싱
-    setFields({
-      birthYear: value.length >= 4 ? value.slice(0, 4) : "",
-      birthMonth: value.length >= 6 ? value.slice(4, 6) : "",
-      birthDay: value.length >= 8 ? value.slice(6, 8) : "",
-    });
+    const parsedYear = value.length >= 4 ? value.slice(0, 4) : "";
+    const parsedMonth = value.length >= 6 ? value.slice(4, 6) : "";
+    const parsedDay = value.length >= 8 ? value.slice(6, 8) : "";
+    setFields({ birthYear: parsedYear, birthMonth: parsedMonth, birthDay: parsedDay });
+
+    // 8자리 완성 시 유효성 검증
+    if (parsedYear && parsedMonth && parsedDay) {
+      setBirthDateError(validateBirthDate(parsedYear, parsedMonth, parsedDay));
+    } else {
+      setBirthDateError("");
+    }
   };
 
   // 시간 입력 처리
@@ -191,10 +220,16 @@ export default function Home() {
     setBirthTimeDisplay(formatted);
 
     // 실제 데이터 파싱
-    setFields({
-      birthHour: value.length >= 2 ? value.slice(0, 2) : "",
-      birthMinute: value.length >= 4 ? value.slice(2, 4) : "",
-    });
+    const parsedHour = value.length >= 2 ? value.slice(0, 2) : "";
+    const parsedMinute = value.length >= 4 ? value.slice(2, 4) : "";
+    setFields({ birthHour: parsedHour, birthMinute: parsedMinute });
+
+    // 4자리 완성 시 유효성 검증
+    if (parsedHour && parsedMinute) {
+      setBirthTimeError(validateBirthTime(parsedHour, parsedMinute));
+    } else {
+      setBirthTimeError("");
+    }
   };
 
   const canProceed = () => {
@@ -203,12 +238,13 @@ export default function Home() {
       case "name":
         return formData.name.trim() !== "";
       case "birthDateTime":
-        // 생년월일은 필수, 시간은 unknownBirthTime이 true이거나 입력되어야 함
+        // 생년월일은 필수, 유효해야 하고, 시간은 unknownBirthTime이 true이거나 입력+유효해야 함
         return (
           formData.birthYear &&
           formData.birthMonth &&
           formData.birthDay &&
-          (formData.unknownBirthTime || (formData.birthHour && formData.birthMinute))
+          !birthDateError &&
+          (formData.unknownBirthTime || (formData.birthHour && formData.birthMinute && !birthTimeError))
         );
       case "birthLocation":
         return formData.birthLocation.trim() !== "";
@@ -280,6 +316,9 @@ export default function Home() {
                 className="w-full text-[15px] h-[52px]"
                 aria-label="생년월일"
               />
+              {birthDateError && (
+                <p className="mt-2 text-[13px] text-primary">{birthDateError}</p>
+              )}
             </div>
 
             {/* 시간 입력 */}
@@ -297,6 +336,9 @@ export default function Home() {
                   className="w-full text-[15px] h-[52px]"
                   aria-label="태어난 시간"
                 />
+                {birthTimeError && (
+                  <p className="mt-2 text-[13px] text-primary">{birthTimeError}</p>
+                )}
               </div>
             )}
 
@@ -473,7 +515,27 @@ export default function Home() {
               </svg>
             </button>
           )}
-          {currentStep === 0 && <div className="w-10" />}
+          {currentStep === 0 && (
+            <button
+              onClick={() => router.push("/menu")}
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
+              aria-label="메뉴로 돌아가기"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+          )}
 
           <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
 
@@ -523,7 +585,7 @@ export default function Home() {
             disabled={!canProceed()}
             className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
           >
-            다음
+            {currentStep === totalSteps - 1 ? "결과 받기" : "다음"}
           </button>
         </div>
       </div>

@@ -24,41 +24,31 @@ export default function MyResultsPage() {
   const { reset } = useStoreActions();
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [redirecting, setRedirecting] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
+
+  const fetchResults = async () => {
+    setLoading(true);
+    setFetchError(false);
+    try {
+      const res = await fetch("/api/results");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setResults(Array.isArray(data.results) ? data.results : []);
+    } catch {
+      setFetchError(true);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!session?.user) {
       setLoading(false);
       return;
     }
-
-    let cancelled = false;
-    const fetchResults = async () => {
-      const res = await fetch("/api/results");
-      if (!res.ok) {
-        if (!cancelled) {
-          setResults([]);
-          setLoading(false);
-        }
-        return;
-      }
-      const data = await res.json();
-      if (!cancelled) {
-        const nextResults = Array.isArray(data.results) ? data.results : [];
-        setResults(nextResults);
-        if (nextResults.length === 0) {
-          setRedirecting(true);
-          router.replace("/start");
-        }
-        setLoading(false);
-      }
-    };
     fetchResults();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session, router]);
+  }, [session]);
 
   const formatBirthDate = (value: string | null) => {
     if (!value) return "";
@@ -72,7 +62,7 @@ export default function MyResultsPage() {
     router.push("/start");
   };
 
-  if (status === "loading" || loading || redirecting) {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center px-5">
         <div className="text-text-secondary text-[14px]">불러오는 중...</div>
@@ -110,9 +100,9 @@ export default function MyResultsPage() {
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push("/menu")}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
-            aria-label="이전 화면"
+            aria-label="메뉴로 돌아가기"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -164,18 +154,51 @@ export default function MyResultsPage() {
             </div>
           )}
 
-          {results.length === 0 && (
-            <div className="pt-2 space-y-2">
-              <p className="text-[13px] text-text-secondary">
-                저장된 사주를 불러오지 못했습니다.
+          {!fetchError && results.length === 0 && (
+            <div className="pt-12 flex flex-col items-center text-center space-y-6">
+              <p className="text-[15px] text-text-secondary">
+                아직 저장된 사주가 없어요.
               </p>
-              <button
-                type="button"
-                onClick={handleAddAnother}
-                className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
-              >
-                다른 사람 사주 추가하기
-              </button>
+              <div className="w-full space-y-3">
+                <button
+                  type="button"
+                  onClick={handleAddAnother}
+                  className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+                >
+                  내 사주 보러가기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/menu")}
+                  className="w-full h-[52px] rounded-xl border border-white/10 bg-background-secondary text-text-secondary text-[15px] font-semibold"
+                >
+                  메뉴로
+                </button>
+              </div>
+            </div>
+          )}
+
+          {fetchError && (
+            <div className="pt-12 flex flex-col items-center text-center space-y-6">
+              <p className="text-[15px] text-text-secondary">
+                사주 내역을 불러오지 못했어요.
+              </p>
+              <div className="w-full space-y-3">
+                <button
+                  type="button"
+                  onClick={fetchResults}
+                  className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+                >
+                  다시 시도
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/menu")}
+                  className="w-full h-[52px] rounded-xl border border-white/10 bg-background-secondary text-text-secondary text-[15px] font-semibold"
+                >
+                  메뉴로
+                </button>
+              </div>
             </div>
           )}
         </div>

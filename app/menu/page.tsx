@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
@@ -9,6 +9,28 @@ export default function MenuPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const isBattleDisabled = true;
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState(false);
+
+  const handleSajuClick = async () => {
+    if (checking) return;
+    setChecking(true);
+    setCheckError(false);
+    try {
+      const res = await fetch("/api/results");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const results = Array.isArray(data.results) ? data.results : [];
+      if (results.length > 0) {
+        router.push("/my/results");
+      } else {
+        router.push("/start");
+      }
+    } catch {
+      setChecking(false);
+      setCheckError(true);
+    }
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -44,47 +66,58 @@ export default function MenuPage() {
         <section className="max-w-[640px] mx-auto pt-10 space-y-4">
           <button
             type="button"
-            onClick={() => router.push("/my/results")}
-            className="group w-full rounded-2xl border border-white/10 bg-zinc-900 text-left transition-colors duration-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            onClick={handleSajuClick}
+            disabled={checking}
+            className={[
+              "w-full rounded-2xl border border-white/10 bg-zinc-900 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+              checking ? "opacity-70 cursor-wait" : "group hover:bg-zinc-800",
+            ].join(" ")}
           >
             <div className="px-5 py-6">
               <div className="flex items-start gap-4">
                 <div className="mt-0.5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-zinc-800/60">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                    className="text-white"
-                  >
-                    <path
-                      d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M12 7.5v9"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M8.5 10.25h7"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  {checking ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                      className="text-white"
+                    >
+                      <path
+                        d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 7.5v9"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M8.5 10.25h7"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-[18px] leading-tight font-aggro text-white">
-                      내 사주 보러가기
+                      {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
                     </div>
-                    <span className="btn-primary mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:translate-x-0.5">
+                    <span className={[
+                      "mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-200",
+                      checking ? "border border-white/10 bg-zinc-800/40" : "btn-primary group-hover:translate-x-0.5",
+                    ].join(" ")}>
                       <svg
                         width="18"
                         height="18"
@@ -124,6 +157,30 @@ export default function MenuPage() {
               </div>
             </div>
           </button>
+
+          {checkError && (
+            <div className="rounded-2xl border border-white/10 bg-zinc-900 px-5 py-5 space-y-4">
+              <p className="text-[15px] text-zinc-300">
+                내 사주 내역을 불러오지 못했어요. 다시 시도할까요?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleSajuClick}
+                  className="flex-1 h-11 rounded-xl bg-primary text-white text-[14px] font-semibold"
+                >
+                  다시 시도
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/start")}
+                  className="flex-1 h-11 rounded-xl border border-white/10 bg-zinc-800 text-zinc-300 text-[14px] font-semibold"
+                >
+                  새로 사주 보기
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
             type="button"
