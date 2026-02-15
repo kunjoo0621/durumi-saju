@@ -1,11 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PROTECTED_PAGES = ["/payment", "/result", "/coins", "/edit-profile", "/my/results"];
+const PROTECTED_PAGES = ["/checkout", "/result", "/coins", "/edit-profile", "/my/results"];
 const PROTECTED_APIS = ["/api/profile", "/api/coins"];
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  // /payment → /checkout redirect (query params 유지)
+  if (pathname === "/payment" || pathname.startsWith("/payment/")) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/checkout";
+    return NextResponse.redirect(redirectUrl, 308);
+  }
 
   const isProtectedPage = PROTECTED_PAGES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const isProtectedApi = PROTECTED_APIS.some((path) => pathname.startsWith(path));
@@ -31,6 +38,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/checkout",
     "/payment",
     "/result",
     "/coins",
