@@ -221,7 +221,7 @@ export default function ResultTable({
             >
               {safeTier.title}
             </div>
-            <p className="max-w-[52ch] text-body-2 text-text-secondary leading-relaxed">
+            <p className="max-w-[52ch] text-[16px] text-text-secondary leading-[1.75]">
               {safeTier.description}
             </p>
           </div>
