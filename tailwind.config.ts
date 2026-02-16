@@ -34,6 +34,11 @@ const config: Config = {
           earth: "rgb(var(--c-saju-earth) / <alpha-value>)",
           metal: "rgb(var(--c-saju-metal) / <alpha-value>)",
           water: "rgb(var(--c-saju-water) / <alpha-value>)",
+          "wood-muted": "rgb(var(--c-saju-wood-muted) / <alpha-value>)",
+          "fire-muted": "rgb(var(--c-saju-fire-muted) / <alpha-value>)",
+          "earth-muted": "rgb(var(--c-saju-earth-muted) / <alpha-value>)",
+          "metal-muted": "rgb(var(--c-saju-metal-muted) / <alpha-value>)",
+          "water-muted": "rgb(var(--c-saju-water-muted) / <alpha-value>)",
         },
       },
       fontSize: {

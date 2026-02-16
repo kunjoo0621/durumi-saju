@@ -176,31 +176,44 @@ const ELEMENT_CONTROLS: Record<ElementType, ElementType> = {
   water: "fire",
 };
 
-// 오행별 Tailwind 클래스
+// 오행별 Tailwind 클래스 — muted 톤 (다크 UI 조화)
 export const ELEMENT_TEXT_CLASSES: Record<ElementType, string> = {
-  wood: "text-saju-wood",
-  fire: "text-saju-fire",
-  earth: "text-saju-earth",
-  metal: "text-saju-metal",
-  water: "text-saju-water",
+  wood: "text-saju-wood-muted",
+  fire: "text-saju-fire-muted",
+  earth: "text-saju-earth-muted",
+  metal: "text-saju-metal-muted",
+  water: "text-saju-water-muted",
 };
 
 export const ELEMENT_BG_CLASSES: Record<ElementType, string> = {
-  wood: "bg-saju-wood/12",
-  fire: "bg-saju-fire/12",
-  earth: "bg-saju-earth/12",
-  metal: "bg-saju-metal/12",
-  water: "bg-saju-water/12",
+  wood: "bg-saju-wood/8",
+  fire: "bg-saju-fire/8",
+  earth: "bg-saju-earth/8",
+  metal: "bg-saju-metal/8",
+  water: "bg-saju-water/8",
+};
+
+export const ELEMENT_BORDER_CLASSES: Record<ElementType, string> = {
+  wood: "border border-saju-wood/15",
+  fire: "border border-saju-fire/15",
+  earth: "border border-saju-earth/15",
+  metal: "border border-saju-metal/15",
+  water: "border border-saju-water/15",
 };
 
 export function getElementTextClass(element?: ElementType | null) {
-  if (!element) return "text-saju-metal";
+  if (!element) return "text-saju-metal-muted";
   return ELEMENT_TEXT_CLASSES[element];
 }
 
 export function getElementBgClass(element?: ElementType | null) {
   if (!element) return "bg-background-tertiary";
   return ELEMENT_BG_CLASSES[element];
+}
+
+export function getElementBorderClass(element?: ElementType | null) {
+  if (!element) return "border border-white/5";
+  return ELEMENT_BORDER_CLASSES[element];
 }
 
 /**

@@ -157,8 +157,8 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                 key={guide.level}
                 d={guide.d}
                 fill="none"
-                stroke="rgba(255,255,255,0.10)"
-                strokeWidth={guide.level === 100 ? 1.1 : 1}
+                stroke="rgba(255,255,255,0.07)"
+                strokeWidth={guide.level === 100 ? 1 : 0.8}
               />
             ))}
 
@@ -171,8 +171,8 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                   y1="0"
                   x2={point.x.toFixed(2)}
                   y2={point.y.toFixed(2)}
-                  stroke="rgba(255,255,255,0.10)"
-                  strokeWidth="1"
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeWidth="0.8"
                 />
               );
             })}
@@ -181,9 +181,9 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
           <g>
             <path
               d={dataPath}
-              fill="rgb(var(--primary) / 0.16)"
-              stroke="rgb(var(--primary) / 0.72)"
-              strokeWidth="2"
+              fill="rgb(var(--primary) / 0.12)"
+              stroke="rgb(var(--primary) / 0.55)"
+              strokeWidth="1.5"
               strokeLinejoin="round"
             />
           </g>
@@ -196,11 +196,11 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                 y={label.y.toFixed(2)}
                 dy={label.dy}
                 textAnchor={label.anchor as any}
-                fill="rgba(238,238,245,0.82)"
-                style={{ fontSize: 12, fontWeight: 600, letterSpacing: "-0.01em" }}
+                fill="rgba(238,238,245,0.70)"
+                style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
               >
                 <tspan>{label.item.key}</tspan>
-                <tspan dx="6" fill="rgb(var(--primary) / 0.86)" style={{ fontWeight: 700 }}>
+                <tspan dx="6" fill="rgb(var(--primary) / 0.72)" style={{ fontWeight: 600 }}>
                   {label.item.grade}
                 </tspan>
               </text>

@@ -41,9 +41,11 @@ export default function SectionBody({ content, locked = false, onUnlock, unlockL
 
     if (!structured) {
       return (
-        <p className="text-body-2 text-text-primary leading-relaxed whitespace-pre-wrap">
-          {content}
-        </p>
+        <div className="space-y-4 text-[16px] text-text-primary leading-[1.75] whitespace-pre-wrap">
+          {content.split(/\n\s*\n/).map((paragraph, index) => (
+            <p key={index}>{paragraph.trim()}</p>
+          ))}
+        </div>
       );
     }
 
@@ -68,9 +70,9 @@ export default function SectionBody({ content, locked = false, onUnlock, unlockL
           <p className="text-[14px] text-text-secondary mt-1">{structured.selectedIssue}</p>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-4">
           {structured.bodyLines.map((line, index) => (
-            <p key={`${line}-${index}`} className="text-body-2 text-text-primary leading-relaxed whitespace-pre-wrap">
+            <p key={`${line}-${index}`} className="text-[16px] text-text-primary leading-[1.75] whitespace-pre-wrap">
               {line}
             </p>
           ))}

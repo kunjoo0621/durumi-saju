@@ -5,6 +5,7 @@ import {
   computePillarDisplayData,
   getElementTextClass,
   getElementBgClass,
+  getElementBorderClass,
   getElementName,
   type SajuData,
   type ElementType,
@@ -32,10 +33,11 @@ const StemCell = memo(function StemCell({
 }) {
   const textClass = getElementTextClass(element);
   const bgClass = getElementBgClass(element);
+  const borderClass = getElementBorderClass(element);
   const elementName = element ? getElementName(element) : null;
 
   return (
-    <div className={`px-4 py-4 text-center rounded-xl ${bgClass}`}>
+    <div className={`px-4 py-4 text-center rounded-xl ${bgClass} ${borderClass}`}>
       <div className={`text-[28px] font-semibold ${textClass}`}>{stemLabel}</div>
       {elementName && (
         <div className="text-[12px] text-text-secondary mt-1">{elementName}</div>
@@ -61,10 +63,11 @@ const BranchCell = memo(function BranchCell({
 }) {
   const textClass = getElementTextClass(element);
   const bgClass = getElementBgClass(element);
+  const borderClass = getElementBorderClass(element);
   const elementName = element ? getElementName(element) : null;
 
   return (
-    <div className={`px-4 py-4 text-center rounded-xl ${bgClass}`}>
+    <div className={`px-4 py-4 text-center rounded-xl ${bgClass} ${borderClass}`}>
       <div className={`text-[28px] font-semibold ${textClass}`}>{branchLabel}</div>
       {elementName && (
         <div className="text-[12px] text-text-secondary mt-1">{elementName}</div>

@@ -39,6 +39,13 @@
   --c-saju-metal: 228 228 231;
   --c-saju-water: 59 130 246;
 
+  /* Muted saju colors — 다크 UI 조화용 (채도↓ 명도 조정) */
+  --c-saju-wood-muted: 110 185 130;
+  --c-saju-fire-muted: 210 120 115;
+  --c-saju-earth-muted: 195 170 90;
+  --c-saju-metal-muted: 195 195 205;
+  --c-saju-water-muted: 115 155 210;
+
   --c-rank-s: 217 70 239;
 
   /* 2. Semantic Mapping */
