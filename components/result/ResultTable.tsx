@@ -26,12 +26,12 @@ const LEGACY_GRADE_STYLES = {
     text: "text-primary",
   },
   B: {
-    background: "bg-saju-wood/15",
-    text: "text-saju-wood",
+    background: "bg-saju-wood/10",
+    text: "text-saju-wood-muted",
   },
   C: {
-    background: "bg-saju-earth/15",
-    text: "text-saju-earth",
+    background: "bg-saju-earth/10",
+    text: "text-saju-earth-muted",
   },
   D: {
     background: "bg-background-secondary",
@@ -58,7 +58,7 @@ type ResultTableProps = {
 const badgeStyles: Record<"무료" | "잠금" | "언락", string> = {
   무료: "bg-background-tertiary text-text-secondary",
   잠금: "bg-primary/15 text-primary",
-  언락: "bg-saju-wood/15 text-saju-wood",
+  언락: "bg-saju-wood/10 text-saju-wood-muted",
 };
 
 function resolveLegacyGradeKey(grade: string): LegacyGradeKey {
