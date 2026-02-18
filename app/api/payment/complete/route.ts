@@ -37,7 +37,7 @@ function hasRequiredInput(input: InputPayload) {
 }
 
 async function markSessionConsumed(userId: string, sessionId: string) {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("prepayment_sessions")
     .update({
       status: "consumed",
@@ -46,6 +46,10 @@ async function markSessionConsumed(userId: string, sessionId: string) {
     .eq("id", sessionId)
     .eq("user_id", userId)
     .eq("status", "pending");
+
+  if (error) {
+    console.error("[markSessionConsumed] failed:", { sessionId, userId, error: error.message });
+  }
 }
 
 export async function POST(request: NextRequest) {

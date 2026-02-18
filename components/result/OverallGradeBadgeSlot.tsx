@@ -25,11 +25,11 @@ function normalizeSize(size?: number) {
 function getPlaceholderTone(grade: OverallGradeLabel) {
   switch (grade) {
     case "S":
-      return "from-white/14 via-white/8 to-primary/10";
+      return "from-primary/20 via-white/8 to-primary/12";
     case "A":
-      return "from-white/12 via-white/7 to-primary/8";
+      return "from-primary/14 via-white/6 to-primary/8";
     case "B":
-      return "from-white/11 via-white/6 to-white/3";
+      return "from-white/12 via-white/6 to-white/4";
     case "C":
       return "from-white/10 via-white/5 to-white/2";
     case "D":
@@ -82,11 +82,8 @@ export default function OverallGradeBadgeSlot({
           />
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <div className="text-[44px] leading-none font-extrabold tracking-[-0.03em] text-white/26">
+            <div className="text-[44px] leading-none font-extrabold tracking-[-0.03em] text-white/30">
               {grade}
-            </div>
-            <div className="mt-1 text-[11px] font-semibold tracking-[0.22em] text-white/55">
-              BADGE
             </div>
           </div>
         </>

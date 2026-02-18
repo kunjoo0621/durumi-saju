@@ -27,7 +27,7 @@
 
   --c-text-main: 255 255 255;
   --c-text-sub: 161 161 170;
-  --c-text-muted: 113 113 122;
+  --c-text-muted: 140 140 150;
 
   --c-brand: 244 63 94;
   --c-brand-hover: 251 113 133;
@@ -159,25 +159,6 @@ select:focus {
   background-color: rgb(var(--primary-hover)) !important;
 }
 
-.bg-primary {
-  background-color: rgb(var(--primary)) !important;
-}
-
-.bg-primary:hover {
-  background-color: rgb(var(--primary-hover)) !important;
-}
-
-.bg-primary-hover {
-  background-color: rgb(var(--primary-hover)) !important;
-}
-
-.bg-primary-disabled {
-  background-color: rgb(var(--bg-tertiary)) !important;
-}
-
-.text-text-tertiary {
-  color: rgb(var(--text-tertiary)) !important;
-}
 
 /* ===== Animations ===== */
 @keyframes slideIn {

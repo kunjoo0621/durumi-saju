@@ -157,7 +157,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                 key={guide.level}
                 d={guide.d}
                 fill="none"
-                stroke="rgba(255,255,255,0.07)"
+                stroke="rgb(var(--text-primary) / 0.12)"
                 strokeWidth={guide.level === 100 ? 1 : 0.8}
               />
             ))}
@@ -171,7 +171,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                   y1="0"
                   x2={point.x.toFixed(2)}
                   y2={point.y.toFixed(2)}
-                  stroke="rgba(255,255,255,0.06)"
+                  stroke="rgb(var(--text-primary) / 0.10)"
                   strokeWidth="0.8"
                 />
               );
@@ -196,7 +196,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                 y={label.y.toFixed(2)}
                 dy={label.dy}
                 textAnchor={label.anchor as any}
-                fill="rgba(238,238,245,0.70)"
+                fill="rgb(var(--text-primary) / 0.70)"
                 style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
               >
                 <tspan>{label.item.key}</tspan>

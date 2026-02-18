@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import MenuDrawer from "./MenuDrawer";
 
 type LandingSection = {
@@ -93,8 +94,12 @@ function ImagePlaceholder({
   );
 }
 
-export default function LandingPage() {
-  const callbackUrl = useMemo(() => "/menu", []);
+function LandingPageInner() {
+  const searchParams = useSearchParams();
+  const callbackUrl = useMemo(() => {
+    const returnTo = searchParams?.get("returnTo");
+    return returnTo && returnTo.startsWith("/") ? returnTo : "/menu";
+  }, [searchParams]);
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -186,5 +191,13 @@ export default function LandingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={null}>
+      <LandingPageInner />
+    </Suspense>
   );
 }

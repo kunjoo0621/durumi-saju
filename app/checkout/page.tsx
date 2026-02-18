@@ -125,8 +125,14 @@ function CheckoutContent() {
           </>
         )}
         {error && (
-          <div className="rounded-xl bg-background-secondary px-4 py-3 text-[14px] text-text-secondary">
-            {error}
+          <div className="max-w-[640px] w-full text-center">
+            <p className="text-body-2 text-text-secondary mb-6">{error}</p>
+            <button
+              onClick={() => router.replace("/start")}
+              className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+            >
+              돌아가기
+            </button>
           </div>
         )}
       </div>

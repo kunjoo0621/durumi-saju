@@ -19,6 +19,9 @@ export async function getSupabaseUserId(session?: Session | null) {
     .select("id")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("[getSupabaseUserId] DB error:", error.message, error.code);
+    throw new Error("사용자 정보를 처리하는 중 오류가 발생했습니다.");
+  }
   return data?.id || null;
 }

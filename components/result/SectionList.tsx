@@ -42,7 +42,7 @@ const SectionItem = memo(function SectionItem({
   const handleToggle = useCallback(() => onToggle(index), [onToggle, index]);
 
   return (
-    <div className="bg-background-secondary rounded-2xl overflow-hidden">
+    <div className="bg-background-secondary rounded-2xl border border-white/5 overflow-hidden">
       <SectionHeader
         icon={section.icon}
         title={section.title}
@@ -50,16 +50,23 @@ const SectionItem = memo(function SectionItem({
         onToggle={handleToggle}
         id={contentId}
       />
-      {expanded && (
-        <div id={contentId} className="px-6 pb-6 pt-2">
-          <SectionBody
-            content={section.content}
-            locked={locked}
-            onUnlock={onUnlock}
-            unlockLabel={unlockLabel}
-          />
+      <div
+        id={contentId}
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-6 pb-6 pt-2">
+            <SectionBody
+              content={section.content}
+              locked={locked}
+              onUnlock={onUnlock}
+              unlockLabel={unlockLabel}
+            />
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 });

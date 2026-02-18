@@ -314,13 +314,26 @@ export default function ResultClient() {
   }
 
   if (!result) {
-    return null;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
+        <div className="max-w-[640px] w-full text-center">
+          <h2 className="text-title-2 text-text-primary mb-4">결과를 불러올 수 없습니다</h2>
+          <p className="text-body-2 text-text-secondary mb-8">입력 정보가 없거나 결과를 찾을 수 없어요.</p>
+          <button
+            onClick={() => router.push("/start")}
+            className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+          >
+            처음으로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-background-primary animate-fadeIn">
       {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
           <h1 className="text-title-3 text-text-primary text-center font-aggro">사주보는 두루미</h1>
@@ -347,7 +360,7 @@ export default function ResultClient() {
 
           {/* 만세력 (사주팔자) */}
           {sajuData && (
-            <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border-0">
+            <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/5">
               {displayBirthDate && (
                 <p className="text-[14px] text-text-tertiary mb-4">
                   ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
@@ -376,7 +389,7 @@ export default function ResultClient() {
       {/* 푸터 */}
       <footer className="px-6 py-12">
         <div className="max-w-[640px] mx-auto text-center">
-          <p className="text-[11px] text-text-tertiary">
+          <p className="text-caption text-text-tertiary">
             이 분석은 AI를 활용한 참고 자료입니다.
             <br />
             실제 운명은 당신의 선택과 노력에 달려있습니다.

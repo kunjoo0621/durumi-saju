@@ -197,7 +197,7 @@ export default function ResultTable({
         <div className={`rounded-3xl p-6 md:p-8 border border-white/5 ${gradeStyle.background}`}>
           <div className="flex items-center justify-between">
             <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-[12px] font-semibold ${badgeStyles[badgeLabel]}`}
+              className={`inline-flex items-center px-3 py-1 rounded-full text-caption font-semibold ${badgeStyles[badgeLabel]}`}
             >
               {badgeLabel}
             </span>
@@ -212,12 +212,11 @@ export default function ResultTable({
             <div className={`text-6xl md:text-7xl font-bold leading-none ${gradeStyle.text}`}>
               {safeTier.grade}
             </div>
-            <div className="text-[13px] font-semibold text-text-secondary">
+            <div className="text-body-2 font-semibold text-text-secondary">
               상위 {safeTier.topPercent}%
             </div>
             <div
-              className="max-w-[26ch] text-[20px] leading-tight font-semibold text-text-primary"
-              style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+              className="max-w-[26ch] text-title-3 text-text-primary line-clamp-2"
             >
               {safeTier.title}
             </div>

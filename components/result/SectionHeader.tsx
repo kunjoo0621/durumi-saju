@@ -13,7 +13,7 @@ export default function SectionHeader({ icon, title, expanded, onToggle, id }: S
     <button
       type="button"
       onClick={onToggle}
-      className="w-full px-6 py-5 flex items-center justify-between text-left"
+      className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
       aria-expanded={expanded}
       aria-controls={id}
     >

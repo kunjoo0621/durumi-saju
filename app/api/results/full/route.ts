@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
           message: parseError?.message,
         });
         return NextResponse.json(
-          { error: "저장된 결과 데이터가 손상되어 불러올 수 없습니다. 다시 분석해주세요." },
+          { error: "저장된 결과 데이터가 손상되었습니다. 고객센터에 문의해 주세요." },
           { status: 500 }
         );
       }

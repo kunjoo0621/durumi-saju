@@ -41,7 +41,7 @@ export default function SectionBody({ content, locked = false, onUnlock, unlockL
 
     if (!structured) {
       return (
-        <div className="space-y-4 text-[16px] text-text-primary leading-[1.75] whitespace-pre-wrap">
+        <div className="max-w-prose space-y-6 text-[16px] text-text-primary leading-[1.75] whitespace-pre-wrap">
           {content.split(/\n\s*\n/).map((paragraph, index) => (
             <p key={index}>{paragraph.trim()}</p>
           ))}
@@ -50,27 +50,21 @@ export default function SectionBody({ content, locked = false, onUnlock, unlockL
     }
 
     return (
-      <div className="space-y-4">
+      <div className="max-w-prose space-y-6">
         <p
-          className="text-[23px] leading-[1.35] font-semibold text-text-primary"
-          style={{
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
+          className="text-title-2 text-text-primary line-clamp-2"
         >
           {structured.hookLine}
         </p>
 
         <div>
-          <p className="text-[11px] text-text-tertiary tracking-[0.08em] uppercase">
+          <p className="text-caption text-text-tertiary tracking-[0.08em] uppercase">
             선택한 고민:
           </p>
-          <p className="text-[14px] text-text-secondary mt-1">{structured.selectedIssue}</p>
+          <p className="text-body-2 text-text-secondary mt-1">{structured.selectedIssue}</p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {structured.bodyLines.map((line, index) => (
             <p key={`${line}-${index}`} className="text-[16px] text-text-primary leading-[1.75] whitespace-pre-wrap">
               {line}
