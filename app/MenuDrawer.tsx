@@ -5,7 +5,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function MenuDrawer() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [hasResults, setHasResults] = useState(false);
@@ -68,6 +68,15 @@ export default function MenuDrawer() {
 
     checkResults();
   }, [isOpen, session]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -144,11 +153,12 @@ export default function MenuDrawer() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[200]">
           <button
             type="button"
-            className="absolute inset-0 bg-black/60 animate-fadeIn"
+            className="absolute inset-0 bg-black/60 animate-fadeIn touch-none"
             onClick={closeMenu}
+            onTouchMove={(e) => e.preventDefault()}
             aria-label="메뉴 닫기"
           />
           <div
@@ -157,7 +167,11 @@ export default function MenuDrawer() {
             role="dialog"
             aria-modal="true"
           >
-            {session?.user ? (
+            {status === "loading" ? (
+              <div className="px-5 py-6 bg-zinc-800">
+                <div className="h-5 w-24 bg-zinc-700 rounded animate-pulse" />
+              </div>
+            ) : session?.user ? (
               <div className="px-5 py-6 bg-zinc-800">
                 <div className="text-[18px] font-semibold text-white">
                   {session.user.name || "사용자"}님
@@ -178,7 +192,7 @@ export default function MenuDrawer() {
             )}
 
             <div className="flex-1 border-t border-white/10">
-              {!session?.user && (
+              {status !== "loading" && !session?.user && (
                 <button
                   type="button"
                   onClick={() => signIn("kakao")}
@@ -194,7 +208,7 @@ export default function MenuDrawer() {
                 </button>
               )}
 
-              {session?.user && (
+              {status !== "loading" && session?.user && (
                 <div className="flex flex-col h-full">
                   <div>
                     <button

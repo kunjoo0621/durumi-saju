@@ -22,7 +22,7 @@ const CORE_FEAR_LABELS: Record<string, string> = {
 export default function ResultClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   // 최적화된 선택자 사용
   const inputs = useAllInputs();
@@ -52,7 +52,15 @@ export default function ResultClient() {
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
-  const [allowedByPayment, setAllowedByPayment] = useState(false);
+  const [allowedByPayment, setAllowedByPayment] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
+    if (justPaid) {
+      sessionStorage.removeItem("sajuJustPaid");
+      return true;
+    }
+    return false;
+  });
 
   // 로딩 단계 표시
   const LOADING_STEPS = [
@@ -227,17 +235,9 @@ export default function ResultClient() {
     fetchResult();
   }, [fetchResult]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
-    if (justPaid) {
-      sessionStorage.removeItem("sajuJustPaid");
-      setAllowedByPayment(true);
-    }
-  }, []);
 
   useEffect(() => {
-    if (!resultIdParam && !allowedByPayment && session?.user) {
+    if (!resultIdParam && !allowedByPayment && status === "authenticated" && session?.user) {
       router.replace("/my/results");
     }
   }, [resultIdParam, allowedByPayment, session, router]);
@@ -333,7 +333,7 @@ export default function ResultClient() {
   return (
     <div className="min-h-screen bg-background-primary animate-fadeIn">
       {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary/80 backdrop-blur-xl border-b border-white/5">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary border-b border-white/5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
           <h1 className="text-title-3 text-text-primary text-center font-aggro">사주보는 두루미</h1>
@@ -344,7 +344,7 @@ export default function ResultClient() {
       {/* 메인 콘텐츠 */}
       <main className="px-6 py-8">
         <div className="max-w-[640px] mx-auto space-y-6">
-          {!session?.user && (
+          {status !== "loading" && !session?.user && (
             <div className="rounded-2xl bg-background-secondary p-4 text-text-secondary flex flex-col gap-3">
               <p className="text-[14px]">
                 나중에 다시 보려면 로그인하고 내역에 저장하세요.

@@ -12,6 +12,7 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30일
   },
   callbacks: {
     async jwt({ token, account, profile }) {
@@ -43,6 +44,19 @@ export const authOptions: NextAuthOptions = {
           }
         }
       }
+
+      // supabaseUserId가 누락된 경우 kakaoId로 DB에서 복구
+      if (token.kakaoId && !token.supabaseUserId) {
+        const { data } = await supabaseAdmin
+          .from("users")
+          .select("id")
+          .eq("kakao_id", token.kakaoId)
+          .single();
+        if (data?.id) {
+          token.supabaseUserId = data.id;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
