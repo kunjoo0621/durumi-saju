@@ -74,6 +74,14 @@ export function hasStar(stars: string[], keyword: string): boolean {
   return (stars || []).some((s) => String(s).includes(keyword));
 }
 
+function countStar(stars: string[], keyword: string): number {
+  return (stars || []).filter((s) => String(s).includes(keyword)).length;
+}
+
+function countDeficientElements(dist: Record<string, number>): number {
+  return Object.values(dist || {}).filter((v) => v === 0).length;
+}
+
 export function getElementAnalysis(dist: Record<string, number>) {
   const values = Object.values(dist || {});
   const max = values.length ? Math.max(...values) : 0;
@@ -98,70 +106,143 @@ function countDataTypes(input: ScoringInput) {
 
 export function calculateScores(input: ScoringInput): ServerScores {
   const elem = getElementAnalysis(input.elementDist);
-  const hasChungOrHyung =
-    (input.relationships?.chung?.length || 0) > 0 || (input.relationships?.hyung?.length || 0) > 0;
+  const hasChung = (input.relationships?.chung?.length || 0) > 0;
+  const hasHyung = (input.relationships?.hyung?.length || 0) > 0;
+  const hasChungOrHyung = hasChung || hasHyung;
   const hasHap = (input.relationships?.hap?.length || 0) > 0;
+  const hapCount = input.relationships?.hap?.length || 0;
+  const chungHyungCount = (input.relationships?.chung?.length || 0) + (input.relationships?.hyung?.length || 0);
 
-  const commonPenalty = elem.hasDeficiency || elem.hasDominance ? -1 : 0;
+  const isSingang = input.strength === "신강" || input.strength === "추정 신강";
+  const isSinyak = input.strength === "신약" || input.strength === "추정 신약";
 
-  const base = COMPOSITE_GRADE_CUTOFFS.C; // 58 — C등급 하한 (neutral 기준)
+  const bigyeobCount = countStar(input.tenStars, "비견") + countStar(input.tenStars, "겁재");
+  const hasBigyeobOverload = bigyeobCount >= 3;
 
+  const hasSikSang = hasStar(input.tenStars, "식신") || hasStar(input.tenStars, "상관");
+  const hasJaeSung = hasStar(input.tenStars, "정재") || hasStar(input.tenStars, "편재");
+  const hasGwanSung = hasStar(input.tenStars, "정관") || hasStar(input.tenStars, "편관");
+  const hasInSung = hasStar(input.tenStars, "정인") || hasStar(input.tenStars, "편인") || hasStar(input.tenStars, "인성");
+
+  const deficientCount = countDeficientElements(input.elementDist);
+
+  const base = COMPOSITE_GRADE_CUTOFFS.C; // 58
+
+  // ── 재물운 (35~95) ──
   let 재물운 = base;
-  if (hasStar(input.tenStars, "정재")) 재물운 += 6;
-  if (hasStar(input.tenStars, "편재")) 재물운 += 4;
-  if (hasStar(input.tenStars, "식신")) 재물운 += 3;
-  if (hasStar(input.tenStars, "비견") || hasStar(input.tenStars, "겁재")) 재물운 -= 4;
-  if (elem.hasDeficiency || elem.hasDominance) 재물운 -= 3;
-  재물운 += commonPenalty;
+  if (hasStar(input.tenStars, "정재")) 재물운 += 8;
+  if (hasStar(input.tenStars, "편재")) 재물운 += 6;
+  if (hasStar(input.tenStars, "식신")) 재물운 += 4;
+  if (hasStar(input.tenStars, "상관")) 재물운 += 2;
+  if (hasSikSang && hasJaeSung) 재물운 += 6; // 식상생재
+  if (elem.isBalanced) 재물운 += 4;
+  if (isSingang) 재물운 += 3;
+  if (hasHap) 재물운 += 2;
+  if (hasStar(input.tenStars, "비견")) 재물운 -= 6;
+  if (hasStar(input.tenStars, "겁재")) 재물운 -= 7;
+  if (hasBigyeobOverload) 재물운 -= 5;
+  if (elem.hasDeficiency) 재물운 -= 5;
+  if (elem.hasDominance) 재물운 -= 4;
+  if (hasChungOrHyung) 재물운 -= 3;
+  if (isSinyak) 재물운 -= 2;
 
-  let 직장운 = base;
-  if (hasStar(input.tenStars, "정관")) 직장운 += 6;
-  if (hasStar(input.tenStars, "편관")) 직장운 += 3;
-  if (hasStar(input.tenStars, "정인") || hasStar(input.tenStars, "편인") || hasStar(input.tenStars, "인성"))
-    직장운 += 2;
-  if (hasStar(input.tenStars, "상관")) 직장운 -= 3;
-  if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 직장운 -= 2;
-  직장운 += commonPenalty;
-
+  // ── 연애운 (35~90) ──
   let 연애운 = base;
-  if ((input.shinsal || []).some((s) => String(s).includes("도화") || String(s).includes("홍염"))) 연애운 += 3;
-  if (hasChungOrHyung) 연애운 -= 2;
-  if (hasStar(input.tenStars, "비견") || hasStar(input.tenStars, "겁재")) 연애운 -= 2;
-  연애운 += commonPenalty;
+  if ((input.shinsal || []).some((s) => String(s).includes("도화"))) 연애운 += 8;
+  if ((input.shinsal || []).some((s) => String(s).includes("홍염"))) 연애운 += 6;
+  if (hasStar(input.tenStars, "정관")) 연애운 += 5;
+  if (hasStar(input.tenStars, "정재")) 연애운 += 3;
+  if (hasHap) 연애운 += 7;
+  if (hapCount >= 2) 연애운 += 4;
+  if (elem.isBalanced) 연애운 += 3;
+  if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 연애운 += 3;
+  if (hasStar(input.tenStars, "비견")) 연애운 -= 5;
+  if (hasStar(input.tenStars, "겁재")) 연애운 -= 6;
+  if (hasBigyeobOverload) 연애운 -= 4;
+  if (hasChung) 연애운 -= 6;
+  if (hasHyung) 연애운 -= 5;
+  if (hasChung && hasHyung) 연애운 -= 3;
+  if (hasStar(input.tenStars, "상관")) 연애운 -= 4;
+  if (elem.hasDeficiency) 연애운 -= 3;
+  if (elem.hasDominance) 연애운 -= 3;
+  if (input.shinsalBadCount >= 2) 연애운 -= 3;
 
+  // ── 직장운 (35~90) ──
+  let 직장운 = base;
+  if (hasStar(input.tenStars, "정관")) 직장운 += 8;
+  if (hasStar(input.tenStars, "편관")) 직장운 += 5;
+  if (hasInSung) 직장운 += 4;
+  if (hasGwanSung && hasInSung) 직장운 += 7; // 관인상생
+  if (hasStar(input.tenStars, "식신")) 직장운 += 3;
+  if (isSingang) 직장운 += 3;
+  if (hasHap) 직장운 += 2;
+  if (elem.isBalanced) 직장운 += 3;
+  if (hasStar(input.tenStars, "상관")) 직장운 -= 5;
+  if (hasStar(input.tenStars, "상관") && hasGwanSung) 직장운 -= 5; // 상관견관
+  if (hasBigyeobOverload) 직장운 -= 5;
+  if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 직장운 -= 4;
+  if (hasChungOrHyung) 직장운 -= 4;
+  if (elem.hasDeficiency) 직장운 -= 4;
+  if (elem.hasDominance) 직장운 -= 3;
+  if (isSinyak) 직장운 -= 3;
+
+  // ── 건강운 (35~88) ──
   let 건강운 = base;
-  if (hasStar(input.tenStars, "식신") || hasStar(input.tenStars, "정인") || hasStar(input.tenStars, "편인"))
-    건강운 += 2;
-  if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 건강운 -= 4;
-  if (elem.hasDeficiency || elem.hasDominance) 건강운 -= 3;
-  건강운 += commonPenalty;
+  if (elem.isBalanced) 건강운 += 10;
+  if (elem.isBalanced && elem.diff <= 1 && !elem.hasDeficiency) 건강운 += 5; // 극균형
+  if (hasStar(input.tenStars, "식신")) 건강운 += 5;
+  if (hasInSung) 건강운 += 3;
+  if (isSingang) 건강운 += 3;
+  if (hasHap) 건강운 += 2;
+  if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 건강운 += 2;
+  건강운 -= deficientCount * 6; // 결핍 원소별 -6
+  if (elem.max >= 4) 건강운 -= 6; // 편중
+  if (elem.max >= 5) 건강운 -= 5; // 극편중 추가
+  if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 건강운 -= 5;
+  if (hasChungOrHyung) 건강운 -= 3;
+  if (isSinyak) 건강운 -= 4;
+  if (input.shinsalBadCount >= 2) 건강운 -= 3;
 
+  // ── 대인운 (35~90) ──
   let 대인운 = base;
-  if (hasStar(input.tenStars, "정인") || hasStar(input.tenStars, "편인") || hasStar(input.tenStars, "정관"))
-    대인운 += 2;
-  if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 대인운 += 2;
-  if (hasHap) 대인운 += 1;
-  if (hasStar(input.tenStars, "비견") || hasStar(input.tenStars, "겁재")) 대인운 -= 3;
-  if (hasStar(input.tenStars, "상관")) 대인운 -= 2;
-  if (hasChungOrHyung) 대인운 -= 2;
-  대인운 += commonPenalty;
+  if (hasInSung) 대인운 += 4;
+  if (hasStar(input.tenStars, "정관")) 대인운 += 4;
+  if (hasStar(input.tenStars, "식신")) 대인운 += 3;
+  if (hasStar(input.tenStars, "상관")) 대인운 += 2;
+  if (bigyeobCount >= 1 && bigyeobCount <= 2) 대인운 += 5; // 비겁 적절
+  if (hasBigyeobOverload) 대인운 -= 8; // 비겁 과다 (적절 대체 — net: 적절 안 줌)
+  if (hasHap) 대인운 += 5;
+  if (hapCount >= 2) 대인운 += 3;
+  if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 대인운 += 5;
+  if ((input.shinsal || []).some((s) => String(s).includes("문창"))) 대인운 += 3;
+  if (elem.isBalanced) 대인운 += 3;
+  if (hasStar(input.tenStars, "겁재") && !hasBigyeobOverload) 대인운 -= 6;
+  if (hasStar(input.tenStars, "상관") && hasGwanSung) 대인운 -= 4; // 상관견관
+  if (hasChung) 대인운 -= 5;
+  if (hasHyung) 대인운 -= 5;
+  if (chungHyungCount >= 3) 대인운 -= 4;
+  if (elem.hasDeficiency) 대인운 -= 3;
+  if (elem.hasDominance) 대인운 -= 3;
 
+  // ── confidence clamp ──
   const confidence = determineConfidence(input);
 
   const scores: ServerScores = { 재물운, 연애운, 직장운, 건강운, 대인운 };
   if (confidence === "low") {
-    // enriched=null → 모든 카테고리 neutral C하한
     (Object.keys(scores) as CategoryKey[]).forEach((key) => {
       scores[key] = COMPOSITE_GRADE_CUTOFFS.C;
     });
   } else if (confidence === "medium") {
     (Object.keys(scores) as CategoryKey[]).forEach((key) => {
-      scores[key] = clampInt(scores[key], 45, 82);
+      scores[key] = clampInt(scores[key], 40, 85);
     });
   } else {
-    (Object.keys(scores) as CategoryKey[]).forEach((key) => {
-      scores[key] = clampInt(scores[key], 35, 90);
-    });
+    // high confidence: 카테고리별 개별 범위
+    scores.재물운 = clampInt(scores.재물운, 35, 95);
+    scores.연애운 = clampInt(scores.연애운, 35, 90);
+    scores.직장운 = clampInt(scores.직장운, 35, 90);
+    scores.건강운 = clampInt(scores.건강운, 35, 88);
+    scores.대인운 = clampInt(scores.대인운, 35, 90);
   }
 
   return scores;
@@ -181,41 +262,50 @@ function calculateAxes(input: ScoringInput) {
   const hasChungOrHyung =
     (input.relationships?.chung?.length || 0) > 0 || (input.relationships?.hyung?.length || 0) > 0;
   const hasHap = (input.relationships?.hap?.length || 0) > 0;
+  const bigyeobCount = countStar(input.tenStars, "비견") + countStar(input.tenStars, "겁재");
 
   let potential = 50;
-  if (hasStar(input.tenStars, "정관") || hasStar(input.tenStars, "편관")) potential += 5;
-  if (hasStar(input.tenStars, "정재") || hasStar(input.tenStars, "편재")) potential += 5;
-  if (hasStar(input.tenStars, "식신") || hasStar(input.tenStars, "상관")) potential += 4;
+  if (hasStar(input.tenStars, "정관") || hasStar(input.tenStars, "편관")) potential += 7;
+  if (hasStar(input.tenStars, "정재") || hasStar(input.tenStars, "편재")) potential += 7;
+  if (hasStar(input.tenStars, "식신") || hasStar(input.tenStars, "상관")) potential += 6;
   if (hasStar(input.tenStars, "정인") || hasStar(input.tenStars, "편인") || hasStar(input.tenStars, "인성"))
-    potential += 3;
-  if (input.strength === "신강" || input.strength === "추정 신강") potential += 3;
-  if (elem.isBalanced) potential += 2;
-  if (Object.values(input.elementDist || {}).every((v) => v === 0)) potential -= 4;
-  potential = clampInt(potential, 35, 85);
+    potential += 4;
+  if (input.strength === "신강" || input.strength === "추정 신강") potential += 4;
+  if (elem.isBalanced) potential += 3;
+  if (hasHap) potential += 3;
+  if (bigyeobCount >= 3) potential -= 6;
+  if (elem.hasDeficiency) potential -= 4;
+  if (elem.hasDominance) potential -= 3;
+  if (Object.values(input.elementDist || {}).every((v) => v === 0)) potential -= 6;
+  potential = clampInt(potential, 30, 90);
 
   let stability = 50;
-  if (elem.diff <= 2 && !Object.values(input.elementDist || {}).every((v) => v === 0)) stability += 6;
-  if (hasHap) stability += 4;
-  if (hasStar(input.tenStars, "정관")) stability += 3;
-  if (hasStar(input.tenStars, "정재")) stability += 2;
+  if (elem.diff <= 2 && !Object.values(input.elementDist || {}).every((v) => v === 0)) stability += 8;
+  if (hasHap) stability += 6;
+  if (hasStar(input.tenStars, "정관")) stability += 4;
+  if (hasStar(input.tenStars, "정재")) stability += 3;
   if (hasStar(input.tenStars, "정인") || hasStar(input.tenStars, "편인") || hasStar(input.tenStars, "인성"))
-    stability += 2;
-  if (elem.hasDominance) stability -= 8;
-  if (elem.hasDeficiency) stability -= 6;
-  if (hasChungOrHyung) stability -= 4;
-  if (input.strength === "신약" || input.strength === "추정 신약") stability -= 3;
-  if (Object.values(input.elementDist || {}).every((v) => v === 0)) stability -= 4;
-  stability = clampInt(stability, 35, 85);
+    stability += 3;
+  if (elem.hasDominance) stability -= 10;
+  if (elem.hasDeficiency) stability -= 8;
+  if (hasChungOrHyung) stability -= 6;
+  if (bigyeobCount >= 3) stability -= 5;
+  if (input.strength === "신약" || input.strength === "추정 신약") stability -= 4;
+  if (Object.values(input.elementDist || {}).every((v) => v === 0)) stability -= 6;
+  stability = clampInt(stability, 30, 90);
 
   let risk = 45;
-  if (hasStar(input.tenStars, "비견") || hasStar(input.tenStars, "겁재")) risk += 6;
-  if (hasStar(input.tenStars, "편관") && hasChungOrHyung) risk += 5;
+  if (hasStar(input.tenStars, "비견") || hasStar(input.tenStars, "겁재")) risk += 8;
+  if (bigyeobCount >= 3) risk += 5;
+  if (hasStar(input.tenStars, "편관") && hasChungOrHyung) risk += 7;
   if (hasStar(input.tenStars, "상관") && (hasStar(input.tenStars, "정관") || hasStar(input.tenStars, "편관")))
-    risk += 4;
-  if (hasChungOrHyung) risk += 4;
-  if (input.shinsalBadCount >= 2) risk += 2;
-  if (elem.hasDeficiency || elem.hasDominance) risk += 2;
-  risk = clampInt(risk, 35, 85);
+    risk += 6;
+  if (hasChungOrHyung) risk += 6;
+  if (input.shinsalBadCount >= 2) risk += 3;
+  if (elem.hasDeficiency) risk += 3;
+  if (elem.hasDominance) risk += 3;
+  if (Object.values(input.elementDist || {}).every((v) => v === 0)) risk -= 4;
+  risk = clampInt(risk, 30, 90);
 
   return { potential, stability, risk };
 }
@@ -269,8 +359,8 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
     0.15 * scores.건강운 + 0.15 * scores.대인운
   );
   const axisAdj = clampInt(
-    Math.round(0.15 * (potential - 50) + 0.15 * (stability - 50) - 0.10 * (risk - 50)),
-    -10, 10
+    Math.round(0.20 * (potential - 50) + 0.20 * (stability - 50) - 0.15 * (risk - 50)),
+    -15, 15
   );
   let composite = clampInt(catAvg + axisAdj, 0, 100);
 
