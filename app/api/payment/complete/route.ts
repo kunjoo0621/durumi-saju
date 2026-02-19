@@ -12,6 +12,7 @@ type PaymentCompleteBody = {
   amount?: number;
   paymentStatus?: string;
   paymentMethod?: string;
+  type?: string;
 };
 
 function hasRequiredInput(input: InputPayload) {
@@ -89,8 +90,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "결제 세션이 만료되었습니다." }, { status: 410 });
     }
 
+    const isBattle = body.type === "battle";
     const input = sessionRow.payload as InputPayload;
-    if (!hasRequiredInput(input)) {
+
+    if (isBattle) {
+      if (!input?.name || !input.birthYear || !input.birthMonth || !input.birthDay || !input.birthLocation || !input.gender) {
+        return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
+      }
+    } else if (!hasRequiredInput(input)) {
       return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
     }
 
@@ -107,7 +114,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "결제 정보가 부족합니다." }, { status: 400 });
       }
 
-      if (Number(body.amount) !== 1000) {
+      if (![1000, 2000].includes(Number(body.amount))) {
         return NextResponse.json({ error: "결제 금액이 올바르지 않습니다." }, { status: 400 });
       }
 
@@ -140,6 +147,30 @@ export async function POST(request: NextRequest) {
 
       paymentMethod = confirmData?.method || "toss";
       amount = Number(body.amount);
+    }
+
+    // 배틀 결제: 결제 확인만 하고 분석은 클라이언트에서 /api/battle/analyze 호출
+    if (isBattle) {
+      const inputHash =
+        typeof sessionRow.input_hash === "string" && sessionRow.input_hash
+          ? sessionRow.input_hash
+          : buildInputHash(input);
+
+      await supabaseAdmin
+        .from("payment_transactions")
+        .upsert(
+          {
+            user_id: userId,
+            order_id: body.orderId,
+            method: paymentMethod,
+            amount,
+            status: "success",
+          },
+          { onConflict: "order_id", ignoreDuplicates: true }
+        );
+
+      await markSessionConsumed(userId, body.sessionId!);
+      return NextResponse.json({ ok: true, type: "battle" });
     }
 
     const inputHash =

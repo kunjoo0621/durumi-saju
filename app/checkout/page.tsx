@@ -6,6 +6,9 @@ import { useSession } from "next-auth/react";
 import Script from "next/script";
 import MenuDrawer from "../MenuDrawer";
 import { useAllInputs } from "@/store/useInputStore";
+import { useBattleStore } from "@/store/useBattleStore";
+
+type CheckoutType = "analysis" | "battle";
 
 function CheckoutLoading() {
   return (
@@ -20,6 +23,12 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const inputs = useAllInputs();
+  const battleStore = useBattleStore();
+
+  const checkoutType: CheckoutType = (searchParams?.get("type") as CheckoutType) || "analysis";
+  const isBattle = checkoutType === "battle";
+  const amount = isBattle ? 2000 : 1000;
+  const productName = isBattle ? "사주 배틀" : "사주 전체 결과";
 
   // 기존 checkout state
   const [error, setError] = useState<string | null>(null);
@@ -38,11 +47,20 @@ function CheckoutContent() {
   const orderIdParam = searchParams?.get("orderId");
   const amountParam = searchParams?.get("amount");
   const sessionIdParam = searchParams?.get("sessionId");
+  const typeParam = searchParams?.get("type") || "analysis";
   const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
   const mockPayment = process.env.NEXT_PUBLIC_USE_MOCK_PAYMENT === "true";
-  const amount = 1000;
 
   const hasRequiredInput = useMemo(() => {
+    if (isBattle) {
+      const { playerA, playerB, relationshipType } = battleStore;
+      if (!playerA.name?.trim() || !playerA.birthYear || !playerA.birthMonth || !playerA.birthDay || !playerA.birthLocation || !playerA.gender) return false;
+      if (!playerA.unknownBirthTime && (!playerA.birthHour || !playerA.birthMinute)) return false;
+      if (!playerB.name?.trim() || !playerB.birthYear || !playerB.birthMonth || !playerB.birthDay || !playerB.birthLocation || !playerB.gender) return false;
+      if (!playerB.unknownBirthTime && (!playerB.birthHour || !playerB.birthMinute)) return false;
+      if (!relationshipType) return false;
+      return true;
+    }
     if (
       !inputs.name.trim() ||
       !inputs.birthYear ||
@@ -60,14 +78,17 @@ function CheckoutContent() {
       return false;
     }
     return true;
-  }, [inputs]);
+  }, [inputs, battleStore, isBattle]);
 
-  // 입력 검증 실패 시 /start로 redirect
+  const redirectBack = isBattle ? "/battle/input" : "/start";
+  const redirectResult = isBattle ? "/battle/result" : "/result";
+
+  // 입력 검증 실패 시 redirect
   useEffect(() => {
     if (!paymentKey && !hasRequiredInput) {
-      router.replace("/start");
+      router.replace(redirectBack);
     }
-  }, [hasRequiredInput, paymentKey, router]);
+  }, [hasRequiredInput, paymentKey, router, redirectBack]);
 
   // 에러 쿼리 파라미터 처리
   useEffect(() => {
@@ -95,15 +116,42 @@ function CheckoutContent() {
             paymentKey,
             orderId: orderIdParam,
             amount: Number(amountParam),
+            type: typeParam,
           }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data?.error || "결제 확인에 실패했습니다.");
         }
-        sessionStorage.setItem("sajuJustPaid", "1");
-        sessionStorage.removeItem("sajuOrderId");
-        router.replace("/result");
+
+        if (typeParam === "battle") {
+          // 결제 확인 완료 → 배틀 분석 실행
+          const analyzeRes = await fetch("/api/battle/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              playerA: battleStore.playerA,
+              playerB: battleStore.playerB,
+              relationshipType: battleStore.relationshipType,
+              sessionId: sessionIdParam,
+            }),
+          });
+          if (!analyzeRes.ok) {
+            const errData = await analyzeRes.json().catch(() => ({}));
+            throw new Error(errData?.error || "배틀 분석에 실패했습니다.");
+          }
+          const analyzeData = await analyzeRes.json();
+          if (analyzeData?.result) {
+            battleStore.setBattleResult(analyzeData.result);
+          }
+          sessionStorage.setItem("sajuBattleJustPaid", "1");
+          sessionStorage.removeItem("sajuOrderId");
+          router.replace("/battle/result");
+        } else {
+          sessionStorage.setItem("sajuJustPaid", "1");
+          sessionStorage.removeItem("sajuOrderId");
+          router.replace("/result");
+        }
       } catch (err: any) {
         setError(err?.message || "결제 확인 중 오류가 발생했습니다.");
         confirmingRef.current = false;
@@ -128,7 +176,7 @@ function CheckoutContent() {
           <div className="max-w-[640px] w-full text-center">
             <p className="text-body-2 text-text-secondary mb-6">{error}</p>
             <button
-              onClick={() => router.replace("/start")}
+              onClick={() => router.replace(redirectBack)}
               className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
             >
               돌아가기
@@ -139,8 +187,7 @@ function CheckoutContent() {
     );
   }
 
-  // 입력 검증 실패 → /start redirect
-  // (useEffect 대신 여기서도 체크하여 잘못된 UI 깜빡임 방지)
+  // 입력 검증 실패 → redirect
   if (!hasRequiredInput) {
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center px-5">
@@ -150,7 +197,10 @@ function CheckoutContent() {
   }
 
   return <CheckoutForm
-    inputs={inputs}
+    inputs={isBattle ? null : inputs}
+    battleStore={isBattle ? battleStore : null}
+    isBattle={isBattle}
+    productName={productName}
     session={session}
     error={error}
     setError={setError}
@@ -171,25 +221,47 @@ function CheckoutContent() {
     amount={amount}
     hasRequiredInput={hasRequiredInput}
     router={router}
+    redirectResult={isBattle ? "/battle/result" : "/result"}
+    redirectBack={redirectBack}
+    checkoutType={checkoutType}
   />;
 }
 
 function CheckoutForm({
-  inputs, session, error, setError,
+  inputs, battleStore, isBattle, productName,
+  session, error, setError,
   paying, setPaying, orderId, setOrderId,
   sessionId, setSessionId, widgets, setWidgets,
   widgetReady, setWidgetReady, sdkReady, setSdkReady,
   clientKey, mockPayment, amount, hasRequiredInput, router,
+  redirectResult, redirectBack, checkoutType,
 }: any) {
   // 페이지 로드 시 세션 생성 + orderId 생성
   useEffect(() => {
     if (sessionId) return;
     const createSession = async () => {
       try {
+        const sessionBody = isBattle
+          ? {
+              name: battleStore.playerA.name,
+              birthYear: battleStore.playerA.birthYear,
+              birthMonth: battleStore.playerA.birthMonth,
+              birthDay: battleStore.playerA.birthDay,
+              calendarType: battleStore.playerA.calendarType,
+              birthHour: battleStore.playerA.birthHour,
+              birthMinute: battleStore.playerA.birthMinute,
+              birthLocation: battleStore.playerA.birthLocation,
+              gender: battleStore.playerA.gender,
+              relationshipStatus: battleStore.playerA.relationshipStatus || "솔로",
+              employmentStatus: battleStore.playerA.employmentStatus || "직장인",
+              coreFearAxis: battleStore.playerA.coreFearAxis || "DISMISS",
+              unknownBirthTime: battleStore.playerA.unknownBirthTime,
+            }
+          : inputs;
         const res = await fetch("/api/intake/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(inputs),
+          body: JSON.stringify(sessionBody),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -262,6 +334,32 @@ function CheckoutForm({
 
     try {
       if (mockPayment) {
+        // For battle mock payment, call battle analyze API directly
+        if (isBattle) {
+          const analyzeRes = await fetch("/api/battle/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              playerA: battleStore.playerA,
+              playerB: battleStore.playerB,
+              relationshipType: battleStore.relationshipType,
+              sessionId,
+            }),
+          });
+          if (!analyzeRes.ok) {
+            const data = await analyzeRes.json().catch(() => ({}));
+            throw new Error(data?.error || "배틀 분석에 실패했습니다.");
+          }
+          const data = await analyzeRes.json();
+          if (data?.result) {
+            battleStore.setBattleResult(data.result);
+          }
+          sessionStorage.setItem("sajuBattleJustPaid", "1");
+          sessionStorage.removeItem("sajuOrderId");
+          router.push("/battle/result");
+          return;
+        }
+
         const res = await fetch("/api/payment/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -284,12 +382,13 @@ function CheckoutForm({
       }
 
       const origin = window.location.origin;
-      const successUrl = `${origin}/checkout?sessionId=${encodeURIComponent(sessionId)}`;
-      const failUrl = `${origin}/checkout?error=payment`;
+      const typeQuery = isBattle ? `&type=battle` : "";
+      const successUrl = `${origin}/checkout?sessionId=${encodeURIComponent(sessionId)}${typeQuery}`;
+      const failUrl = `${origin}/checkout?error=payment${typeQuery}`;
 
       await widgets.requestPayment({
         orderId: safeOrderId,
-        orderName: "사주 전체 결과",
+        orderName: productName,
         successUrl,
         failUrl,
         customerName: session?.user?.name || "두루미",
@@ -300,6 +399,8 @@ function CheckoutForm({
       setPaying(false);
     }
   };
+
+  const displayInputs = isBattle ? battleStore.playerA : inputs;
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
@@ -315,7 +416,7 @@ function CheckoutForm({
       <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
-            onClick={() => router.push("/start")}
+            onClick={() => router.push(redirectBack)}
             className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
             aria-label="이전 화면"
           >
@@ -330,52 +431,78 @@ function CheckoutForm({
 
       <main className="flex-1 px-5 pb-48">
         <div className="max-w-[640px] mx-auto pt-10 space-y-4">
-          <p className="text-[18px] font-semibold">전체 결과표 + 8개 섹션 리포트가 열려요</p>
-          <p className="text-[15px] text-text-secondary">결과는 계정에 저장돼서 다시 볼 수 있어요</p>
+          {isBattle ? (
+            <>
+              <p className="text-[18px] font-semibold">1:1 사주 배틀 결과가 열려요</p>
+              <p className="text-[15px] text-text-secondary">5개 카테고리 비교 + 심판 판정</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[18px] font-semibold">전체 결과표 + 8개 섹션 리포트가 열려요</p>
+              <p className="text-[15px] text-text-secondary">결과는 계정에 저장돼서 다시 볼 수 있어요</p>
+            </>
+          )}
 
-          <div className="rounded-2xl bg-background-secondary p-5 space-y-2">
-            <div className="text-[14px] text-text-secondary">입력 정보 확인</div>
-            <dl className="space-y-1.5 text-[14px]">
-              {inputs.name && (
-                <div className="flex justify-between">
-                  <dt className="text-text-secondary">이름</dt>
-                  <dd className="text-text-primary font-medium">{inputs.name}</dd>
+          {isBattle ? (
+            <div className="rounded-2xl bg-background-secondary p-5 space-y-3">
+              <div className="text-[14px] text-text-secondary">대결 정보 확인</div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 rounded-xl bg-background-primary p-3 text-center">
+                  <div className="text-[13px] text-text-tertiary">甲</div>
+                  <div className="text-[15px] font-semibold text-text-primary mt-1">{battleStore.playerA.name}</div>
                 </div>
-              )}
-              {inputs.birthYear && inputs.birthMonth && inputs.birthDay && (
-                <div className="flex justify-between">
-                  <dt className="text-text-secondary">생년월일</dt>
-                  <dd className="text-text-primary font-medium">
-                    {inputs.calendarType === "lunar" ? "음력 " : ""}{inputs.birthYear}.{inputs.birthMonth}.{inputs.birthDay}
-                  </dd>
+                <div className="text-[16px] font-bold text-primary">VS</div>
+                <div className="flex-1 rounded-xl bg-background-primary p-3 text-center">
+                  <div className="text-[13px] text-text-tertiary">乙</div>
+                  <div className="text-[15px] font-semibold text-text-primary mt-1">{battleStore.playerB.name}</div>
                 </div>
-              )}
-              {!inputs.unknownBirthTime && inputs.birthHour && inputs.birthMinute && (
-                <div className="flex justify-between">
-                  <dt className="text-text-secondary">태어난 시간</dt>
-                  <dd className="text-text-primary font-medium">{inputs.birthHour}:{inputs.birthMinute}</dd>
-                </div>
-              )}
-              {inputs.unknownBirthTime && (
-                <div className="flex justify-between">
-                  <dt className="text-text-secondary">태어난 시간</dt>
-                  <dd className="text-text-primary font-medium">모름</dd>
-                </div>
-              )}
-              {inputs.birthLocation && (
-                <div className="flex justify-between">
-                  <dt className="text-text-secondary">출생지</dt>
-                  <dd className="text-text-primary font-medium">{inputs.birthLocation}</dd>
-                </div>
-              )}
-              {inputs.gender && (
-                <div className="flex justify-between">
-                  <dt className="text-text-secondary">성별</dt>
-                  <dd className="text-text-primary font-medium">{inputs.gender}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-background-secondary p-5 space-y-2">
+              <div className="text-[14px] text-text-secondary">입력 정보 확인</div>
+              <dl className="space-y-1.5 text-[14px]">
+                {displayInputs.name && (
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">이름</dt>
+                    <dd className="text-text-primary font-medium">{displayInputs.name}</dd>
+                  </div>
+                )}
+                {displayInputs.birthYear && displayInputs.birthMonth && displayInputs.birthDay && (
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">생년월일</dt>
+                    <dd className="text-text-primary font-medium">
+                      {displayInputs.calendarType === "lunar" ? "음력 " : ""}{displayInputs.birthYear}.{displayInputs.birthMonth}.{displayInputs.birthDay}
+                    </dd>
+                  </div>
+                )}
+                {!displayInputs.unknownBirthTime && displayInputs.birthHour && displayInputs.birthMinute && (
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">태어난 시간</dt>
+                    <dd className="text-text-primary font-medium">{displayInputs.birthHour}:{displayInputs.birthMinute}</dd>
+                  </div>
+                )}
+                {displayInputs.unknownBirthTime && (
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">태어난 시간</dt>
+                    <dd className="text-text-primary font-medium">모름</dd>
+                  </div>
+                )}
+                {displayInputs.birthLocation && (
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">출생지</dt>
+                    <dd className="text-text-primary font-medium">{displayInputs.birthLocation}</dd>
+                  </div>
+                )}
+                {displayInputs.gender && (
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">성별</dt>
+                    <dd className="text-text-primary font-medium">{displayInputs.gender}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
 
           {!mockPayment && (
             <div className="rounded-2xl bg-background-secondary p-5 space-y-3">
@@ -420,7 +547,7 @@ function CheckoutForm({
             disabled={paying || !hasRequiredInput || !sessionId || (!mockPayment && !widgetReady)}
             className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
           >
-            {paying ? "결제창 여는 중..." : "1,000원 결제하기"}
+            {paying ? "결제창 여는 중..." : `${amount.toLocaleString()}원 결제하기`}
           </button>
         </div>
       </div>

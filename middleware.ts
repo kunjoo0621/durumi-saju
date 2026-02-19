@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PROTECTED_PAGES = ["/checkout", "/result", "/coins", "/edit-profile", "/my/results"];
+const PROTECTED_PAGES = ["/checkout", "/result", "/coins", "/edit-profile", "/my/results", "/battle/result"];
 const PROTECTED_APIS = ["/api/profile", "/api/coins"];
 
 export async function middleware(request: NextRequest) {
@@ -44,6 +44,7 @@ export const config = {
     "/coins",
     "/edit-profile",
     "/my/results",
+    "/battle/result",
     "/api/profile",
     "/api/coins",
   ],

@@ -200,7 +200,7 @@ export default function ResultTable({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
-        <div className={`rounded-3xl p-6 md:p-8 border border-white/8 ${gradeStyle.background}`}>
+        <div className={`rounded-3xl p-6 md:p-8 ${gradeStyle.background}`}>
           <div className="flex items-center justify-between">
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-caption font-semibold ${badgeStyles[badgeLabel]}`}
@@ -215,15 +215,13 @@ export default function ResultTable({
               // TODO: 배지 이미지 전달받으면 badgeSrc 연결
               size={152}
             />
-            <div className="text-body-2 font-semibold text-text-secondary">
+            <div className="text-xl font-bold text-text-secondary">
               상위 {safeTier.topPercent}%
             </div>
-            <div
-              className="max-w-[26ch] text-title-3 text-text-primary line-clamp-2"
-            >
+            <div className="text-lg font-semibold text-text-primary line-clamp-2">
               {safeTier.title}
             </div>
-            <p className="max-w-[52ch] text-[16px] text-text-secondary leading-[1.75]">
+            <p className="max-w-sm text-sm text-text-tertiary text-center leading-[1.75]">
               {safeTier.description}
             </p>
             {safeTier.confidence === "low" && (

@@ -4,8 +4,6 @@ import { memo, useMemo } from "react";
 import {
   computePillarDisplayData,
   getElementTextClass,
-  getElementBgClass,
-  getElementBorderClass,
   getElementName,
   type SajuData,
   type ElementType,
@@ -18,7 +16,7 @@ type SajuChartProps = {
 // 개별 셀 컴포넌트 - 메모이즈
 const LabelCell = memo(function LabelCell({ label }: { label: string }) {
   return (
-    <div className="px-4 py-3 text-center text-[14px] text-text-tertiary bg-background-primary rounded-xl">
+    <div className="px-4 py-3 text-center text-[14px] text-text-tertiary bg-[#1A1A1A] rounded-xl">
       {label}
     </div>
   );
@@ -32,15 +30,13 @@ const StemCell = memo(function StemCell({
   element: ElementType | null;
 }) {
   const textClass = getElementTextClass(element);
-  const bgClass = getElementBgClass(element);
-  const borderClass = getElementBorderClass(element);
   const elementName = element ? getElementName(element) : null;
 
   return (
-    <div className={`px-2 py-3 text-center rounded-xl ${bgClass} ${borderClass}`}>
+    <div className="px-2 py-3 text-center rounded-xl bg-[#1A1A1A]">
       <div className={`text-[28px] font-semibold ${textClass}`}>{stemLabel}</div>
       {elementName && (
-        <div className="text-[12px] text-text-secondary mt-1">{elementName}</div>
+        <div className="text-[12px] text-text-tertiary mt-1">{elementName}</div>
       )}
     </div>
   );
@@ -48,7 +44,7 @@ const StemCell = memo(function StemCell({
 
 const TenGodCell = memo(function TenGodCell({ tenGod }: { tenGod: string | null }) {
   return (
-    <div className="px-4 py-3 text-center text-[14px] text-text-secondary bg-background-primary rounded-xl">
+    <div className="px-4 py-3 text-center text-[14px] text-text-secondary bg-[#1A1A1A] rounded-xl">
       {tenGod || "-"}
     </div>
   );
@@ -62,15 +58,13 @@ const BranchCell = memo(function BranchCell({
   element: ElementType | null;
 }) {
   const textClass = getElementTextClass(element);
-  const bgClass = getElementBgClass(element);
-  const borderClass = getElementBorderClass(element);
   const elementName = element ? getElementName(element) : null;
 
   return (
-    <div className={`px-2 py-3 text-center rounded-xl ${bgClass} ${borderClass}`}>
+    <div className="px-2 py-3 text-center rounded-xl bg-[#1A1A1A]">
       <div className={`text-[28px] font-semibold ${textClass}`}>{branchLabel}</div>
       {elementName && (
-        <div className="text-[12px] text-text-secondary mt-1">{elementName}</div>
+        <div className="text-[12px] text-text-tertiary mt-1">{elementName}</div>
       )}
     </div>
   );
@@ -85,7 +79,7 @@ function SajuChartInner({ sajuData }: SajuChartProps) {
   );
 
   return (
-    <div className="grid grid-cols-4 gap-2.5">
+    <div className="grid grid-cols-4 gap-1">
       {/* 라벨 행 */}
       {pillars.map((p) => (
         <LabelCell key={`label-${p.key}`} label={p.label} />

@@ -18,6 +18,11 @@ type SectionListProps = {
   initialExpandedCount?: number;
 };
 
+const ACCENT_COLORS = [
+  "#F43F5E", "#A855F7", "#3B82F6", "#22C55E",
+  "#EAB308", "#F97316", "#EC4899", "#06B6D4",
+];
+
 // 개별 섹션 아이템 - 메모이즈
 type SectionItemProps = {
   section: ResultSection;
@@ -27,6 +32,7 @@ type SectionItemProps = {
   locked: boolean;
   onUnlock?: () => void;
   unlockLabel?: string;
+  accentColor: string;
 };
 
 const SectionItem = memo(function SectionItem({
@@ -37,33 +43,40 @@ const SectionItem = memo(function SectionItem({
   locked,
   onUnlock,
   unlockLabel,
+  accentColor,
 }: SectionItemProps) {
   const contentId = `section-content-${index}`;
   const handleToggle = useCallback(() => onToggle(index), [onToggle, index]);
 
   return (
-    <div className="bg-background-secondary rounded-2xl border border-white/8 overflow-hidden">
-      <SectionHeader
-        icon={section.icon}
-        title={section.title}
-        expanded={expanded}
-        onToggle={handleToggle}
-        id={contentId}
-      />
+    <div className="flex bg-background-secondary rounded-2xl overflow-hidden">
       <div
-        id={contentId}
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="px-6 pb-6 pt-4">
-            <SectionBody
-              content={section.content}
-              locked={locked}
-              onUnlock={onUnlock}
-              unlockLabel={unlockLabel}
-            />
+        className="w-1 shrink-0 rounded-full my-2 ml-1.5"
+        style={{ backgroundColor: accentColor }}
+      />
+      <div className="flex-1 min-w-0">
+        <SectionHeader
+          icon={section.icon}
+          title={section.title}
+          expanded={expanded}
+          onToggle={handleToggle}
+          id={contentId}
+        />
+        <div
+          id={contentId}
+          className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+            expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="px-6 pb-6 pt-4">
+              <SectionBody
+                content={section.content}
+                locked={locked}
+                onUnlock={onUnlock}
+                unlockLabel={unlockLabel}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -99,7 +112,7 @@ function SectionListInner({
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {sections.map((section, index) => (
         <SectionItem
           key={`${section.title}-${index}`}
@@ -110,6 +123,7 @@ function SectionListInner({
           locked={locked}
           onUnlock={onUnlock}
           unlockLabel={unlockLabel}
+          accentColor={ACCENT_COLORS[index % ACCENT_COLORS.length]}
         />
       ))}
     </div>

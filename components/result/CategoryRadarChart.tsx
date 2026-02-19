@@ -19,6 +19,14 @@ const CATEGORY_ORDER: CategoryKey[] = ["재물운", "연애운", "직장운", "�
 const BASE_ANGLE_OFFSET = -90;
 const LEVELS = [20, 40, 60, 80, 100];
 
+const GRADE_BADGE_COLORS: Record<string, string> = {
+  S: "#D946EF",
+  A: "#F43F5E",
+  B: "#22C55E",
+  C: "#A1A1AA",
+  D: "#52525B",
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -140,7 +148,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
   }, [orderedCategories, axisAngles]);
 
   return (
-    <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/8">
+    <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
       <div className="mb-4">
         <h3 className="text-title-3 text-text-primary font-semibold">카테고리별 등급</h3>
       </div>
@@ -151,13 +159,20 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
           className="h-auto w-full"
           aria-label="카테고리별 오각형 레이더 차트"
         >
+          <defs>
+            <radialGradient id="radarFillGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgb(244,63,94)" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="rgb(244,63,94)" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+
           <g>
             {guidePaths.map((guide) => (
               <path
                 key={guide.level}
                 d={guide.d}
                 fill="none"
-                stroke="rgb(var(--text-primary) / 0.12)"
+                stroke="#1F1F1F"
                 strokeWidth={guide.level === 100 ? 1 : 0.8}
               />
             ))}
@@ -171,7 +186,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                   y1="0"
                   x2={point.x.toFixed(2)}
                   y2={point.y.toFixed(2)}
-                  stroke="rgb(var(--text-primary) / 0.10)"
+                  stroke="#1A1A1A"
                   strokeWidth="0.8"
                 />
               );
@@ -181,30 +196,61 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
           <g>
             <path
               d={dataPath}
-              fill="rgb(var(--primary) / 0.12)"
-              stroke="rgb(var(--primary) / 0.55)"
-              strokeWidth="1.5"
+              fill="url(#radarFillGradient)"
+              stroke="rgb(var(--primary) / 0.8)"
+              strokeWidth="2"
               strokeLinejoin="round"
             />
           </g>
 
           <g>
-            {labelPoints.map((label) => (
-              <text
-                key={label.item.key}
-                x={label.x.toFixed(2)}
-                y={label.y.toFixed(2)}
-                dy={label.dy}
-                textAnchor={label.anchor as any}
-                fill="rgb(var(--text-primary) / 0.70)"
-                style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
-              >
-                <tspan>{label.item.key}</tspan>
-                <tspan dx="6" fill="rgb(var(--primary) / 0.72)" style={{ fontWeight: 600 }}>
-                  {label.item.grade}
-                </tspan>
-              </text>
-            ))}
+            {labelPoints.map((label) => {
+              const badgeColor = GRADE_BADGE_COLORS[label.item.grade] || GRADE_BADGE_COLORS.D;
+              const badgeWidth = 28;
+              const badgeHeight = 18;
+              const badgeGap = 4;
+
+              // Badge position: below the label text
+              const badgeX = label.anchor === "start"
+                ? label.x
+                : label.anchor === "end"
+                  ? label.x - badgeWidth
+                  : label.x - badgeWidth / 2;
+              const badgeY = label.y + label.dy + badgeGap;
+
+              return (
+                <g key={label.item.key}>
+                  <text
+                    x={label.x.toFixed(2)}
+                    y={label.y.toFixed(2)}
+                    dy={label.dy}
+                    textAnchor={label.anchor as any}
+                    fill="rgb(var(--text-primary) / 0.70)"
+                    style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
+                  >
+                    {label.item.key}
+                  </text>
+                  <rect
+                    x={badgeX}
+                    y={badgeY}
+                    width={badgeWidth}
+                    height={badgeHeight}
+                    rx={4}
+                    fill={`${badgeColor}20`}
+                  />
+                  <text
+                    x={badgeX + badgeWidth / 2}
+                    y={badgeY + badgeHeight / 2}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill={badgeColor}
+                    style={{ fontSize: 11, fontWeight: 600 }}
+                  >
+                    {label.item.grade}
+                  </text>
+                </g>
+              );
+            })}
           </g>
         </svg>
       </div>

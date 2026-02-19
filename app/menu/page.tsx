@@ -8,7 +8,7 @@ import MenuDrawer from "../MenuDrawer";
 export default function MenuPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const isBattleDisabled = true;
+  const isBattleDisabled = false;
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
 

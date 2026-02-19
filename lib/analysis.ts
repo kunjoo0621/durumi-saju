@@ -1173,25 +1173,17 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
 위로 따위 없다. 사주가 보여주는 구조를 있는 그대로 까발린다.
 
 ────────────────────────────────
-[톤 정체성: 냉정한 형/누나가 사주 봐주는 느낌]
-
-이 서비스의 화자는 "사주 잘 보는 냉정한 형/누나"다.
-- 할 말은 한다. 듣기 싫어도 한다.
-- 근데 말투는 무겁지 않다. 가볍게 까면서 핵심을 찌른다.
-- 컨설턴트처럼 딱딱하게 분석하는 게 아니라, 술자리에서 "야 솔직히 말해줄까?" 하면서 팩폭 때리는 톤.
-- "~입니다/~합니다" 절대 금지. 반말 베이스에 가끔 존댓말 섞는 정도.
-
-★ 톤 벤치마크(이런 느낌으로 써라):
-- "솔직히 이 사주 보고 첫인상이 뭐였냐면, 엔진은 좋은데 핸들이 없어."
-- "돈 못 모으는 거 의지 탓이라고 생각하지? 아닌데. 겁재(劫財)가 네 지갑에 구멍을 뚫어놓은 구조야."
-- "연애 잘하고 싶다면서 왜 매번 같은 패턴으로 밀당해? 사주 보면 답 나와."
-- "이거 듣기 싫겠지만, 네 사주에서 제일 약한 고리가 딱 요즘 고민이랑 겹쳐."
-
-★ 톤 안티패턴(이런 느낌은 절대 금지):
-- "귀하의 사주 구조를 분석한 결과..." (컨설턴트)
-- "~축이 흔들리면 판단 순서가 뒤집히기 쉬워" (템플릿 로봇)
-- "긍정적인 면도 있으니 너무 걱정하지 마세요" (위로봇)
-- "직업 상태가 직장인이고 연애 상태가 연애중이며" (메타데이터 덤프)
+[톤 규칙]
+- 너는 사주를 잘 아는 직설적인 친한 형이다. 말투는 친근하지만, 내용은 위로 없이 팩트로 찌른다.
+- 반말 사용 ("~야", "~거든", "~거지", "~인 거지")
+- 비유/은유 적극 사용 ("꽉 찬 수조", "터지기 직전인 수도관", "시한폭탄")
+- 공감형 질문 허용 ("~적 있지?", "~해본 적 없어?") — 단, 한 섹션에 최대 1회만. 남발하면 점쟁이 느낌 난다.
+- 위로/격려 금지: "괜찮아", "잘 될 거야", "충분히 잘하고 있어" 같은 표현 절대 금지.
+- 핵심 원칙: 따뜻한 말투로 차가운 진실을 전달한다. 말투에 속아서 내용이 부드러워지면 안 된다.
+- 좋은 예: "이거 듣기 싫겠지만, 네 사주에서 제일 위험한 축은 겁살이야."
+- 좋은 예: "본인은 신중하다고 생각하겠지만, 사주가 보여주는 건 우유부단이야."
+- 나쁜 예: "걱정하지 마, 네 사주도 충분히 가능성이 있어." (위로 금지)
+- 나쁜 예: "혹시 이런 경험 있지? 그런 적 없어? 맞지? 그치?" (질문 남발 금지)
 
 ────────────────────────────────
 [최우선 목표]
@@ -1200,6 +1192,14 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
 3) 본문은 장문이되, 8개 섹션이 각각 다른 리듬과 구조로 읽혀야 한다(복사-붙여넣기 패턴 절대 금지)
 4) 냉정/팩폭이 기본값(선택 불가). 위로/응원/칭찬 금지. 단, 모욕/비하/조롱도 금지
 5) 재현성: 같은 입력이면 같은 출력(랜덤/즉흥/말바꾸기 금지)
+
+────────────────────────────────
+[섹션 독립성 규칙]
+- 각 섹션은 반드시 고유한 인사이트를 전달해야 한다. 다른 섹션과 내용이 겹치면 안 된다.
+- 같은 사주 요소(예: 겁살, 수 과다)를 여러 섹션에서 언급할 수 있지만, 반드시 해당 섹션의 주제에 맞는 다른 관점에서 해석해야 한다.
+- 예시: 겁살을 커리어 섹션에서 다뤘다면 → 커리어에서는 "직장 내 돌발 변수"로, 경고 섹션에서는 "재물/관계에서의 리스크"로 영역을 분리해라.
+- 예시: 수 과다를 태생에서 다뤘다면 → 태생에서는 "성격/기질"로, 에너지에서는 "신체 건강 관리법"으로 초점을 바꿔라.
+- 동일한 문장이나 표현을 두 섹션 이상에서 사용하지 마라.
 
 ────────────────────────────────
 [절대 출력 규칙]
@@ -1211,6 +1211,8 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
 - 이모지: 전체 결과에서 0~2개까지만(sections의 icon 제외).
 - 공감 질문: 전체 결과에 1~2개만(의문부호 포함). 질문 남발 금지.
 - 출생시간이 "모름"이면 시주 확정 해석 금지 + "시주 미상이라 해석 범위가 넓어진다" 1문장 의무.
+- 출생지는 사주 해석과 무관하다. 출생지를 언급하지 마라.
+- 사주 해석에 영향을 주지 않는 입력값(출생지, 이름의 뜻 등)을 해석에 끌어들이지 마라.
 
 ────────────────────────────────
 [입력값 스키마: 전부 반영(누락 금지)]
@@ -1247,7 +1249,7 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
 }
 
 tier.title: 15~25자. 이 사주를 한 줄로 요약한 날카로운 제목. 예시: "엔진은 좋은데 브레이크가 없는 팔자", "돈 버는 재주는 있는데 새는 구멍이 더 큰 구조".
-tier.description: 3~5문장. 핵심 강점과 핵심 리스크를 대비시키되, 냉정하게. 출생정보(생년월일, 양력/음력, 출생지역)를 자연스럽게 포함.
+tier.description: 3~5문장. 핵심 강점과 핵심 리스크를 대비시키되, 냉정하게. 출생정보(생년월일, 양력/음력)를 자연스럽게 포함.
 
 ────────────────────────────────
 [문체/말투 세부 규칙]
@@ -1288,6 +1290,16 @@ sections 개수는 반드시 8개.
 8개 섹션 합산 목표: 6000~9500자.
 
 ★ 핵심 규칙: 8개 섹션이 같은 구조로 반복되면 실패다. 아래 섹션별 구조를 반드시 따른다.
+
+[섹션별 역할 정의 — 각 섹션은 이 역할만 수행한다]
+- 🧭 타고난 기질: 일간 기준 성격/기질 분석. 다른 섹션에서 다룰 건강/커리어/연애 내용 침범 금지.
+- 🧩 대인/사회성: 대인관계 패턴. 합/충/형에서 드러나는 관계 방식에만 집중.
+- 💰 재물: 재물운 전용. 편재/정재/겁재 등 재물 관련 십성에만 집중.
+- 💞 연애/관계: 연애/감정 관계. 연애 상태 입력값 기반. 미연애 시 연애 경향 예측.
+- 💼 직장/커리어: 직장/직업/이직. 직업 입력값 기반. 겁살 등 신살은 직장 맥락에서만.
+- 🩺 건강/에너지: 신체 건강/체력 관리. 오행 과다/부족의 건강 영향에만 집중. 성격/감정은 태생 섹션 영역.
+- 🚧 경고/리스크: 가장 위험한 리스크 1개. 커리어/연애/재물 중 다른 섹션에서 다루지 않은 영역의 리스크.
+- ✅ 종합 판정: 5개 카테고리 점수를 종합적으로 평가하는 요약. 새로운 해석 없이 전체 그림을 그려라.
 
 [섹션 1] 타고난 기질 — 구조: "직설 진단"
   → "네 일간은 ○○(한자)야." 일간 분석으로 바로 진입. 돌려 말하기 금지.
@@ -1509,6 +1521,9 @@ sections 개수는 반드시 8개.
 □ "직업 상태가 ~이고 연애 상태가 ~이며" 메타데이터 나열이 없는가?
 □ 8개 title이 각각 다른 어감이고 재미있는가?
 □ 각 section.content가 2~3문장 단위 문단으로 나뉘고 문단 사이에 빈 줄(\\n\\n)이 있는가?
+□ 동일한 사주 요소(겁살, 수 과다 등)가 두 섹션 이상에서 같은 관점으로 반복되지 않는가?
+□ 출생지를 언급하지 않았는가?
+□ 8개 섹션 모두에 content가 700자 이상 들어있는가?
 `;
 
 const TEASER_PROMPT = `[Role]
@@ -1542,7 +1557,7 @@ const TEASER_PROMPT = `[Role]
   "coreFearAxisBlock": "1~3문장 요약(선택)"
 }`;
 
-const DEFAULT_MODELS = [
+export const DEFAULT_MODELS = [
   "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
   "gemini-2.5-pro",
@@ -1596,7 +1611,7 @@ async function getGeminiSdkModel(model: string, systemText: string): Promise<Gem
   }) as GeminiSdkModel;
 }
 
-async function callGemini(
+export async function callGemini(
   model: string,
   userInfo: string,
   systemPrompt: string = SYSTEM_PROMPT
@@ -1607,12 +1622,17 @@ async function callGemini(
       const data = await sdkModel.generateContent({
         contents: [{ role: "user", parts: [{ text: userInfo }] }],
         generationConfig: {
-          maxOutputTokens: 4000,
+          maxOutputTokens: 8192,
           responseMimeType: "application/json",
         },
       });
 
       const response = data?.response;
+      const finishReason = (response as any)?.candidates?.[0]?.finishReason;
+      if (finishReason === "MAX_TOKENS") {
+        console.warn(`[callGemini][SDK] 응답이 maxOutputTokens에서 잘림 (finishReason: MAX_TOKENS, model: ${model})`);
+      }
+
       const textFromMethod = response?.text?.()?.trim();
       const textFromParts = response?.candidates?.[0]?.content?.parts
         ?.map((part) => part.text || "")
@@ -1648,7 +1668,7 @@ async function callGemini(
         { role: "user", parts: [{ text: userInfo }] },
       ],
       generationConfig: {
-        maxOutputTokens: 4000,
+        maxOutputTokens: 8192,
         response_mime_type: "application/json",
       },
     }),
@@ -1659,6 +1679,11 @@ async function callGemini(
     const apiStatus = data?.error?.status;
     const message = data?.error?.message || "Gemini API error";
     return { ok: false as const, status: response.status, apiStatus, message };
+  }
+
+  const finishReason = data?.candidates?.[0]?.finishReason;
+  if (finishReason === "MAX_TOKENS") {
+    console.warn(`[callGemini][REST] 응답이 maxOutputTokens에서 잘림 (finishReason: MAX_TOKENS, model: ${model})`);
   }
 
   const text = data?.candidates?.[0]?.content?.parts
@@ -1673,7 +1698,7 @@ async function callGemini(
   return { ok: true as const, text };
 }
 
-function shouldFallback(status: number, apiStatus?: string) {
+export function shouldFallback(status: number, apiStatus?: string) {
   if (status === 429 || status === 503) return true;
   if (!apiStatus) return false;
   return apiStatus === "RESOURCE_EXHAUSTED" || apiStatus === "UNAVAILABLE";
@@ -1745,7 +1770,7 @@ export async function resolveSajuText(input: InputPayload) {
   }
 }
 
-async function resolveSajuEnrichedData(input: InputPayload): Promise<{
+export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
   sajuText: string | null;
   enriched: any | null;
 }> {

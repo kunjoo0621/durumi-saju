@@ -363,9 +363,12 @@ export default function ResultClient() {
             </div>
           )}
 
-          {/* 만세력 (사주팔자) */}
+          <ResultTable result={result} locked={false} statusLabel="언락" initialExpandedCount={2} />
+
+          {/* 내 사주 원본 */}
           {sajuData && (
-            <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/8">
+            <div>
+              <h3 className="text-lg font-semibold text-text-secondary mb-4">내 사주 원본</h3>
               {displayBirthDate && (
                 <p className="text-[14px] text-text-tertiary mb-4">
                   ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
@@ -377,8 +380,6 @@ export default function ResultClient() {
               )}
             </div>
           )}
-
-          <ResultTable result={result} locked={false} statusLabel="언락" initialExpandedCount={2} />
         </div>
       </main>
 

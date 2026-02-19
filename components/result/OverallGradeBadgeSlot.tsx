@@ -13,30 +13,13 @@ type OverallGradeBadgeSlotProps = {
   className?: string;
 };
 
-function clampNumber(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function normalizeSize(size?: number) {
-  if (typeof size !== "number" || !Number.isFinite(size)) return 152;
-  return clampNumber(Math.round(size), 96, 220);
-}
-
-function getPlaceholderTone(grade: OverallGradeLabel) {
-  switch (grade) {
-    case "S":
-      return "from-primary/20 via-white/8 to-primary/12";
-    case "A":
-      return "from-primary/14 via-white/6 to-primary/8";
-    case "B":
-      return "from-white/12 via-white/6 to-white/4";
-    case "C":
-      return "from-white/10 via-white/5 to-white/2";
-    case "D":
-    default:
-      return "from-white/9 via-white/4 to-white/1";
-  }
-}
+const GRADE_GLOWS: Record<OverallGradeLabel, string> = {
+  S: "radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)",
+  A: "radial-gradient(circle, rgba(239,68,68,0.2) 0%, transparent 70%)",
+  B: "radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%)",
+  C: "radial-gradient(circle, rgba(161,161,170,0.2) 0%, transparent 70%)",
+  D: "radial-gradient(circle, rgba(82,82,91,0.15) 0%, transparent 70%)",
+};
 
 export default function OverallGradeBadgeSlot({
   grade,
@@ -44,50 +27,61 @@ export default function OverallGradeBadgeSlot({
   size,
   className,
 }: OverallGradeBadgeSlotProps) {
-  const normalizedSize = useMemo(() => normalizeSize(size), [size]);
-  const placeholderTone = useMemo(() => getPlaceholderTone(grade), [grade]);
+  const isCompact = typeof size === "number" && size < 100;
+  const glow = useMemo(() => GRADE_GLOWS[grade] || GRADE_GLOWS.D, [grade]);
 
-  const rootClassName = [
-    "relative isolate overflow-hidden",
-    "rounded-full",
-    "bg-background-primary/30",
-    "shadow-[0_12px_34px_rgba(0,0,0,0.38)]",
-    "ring-1 ring-white/10",
-    className || "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <div
-      className={rootClassName}
-      style={{ width: normalizedSize, height: normalizedSize }}
-      aria-label={`등급 배지 슬롯 (${grade})`}
-    >
-      {badgeSrc ? (
-        // 이미지가 들어오면 그대로 교체 가능한 슬롯
+  if (badgeSrc) {
+    const normalizedSize = typeof size === "number" && Number.isFinite(size)
+      ? Math.min(220, Math.max(96, Math.round(size)))
+      : 152;
+    return (
+      <div
+        className={`relative isolate overflow-hidden rounded-full ${className || ""}`}
+        style={{ width: normalizedSize, height: normalizedSize }}
+        aria-label={`등급 배지 슬롯 (${grade})`}
+      >
         <img
           src={badgeSrc}
           alt={`등급 배지 ${grade}`}
           className="absolute inset-0 h-full w-full object-cover"
           draggable={false}
         />
-      ) : (
-        <>
-          <div className={`absolute inset-0 bg-gradient-to-br ${placeholderTone}`} />
-          <div className="absolute inset-0 opacity-[0.45] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_55%)]" />
-          <div
-            className="absolute -inset-8 bg-primary/12 blur-2xl"
-            aria-hidden="true"
-          />
+      </div>
+    );
+  }
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <div className="text-[52px] leading-none font-extrabold tracking-[-0.03em] text-white/80">
-              {grade}
-            </div>
-          </div>
-        </>
-      )}
+  if (isCompact) {
+    return (
+      <div
+        className={`relative flex items-center justify-center ${className || ""}`}
+        style={{ width: size, height: size }}
+        aria-label={`등급 배지 슬롯 (${grade})`}
+      >
+        <div
+          className="absolute -inset-4 rounded-full"
+          style={{ background: glow }}
+          aria-hidden="true"
+        />
+        <span className="relative text-[28px] font-aggro font-bold text-white/90">
+          {grade}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative flex items-center justify-center ${className || ""}`}
+      aria-label={`등급 배지 슬롯 (${grade})`}
+    >
+      <div
+        className="absolute -inset-12 rounded-full"
+        style={{ background: glow }}
+        aria-hidden="true"
+      />
+      <span className="relative text-8xl font-aggro font-bold text-white/90">
+        {grade}
+      </span>
     </div>
   );
 }

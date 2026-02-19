@@ -22,7 +22,7 @@
 :root {
   /* 1. Primitives */
   --c-dark-bg: 9 9 11;
-  --c-dark-surface: 24 24 27;
+  --c-dark-surface: 20 20 20;
   --c-dark-elevated: 39 39 42;
 
   --c-text-main: 255 255 255;
