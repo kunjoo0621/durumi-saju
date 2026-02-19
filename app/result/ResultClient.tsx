@@ -363,14 +363,12 @@ export default function ResultClient() {
             </div>
           )}
 
-          <ResultTable result={result} locked={false} statusLabel="언락" initialExpandedCount={2} />
-
-          {/* 내 사주 원본 */}
+          {/* 내 사주 원본 — 최상단 */}
           {sajuData && (
-            <div>
-              <h3 className="text-lg font-semibold text-text-secondary mb-4">내 사주 원본</h3>
+            <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
+              <h3 className="text-lg font-bold text-white mb-1">내 사주 원본</h3>
               {displayBirthDate && (
-                <p className="text-[14px] text-text-tertiary mb-4">
+                <p className="text-sm text-gray-500 mb-4">
                   ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
                 </p>
               )}
@@ -380,6 +378,8 @@ export default function ResultClient() {
               )}
             </div>
           )}
+
+          <ResultTable result={result} locked={false} statusLabel="언락" initialExpandedCount={2} />
         </div>
       </main>
 

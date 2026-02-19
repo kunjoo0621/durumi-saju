@@ -18,14 +18,19 @@ const CATEGORY_ORDER: CategoryKey[] = ["재물운", "연애운", "직장운", "�
 
 const BASE_ANGLE_OFFSET = -90;
 const LEVELS = [20, 40, 60, 80, 100];
+const GRID_OPACITIES = [0.04, 0.06, 0.08, 0.10, 0.12];
 
-const GRADE_BADGE_COLORS: Record<string, string> = {
-  S: "#D946EF",
-  A: "#F43F5E",
-  B: "#22C55E",
-  C: "#A1A1AA",
-  D: "#52525B",
+const ACCENT = "#FF6B6B";
+
+const GRADE_BADGE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  S: { bg: "rgba(168,85,247,0.20)", text: "#C084FC", border: "rgba(168,85,247,0.30)" },
+  A: { bg: "rgba(239,68,68,0.20)", text: "#F87171", border: "rgba(239,68,68,0.30)" },
+  B: { bg: "rgba(34,197,94,0.20)", text: "#4ADE80", border: "rgba(34,197,94,0.30)" },
+  C: { bg: "rgba(234,179,8,0.20)", text: "#FACC15", border: "rgba(234,179,8,0.30)" },
+  D: { bg: "rgba(107,114,128,0.20)", text: "#9CA3AF", border: "rgba(107,114,128,0.30)" },
 };
+
+const DEFAULT_BADGE = GRADE_BADGE_STYLES.D;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -37,19 +42,16 @@ function easeOutCubic(value: number) {
 
 function polarToCartesian(radius: number, angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180;
-  return {
-    x: radius * Math.cos(rad),
-    y: radius * Math.sin(rad),
-  };
+  return { x: radius * Math.cos(rad), y: radius * Math.sin(rad) };
 }
 
-function formatPoint(point: { x: number; y: number }) {
-  return `${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+function formatPoint(p: { x: number; y: number }) {
+  return `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
 }
 
 function buildPolygonPath(points: Array<{ x: number; y: number }>) {
   if (points.length === 0) return "";
-  return `M ${points.map((point) => formatPoint(point)).join(" L ")} Z`;
+  return `M ${points.map(formatPoint).join(" L ")} Z`;
 }
 
 function clampScore(raw: number) {
@@ -79,21 +81,11 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
   );
 
   useEffect(() => {
-    if (hasAnimatedRef.current) {
-      setProgress(1);
-      return;
-    }
-
+    if (hasAnimatedRef.current) { setProgress(1); return; }
     const prefersReducedMotion =
       typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (prefersReducedMotion) {
-      setProgress(1);
-      hasAnimatedRef.current = true;
-      return;
-    }
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) { setProgress(1); hasAnimatedRef.current = true; return; }
 
     setProgress(0);
     hasAnimatedRef.current = true;
@@ -102,50 +94,52 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
     const duration = 480;
 
     const tick = (now: number) => {
-      const elapsed = now - startedAt;
-      const t = clamp(elapsed / duration, 0, 1);
+      const t = clamp((now - startedAt) / duration, 0, 1);
       setProgress(easeOutCubic(t));
       if (t < 1) frame = requestAnimationFrame(tick);
     };
-
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [scoreHash]);
 
   const angleStep = 360 / orderedCategories.length;
   const outerRadius = 112;
-  const labelRadius = 142;
+  const labelRadius = 146;
 
   const axisAngles = useMemo(
-    () => orderedCategories.map((_, index) => BASE_ANGLE_OFFSET + index * angleStep),
+    () => orderedCategories.map((_, i) => BASE_ANGLE_OFFSET + i * angleStep),
     [orderedCategories, angleStep]
   );
 
-  const guidePaths = useMemo(() => {
-    return LEVELS.map((level) => {
-      const radius = outerRadius * (level / 100);
-      const points = axisAngles.map((angle) => polarToCartesian(radius, angle));
-      return { level, d: buildPolygonPath(points) };
-    });
-  }, [axisAngles]);
+  const guidePaths = useMemo(
+    () => LEVELS.map((level, i) => {
+      const r = outerRadius * (level / 100);
+      const points = axisAngles.map((a) => polarToCartesian(r, a));
+      return { level, d: buildPolygonPath(points), opacity: GRID_OPACITIES[i] };
+    }),
+    [axisAngles]
+  );
 
-  const dataPath = useMemo(() => {
-    const points = orderedCategories.map((item, index) => {
-      const radius = outerRadius * (item.score / 100) * progress;
-      return polarToCartesian(radius, axisAngles[index]);
-    });
-    return buildPolygonPath(points);
-  }, [orderedCategories, axisAngles, progress]);
+  const dataPoints = useMemo(
+    () => orderedCategories.map((item, i) => {
+      const r = outerRadius * (item.score / 100) * progress;
+      return polarToCartesian(r, axisAngles[i]);
+    }),
+    [orderedCategories, axisAngles, progress]
+  );
 
-  const labelPoints = useMemo(() => {
-    return orderedCategories.map((item, index) => {
-      const angle = axisAngles[index];
-      const point = polarToCartesian(labelRadius, angle);
-      const anchor = point.x > 10 ? "start" : point.x < -10 ? "end" : "middle";
-      const dy = point.y > 10 ? 14 : point.y < -10 ? -10 : 4;
-      return { item, x: point.x, y: point.y, anchor, dy };
-    });
-  }, [orderedCategories, axisAngles]);
+  const dataPath = useMemo(() => buildPolygonPath(dataPoints), [dataPoints]);
+
+  const labelPoints = useMemo(
+    () => orderedCategories.map((item, i) => {
+      const angle = axisAngles[i];
+      const p = polarToCartesian(labelRadius, angle);
+      const anchor = p.x > 10 ? "start" : p.x < -10 ? "end" : "middle";
+      const dy = p.y > 10 ? 16 : p.y < -10 ? -8 : 4;
+      return { item, x: p.x, y: p.y, anchor, dy };
+    }),
+    [orderedCategories, axisAngles]
+  );
 
   return (
     <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
@@ -160,93 +154,144 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
           aria-label="카테고리별 오각형 레이더 차트"
         >
           <defs>
-            <radialGradient id="radarFillGradient" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgb(244,63,94)" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="rgb(244,63,94)" stopOpacity="0" />
+            <radialGradient id="radarFill" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={ACCENT} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={ACCENT} stopOpacity="0.08" />
             </radialGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
 
+          {/* Grid */}
           <g>
-            {guidePaths.map((guide) => (
+            {guidePaths.map((g) => (
               <path
-                key={guide.level}
-                d={guide.d}
+                key={g.level}
+                d={g.d}
                 fill="none"
-                stroke="#1F1F1F"
-                strokeWidth={guide.level === 100 ? 1 : 0.8}
+                stroke={`rgba(255,255,255,${g.opacity})`}
+                strokeWidth="1"
               />
             ))}
-
             {axisAngles.map((angle) => {
-              const point = polarToCartesian(outerRadius, angle);
+              const p = polarToCartesian(outerRadius, angle);
               return (
                 <line
                   key={angle}
-                  x1="0"
-                  y1="0"
-                  x2={point.x.toFixed(2)}
-                  y2={point.y.toFixed(2)}
-                  stroke="#1A1A1A"
-                  strokeWidth="0.8"
+                  x1="0" y1="0"
+                  x2={p.x.toFixed(2)} y2={p.y.toFixed(2)}
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeWidth="1"
                 />
               );
             })}
           </g>
 
+          {/* Data area */}
           <g>
+            {/* Glow layer */}
             <path
               d={dataPath}
-              fill="url(#radarFillGradient)"
-              stroke="rgb(var(--primary) / 0.8)"
-              strokeWidth="2"
+              fill="none"
+              stroke={ACCENT}
+              strokeWidth="8"
               strokeLinejoin="round"
+              opacity="0.15"
+              filter="url(#glow)"
             />
+            {/* Fill */}
+            <path
+              d={dataPath}
+              fill="url(#radarFill)"
+              stroke={ACCENT}
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              opacity="0.9"
+            />
+            {/* Data point dots */}
+            {dataPoints.map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x.toFixed(2)}
+                cy={p.y.toFixed(2)}
+                r="4"
+                fill={ACCENT}
+                stroke="white"
+                strokeWidth="1.5"
+              />
+            ))}
           </g>
 
+          {/* Labels, badges, scores */}
           <g>
             {labelPoints.map((label) => {
-              const badgeColor = GRADE_BADGE_COLORS[label.item.grade] || GRADE_BADGE_COLORS.D;
-              const badgeWidth = 28;
-              const badgeHeight = 18;
-              const badgeGap = 4;
+              const gradeKey = label.item.grade.toUpperCase().charAt(0);
+              const style = GRADE_BADGE_STYLES[gradeKey] || DEFAULT_BADGE;
+              const badgeW = 28;
+              const badgeH = 18;
+              const badgeGap = 3;
+              const scoreGap = 2;
 
-              // Badge position: below the label text
               const badgeX = label.anchor === "start"
                 ? label.x
                 : label.anchor === "end"
-                  ? label.x - badgeWidth
-                  : label.x - badgeWidth / 2;
+                  ? label.x - badgeW
+                  : label.x - badgeW / 2;
               const badgeY = label.y + label.dy + badgeGap;
+              const scoreY = badgeY + badgeH + scoreGap + 10;
 
               return (
                 <g key={label.item.key}>
+                  {/* Category name */}
                   <text
                     x={label.x.toFixed(2)}
                     y={label.y.toFixed(2)}
                     dy={label.dy}
                     textAnchor={label.anchor as any}
-                    fill="rgb(var(--text-primary) / 0.70)"
+                    fill="rgba(209,213,219,1)"
                     style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
                   >
                     {label.item.key}
                   </text>
+
+                  {/* Grade badge - border */}
                   <rect
                     x={badgeX}
                     y={badgeY}
-                    width={badgeWidth}
-                    height={badgeHeight}
-                    rx={4}
-                    fill={`${badgeColor}20`}
+                    width={badgeW}
+                    height={badgeH}
+                    rx={5}
+                    fill={style.bg}
+                    stroke={style.border}
+                    strokeWidth="1"
                   />
+                  {/* Grade badge - text */}
                   <text
-                    x={badgeX + badgeWidth / 2}
-                    y={badgeY + badgeHeight / 2}
+                    x={badgeX + badgeW / 2}
+                    y={badgeY + badgeH / 2}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill={badgeColor}
-                    style={{ fontSize: 11, fontWeight: 600 }}
+                    fill={style.text}
+                    style={{ fontSize: 11, fontWeight: 700 }}
                   >
                     {label.item.grade}
+                  </text>
+
+                  {/* Score text */}
+                  <text
+                    x={badgeX + badgeW / 2}
+                    y={scoreY}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="rgba(107,114,128,1)"
+                    style={{ fontSize: 10, fontWeight: 500 }}
+                  >
+                    {label.item.score}점
                   </text>
                 </g>
               );

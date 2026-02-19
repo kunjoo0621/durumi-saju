@@ -2,13 +2,13 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { ServerScores } from "@/lib/utils/saju-scoring";
-import { scoreToGrade } from "@/lib/utils/saju-scoring";
 
 type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
 const CATEGORY_ORDER: CategoryKey[] = ["재물운", "연애운", "직장운", "건강운", "대인운"];
 const BASE_ANGLE_OFFSET = -90;
 const LEVELS = [20, 40, 60, 80, 100];
+const GRID_OPACITIES = [0.04, 0.06, 0.08, 0.10, 0.12];
 
 const COLOR_A = "#FF6B6B";
 const COLOR_B = "#A855F7";
@@ -80,7 +80,7 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB }: Props) {
 
   const angleStep = 360 / CATEGORY_ORDER.length;
   const outerRadius = 112;
-  const labelRadius = 142;
+  const labelRadius = 146;
 
   const axisAngles = useMemo(
     () => CATEGORY_ORDER.map((_, i) => BASE_ANGLE_OFFSET + i * angleStep),
@@ -88,36 +88,39 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB }: Props) {
   );
 
   const guidePaths = useMemo(
-    () => LEVELS.map((level) => {
+    () => LEVELS.map((level, i) => {
       const r = outerRadius * (level / 100);
       const points = axisAngles.map((a) => polarToCartesian(r, a));
-      return { level, d: buildPolygonPath(points) };
+      return { level, d: buildPolygonPath(points), opacity: GRID_OPACITIES[i] };
     }),
     [axisAngles]
   );
 
-  const dataPathA = useMemo(() => {
-    const points = CATEGORY_ORDER.map((k, i) => {
+  const dataPointsA = useMemo(
+    () => CATEGORY_ORDER.map((k, i) => {
       const r = outerRadius * (clampScore(scoresA[k]) / 100) * progress;
       return polarToCartesian(r, axisAngles[i]);
-    });
-    return buildPolygonPath(points);
-  }, [scoresA, axisAngles, progress]);
+    }),
+    [scoresA, axisAngles, progress]
+  );
 
-  const dataPathB = useMemo(() => {
-    const points = CATEGORY_ORDER.map((k, i) => {
+  const dataPointsB = useMemo(
+    () => CATEGORY_ORDER.map((k, i) => {
       const r = outerRadius * (clampScore(scoresB[k]) / 100) * progress;
       return polarToCartesian(r, axisAngles[i]);
-    });
-    return buildPolygonPath(points);
-  }, [scoresB, axisAngles, progress]);
+    }),
+    [scoresB, axisAngles, progress]
+  );
+
+  const dataPathA = useMemo(() => buildPolygonPath(dataPointsA), [dataPointsA]);
+  const dataPathB = useMemo(() => buildPolygonPath(dataPointsB), [dataPointsB]);
 
   const labelPoints = useMemo(
     () => CATEGORY_ORDER.map((key, i) => {
       const angle = axisAngles[i];
       const p = polarToCartesian(labelRadius, angle);
       const anchor = p.x > 10 ? "start" : p.x < -10 ? "end" : "middle";
-      const dy = p.y > 10 ? 14 : p.y < -10 ? -10 : 4;
+      const dy = p.y > 10 ? 16 : p.y < -10 ? -8 : 4;
       return { key, x: p.x, y: p.y, anchor, dy };
     }),
     [axisAngles]
@@ -129,33 +132,133 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB }: Props) {
         <h3 className="text-title-3 text-text-primary font-semibold">카테고리 비교</h3>
         <div className="flex items-center gap-4 text-[12px]">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: COLOR_A }} />
-            {nameA}
+            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_A }} />
+            <span className="text-gray-300">{nameA}</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: COLOR_B }} />
-            {nameB}
+            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_B }} />
+            <span className="text-gray-300">{nameB}</span>
           </span>
         </div>
       </div>
 
       <div className="mx-auto w-full">
         <svg viewBox="-180 -180 360 360" className="h-auto w-full" aria-label="배틀 레이더 차트">
+          <defs>
+            <radialGradient id="battleFillA" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={COLOR_A} stopOpacity="0.30" />
+              <stop offset="100%" stopColor={COLOR_A} stopOpacity="0.06" />
+            </radialGradient>
+            <radialGradient id="battleFillB" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={COLOR_B} stopOpacity="0.30" />
+              <stop offset="100%" stopColor={COLOR_B} stopOpacity="0.06" />
+            </radialGradient>
+            <filter id="glowA">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="glowB">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Grid */}
           <g>
             {guidePaths.map((g) => (
-              <path key={g.level} d={g.d} fill="none" stroke="#1F1F1F" strokeWidth={g.level === 100 ? 1 : 0.8} />
+              <path
+                key={g.level}
+                d={g.d}
+                fill="none"
+                stroke={`rgba(255,255,255,${g.opacity})`}
+                strokeWidth="1"
+              />
             ))}
             {axisAngles.map((angle) => {
               const p = polarToCartesian(outerRadius, angle);
-              return <line key={angle} x1="0" y1="0" x2={p.x.toFixed(2)} y2={p.y.toFixed(2)} stroke="#1A1A1A" strokeWidth="0.8" />;
+              return (
+                <line
+                  key={angle}
+                  x1="0" y1="0"
+                  x2={p.x.toFixed(2)} y2={p.y.toFixed(2)}
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeWidth="1"
+                />
+              );
             })}
           </g>
 
+          {/* Player B data (drawn first = behind) */}
           <g>
-            <path d={dataPathA} fill={`${COLOR_A}1F`} stroke={`${COLOR_A}8C`} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d={dataPathB} fill={`${COLOR_B}1F`} stroke={`${COLOR_B}8C`} strokeWidth="1.5" strokeLinejoin="round" />
+            <path
+              d={dataPathB}
+              fill="none"
+              stroke={COLOR_B}
+              strokeWidth="8"
+              strokeLinejoin="round"
+              opacity="0.15"
+              filter="url(#glowB)"
+            />
+            <path
+              d={dataPathB}
+              fill="url(#battleFillB)"
+              stroke={COLOR_B}
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              opacity="0.9"
+            />
+            {dataPointsB.map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x.toFixed(2)}
+                cy={p.y.toFixed(2)}
+                r="3.5"
+                fill={COLOR_B}
+                stroke="white"
+                strokeWidth="1.5"
+              />
+            ))}
           </g>
 
+          {/* Player A data (drawn second = on top) */}
+          <g>
+            <path
+              d={dataPathA}
+              fill="none"
+              stroke={COLOR_A}
+              strokeWidth="8"
+              strokeLinejoin="round"
+              opacity="0.15"
+              filter="url(#glowA)"
+            />
+            <path
+              d={dataPathA}
+              fill="url(#battleFillA)"
+              stroke={COLOR_A}
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              opacity="0.9"
+            />
+            {dataPointsA.map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x.toFixed(2)}
+                cy={p.y.toFixed(2)}
+                r="3.5"
+                fill={COLOR_A}
+                stroke="white"
+                strokeWidth="1.5"
+              />
+            ))}
+          </g>
+
+          {/* Labels */}
           <g>
             {labelPoints.map((label) => (
               <text
@@ -164,7 +267,7 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB }: Props) {
                 y={label.y.toFixed(2)}
                 dy={label.dy}
                 textAnchor={label.anchor as any}
-                fill="rgb(var(--text-primary) / 0.70)"
+                fill="rgba(209,213,219,1)"
                 style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
               >
                 {label.key}

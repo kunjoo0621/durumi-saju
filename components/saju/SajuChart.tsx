@@ -13,104 +13,142 @@ type SajuChartProps = {
   sajuData: SajuData;
 };
 
-// 개별 셀 컴포넌트 - 메모이즈
-const LabelCell = memo(function LabelCell({ label }: { label: string }) {
-  return (
-    <div className="px-4 py-3 text-center text-[14px] text-text-tertiary bg-[#1A1A1A] rounded-xl">
-      {label}
-    </div>
-  );
-});
+const ELEMENT_HEX: Record<ElementType, string> = {
+  wood: "#22C55E",
+  fire: "#EF4444",
+  earth: "#EAB308",
+  metal: "#F5F5F5",
+  water: "#3B82F6",
+};
 
-const StemCell = memo(function StemCell({
-  stemLabel,
-  element,
+function getElementHex(element: ElementType | null): string {
+  return element ? ELEMENT_HEX[element] : ELEMENT_HEX.metal;
+}
+
+/* ── Header Cell (생시/생일/생월/생년) ── */
+const HeaderCell = memo(function HeaderCell({
+  label,
+  isDayStem,
 }: {
-  stemLabel: string;
-  element: ElementType | null;
+  label: string;
+  isDayStem: boolean;
 }) {
-  const textClass = getElementTextClass(element);
-  const elementName = element ? getElementName(element) : null;
-
   return (
-    <div className="px-2 py-3 text-center rounded-xl bg-[#1A1A1A]">
-      <div className={`text-[28px] font-semibold ${textClass}`}>{stemLabel}</div>
-      {elementName && (
-        <div className="text-[12px] text-text-tertiary mt-1">{elementName}</div>
+    <div className="py-2 text-center">
+      <span className="text-xs font-medium text-gray-500">
+        {label}
+      </span>
+      {isDayStem && (
+        <span className="ml-1 text-[10px] text-gray-600">(일간)</span>
       )}
     </div>
   );
 });
 
+/* ── Stem / Branch Cell (한자 + 오행 라벨) ── */
+const CharCell = memo(function CharCell({
+  label,
+  element,
+  isDayHighlight,
+}: {
+  label: string;
+  element: ElementType | null;
+  isDayHighlight: boolean;
+}) {
+  const textClass = getElementTextClass(element);
+  const elementName = element ? getElementName(element) : null;
+  const hex = getElementHex(element);
+
+  return (
+    <div
+      className={`py-3 text-center rounded-xl ${
+        isDayHighlight ? "bg-[#222222]" : "bg-[#1A1A1A]"
+      }`}
+      style={
+        isDayHighlight
+          ? { border: `1px solid ${hex}33` }
+          : undefined
+      }
+    >
+      <div
+        className={`text-2xl font-bold ${textClass}`}
+        style={
+          isDayHighlight
+            ? { textShadow: `0 0 12px ${hex}4D` }
+            : undefined
+        }
+      >
+        {label}
+      </div>
+      {elementName && (
+        <div
+          className={`text-xs mt-1 ${textClass}`}
+          style={{ opacity: 0.75 }}
+        >
+          {elementName}
+        </div>
+      )}
+    </div>
+  );
+});
+
+/* ── TenGod Cell (십성) ── */
 const TenGodCell = memo(function TenGodCell({ tenGod }: { tenGod: string | null }) {
   return (
-    <div className="px-4 py-3 text-center text-[14px] text-text-secondary bg-[#1A1A1A] rounded-xl">
-      {tenGod || "-"}
+    <div className="py-1.5 text-center">
+      <span className="text-xs text-gray-500">
+        {tenGod || "-"}
+      </span>
     </div>
   );
 });
 
-const BranchCell = memo(function BranchCell({
-  branchLabel,
-  element,
-}: {
-  branchLabel: string;
-  element: ElementType | null;
-}) {
-  const textClass = getElementTextClass(element);
-  const elementName = element ? getElementName(element) : null;
-
-  return (
-    <div className="px-2 py-3 text-center rounded-xl bg-[#1A1A1A]">
-      <div className={`text-[28px] font-semibold ${textClass}`}>{branchLabel}</div>
-      {elementName && (
-        <div className="text-[12px] text-text-tertiary mt-1">{elementName}</div>
-      )}
-    </div>
-  );
-});
-
-// 메인 SajuChart 컴포넌트 - 메모이즈
+/* ── Main SajuChart ── */
 function SajuChartInner({ sajuData }: SajuChartProps) {
-  // 모든 표시 데이터를 한번에 계산
   const pillars = useMemo(
     () => computePillarDisplayData(sajuData),
     [sajuData]
   );
 
   return (
-    <div className="grid grid-cols-4 gap-1">
-      {/* 라벨 행 */}
+    <div className="grid grid-cols-4 gap-2">
+      {/* Header row */}
       {pillars.map((p) => (
-        <LabelCell key={`label-${p.key}`} label={p.label} />
+        <HeaderCell
+          key={`h-${p.key}`}
+          label={p.label}
+          isDayStem={p.key === "day"}
+        />
       ))}
 
-      {/* 천간 행 */}
+      {/* Stem row */}
       {pillars.map((p) => (
-        <StemCell
-          key={`stem-${p.key}`}
-          stemLabel={p.stemLabel}
+        <CharCell
+          key={`s-${p.key}`}
+          label={p.stemLabel}
           element={p.stemElement}
+          isDayHighlight={p.key === "day"}
         />
       ))}
 
-      {/* 천간 십성 행 */}
+      {/* Stem TenGod row */}
       {pillars.map((p) => (
-        <TenGodCell key={`stem-ten-${p.key}`} tenGod={p.stemTenGod} />
+        <TenGodCell key={`st-${p.key}`} tenGod={p.stemTenGod} />
       ))}
 
-      {/* 지지 행 */}
+      {/* Branch row */}
       {pillars.map((p) => (
-        <BranchCell
-          key={`branch-${p.key}`}
-          branchLabel={p.branchLabel}
+        <CharCell
+          key={`b-${p.key}`}
+          label={p.branchLabel}
           element={p.branchElement}
+          isDayHighlight={false}
         />
       ))}
 
-      {/* 지지 십성 행 */}
+      {/* Branch TenGod row */}
       {pillars.map((p) => (
-        <TenGodCell key={`branch-ten-${p.key}`} tenGod={p.branchTenGod} />
+        <TenGodCell key={`bt-${p.key}`} tenGod={p.branchTenGod} />
       ))}
     </div>
   );

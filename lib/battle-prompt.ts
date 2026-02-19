@@ -9,10 +9,10 @@ import type {
 } from "@/types/battle";
 
 const RELATIONSHIP_TONE: Record<RelationshipType, string> = {
-  lover: "연인 관계에 맞게 애정 있지만 솔직한 톤으로 분석하라. '커플 사주궁합'의 관점에서 서술하라.",
+  lover: "연인 관계에 맞게 애정 있지만 솔직한 톤으로 분석하라. '커플 사주궁합'의 관점에서 서술하라. 반말 유지, 위로/격려 금지.",
   friend: "친구 관계에 맞게 재미있고 가벼운 톤으로 분석하라. 친구 간 우열 비교를 유쾌하게 풀어라.",
   colleague: "직장동료 관계에 맞게 프로페셔널하면서도 위트 있는 톤으로 분석하라. 업무 스타일 차이에 초점을 맞춰라.",
-  family: "가족 관계에 맞게 따뜻하지만 객관적인 톤으로 분석하라. 가족 내 역할과 시너지를 언급하라.",
+  family: "가족 관계에 맞게 따뜻하지만 객관적인 톤으로 분석하라. 가족 내 역할과 시너지를 언급하라. 반말 유지, 위로/격려 금지.",
   other: "일반적인 톤으로 두 사람의 사주를 비교 분석하라.",
 };
 
@@ -155,12 +155,12 @@ export async function runBattleAnalysis(opts: {
     categoryComments: opts.comparison.matches.map((m) => ({
       category: m.category,
       comment: m.winner === "draw"
-        ? "두 사람의 역량이 비슷합니다."
-        : `${m.winner === "A" ? opts.nameA : opts.nameB}가 ${m.diff}점 차로 앞섭니다.`,
+        ? "두 사람 역량이 비슷해."
+        : `${m.winner === "A" ? opts.nameA : opts.nameB}가 ${m.diff}점 차로 앞서.`,
     })),
     overallComment: winner
-      ? `종합적으로 ${winner}의 사주가 더 강한 기운을 가지고 있습니다.`
-      : "두 사람 모두 비슷한 수준의 사주 기운을 가지고 있습니다.",
+      ? `종합적으로 ${winner}의 사주가 더 강한 기운을 갖고 있어.`
+      : "두 사람 다 비슷한 수준의 사주 기운이야.",
     playerASummary: `${opts.nameA}: ${opts.tierA.grade}등급`,
     playerBSummary: `${opts.nameB}: ${opts.tierB.grade}등급`,
   };
