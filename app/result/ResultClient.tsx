@@ -7,7 +7,8 @@ import ResultTable from "@/components/result/ResultTable";
 import MenuDrawer from "../MenuDrawer";
 import SajuChart from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
-import { calculateSaju, type SajuData } from "@/lib/utils/saju";
+import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
+import ShinsalBadges from "@/components/saju/ShinsalBadges";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
@@ -52,6 +53,10 @@ export default function ResultClient() {
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
+  const shinsalResult = useMemo(() => {
+    if (!sajuData) return null;
+    return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime }).shinsal;
+  }, [sajuData, unknownBirthTime]);
   const [allowedByPayment, setAllowedByPayment] = useState(() => {
     if (typeof window === "undefined") return false;
     const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
@@ -240,7 +245,7 @@ export default function ResultClient() {
     if (!resultIdParam && !allowedByPayment && status === "authenticated" && session?.user) {
       router.replace("/my/results");
     }
-  }, [resultIdParam, allowedByPayment, session, router]);
+  }, [resultIdParam, allowedByPayment, session, router, status]);
 
 
   if (loading) {
@@ -360,13 +365,16 @@ export default function ResultClient() {
 
           {/* 만세력 (사주팔자) */}
           {sajuData && (
-            <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/5">
+            <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/8">
               {displayBirthDate && (
                 <p className="text-[14px] text-text-tertiary mb-4">
                   ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
                 </p>
               )}
               <SajuChart sajuData={sajuData} />
+              {shinsalResult && shinsalResult.matches.length > 0 && (
+                <ShinsalBadges matches={shinsalResult.matches} note={shinsalResult.meta?.note} />
+              )}
             </div>
           )}
 

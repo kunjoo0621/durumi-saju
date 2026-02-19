@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { createDateFnsAdapter } from "@gracefullight/saju/adapters/date-fns";
 import { getFourPillars } from "@gracefullight/saju";
 import {
@@ -23,10 +24,16 @@ async function getAdapter() {
   if (cachedAdapter) return cachedAdapter;
   if (adapterPromise) return adapterPromise;
 
-  adapterPromise = createDateFnsAdapter().then((adapter) => {
-    cachedAdapter = adapter;
-    return adapter;
-  });
+  adapterPromise = createDateFnsAdapter()
+    .then((adapter) => {
+      cachedAdapter = adapter;
+      return adapter;
+    })
+    .catch((err) => {
+      adapterPromise = null;
+      cachedAdapter = null;
+      throw err;
+    });
 
   return adapterPromise;
 }
@@ -274,7 +281,10 @@ export async function calculateSaju(
       },
     };
   } catch (error) {
-    console.error("사주 계산 오류:", error);
+    console.error("사주 계산 오류:", {
+      hash: crypto.createHash("sha256").update(`${year}-${month}-${day}-${hour ?? ""}-${minute ?? ""}`).digest("hex").slice(0, 12),
+      error,
+    });
     return null;
   }
 }
@@ -398,7 +408,7 @@ export function enrichSajuData(saju: SajuData, opts?: { isTimeUnknown?: boolean 
   const strength = judgeStrength(dayMaster.element, elementDist, stems.length + branches.length, isTimeUnknown);
   const tenStars = calculateTenStars(stems, branches);
   const relationships = findRelationships(branches);
-  const shinsal = findShinsal(dayBranch, dayStem, branches);
+  const shinsal = findShinsal(dayBranch, dayStem, monthBranch, branches, isTimeUnknown);
 
   return {
     pillars: {

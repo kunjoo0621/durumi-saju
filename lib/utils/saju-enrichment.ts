@@ -343,63 +343,237 @@ export function findRelationships(branches: string[]): {
   return result;
 }
 
+/** @deprecated 내부 로직은 SHINSAL_DEFS 사용. 외부 참조용으로만 유지. */
 export const DOHWA: Record<string, string> = {
-  子: "酉",
-  丑: "午",
-  寅: "卯",
-  卯: "子",
-  辰: "酉",
-  巳: "午",
-  午: "卯",
-  未: "子",
-  申: "酉",
-  酉: "午",
-  戌: "卯",
-  亥: "子",
+  子: "酉", 丑: "午", 寅: "卯", 卯: "子", 辰: "酉", 巳: "午",
+  午: "卯", 未: "子", 申: "酉", 酉: "午", 戌: "卯", 亥: "子",
 } as const;
 
+/** @deprecated 내부 로직은 SHINSAL_DEFS 사용. 외부 참조용으로만 유지. */
 export const YEOKMA: Record<string, string> = {
-  子: "寅",
-  丑: "亥",
-  寅: "申",
-  卯: "巳",
-  辰: "寅",
-  巳: "亥",
-  午: "申",
-  未: "巳",
-  申: "寅",
-  酉: "亥",
-  戌: "申",
-  亥: "巳",
+  子: "寅", 丑: "亥", 寅: "申", 卯: "巳", 辰: "寅", 巳: "亥",
+  午: "申", 未: "巳", 申: "寅", 酉: "亥", 戌: "申", 亥: "巳",
 } as const;
 
+/** @deprecated 내부 로직은 SHINSAL_DEFS 사용. 외부 참조용으로만 유지. */
 export const HWAGAE: Record<string, string> = {
-  子: "辰",
-  丑: "丑",
-  寅: "戌",
-  卯: "未",
-  辰: "辰",
-  巳: "丑",
-  午: "戌",
-  未: "未",
-  申: "辰",
-  酉: "丑",
-  戌: "戌",
-  亥: "未",
+  子: "辰", 丑: "丑", 寅: "戌", 卯: "未", 辰: "辰", 巳: "丑",
+  午: "戌", 未: "未", 申: "辰", 酉: "丑", 戌: "戌", 亥: "未",
 } as const;
 
+/** @deprecated 내부 로직은 SHINSAL_DEFS 사용. 외부 참조용으로만 유지. */
 export const HYUNCHIM_STEMS = ["甲", "辛"] as const;
 
-export function findShinsal(dayBranch: string, dayMasterStem: string, allBranches: string[]): string[] {
-  const result: string[] = [];
-  const otherBranches = allBranches.filter((_, i) => i !== 2); // 일지 제외
+// ── 신살 시스템 KR_COMMON_V1 ──
 
-  if (otherBranches.includes(DOHWA[dayBranch])) result.push("도화살(桃花殺)");
-  if (otherBranches.includes(YEOKMA[dayBranch])) result.push("역마살(驛馬殺)");
-  if (otherBranches.includes(HWAGAE[dayBranch])) result.push("화개살(華蓋殺)");
-  if ((HYUNCHIM_STEMS as readonly string[]).includes(dayMasterStem)) result.push("현침살(懸針殺)");
+export const SHINSAL_RULESET = "KR_COMMON_V1" as const;
 
-  return result;
+export type SamhapGroup = "인오술" | "사유축" | "신자진" | "해묘미";
+export type ShinsalType = "good" | "bad" | "neutral";
+
+export interface ShinsalMatch {
+  key: string;
+  label: string;
+  type: ShinsalType;
+  evidence: string[];
+}
+
+export interface ShinsalResult {
+  ruleset: typeof SHINSAL_RULESET;
+  matches: ShinsalMatch[];
+  labels: string[];
+  meta: { note?: string };
+}
+
+interface ShinsalContext {
+  dayStem: string;
+  dayBranch: string;
+  monthBranch: string;
+  allBranches: string[];
+  otherBranches: string[];
+  otherBranchSet: Set<string>;
+  isTimeUnknown: boolean;
+  samhapGroup: SamhapGroup;
+}
+
+interface ShinsalDef {
+  key: string;
+  label: string;
+  type: ShinsalType;
+  requiredPillars: 3 | 4;
+  detect: (ctx: ShinsalContext) => ShinsalMatch | null;
+}
+
+const BRANCH_TO_SAMHAP_GROUP: Record<string, SamhapGroup> = {
+  寅: "인오술", 午: "인오술", 戌: "인오술",
+  巳: "사유축", 酉: "사유축", 丑: "사유축",
+  申: "신자진", 子: "신자진", 辰: "신자진",
+  亥: "해묘미", 卯: "해묘미", 未: "해묘미",
+};
+
+// 삼합 기반 룩업 (4-entry)
+const SAMHAP_DOHWA: Record<SamhapGroup, string> = {
+  "인오술": "卯", "사유축": "午", "신자진": "酉", "해묘미": "子",
+};
+const SAMHAP_YEOKMA: Record<SamhapGroup, string> = {
+  "인오술": "申", "사유축": "亥", "신자진": "寅", "해묘미": "巳",
+};
+const SAMHAP_HWAGAE: Record<SamhapGroup, string> = {
+  "인오술": "戌", "사유축": "丑", "신자진": "辰", "해묘미": "未",
+};
+// KR_COMMON_V1 겁살 — 삼합 그룹의 역마 대충(對沖) 지지.
+// 근거: 연해자평·명리정의 계열 표 기준, 학파 간 일치도 높음.
+const SAMHAP_GYEOPSAL: Record<SamhapGroup, string> = {
+  "인오술": "亥", "사유축": "寅", "신자진": "巳", "해묘미": "申",
+};
+
+// 일간 기반 룩업
+const YANGIN_STEMS: Record<string, string> = {
+  "甲": "卯", "丙": "午", "戊": "午", "庚": "酉", "壬": "子",
+};
+const CHUNEUL_STEMS: Record<string, string[]> = {
+  "甲": ["丑", "未"], "戊": ["丑", "未"],
+  "乙": ["子", "申"], "己": ["子", "申"],
+  "丙": ["亥", "酉"], "丁": ["亥", "酉"],
+  "庚": ["寅", "午"], "辛": ["寅", "午"],
+  "壬": ["卯", "巳"], "癸": ["卯", "巳"],
+};
+const MUNCHANG_STEMS: Record<string, string> = {
+  "甲": "巳", "乙": "午", "丙": "申", "丁": "酉", "戊": "申",
+  "己": "酉", "庚": "亥", "辛": "子", "壬": "寅", "癸": "卯",
+};
+const HONGRYEOM_STEMS: Record<string, string> = {
+  "甲": "午", "乙": "申", "丙": "寅", "丁": "未", "戊": "辰",
+  "己": "辰", "庚": "戌", "辛": "酉", "壬": "子", "癸": "申",
+};
+
+function branchKorean(branch: string): string {
+  return BRANCH_INFO[branch]?.korean ?? branch;
+}
+
+function makeSamhapMatch(
+  key: string, label: string, type: ShinsalType,
+  ctx: ShinsalContext, table: Record<SamhapGroup, string>, shinsalName: string
+): ShinsalMatch | null {
+  const target = table[ctx.samhapGroup];
+  if (!target || !ctx.otherBranchSet.has(target)) return null;
+  return {
+    key, label, type,
+    evidence: [
+      `일지 ${ctx.dayBranch}(${branchKorean(ctx.dayBranch)}) → 삼합 ${ctx.samhapGroup} → ${shinsalName} ${target}(${branchKorean(target)})`,
+    ],
+  };
+}
+
+const SHINSAL_DEFS: ShinsalDef[] = [
+  // ── 삼합 기반 (dayBranch-samhap) ──
+  {
+    key: "dohwa", label: "도화살(桃花殺)", type: "neutral", requiredPillars: 3,
+    detect(ctx) { return makeSamhapMatch(this.key, this.label, this.type, ctx, SAMHAP_DOHWA, "도화"); },
+  },
+  {
+    key: "yeokma", label: "역마살(驛馬殺)", type: "neutral", requiredPillars: 3,
+    detect(ctx) { return makeSamhapMatch(this.key, this.label, this.type, ctx, SAMHAP_YEOKMA, "역마"); },
+  },
+  {
+    key: "hwagae", label: "화개살(華蓋殺)", type: "neutral", requiredPillars: 3,
+    detect(ctx) { return makeSamhapMatch(this.key, this.label, this.type, ctx, SAMHAP_HWAGAE, "화개"); },
+  },
+  {
+    key: "gyeopsal", label: "겁살(劫殺)", type: "bad", requiredPillars: 3,
+    detect(ctx) { return makeSamhapMatch(this.key, this.label, this.type, ctx, SAMHAP_GYEOPSAL, "겁살"); },
+  },
+  // ── 일간 기반 (dayStem) ──
+  {
+    key: "yangin", label: "양인살(羊刃殺)", type: "bad", requiredPillars: 3,
+    detect(ctx) {
+      const target = YANGIN_STEMS[ctx.dayStem];
+      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      return {
+        key: this.key, label: this.label, type: this.type,
+        evidence: [`일간 ${ctx.dayStem}(양간) → 양인 ${target}(${branchKorean(target)})`],
+      };
+    },
+  },
+  {
+    key: "chuneul", label: "천을귀인(天乙貴人)", type: "good", requiredPillars: 3,
+    detect(ctx) {
+      const targets = CHUNEUL_STEMS[ctx.dayStem];
+      if (!targets) return null;
+      const found = targets.filter((t) => ctx.otherBranchSet.has(t));
+      if (found.length === 0) return null;
+      return {
+        key: this.key, label: this.label, type: this.type,
+        evidence: [
+          `일간 ${ctx.dayStem} → 천을귀인 ${targets.map((t) => `${t}(${branchKorean(t)})`).join("·")}`,
+          ...found.map((t) => `${branchKorean(t)}지에 ${t} 존재`),
+        ],
+      };
+    },
+  },
+  {
+    key: "munchang", label: "문창귀인(文昌貴人)", type: "good", requiredPillars: 3,
+    detect(ctx) {
+      const target = MUNCHANG_STEMS[ctx.dayStem];
+      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      return {
+        key: this.key, label: this.label, type: this.type,
+        evidence: [`일간 ${ctx.dayStem} → 문창 ${target}(${branchKorean(target)})`],
+      };
+    },
+  },
+  {
+    key: "hongryeom", label: "홍염살(紅艶殺)", type: "neutral", requiredPillars: 3,
+    detect(ctx) {
+      const target = HONGRYEOM_STEMS[ctx.dayStem];
+      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      return {
+        key: this.key, label: this.label, type: this.type,
+        evidence: [`일간 ${ctx.dayStem} → 홍염 ${target}(${branchKorean(target)})`],
+      };
+    },
+  },
+  // ── 일간 형태 (dayStem-shape) ──
+  {
+    key: "hyunchim", label: "현침살(懸針殺)", type: "bad", requiredPillars: 3,
+    detect(ctx) {
+      if (!(HYUNCHIM_STEMS as readonly string[]).includes(ctx.dayStem)) return null;
+      return {
+        key: this.key, label: this.label, type: this.type,
+        evidence: [`일간 ${ctx.dayStem} 자형(字形)이 현침에 해당`],
+      };
+    },
+  },
+];
+
+export function findShinsal(
+  dayBranch: string,
+  dayStem: string,
+  monthBranch: string,
+  allBranches: string[],
+  isTimeUnknown: boolean,
+): ShinsalResult {
+  const otherBranches = allBranches.filter((_, i) => i !== 2);
+  const ctx: ShinsalContext = {
+    dayStem, dayBranch, monthBranch, allBranches, otherBranches,
+    otherBranchSet: new Set(otherBranches),
+    isTimeUnknown,
+    samhapGroup: BRANCH_TO_SAMHAP_GROUP[dayBranch],
+  };
+
+  const matches: ShinsalMatch[] = [];
+  for (const def of SHINSAL_DEFS) {
+    if (def.requiredPillars === 4 && isTimeUnknown) continue;
+    const match = def.detect(ctx);
+    if (match) matches.push(match);
+  }
+
+  const meta: ShinsalResult["meta"] = {};
+  if (isTimeUnknown) {
+    meta.note = "시주 미상으로 일부 변동 가능";
+  }
+
+  return { ruleset: SHINSAL_RULESET, matches, labels: matches.map((m) => m.label), meta };
 }
 
 export interface EnrichedSajuData {
@@ -410,7 +584,7 @@ export interface EnrichedSajuData {
   strength: { result: string; helpCount: number; resistCount: number };
   tenStars: string[];
   relationships: { hap: string[]; chung: string[]; hyung: string[] };
-  shinsal: string[];
+  shinsal: ShinsalResult;
   isTimeUnknown: boolean;
 }
 
@@ -457,7 +631,15 @@ export function formatEnrichedSajuText(data: EnrichedSajuData): string {
   lines.push(`합충형: ${rels.length > 0 ? rels.join(" / ") : "없음"}${relNote}`);
 
   const ssNote = data.isTimeUnknown ? " (시주 제외)" : "";
-  lines.push(`신살: ${data.shinsal.length > 0 ? data.shinsal.join(" ") : "없음"}${ssNote}`);
+  const shinsalLabels = data.shinsal?.labels ?? [];
+  if (shinsalLabels.length > 0) {
+    const parts = data.shinsal.matches.map((m) =>
+      `${m.label} [${m.evidence.join(", ")}]`
+    );
+    lines.push(`신살: ${parts.join(", ")}${ssNote}`);
+  } else {
+    lines.push(`신살: 없음${ssNote}`);
+  }
 
   return lines.join("\n");
 }

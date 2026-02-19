@@ -42,7 +42,7 @@ const SectionItem = memo(function SectionItem({
   const handleToggle = useCallback(() => onToggle(index), [onToggle, index]);
 
   return (
-    <div className="bg-background-secondary rounded-2xl border border-white/5 overflow-hidden">
+    <div className="bg-background-secondary rounded-2xl border border-white/8 overflow-hidden">
       <SectionHeader
         icon={section.icon}
         title={section.title}
@@ -57,7 +57,7 @@ const SectionItem = memo(function SectionItem({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="px-6 pb-6 pt-2">
+          <div className="px-6 pb-6 pt-4">
             <SectionBody
               content={section.content}
               locked={locked}
@@ -99,7 +99,7 @@ function SectionListInner({
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {sections.map((section, index) => (
         <SectionItem
           key={`${section.title}-${index}`}

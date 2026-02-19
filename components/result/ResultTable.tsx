@@ -97,11 +97,17 @@ export default function ResultTable({
         ? clampValue(Math.round(raw.percentileRank), 1, 99)
         : percentileRankFromComposite(composite);
     const topPercent = topPercentFromPercentileRank(percentileRank);
+    const confidence =
+      typeof (raw as any)?.confidence === "string" &&
+      ["high", "medium", "low"].includes((raw as any).confidence)
+        ? ((raw as any).confidence as "high" | "medium" | "low")
+        : "high";
     return {
       grade,
       composite,
       percentileRank,
       topPercent,
+      confidence,
       title: typeof raw?.title === "string" && raw.title.trim() ? raw.title : "기본 결과 요약",
       description:
         typeof raw?.description === "string" && raw.description.trim()
@@ -194,7 +200,7 @@ export default function ResultTable({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
-        <div className={`rounded-3xl p-6 md:p-8 border border-white/5 ${gradeStyle.background}`}>
+        <div className={`rounded-3xl p-6 md:p-8 border border-white/8 ${gradeStyle.background}`}>
           <div className="flex items-center justify-between">
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-caption font-semibold ${badgeStyles[badgeLabel]}`}
@@ -202,16 +208,13 @@ export default function ResultTable({
               {badgeLabel}
             </span>
           </div>
-          <div className="mt-6 flex flex-col items-center text-center gap-3">
+          <div className="mt-6 flex flex-col items-center text-center gap-4">
             <OverallGradeBadgeSlot
               grade={safeTier.grade as OverallGradeLabel}
               badgeSrc={null}
               // TODO: 배지 이미지 전달받으면 badgeSrc 연결
               size={152}
             />
-            <div className={`text-6xl md:text-7xl font-bold leading-none ${gradeStyle.text}`}>
-              {safeTier.grade}
-            </div>
             <div className="text-body-2 font-semibold text-text-secondary">
               상위 {safeTier.topPercent}%
             </div>
@@ -223,6 +226,16 @@ export default function ResultTable({
             <p className="max-w-[52ch] text-[16px] text-text-secondary leading-[1.75]">
               {safeTier.description}
             </p>
+            {safeTier.confidence === "low" && (
+              <p className="mt-2 text-[13px] text-text-tertiary">
+                만세력 계산에 실패해 추정 결과입니다
+              </p>
+            )}
+            {safeTier.confidence === "medium" && (
+              <p className="mt-2 text-[13px] text-text-tertiary">
+                출생 시간 미상으로 정확도가 낮을 수 있어요
+              </p>
+            )}
           </div>
         </div>
 

@@ -140,7 +140,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
   }, [orderedCategories, axisAngles]);
 
   return (
-    <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/5">
+    <div className="bg-background-secondary rounded-3xl p-6 md:p-8 border border-white/8">
       <div className="mb-4">
         <h3 className="text-title-3 text-text-primary font-semibold">카테고리별 등급</h3>
       </div>

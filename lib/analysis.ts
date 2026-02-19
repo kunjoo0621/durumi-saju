@@ -18,6 +18,13 @@ import {
 
 export { normalizeScores } from "@/lib/resultSchema";
 
+function inputHash(y: number, m: number, d: number, h?: number, min?: number): string {
+  return crypto.createHash("sha256")
+    .update(`${y}-${m}-${d}-${h ?? ""}-${min ?? ""}`)
+    .digest("hex")
+    .slice(0, 12);
+}
+
 export type AnalysisResult = {
   tier: {
     grade: string;
@@ -74,11 +81,18 @@ function normalizeTier(tier: Partial<AnalysisResult["tier"]> | undefined | null)
       : percentileRankFromComposite(composite);
   const topPercent = topPercentFromPercentileRank(percentileRank);
 
+  const rawConfidence = (tier as Record<string, unknown>)?.confidence;
+  const confidence: "high" | "medium" | "low" =
+    typeof rawConfidence === "string" && ["high", "medium", "low"].includes(rawConfidence)
+      ? (rawConfidence as "high" | "medium" | "low")
+      : "high";
+
   return {
     grade: normalizedGrade,
     composite,
     percentileRank,
     topPercent,
+    confidence,
     title: typeof tier?.title === "string" && tier.title.trim() ? tier.title : "기본 결과 요약",
     description:
       typeof tier?.description === "string" && tier.description.trim()
@@ -111,7 +125,9 @@ const ALLOWED_FEAR_LABELS = ["돈·재정", "이직·커리어", "인간관계",
 export function validatePackpok(text: string): boolean {
   const normalized = text?.trim() ?? "";
   if (!normalized) return false;
-  return normalized.includes("이 말이 나오는 이유는") && normalized.includes("그래서 2주만");
+  if (countSentences(normalized) < 3) return false;
+  if (!HANJA_TERM_REGEX.test(normalized)) return false;
+  return true;
 }
 
 function resolveCoreFearLabel(input: InputPayload): string {
@@ -610,10 +626,10 @@ const THEME_MYEONGRI_TERMS: Record<SectionTheme, string[]> = {
 };
 
 const AXIS_BRIDGE_TEMPLATES = [
-  "{axis} 압박이 {theme} 흐름의 방아쇠로 붙고",
+  "{axis} 쪽 스트레스가 {theme} 쪽 결정까지 끌고 와서",
   "{axis} 긴장이 {theme} 판단을 먼저 흔들고",
   "{axis} 부담이 {theme} 선택 속도를 늦추고",
-  "{axis} 신호가 {theme} 리듬을 갑자기 꺾고",
+  "{axis} 쪽 피로가 쌓이니까 {theme} 쪽 감각도 같이 둔해지고",
 ];
 
 const SINGLE_USE_PHRASES = ["하루 선택 비용"];
@@ -752,13 +768,11 @@ export function validateSectionFormat(content: string): boolean {
   if (!normalized) return false;
 
   if (countSentences(normalized) < 5) return false;
-  if (!normalized.includes("이 말이 나오는 이유는")) return false;
-  if (!normalized.includes("그래서 2주만")) return false;
   if (!HANJA_TERM_REGEX.test(normalized)) return false;
   if (countEmoji(normalized) > 2) return false;
 
   const lastLine = getLastNonEmptyLine(normalized);
-  if (!(lastLine.includes("불편한 진실은") || isPunchlineLine(lastLine))) return false;
+  if (!isPunchlineLine(lastLine)) return false;
 
   return true;
 }
@@ -885,9 +899,9 @@ function buildForcedSectionContent(input: InputPayload, theme: SectionTheme, sec
 
   const lines = [
     hookSentence,
-    `${keywords.join("·")} 축이 흔들리면 판단 순서가 뒤집히기 쉬워.`,
+    `${keywords.join("·")} 쪽에서 균열이 나면 다른 데까지 영향이 번져.`,
     `지금 문제는 ${withSubjectParticle(ab.a)} 아니라 ${withCopula(ab.b)}.`,
-    `이 말이 나오는 이유는 직업 상태가 ${employment}이고 연애 상태가 ${relationship}이며 성별 맥락은 ${withRoParticle(genderContext)} 입력됐고, ${axisBridgeClause} ${themeWord2} 부담이 반복되며 ${termText} 신호가 동시에 걸리기 때문이야.`,
+    `${employment} 상태에서 ${relationship} 맥락이 겹치고, ${axisBridgeClause} ${themeWord2} 쪽 ${termText} 압력이 같이 걸리는 구조야.`,
     futureSentence,
     actionSentence,
     punchline,
@@ -1011,74 +1025,74 @@ export const CORE_FEAR_TEMPLATES: Record<CoreFearAxis, {
 }> = {
   DISMISS: {
     inference:
-      "요즘 고민 1순위가 인간관계라면, ‘거리감’과 ‘소속감’ 사이에서 균형을 찾고 있을 가능성이 큽니다. " +
-      "말 한마디나 분위기 변화에 민감해질 수 있고, 관계의 온도를 자주 점검하게 될 수 있어요.",
+      "요즘 고민 1순위가 인간관계라면, '거리감'이랑 '소속감' 사이에서 줄타기하고 있을 확률이 높아. " +
+      "말 한마디, 분위기 변화에 민감해지고, 관계 온도를 자꾸 재게 돼.",
     strongWeak:
-      "이 고민이 강하면 작은 오해도 크게 느껴지고, 약하면 관계를 유연하게 바라보는 편입니다.",
+      "이 고민이 강하면 작은 오해도 크게 느껴지고, 약하면 관계를 유연하게 보는 편이야.",
     relationshipBranch: {
-      솔로: "새 만남의 시작에서 ‘우리 대화 잘 맞나?’가 핵심 포인트가 될 수 있습니다.",
-      연애중: "연락 빈도나 말투 변화에 예민해지기 쉬운 타이밍입니다.",
-      기혼: "역할 분담이나 소통 방식이 관계 만족도를 좌우할 수 있습니다.",
+      솔로: "새 만남에서 '우리 대화 잘 맞나?'가 핵심 포인트가 돼.",
+      연애중: "연락 빈도나 말투 변화에 예민해지기 쉬운 타이밍이야.",
+      기혼: "역할 분담이나 소통 방식이 관계 만족도를 좌우해.",
     },
     employmentBranch: {
-      직장인: "팀 내 관계와 커뮤니케이션 방식이 스트레스 요인일 수 있습니다.",
-      "사업·프리랜서": "고객과의 신뢰 관리가 성과만큼 중요하게 느껴질 수 있습니다.",
-      학생: "친구/동아리 관계에서 거리감이 고민으로 이어질 수 있습니다.",
-      "취업 준비 중": "면접/네트워킹에서의 첫인상과 관계 형성이 핵심일 수 있습니다.",
+      직장인: "팀 내 관계랑 커뮤니케이션 방식이 스트레스 원인일 가능성이 높아.",
+      "사업·프리랜서": "고객과의 신뢰 관리가 성과만큼 중요하게 느껴지는 시기야.",
+      학생: "친구/동아리 관계에서 거리감이 고민으로 번질 수 있어.",
+      "취업 준비 중": "면접/네트워킹에서 첫인상과 관계 형성이 핵심이야.",
     },
   },
   ABANDON: {
     inference:
-      "요즘 커리어가 고민 1순위라면, ‘지금 방향이 맞나?’라는 질문이 자주 떠오를 수 있어요. " +
-      "성장 속도, 평가, 방향 전환(이직/전환)에 대한 관심이 커질 수 있습니다.",
+      "요즘 커리어가 고민 1순위라면, '지금 방향이 맞나?' 이 질문이 자꾸 떠오를 거야. " +
+      "성장 속도, 평가, 이직 같은 방향 전환에 대한 생각이 커지는 시기야.",
     strongWeak:
-      "이 고민이 강하면 작은 피드백에도 커리어 전체가 흔들리는 느낌이 들 수 있고, 약하면 장기 플랜으로 차분히 가는 편입니다.",
+      "이 고민이 강하면 작은 피드백에도 커리어 전체가 흔들리는 느낌이 들고, 약하면 장기 플랜으로 차분히 가는 편이야.",
     relationshipBranch: {
-      솔로: "일에 몰입하면서 연애/만남 우선순위가 내려갈 수 있습니다.",
-      연애중: "커리어 고민이 커지면 데이트/시간 배분에 민감해질 수 있습니다.",
-      기혼: "가정의 안정과 커리어 변화 사이에서 선택의 무게가 커질 수 있습니다.",
+      솔로: "일에 몰입하면서 연애/만남 우선순위가 내려갈 수 있어.",
+      연애중: "커리어 고민이 커지면 데이트/시간 배분에 민감해져.",
+      기혼: "가정의 안정과 커리어 변화 사이에서 선택의 무게가 커져.",
     },
     employmentBranch: {
-      직장인: "이직 타이밍, 승진 루트, 역할 변화가 핵심 고민이 될 수 있습니다.",
-      "사업·프리랜서": "프로젝트 파이프라인과 브랜딩 방향이 중요해질 수 있습니다.",
-      학생: "전공/진로 선택과 인턴 경험이 커리어 방향의 힌트가 될 수 있습니다.",
-      "취업 준비 중": "지원 전략, 포트폴리오, 합격 신호에 집중하게 될 수 있습니다.",
+      직장인: "이직 타이밍, 승진 루트, 역할 변화가 핵심 고민이 돼.",
+      "사업·프리랜서": "프로젝트 파이프라인과 브랜딩 방향이 중요해지는 시기야.",
+      학생: "전공/진로 선택과 인턴 경험이 커리어 방향의 힌트가 돼.",
+      "취업 준비 중": "지원 전략, 포트폴리오, 합격 신호에 집중하게 돼.",
     },
   },
   INCOMPETENT: {
     inference:
-      "요즘 돈/재정이 고민 1순위라면, 수입과 지출의 흐름이 더 예민하게 느껴질 수 있습니다. " +
-      "‘지금 잘 굴러가고 있나?’를 계속 체크하는 시기일 수 있어요.",
+      "요즘 돈/재정이 고민 1순위라면, 수입이랑 지출 흐름이 더 예민하게 느껴질 거야. " +
+      "'지금 잘 굴러가고 있나?' 계속 체크하게 되는 시기야.",
     strongWeak:
-      "이 고민이 강하면 작은 지출에도 불안이 커지고, 약하면 돈을 도구로 차분히 관리하는 편입니다.",
+      "이 고민이 강하면 작은 지출에도 불안이 커지고, 약하면 돈을 도구로 차분히 관리하는 편이야.",
     relationshipBranch: {
-      솔로: "자기계발/취미 비용과 저축 사이의 균형이 고민일 수 있습니다.",
-      연애중: "데이트 비용, 미래 자금에 대한 합의가 중요해질 수 있습니다.",
-      기혼: "가계/대출/자녀 교육비 등 장기 계획이 핵심이 될 수 있습니다.",
+      솔로: "자기계발/취미 비용이랑 저축 사이에서 균형 잡는 게 고민이야.",
+      연애중: "데이트 비용, 미래 자금에 대한 합의가 중요해져.",
+      기혼: "가계/대출/자녀 교육비 같은 장기 계획이 핵심이야.",
     },
     employmentBranch: {
-      직장인: "연봉/성과급/복지가 재정 안정감에 큰 영향을 줄 수 있습니다.",
-      "사업·프리랜서": "매출 변동과 현금흐름 관리가 가장 큰 이슈가 될 수 있습니다.",
-      학생: "알바/용돈 등 단기 재정 계획이 고민이 될 수 있습니다.",
-      "취업 준비 중": "준비 비용과 공백 기간의 지출이 부담이 될 수 있습니다.",
+      직장인: "연봉/성과급/복지가 재정 안정감에 크게 영향을 줘.",
+      "사업·프리랜서": "매출 변동이랑 현금흐름 관리가 가장 큰 이슈야.",
+      학생: "알바/용돈 같은 단기 재정 계획이 고민이야.",
+      "취업 준비 중": "준비 비용이랑 공백 기간 지출이 부담이 돼.",
     },
   },
   LOSS_OF_CONTROL: {
     inference:
-      "요즘 건강/컨디션이 고민 1순위라면, 몸의 신호와 생활 리듬을 더 예민하게 체감하고 있을 수 있습니다. " +
-      "컨디션이 곧 하루 성과를 좌우한다고 느껴질 수 있어요.",
+      "요즘 건강/컨디션이 고민 1순위라면, 몸의 신호랑 생활 리듬을 더 예민하게 느끼고 있을 거야. " +
+      "컨디션이 곧 하루 성과를 좌우한다고 체감하는 시기야.",
     strongWeak:
-      "이 고민이 강하면 작은 피로에도 불안해지고, 약하면 루틴을 안정적으로 유지하는 편입니다.",
+      "이 고민이 강하면 작은 피로에도 불안해지고, 약하면 루틴을 안정적으로 유지하는 편이야.",
     relationshipBranch: {
-      솔로: "생활 패턴을 지키는 것이 중요해지는 시기일 수 있습니다.",
-      연애중: "약속/일정 조율이 컨디션 관리에 영향을 줄 수 있습니다.",
-      기혼: "가족 건강과 생활 리듬 관리가 우선순위가 될 수 있습니다.",
+      솔로: "생활 패턴을 지키는 게 중요해지는 시기야.",
+      연애중: "약속/일정 조율이 컨디션 관리에 영향을 줘.",
+      기혼: "가족 건강이랑 생활 리듬 관리가 우선순위가 돼.",
     },
     employmentBranch: {
-      직장인: "야근/수면 부족이 컨디션에 직접 영향을 줄 수 있습니다.",
-      "사업·프리랜서": "불규칙한 일정이 컨디션 관리의 큰 변수일 수 있습니다.",
-      학생: "시험/과제 시즌에 컨디션 기복이 심해질 수 있습니다.",
-      "취업 준비 중": "루틴 관리가 멘탈/체력 유지의 핵심이 될 수 있습니다.",
+      직장인: "야근/수면 부족이 컨디션에 바로 영향 줘.",
+      "사업·프리랜서": "불규칙한 일정이 컨디션 관리의 큰 변수야.",
+      학생: "시험/과제 시즌에 컨디션 기복이 심해질 수 있어.",
+      "취업 준비 중": "루틴 관리가 멘탈/체력 유지의 핵심이야.",
     },
   },
 };
@@ -1091,7 +1105,7 @@ const MOCK_DATA: AnalysisResult = {
     topPercent: 10,
     title: "엔진은 강력한데 핸들이 좀 헐거운 스포츠카",
     description:
-      "잠재력은 충분한데 방향성이 애매할 때가 많아요. 한 분야에 집중하면 탑티어까지 올라갈 수 있는 사람인데, 이것저것 손대다가 에너지가 분산되는 경향이 있어요. 일단 한 우물만 파면 진짜 대박 나는 타입입니다.",
+      "잠재력은 충분한데 방향성이 애매할 때가 많아. 한 분야에 집중하면 탑티어까지 올라갈 수 있는 사람인데, 이것저것 손대다가 에너지가 분산되는 경향이 있어. 한 우물만 파면 진짜 터지는 타입이야.",
   },
   scores: {
     재물운: 78,
@@ -1101,55 +1115,55 @@ const MOCK_DATA: AnalysisResult = {
     대인운: 88,
   },
   coreFearAxisBlock:
-    "선택한 고민: 돈·재정\n\n요즘 돈의 흐름이 더 크게 느껴질 수 있어요. 작은 지출도 신경 쓰이고, ‘지금 이게 맞나?’라는 체크가 잦아지는 시기입니다.\n\n재정은 ‘흐름 관리’에서 승부가 나요. 지출을 줄이기보다, 고정비 구조와 수입 리듬을 먼저 정리해보는 게 빠릅니다.",
+    "선택한 고민: 돈·재정\n\n요즘 돈의 흐름이 더 크게 느껴질 거야. 작은 지출도 신경 쓰이고, '지금 이게 맞나?' 체크가 잦아지는 시기야.\n\n재정은 '흐름 관리'에서 승부가 나. 지출을 줄이기보다, 고정비 구조랑 수입 리듬을 먼저 정리해보는 게 빨라.",
   sections: [
     {
       icon: "🎭",
       title: "타고난 DNA",
       content:
-        "당신의 일간은 甲木(갑목)인데, 子月(자월)에 태어났어요. 한겨울에 태어난 나무라 뿌리는 깊지만 가지가 잘 안 뻗는 구조예요. 이게 무슨 뜻이냐면, 내면은 단단한데 겉으로 표현하는 게 서툰 타입이라는 거예요. 어릴 때부터 '너 속을 모르겠다'는 소리 들어본 적 있죠? 혼자 끙끙 앓다가 나중에 터뜨리는 스타일이에요. 그래도 일단 마음 열면 의리 하나는 끝내주는 게 갑목의 특징입니다. 천천히 크지만 결국엔 큰 나무가 되는 사람이에요.",
+        "일간이 甲木(갑목)인데, 子月(자월)에 태어났어. 한겨울에 태어난 나무라 뿌리는 깊지만 가지가 잘 안 뻗는 구조야. 이 말이 나오는 이유는 내면은 단단한데 겉으로 표현하는 게 서툰 타입이라는 거야. 어릴 때부터 '너 속을 모르겠다'는 소리 들어본 적 있지? 혼자 끙끙 앓다가 나중에 터뜨리는 스타일이야. 그래도 마음 열면 의리 하나는 끝내줘. 천천히 크지만 결국엔 큰 나무가 되는 사람이야.",
     },
     {
       icon: "💰",
       title: "돈과의 케미",
       content:
-        "사주에 편재(偏財)가 있는데 비겁(比劫)이 많아요. 돈 들어올 구멍은 큰데 새는 구멍도 많은 구조라는 거죠. 벌 땐 많이 버는데, 쓸 때도 과감하게 써버려서 통장에 돈이 안 남는 패턴 아니었어요? 특히 친구 생일이나 모임에서 계산할 때 가장 먼저 카드 내미는 스타일일 거예요. 재테크는 혼자 하면 망하니까 자동이체나 적금처럼 강제 저축이 답입니다. 30대 중반 이후부터 재성(財星)이 좋아지니까 그때부터는 쌓이기 시작해요. 지금은 버는 힘 키우는 데 집중하세요.",
+        "사주에 편재(偏財)가 있는데 비겁(比劫)이 많아. 돈 들어올 구멍은 큰데 새는 구멍도 많은 구조야. 벌 땐 많이 버는데, 쓸 때도 과감하게 써버려서 통장에 돈이 안 남는 패턴 아니었어? 특히 모임에서 계산할 때 가장 먼저 카드 내미는 스타일일 거야. 재테크는 혼자 하면 망하니까 자동이체나 적금처럼 강제 저축이 답이야. 30대 중반 이후부터 재성(財星)이 좋아지니까 그때부터 쌓여. 지금은 버는 힘 키우는 데 집중해.",
     },
     {
       icon: "💕",
       title: "연애 성적표",
       content:
-        "당신은 정관(正官)보다 편관(偏官)이 있는 사주예요. 정석적이고 안정적인 사랑보다는 좀 드라마틱한 관계를 겪을 가능성이 높아요. 소개팅보다는 우연히 만난 사람한테 끌리고, 뻔한 데이트보다 색다른 경험 같이 하는 게 재밌잖아요? 그런데 이게 양날의 칼이라서, 초반엔 재밌는데 오래 가려면 루틴이 필요한데 그게 안 맞는 거예요. 잘 맞는 타입은 당신만큼 자유롭지만 책임감은 있는 사람. 너무 평범하거나 보수적인 사람은 답답해서 못 견딥니다. 결혼은 늦어도 30대 중후반에 잘 맞는 사람 만나면 안정되니 조급해하지 마세요.",
+        "정관(正官)보다 편관(偏官)이 있는 사주야. 정석적이고 안정적인 사랑보다는 좀 드라마틱한 관계를 겪을 확률이 높아. 소개팅보다는 우연히 만난 사람한테 끌리고, 뻔한 데이트보다 색다른 경험 같이 하는 게 재밌잖아? 근데 이게 양날의 칼이라서, 초반엔 재밌는데 오래 가려면 루틴이 필요한데 그게 안 맞아. 잘 맞는 타입은 너만큼 자유롭지만 책임감은 있는 사람이야. 너무 평범하거나 보수적인 사람은 답답해서 못 견뎌.",
     },
     {
       icon: "🏢",
       title: "직장 & 커리어",
       content:
-        "직장운은 확장성과 책임감이 동시에 강조되는 흐름이에요. 단기간에 업무를 끌어올리는 힘이 있어서 성과가 빨리 보이는 편입니다. 다만 방향을 바꾸기 전에 한 사이클을 끝내는 게 필요합니다. 이직은 ‘확실한 역할 변화’가 있을 때 더 유리하고, 지금은 핵심 역량을 하나 정해서 깊게 파는 게 더 빠르게 올라가는 길입니다.",
+        "직장운은 확장성과 책임감이 동시에 강조되는 흐름이야. 단기간에 업무를 끌어올리는 힘이 있어서 성과가 빨리 보이는 편이야. 다만 방향을 바꾸기 전에 한 사이클을 끝내는 게 필요해. 이직은 '확실한 역할 변화'가 있을 때 더 유리하고, 지금은 핵심 역량을 하나 정해서 깊게 파는 게 더 빠르게 올라가는 길이야.",
     },
     {
       icon: "🧠",
       title: "멘탈 & 컨디션",
       content:
-        "건강운은 기본 체력은 괜찮지만 리듬이 깨질 때 컨디션이 급격히 흔들리는 타입이에요. 수면/식사 루틴이 한 번 틀어지면 회복에 시간이 걸릴 수 있습니다. 지금은 운동보다 ‘수면 고정’이 우선입니다. 하루 일정이 많을수록 루틴을 단단히 잡는 게 장기적으로 효율적이에요.",
+        "기본 체력은 괜찮은데 리듬이 깨질 때 컨디션이 급격히 흔들리는 타입이야. 수면/식사 루틴이 한 번 틀어지면 회복에 시간이 걸려. 지금은 운동보다 '수면 고정'이 우선이야. 하루 일정이 많을수록 루틴을 단단히 잡는 게 장기적으로 효율적이야.",
     },
     {
       icon: "🧑‍🤝‍🧑",
       title: "대인 관계 흐름",
       content:
-        "사람과의 거리를 재는 감각이 예민한 편이라, 가까워지는 속도와 타이밍이 중요합니다. 처음엔 조심스럽지만 한 번 신뢰가 쌓이면 깊어지는 구조예요. 지금은 ‘너무 빨리 맞추려는 습관’을 줄이고, 일정한 간격의 소통을 유지하는 게 관계 안정에 도움이 됩니다.",
+        "사람과의 거리를 재는 감각이 예민한 편이라, 가까워지는 속도랑 타이밍이 중요해. 처음엔 조심스럽지만 한 번 신뢰가 쌓이면 깊어지는 구조야. 지금은 '너무 빨리 맞추려는 습관'을 줄이고, 일정한 간격의 소통을 유지하는 게 관계 안정에 도움이 돼.",
     },
     {
       icon: "🚧",
       title: "리스크 관리",
       content:
-        "속도가 빠른 대신 실수도 빨리 나오는 구조라서, 체크리스트가 있는지 없는지가 결과를 가릅니다. 특히 돈/일 관련 결정에서 ‘충동’이 섞이면 흔들릴 수 있어요. 지금은 결정 직전에 하루만 보류하는 습관을 붙이면 리스크가 크게 줄어듭니다.",
+        "속도가 빠른 대신 실수도 빨리 나오는 구조라서, 체크리스트가 있는지 없는지가 결과를 갈라. 특히 돈/일 관련 결정에서 '충동'이 섞이면 흔들려. 지금은 결정 직전에 하루만 보류하는 습관을 붙이면 리스크가 크게 줄어들어.",
     },
     {
       icon: "✅",
       title: "현실적인 결론",
       content:
-        "요약하면, 잠재력은 충분한데 방향성과 루틴이 관건이에요. 한 번만 정리하면 크게 뻗을 수 있는 타입입니다. 다음 2주 동안은 일정, 지출, 업무 우선순위를 ‘한 장’으로 정리해두면 결과가 눈에 보이게 안정될 거예요.",
+        "요약하면, 잠재력은 충분한데 방향성과 루틴이 관건이야. 한 번만 정리하면 크게 뻗을 수 있는 타입이야. 다음 2주 동안 일정, 지출, 업무 우선순위를 '한 장'으로 정리해두면 결과가 눈에 보이게 안정돼.",
     },
   ],
 };
@@ -1300,7 +1314,7 @@ sections 개수는 반드시 8개.
 [섹션 4] 연애/관계 — 구조: "대화체 톤 전환"
   → 이 섹션만 톤을 확 바꿔서, 친구한테 말하듯이 쓴다. "솔직히 물어볼게.", "이거 찔리면 맞는 거야."
   → 연애 상태(솔로/연애중/기혼)에 딱 맞춘 해석. 다른 상태 이야기 금지.
-  → 사주의 관성(官星)/도화살/합충 근거.
+  → 사주의 관성(官星)/도화살(桃花殺)/홍염살(紅艶殺)/합충 근거. [신살 감지 결과]에 해당 신살이 있으면 반드시 활용.
   → 상대 탓이 아니라 본인 패턴 지적. "상대가 문제가 아니라, 네가 매번 같은 타입을 고르는 구조가 문제야." 스타일.
   → 마무리: 연애 관련 불편한 진실 한 줄.
 
@@ -1323,6 +1337,7 @@ sections 개수는 반드시 8개.
   → "이거 듣기 싫겠지만" 으로 시작해도 됨.
   → ★ 팩폭 의무 1회(강도 hard). 사주 용어가 문장의 주어.
   → 충(沖)/형(刑)/겁재/상관 등 구조명이 문장의 주어로 들어가야 한다.
+  → [신살 감지 결과]에 흉살(양인살/겁살/현침살)이 있으면 이 섹션에서 반드시 근거로 활용한다.
   → "이 구조를 방치하면 3개월/6개월/1년 뒤에 이런 패턴이 반복된다" 형태.
   → 마무리: 가장 불편한 한 줄. "이걸 운이라고 부르기엔, 네가 선택한 패턴의 비율이 너무 커."
 
@@ -1456,6 +1471,22 @@ sections 개수는 반드시 8개.
 - 텍스트를 쓸 때 서버가 준 점수/등급을 근거로 서술한다. 예: "직장운이 B인 이유는 정관(正官)이 버티고 있어서야. 근데 나머지가 전부 D인 건..."
 - 점수가 낮은 카테고리일수록 해당 섹션의 팩폭 강도를 높인다. D등급 카테고리 섹션은 반드시 날카롭게.
 - 점수가 높은 카테고리여도 무조건 칭찬하지 않는다. "B라서 괜찮다"가 아니라 "B인데 A는 못 가는 이유가 있어."
+
+────────────────────────────────
+[신살 활용 규칙]
+
+- 신살은 별도 섹션이 아니다. 기존 8개 섹션 안에서 근거로 자연스럽게 녹여 서술한다.
+- 신살명은 한자 병기 필수. 예: 도화살(桃花殺), 역마살(驛馬殺).
+- 신살을 단순 나열하지 않는다. 해당 섹션 맥락에 맞게 해석한다.
+- 신살-섹션 매핑:
+  - 도화살(桃花殺)/홍염살(紅艶殺) → [섹션 4] 연애
+  - 역마살(驛馬殺) → [섹션 5] 직장/커리어
+  - 천을귀인(天乙貴人)/문창귀인(文昌貴人) → [섹션 2] 대인 또는 [섹션 1] 기질
+  - 양인살(羊刃殺)/겁살(劫殺)/현침살(懸針殺) → [섹션 7] 경고
+  - 화개살(華蓋殺) → [섹션 1] 기질 또는 [섹션 6] 건강
+- 흉살이 2개 이상이면 [섹션 7]에서 복합 리스크 분석을 반드시 수행한다.
+- 길신과 흉살이 동시에 있으면, 대비 구조("~이 있지만 ~이 발목을 잡는다")로 활용한다.
+- [신살 감지 결과]가 입력에 없거나 비어있으면 신살을 언급하지 않는다.
 
 ────────────────────────────────
 [문단 포맷 규칙 — 모바일 가독성 강화]
@@ -1750,12 +1781,15 @@ async function resolveSajuEnrichedData(input: InputPayload): Promise<{
   try {
     const { calculateSaju, enrichSajuData, formatEnrichedSajuText } = await import("@/lib/utils/saju");
     const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
-    if (!saju) return { sajuText: existing, enriched: null };
+    if (!saju) {
+      console.error("[SAJU] calculateSaju returned null", { hash: inputHash(calcYear, calcMonth, calcDay, hour, minute) });
+      return { sajuText: existing, enriched: null };
+    }
     const enriched = enrichSajuData(saju, { isTimeUnknown: Boolean(input.unknownBirthTime) });
     const sajuText = formatEnrichedSajuText(enriched);
     return { sajuText, enriched };
   } catch (error) {
-    console.warn("[SAJU] failed to resolve saju enriched data", error);
+    console.error("[SAJU] failed to resolve saju enriched data", { hash: inputHash(calcYear, calcMonth, calcDay, hour, minute), error });
     return { sajuText: existing, enriched: null };
   }
 }
@@ -1830,10 +1864,28 @@ export async function runFullAnalysis(input: InputPayload) {
   const { sajuText: resolvedSajuText, enriched } = await resolveSajuEnrichedData(input);
   const sajuInfo = resolvedSajuText ? `\n사주팔자: ${resolvedSajuText}` : "";
 
+  let shinsalPromptBlock = "";
+  if (enriched?.shinsal?.matches?.length) {
+    const lines = ["[신살 감지 결과]"];
+    for (const m of enriched.shinsal.matches) {
+      const typeLabel = m.type === "good" ? "길신" : m.type === "bad" ? "흉살" : "중성";
+      lines.push(`- ${m.label} (${typeLabel}): ${m.evidence.join("; ")}`);
+    }
+    if (enriched.isTimeUnknown) lines.push("※ 시주 미상으로 일부 신살 변동 가능");
+    shinsalPromptBlock = "\n" + lines.join("\n");
+  }
+
   const serverScoring = calculateServerScoring(enriched);
   const serverTier = serverScoring.tier;
   const serverScores = serverScoring.scores;
-  const serverScoreSummary = `종합등급: ${serverTier.grade} (composite: ${serverTier.composite}, 상위 ${serverTier.topPercent}%)\n재물운: ${serverScores.재물운} (${scoreToGrade(
+  console.info("[SCORING] full", {
+    hasEnriched: !!enriched,
+    confidence: serverTier.confidence,
+    grade: serverTier.grade,
+    composite: serverTier.composite,
+    scores: serverScores,
+  });
+  const serverScoreSummary = `종합등급: ${serverTier.grade} (composite: ${serverTier.composite}, 상위 ${serverTier.topPercent}%, confidence: ${serverTier.confidence})\n재물운: ${serverScores.재물운} (${scoreToGrade(
     serverScores.재물운
   )}) / 연애운: ${serverScores.연애운} (${scoreToGrade(serverScores.연애운)}) / 직장운: ${
     serverScores.직장운
@@ -1851,7 +1903,7 @@ export async function runFullAnalysis(input: InputPayload) {
 출생지역: ${input.birthLocation}
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
-직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}
+직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}${shinsalPromptBlock}
 요즘 1등 이슈: ${coreFearLabel}
 
 [서버 계산 결과]
@@ -1951,7 +2003,14 @@ export async function runTeaserAnalysis(input: InputPayload) {
   const serverScoring = calculateServerScoring(enriched);
   const serverTier = serverScoring.tier;
   const serverScores = serverScoring.scores;
-  const serverScoreSummary = `종합등급: ${serverTier.grade} (composite: ${serverTier.composite}, 상위 ${serverTier.topPercent}%)\n재물운: ${serverScores.재물운} (${scoreToGrade(
+  console.info("[SCORING] teaser", {
+    hasEnriched: !!enriched,
+    confidence: serverTier.confidence,
+    grade: serverTier.grade,
+    composite: serverTier.composite,
+    scores: serverScores,
+  });
+  const serverScoreSummary = `종합등급: ${serverTier.grade} (composite: ${serverTier.composite}, 상위 ${serverTier.topPercent}%, confidence: ${serverTier.confidence})\n재물운: ${serverScores.재물운} (${scoreToGrade(
     serverScores.재물운
   )}) / 연애운: ${serverScores.연애운} (${scoreToGrade(serverScores.연애운)}) / 직장운: ${
     serverScores.직장운

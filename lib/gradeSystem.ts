@@ -1,4 +1,5 @@
 export type GradeLabel = "S" | "A" | "B" | "C" | "D";
+export type ConfidenceLevel = "high" | "medium" | "low";
 
 export type GradeCutoffs = {
   S: number;
@@ -14,6 +15,15 @@ export const COMPOSITE_GRADE_CUTOFFS: GradeCutoffs = {
   B: 68,
   C: 58,
   D: 0,
+};
+
+/** 각 등급의 composite 상한 (해당 등급 내 최대값) */
+export const GRADE_MAX: Record<GradeLabel, number> = {
+  S: 100,
+  A: COMPOSITE_GRADE_CUTOFFS.S - 1,  // 85
+  B: COMPOSITE_GRADE_CUTOFFS.A - 1,  // 77
+  C: COMPOSITE_GRADE_CUTOFFS.B - 1,  // 67
+  D: COMPOSITE_GRADE_CUTOFFS.C - 1,  // 57
 };
 
 export function clampValue(value: number, min: number, max: number) {

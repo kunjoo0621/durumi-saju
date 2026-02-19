@@ -37,7 +37,7 @@ const StemCell = memo(function StemCell({
   const elementName = element ? getElementName(element) : null;
 
   return (
-    <div className={`px-4 py-4 text-center rounded-xl ${bgClass} ${borderClass}`}>
+    <div className={`px-2 py-3 text-center rounded-xl ${bgClass} ${borderClass}`}>
       <div className={`text-[28px] font-semibold ${textClass}`}>{stemLabel}</div>
       {elementName && (
         <div className="text-[12px] text-text-secondary mt-1">{elementName}</div>
@@ -67,7 +67,7 @@ const BranchCell = memo(function BranchCell({
   const elementName = element ? getElementName(element) : null;
 
   return (
-    <div className={`px-4 py-4 text-center rounded-xl ${bgClass} ${borderClass}`}>
+    <div className={`px-2 py-3 text-center rounded-xl ${bgClass} ${borderClass}`}>
       <div className={`text-[28px] font-semibold ${textClass}`}>{branchLabel}</div>
       {elementName && (
         <div className="text-[12px] text-text-secondary mt-1">{elementName}</div>
@@ -85,7 +85,7 @@ function SajuChartInner({ sajuData }: SajuChartProps) {
   );
 
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-4 gap-2.5">
       {/* 라벨 행 */}
       {pillars.map((p) => (
         <LabelCell key={`label-${p.key}`} label={p.label} />

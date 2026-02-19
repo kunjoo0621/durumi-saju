@@ -15,6 +15,7 @@ export type AnalysisResult = {
     composite: number;
     percentileRank: number;
     topPercent: number;
+    confidence?: "high" | "medium" | "low";
     title: string;
     description: string;
   };
@@ -33,6 +34,7 @@ export type TeaserResult = {
     composite: number;
     percentileRank: number;
     topPercent: number;
+    confidence?: "high" | "medium" | "low";
     title: string;
     description: string;
   };

@@ -82,7 +82,7 @@ export default function OverallGradeBadgeSlot({
           />
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <div className="text-[44px] leading-none font-extrabold tracking-[-0.03em] text-white/30">
+            <div className="text-[52px] leading-none font-extrabold tracking-[-0.03em] text-white/80">
               {grade}
             </div>
           </div>
