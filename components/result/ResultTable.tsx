@@ -13,70 +13,23 @@ import {
   percentileRankFromComposite,
   topPercentFromPercentileRank,
 } from "@/lib/gradeSystem";
-import { getGradeBadge } from "@/lib/utils/grade-colors";
+import { getGradeBadge, getGradeColor } from "@/lib/utils/grade-colors";
 
 const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
-
-const LEGACY_GRADE_STYLES = {
-  S: {
-    background: "bg-primary-rank-s/15",
-    text: "text-primary-rank-s",
-  },
-  A: {
-    background: "bg-primary-rank-a/15",
-    text: "text-primary-rank-a",
-  },
-  B: {
-    background: "bg-primary-rank-b/15",
-    text: "text-primary-rank-b",
-  },
-  C: {
-    background: "bg-primary-rank-c/15",
-    text: "text-primary-rank-c",
-  },
-  D: {
-    background: "bg-primary-rank-d/15",
-    text: "text-primary-rank-d",
-  },
-} as const;
-
-type LegacyGradeKey = keyof typeof LEGACY_GRADE_STYLES;
-
-const LEGACY_GRADE_LABELS: LegacyGradeKey[] = ["S", "A", "B", "C", "D"];
-
-const LEGACY_GRADE_ORDER = [...LEGACY_GRADE_LABELS];
-
 
 type ResultTableProps = {
   result: AnalysisResult | TeaserResult;
   locked?: boolean;
   onUnlock?: () => void;
   unlockLabel?: string;
-  statusLabel?: "무료" | "잠금" | "언락";
   initialExpandedCount?: number;
 };
-
-const badgeStyles: Record<"무료" | "잠금" | "언락", string> = {
-  무료: "bg-background-tertiary text-text-secondary",
-  잠금: "bg-primary/15 text-primary",
-  언락: "bg-saju-wood/10 text-saju-wood-muted",
-};
-
-function resolveLegacyGradeKey(grade: string): LegacyGradeKey {
-  const upperGrade = grade.trim().toUpperCase();
-  const key = LEGACY_GRADE_ORDER.find((label) => upperGrade.startsWith(label));
-  if (key && key in LEGACY_GRADE_STYLES) {
-    return key as LegacyGradeKey;
-  }
-  return "D";
-}
 
 export default function ResultTable({
   result,
   locked = false,
   onUnlock,
   unlockLabel = DEFAULT_UNLOCK_LABEL,
-  statusLabel,
   initialExpandedCount = 0,
 }: ResultTableProps) {
   const safeTier = useMemo(() => {
@@ -140,8 +93,7 @@ export default function ResultTable({
       });
   }, [result]);
 
-  const gradeKey = useMemo(() => resolveLegacyGradeKey(safeTier.grade), [safeTier.grade]);
-  const gradeStyle = LEGACY_GRADE_STYLES[gradeKey];
+  const gradeColor = useMemo(() => getGradeColor(safeTier.grade), [safeTier.grade]);
 
   const categories = useMemo<CategoryItem[]>(() => {
     const rawScores = (result as Partial<AnalysisResult>)?.scores as Record<string, unknown> | undefined;
@@ -196,29 +148,29 @@ export default function ResultTable({
     return next;
   }, [safeSections, safeCoreFearAxisBlock]);
 
-  const badgeLabel: "무료" | "잠금" | "언락" = statusLabel || (locked ? "잠금" : "언락");
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
-        <div className={`rounded-3xl p-6 md:p-8 ${gradeStyle.background}`}>
-          <div className="flex items-center justify-between">
-            <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-caption font-semibold ${badgeStyles[badgeLabel]}`}
-            >
-              {badgeLabel}
-            </span>
-          </div>
+        <div
+          className="rounded-3xl p-6 md:p-8"
+          style={{
+            backgroundColor: gradeColor.bg,
+            boxShadow: `0 0 40px ${gradeColor.glow}`,
+          }}
+        >
           <div className="mt-6 flex flex-col items-center text-center gap-4">
             <OverallGradeBadgeSlot
               grade={safeTier.grade as OverallGradeLabel}
               badgeSrc={getGradeBadge(safeTier.grade)}
               size={152}
             />
-            <div className="text-xl font-bold text-text-secondary">
+            <div className="text-3xl font-bold font-aggro" style={{ color: gradeColor.main }}>
+              {safeTier.grade}등급
+            </div>
+            <div className="text-lg font-bold text-gray-400">
               상위 {safeTier.topPercent}%
             </div>
-            <div className="text-lg font-semibold text-text-primary line-clamp-2">
+            <div className="mt-3 text-2xl font-bold text-white line-clamp-2">
               {safeTier.title}
             </div>
             <p className="max-w-sm text-sm text-text-tertiary text-center leading-[1.75]">

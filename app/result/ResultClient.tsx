@@ -379,7 +379,7 @@ export default function ResultClient() {
             </div>
           )}
 
-          <ResultTable result={result} locked={false} statusLabel="언락" initialExpandedCount={2} />
+          <ResultTable result={result} locked={false} initialExpandedCount={2} />
         </div>
       </main>
 

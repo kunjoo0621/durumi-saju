@@ -10,7 +10,7 @@ export default function DevResultUiPage() {
   return (
     <div className="min-h-screen bg-background-primary px-6 py-8">
       <div className="max-w-[640px] mx-auto">
-        <ResultTable result={MOCK_RESULT} locked={false} statusLabel="언락" initialExpandedCount={0} />
+        <ResultTable result={MOCK_RESULT} locked={false} initialExpandedCount={0} />
       </div>
     </div>
   );
