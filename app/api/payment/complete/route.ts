@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, buildTeaserFromFull, resolveSajuText, runFullAnalysis, type InputPayload } from "@/lib/analysis";
+import { SCORING_VERSION } from "@/lib/utils/saju-scoring";
 import { getSupabaseUserId } from "@/lib/server/user";
 
 type PaymentCompleteBody = {
@@ -186,8 +187,22 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existingUnlock.data?.result_id) {
-      await markSessionConsumed(userId, body.sessionId);
-      return NextResponse.json({ ok: true, reused: true });
+      // 스코어링 버전 확인 — 구버전이면 재계산
+      const { data: existingForVersion } = await supabaseAdmin
+        .from("saju_results")
+        .select("full_json")
+        .eq("id", existingUnlock.data.result_id)
+        .maybeSingle();
+      const storedVersion = (existingForVersion?.full_json as any)?.scoringVersion ?? 0;
+      if (storedVersion >= SCORING_VERSION) {
+        await markSessionConsumed(userId, body.sessionId);
+        return NextResponse.json({ ok: true, reused: true });
+      }
+      console.info("[SCORING_UPGRADE] recomputing stale result", {
+        resultId: existingUnlock.data.result_id,
+        storedVersion,
+        currentVersion: SCORING_VERSION,
+      });
     }
 
     const existingPayment = await supabaseAdmin
@@ -210,25 +225,33 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (existingResult.data?.full_json) {
-        const unlockUpsert = await supabaseAdmin
-          .from("result_unlocks")
-          .upsert(
-            {
-              user_id: userId,
-              result_id: existingResult.data.id,
-              input_hash: inputHash,
-              order_id: body.orderId,
-            },
-            { onConflict: "order_id", ignoreDuplicates: true }
-          )
-          .select("id")
-          .maybeSingle();
-        if (unlockUpsert.error) {
-          return NextResponse.json({ error: unlockUpsert.error.message }, { status: 500 });
-        }
+        const storedVer = (existingResult.data.full_json as any)?.scoringVersion ?? 0;
+        if (storedVer >= SCORING_VERSION) {
+          const unlockUpsert = await supabaseAdmin
+            .from("result_unlocks")
+            .upsert(
+              {
+                user_id: userId,
+                result_id: existingResult.data.id,
+                input_hash: inputHash,
+                order_id: body.orderId,
+              },
+              { onConflict: "order_id", ignoreDuplicates: true }
+            )
+            .select("id")
+            .maybeSingle();
+          if (unlockUpsert.error) {
+            return NextResponse.json({ error: unlockUpsert.error.message }, { status: 500 });
+          }
 
-        await markSessionConsumed(userId, body.sessionId);
-        return NextResponse.json({ ok: true, reused: true });
+          await markSessionConsumed(userId, body.sessionId);
+          return NextResponse.json({ ok: true, reused: true });
+        }
+        console.info("[SCORING_UPGRADE] payment re-run: stale result", {
+          resultId: existingResult.data.id,
+          storedVersion: storedVer,
+          currentVersion: SCORING_VERSION,
+        });
       }
       forceUnlock = true;
     }

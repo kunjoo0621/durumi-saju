@@ -1986,15 +1986,23 @@ export async function runFullAnalysis(input: InputPayload) {
     shinsalPromptBlock = "\n" + lines.join("\n");
   }
 
+  console.info("[INDIVIDUAL_ENRICHED]", JSON.stringify(enriched).slice(0, 2000));
+
   const serverScoring = calculateServerScoring(enriched);
   const serverTier = serverScoring.tier;
   const serverScores = serverScoring.scores;
   console.info("[SCORING] full", {
     hasEnriched: !!enriched,
+    isTimeUnknown: serverScoring.scoringInput.isTimeUnknown,
+    calendarType: input.calendarType,
+    birthHour: input.birthHour,
+    birthMinute: input.birthMinute,
     confidence: serverTier.confidence,
     grade: serverTier.grade,
     composite: serverTier.composite,
     scores: serverScores,
+    tenStars: serverScoring.scoringInput.tenStars,
+    elementDist: serverScoring.scoringInput.elementDist,
   });
   const serverScoreSummary = `종합등급: ${serverTier.grade} (composite: ${serverTier.composite}, 상위 ${serverTier.topPercent}%, confidence: ${serverTier.confidence})\n재물운: ${serverScores.재물운} (${scoreToGrade(
     serverScores.재물운

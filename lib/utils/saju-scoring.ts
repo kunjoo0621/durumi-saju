@@ -8,6 +8,9 @@ import {
 } from "@/lib/gradeSystem";
 import type { EnrichedSajuData } from "./saju-enrichment";
 
+/** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
+export const SCORING_VERSION = 2;
+
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
 export type ServerScores = Record<CategoryKey, number>;
@@ -416,6 +419,7 @@ export type FinalResult = {
   scores: ServerScores;
   sections: GeminiTextOnlyResponse["sections"];
   coreFearAxisBlock: string;
+  scoringVersion?: number;
 };
 
 export function assembleFinalResult(
@@ -436,6 +440,7 @@ export function assembleFinalResult(
     scores: serverScores,
     sections: geminiResponse.sections,
     coreFearAxisBlock: geminiResponse.coreFearAxisBlock,
+    scoringVersion: SCORING_VERSION,
   };
 }
 

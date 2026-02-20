@@ -376,10 +376,14 @@ export default function BattleInputPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setPlayerA({ unknownBirthTime: !playerA.unknownBirthTime, birthHour: "", birthMinute: "" })}
-                  className="btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200"
+                  onClick={() => {
+                    setPlayerA({ unknownBirthTime: !playerA.unknownBirthTime, birthHour: "", birthMinute: "" });
+                    setBirthTimeDisplayA("");
+                  }}
+                  className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200 ${playerA.unknownBirthTime ? "btn-option--selected" : ""}`}
+                  aria-pressed={playerA.unknownBirthTime}
                 >
-                  {playerA.unknownBirthTime ? "태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
+                  {playerA.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
                 </button>
                 <div>
                   <label className="block text-[12px] text-text-secondary mb-2">출생지</label>
@@ -521,9 +525,10 @@ export default function BattleInputPage() {
                 setPlayerB({ unknownBirthTime: !playerB.unknownBirthTime, birthHour: "", birthMinute: "" });
                 setBirthTimeDisplayB("");
               }}
-              className="btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200"
+              className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200 ${playerB.unknownBirthTime ? "btn-option--selected" : ""}`}
+              aria-pressed={playerB.unknownBirthTime}
             >
-              {playerB.unknownBirthTime ? "태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
+              {playerB.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
             </button>
           </div>
         );

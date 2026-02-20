@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { buildInputHash, type InputPayload } from "@/lib/analysis";
+import { buildInputHash, resolveSajuEnrichedData, type InputPayload } from "@/lib/analysis";
+import { calculateServerScoring, SCORING_VERSION } from "@/lib/utils/saju-scoring";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
 import { parseJson5Loose } from "@/lib/json5Utils";
@@ -121,6 +122,44 @@ export async function POST(request: NextRequest) {
           { error: "저장된 결과 데이터가 손상되었습니다. 고객센터에 문의해 주세요." },
           { status: 500 }
         );
+      }
+    }
+
+    // 스코어링 버전이 오래되었으면 tier/scores만 실시간 재계산 (텍스트는 유지)
+    const storedVersion = (parsedResult as any)?.scoringVersion ?? 0;
+    if (storedVersion < SCORING_VERSION && data.birth_date) {
+      try {
+        const [bY, bM, bD] = data.birth_date.split("-");
+        const timeParts = data.birth_time?.split(":") || [];
+        const refreshInput: InputPayload = {
+          name: data.name || "",
+          birthYear: bY || "",
+          birthMonth: bM || "",
+          birthDay: bD || "",
+          calendarType: (data.calendar_type as "solar" | "lunar") || "solar",
+          birthHour: timeParts[0] || "",
+          birthMinute: timeParts[1] || "",
+          birthLocation: data.region || "",
+          gender: data.gender || "",
+          relationshipStatus: data.relationship_status || "",
+          employmentStatus: data.employment_status || "",
+          coreFearAxis: (data.core_fear_axis || "") as InputPayload["coreFearAxis"],
+          unknownBirthTime: !data.birth_time,
+        };
+        const { enriched } = await resolveSajuEnrichedData(refreshInput);
+        const freshScoring = calculateServerScoring(enriched);
+        const pr = parsedResult as Record<string, any>;
+        pr.tier = { ...pr.tier, ...freshScoring.tier };
+        pr.scores = freshScoring.scores;
+        pr.scoringVersion = SCORING_VERSION;
+        console.info("[SCORING_UPGRADE] results/full re-scored", {
+          storedVersion,
+          currentVersion: SCORING_VERSION,
+          oldGrade: (parsedResult as any)?.tier?.grade,
+          newGrade: freshScoring.tier.grade,
+        });
+      } catch (e) {
+        console.warn("[SCORING_UPGRADE] re-score failed, returning stale", e);
       }
     }
 

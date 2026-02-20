@@ -72,12 +72,42 @@ export async function POST(request: NextRequest) {
     // Enrich + score Player A
     const inputA = playerToInputPayload(body.playerA);
     const { sajuText: sajuTextA, enriched: enrichedA } = await resolveSajuEnrichedData(inputA);
+    console.info("[BATTLE_ENRICHED_A]", JSON.stringify(enrichedA).slice(0, 2000));
+
     const scoringA = calculateServerScoring(enrichedA);
+
+    console.info("[BATTLE_SCORING] playerA", {
+      name: body.playerA.name,
+      isTimeUnknown: scoringA.scoringInput.isTimeUnknown,
+      calendarType: inputA.calendarType,
+      birthHour: inputA.birthHour,
+      birthMinute: inputA.birthMinute,
+      confidence: scoringA.tier.confidence,
+      grade: scoringA.tier.grade,
+      composite: scoringA.tier.composite,
+      scores: scoringA.scores,
+      tenStars: scoringA.scoringInput.tenStars,
+      elementDist: scoringA.scoringInput.elementDist,
+    });
 
     // Enrich + score Player B
     const inputB = playerToInputPayload(body.playerB);
     const { sajuText: sajuTextB, enriched: enrichedB } = await resolveSajuEnrichedData(inputB);
     const scoringB = calculateServerScoring(enrichedB);
+
+    console.info("[BATTLE_SCORING] playerB", {
+      name: body.playerB.name,
+      isTimeUnknown: scoringB.scoringInput.isTimeUnknown,
+      calendarType: inputB.calendarType,
+      birthHour: inputB.birthHour,
+      birthMinute: inputB.birthMinute,
+      confidence: scoringB.tier.confidence,
+      grade: scoringB.tier.grade,
+      composite: scoringB.tier.composite,
+      scores: scoringB.scores,
+      tenStars: scoringB.scoringInput.tenStars,
+      elementDist: scoringB.scoringInput.elementDist,
+    });
 
     // Compare
     const comparison = compareBattle(
