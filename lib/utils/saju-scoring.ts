@@ -358,10 +358,11 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
     0.25 * scores.재물운 + 0.20 * scores.연애운 + 0.25 * scores.직장운 +
     0.15 * scores.건강운 + 0.15 * scores.대인운
   );
-  const axisAdj = clampInt(
-    Math.round(0.20 * (potential - 50) + 0.20 * (stability - 50) - 0.15 * (risk - 50)),
-    -15, 15
-  );
+  const rawAdj = Math.round(0.15 * (potential - 50) + 0.15 * (stability - 50) - 0.12 * (risk - 50));
+  // 양수 방향은 억제 (최대 +8), 음수 방향은 유지 (최대 -15)
+  const axisAdj = rawAdj >= 0
+    ? clampInt(rawAdj, 0, 8)
+    : clampInt(rawAdj, -15, 0);
   let composite = clampInt(catAvg + axisAdj, 0, 100);
 
   // 단조성: composite와 catAvg 차이 15 이내 강제
