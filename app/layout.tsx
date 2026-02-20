@@ -27,6 +27,10 @@ export const metadata: Metadata = {
     description: "행운 배달부 두루미의 사주풀이",
     images: ["https://durumi-saju.vercel.app/og-image.png"],
   },
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
