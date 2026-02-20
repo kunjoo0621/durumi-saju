@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
+import { IconSparkles, IconSwords, IconChevronRight } from "@tabler/icons-react";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function MenuPage() {
 
       <main className="flex-1 px-5 pb-12">
         <section className="max-w-[640px] mx-auto pt-10 space-y-4">
-          <h2 className="text-2xl font-aggro text-white">
+          <h2 className="text-2xl font-aggro text-white text-center">
             {session.user?.name ? `${session.user.name}아, 뭐 볼 거야?` : '뭐 볼 거야?'}
           </h2>
           <button
@@ -75,11 +76,17 @@ export default function MenuPage() {
               "w-full p-6 rounded-2xl text-left transition-colors duration-200 cursor-pointer",
               checking ? "opacity-70 cursor-wait" : "active:bg-white/5",
             ].join(" ")}
-            style={{ backgroundColor: '#1A1414' }}
+            style={{ backgroundColor: '#181414' }}
           >
-            <h2 className="font-aggro text-xl text-white font-bold">
-              {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
-            </h2>
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                <IconSparkles size={24} stroke={1.5} style={{ color: '#FF6B6B' }} />
+                <h2 className="font-aggro text-xl text-white font-bold">
+                  {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
+                </h2>
+              </div>
+              <IconChevronRight size={20} stroke={1.5} className="text-gray-500 mt-1" />
+            </div>
             <p className="text-sm text-gray-400 mt-2 leading-relaxed">
               천원이면 등급부터<br/>행동팁까지 전부 까발려줌
             </p>
@@ -120,9 +127,15 @@ export default function MenuPage() {
               "w-full p-6 rounded-2xl text-left transition-colors duration-200 cursor-pointer",
               isBattleDisabled ? "cursor-not-allowed opacity-55" : "active:bg-white/5",
             ].join(" ")}
-            style={{ backgroundColor: '#161420' }}
+            style={{ backgroundColor: '#151418' }}
           >
-            <h2 className="font-aggro text-xl text-white font-bold">1:1 사주배틀</h2>
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                <IconSwords size={24} stroke={1.5} style={{ color: '#A855F7' }} />
+                <h2 className="font-aggro text-xl text-white font-bold">1:1 사주배틀</h2>
+              </div>
+              <IconChevronRight size={20} stroke={1.5} className="text-gray-500 mt-1" />
+            </div>
             <p className="text-sm text-gray-400 mt-2 leading-relaxed">
               둘 중 누가 더 좋은 사주인지<br/>등급으로 딱 정리해줌
             </p>
