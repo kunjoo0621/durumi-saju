@@ -38,14 +38,14 @@ export default function OverallGradeBadgeSlot({
       : 152;
     return (
       <div
-        className={`relative isolate overflow-hidden rounded-full ${className || ""}`}
+        className={`relative isolate ${className || ""}`}
         style={{ width: normalizedSize, height: normalizedSize }}
         aria-label={`등급 배지 슬롯 (${grade})`}
       >
         <img
           src={resolvedBadge}
           alt={`등급 배지 ${grade}`}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="h-full w-full object-contain"
           draggable={false}
         />
       </div>

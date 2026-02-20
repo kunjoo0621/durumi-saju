@@ -120,32 +120,33 @@ export default function ResultTable({
   }, [result]);
 
   const composedSections = useMemo(() => {
-    const riskPattern = /(리스크|위험|경고|누수)/;
-    const conclusionPattern = /(현실적인 결론|결론|요약|정리)/;
-
-    const riskSection = safeSections.find((section) => riskPattern.test(section.title));
-    const conclusionSection = safeSections.find((section) => conclusionPattern.test(section.title));
-
-    const next = safeSections.filter(
-      (section) => section !== riskSection && section !== conclusionSection
-    );
-
-    if (riskSection) {
-      next.push(riskSection);
-    }
-
-    if (conclusionSection) {
-      next.push(conclusionSection);
-    }
+    const SECTION_ORDER = [
+      '🧭', // 타고난 기질
+      '💎', // 타고난 무기
+      '🧩', // 대인/사회성
+      '💰', // 재물
+      '💞', // 연애/관계
+      '💼', // 직장/커리어
+      '🩺', // 건강/에너지
+      '🚧', // 경고/리스크
+      '✅', // 종합 판정
+    ];
+    const orderMap = new Map(SECTION_ORDER.map((icon, i) => [icon, i]));
+    const sorted = [...safeSections].sort((a, b) => {
+      const ai = orderMap.get(a.icon) ?? SECTION_ORDER.length;
+      const bi = orderMap.get(b.icon) ?? SECTION_ORDER.length;
+      return ai - bi;
+    });
 
     if (safeCoreFearAxisBlock) {
-      next.push({
-        icon: "🎯",
-        title: "요즘 1등 이슈",
+      sorted.push({
+        icon: '🎯',
+        title: '요즘 1등 이슈',
         content: safeCoreFearAxisBlock,
       });
     }
-    return next;
+
+    return sorted;
   }, [safeSections, safeCoreFearAxisBlock]);
 
   return (
