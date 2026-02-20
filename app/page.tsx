@@ -5,6 +5,15 @@ import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import MenuDrawer from "./MenuDrawer";
+import {
+  IconAward,
+  IconCoins,
+  IconHeart,
+  IconBriefcase,
+  IconActivity,
+  IconUsers,
+  IconSwords,
+} from "@tabler/icons-react";
 
 /* ─── scroll-reveal hook ─── */
 
@@ -29,103 +38,6 @@ function useScrollReveal<T extends HTMLElement = HTMLDivElement>() {
   }, []);
 
   return { ref, visible };
-}
-
-/* ─── cycling grade badge ─── */
-
-const GRADE_COLORS: Record<string, string> = {
-  S: "#A855F7",
-  A: "#EF4444",
-  B: "#22C55E",
-  C: "#EAB308",
-  D: "#6B7280",
-};
-
-const GRADE_ORDER = ["S", "A", "B", "C", "D"] as const;
-
-function CyclingGradeBadge() {
-  const [index, setIndex] = useState(0);
-  const [fading, setFading] = useState(false);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setFading(true);
-      setTimeout(() => {
-        setIndex((prev) => (prev + 1) % GRADE_ORDER.length);
-        setFading(false);
-      }, 250);
-    }, 2000);
-    return () => clearInterval(id);
-  }, []);
-
-  const grade = GRADE_ORDER[index];
-  const color = GRADE_COLORS[grade];
-
-  return (
-    <span
-      className="inline-flex items-center justify-center text-2xl font-aggro font-bold px-4 py-1 rounded-lg"
-      style={{
-        color,
-        backgroundColor: `${color}1A`,
-        boxShadow: `0 0 20px ${color}4D`,
-        opacity: fading ? 0 : 1,
-        transition: "all 0.5s ease",
-      }}
-    >
-      {grade}
-    </span>
-  );
-}
-
-/* ─── battle VS badges ─── */
-
-const GRADE_ORDER_REVERSE = ["D", "C", "B", "A", "S"] as const;
-
-function BattleVSBadges() {
-  const [index, setIndex] = useState(0);
-  const [fading, setFading] = useState(false);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setFading(true);
-      setTimeout(() => {
-        setIndex((prev) => (prev + 1) % GRADE_ORDER.length);
-        setFading(false);
-      }, 250);
-    }, 2000);
-    return () => clearInterval(id);
-  }, []);
-
-  const leftGrade = GRADE_ORDER[index];
-  const rightGrade = GRADE_ORDER_REVERSE[index];
-  const leftColor = GRADE_COLORS[leftGrade];
-  const rightColor = GRADE_COLORS[rightGrade];
-
-  const badgeStyle = (color: string): React.CSSProperties => ({
-    color,
-    backgroundColor: `${color}1A`,
-    boxShadow: `0 0 20px ${color}4D`,
-    opacity: fading ? 0 : 1,
-    transition: "all 0.5s ease",
-  });
-
-  return (
-    <div className="flex items-center justify-center gap-3">
-      <span
-        className="inline-flex items-center justify-center text-xl font-aggro font-bold px-4 py-1 rounded-lg"
-        style={badgeStyle(leftColor)}
-      >
-        ?
-      </span>
-      <span className="text-sm text-gray-500">VS</span>
-      <span
-        className="inline-flex items-center justify-center text-xl font-aggro font-bold px-4 py-1 rounded-lg"
-        style={badgeStyle(rightColor)}
-      >
-        ?
-      </span>
-    </div>
-  );
 }
 
 /* ─── image placeholder (carried over) ─── */
@@ -187,6 +99,12 @@ function KakaoCTA({ onClick }: { onClick: () => void }) {
   );
 }
 
+/* ─── icon constants ─── */
+
+const AWARD_COLORS = ["#A855F7", "#EF4444", "#22C55E", "#EAB308", "#6B7280"];
+
+const CATEGORY_ICONS = [IconCoins, IconHeart, IconBriefcase, IconActivity, IconUsers];
+
 /* ─── main page ─── */
 
 function LandingPageInner() {
@@ -211,7 +129,7 @@ function LandingPageInner() {
 
   /* scroll-reveal refs */
   const hero = useScrollReveal<HTMLElement>();
-  const grade = useScrollReveal<HTMLElement>();
+  const gradeSection = useScrollReveal<HTMLElement>();
   const battle = useScrollReveal<HTMLElement>();
 
   const revealStyle = (visible: boolean): React.CSSProperties => ({
@@ -220,8 +138,51 @@ function LandingPageInner() {
     transition: "opacity 0.6s ease-out, transform 0.6s ease-out",
   });
 
+  /* ── hero: IconAward color cycling ── */
+  const [awardColorIndex, setAwardColorIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setAwardColorIndex((prev) => (prev + 1) % AWARD_COLORS.length);
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  /* ── section 2: category icons sequential fade-in ── */
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+
+    const step = () => {
+      setVisibleCount((prev) => {
+        if (prev < 5) {
+          timer = setTimeout(step, 300);
+          return prev + 1;
+        }
+        timer = setTimeout(() => {
+          setVisibleCount(0);
+          timer = setTimeout(step, 500);
+        }, 2000);
+        return prev;
+      });
+    };
+
+    timer = setTimeout(step, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white">
+      <style>{`
+        @keyframes swordClash {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          25% { transform: scale(1.15) rotate(-8deg); }
+          50% { transform: scale(1) rotate(0deg); }
+          75% { transform: scale(1.15) rotate(8deg); }
+        }
+      `}</style>
+
       {/* ── header ── */}
       <header
         className={`sticky top-0 z-[120] px-5 py-4 transition-all duration-300 ${
@@ -245,11 +206,21 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <CyclingGradeBadge />
-            <h2 className="mt-4 font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white">
-              내 사주, S등급일까 D등급일까.
+            <div className="mb-4">
+              <IconAward
+                size={36}
+                stroke={1.5}
+                style={{
+                  color: AWARD_COLORS[awardColorIndex],
+                  transition: "color 0.5s ease",
+                }}
+              />
+            </div>
+            <h2 className="font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white break-keep">
+              내 사주, S등급일까{" "}
+              <span className="inline-block">D등급일까.</span>
             </h2>
-            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">
+            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400 break-keep">
               <span className="block">비싼데 뻔한 사주 말고,</span>
               <span className="block">천원으로 내 사주 등급부터 확인해.</span>
             </p>
@@ -265,17 +236,31 @@ function LandingPageInner() {
 
         {/* ── 섹션 2: 등급 프리뷰 ── */}
         <section
-          ref={grade.ref}
-          style={revealStyle(grade.visible)}
+          ref={gradeSection.ref}
+          style={revealStyle(gradeSection.visible)}
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <h2 className="font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white">
+            <div className="flex gap-4 justify-center mb-4">
+              {CATEGORY_ICONS.map((Icon, i) => (
+                <Icon
+                  key={i}
+                  size={24}
+                  stroke={1.5}
+                  className="text-gray-400"
+                  style={{
+                    opacity: i < visibleCount ? 1 : 0,
+                    transition: "opacity 0.4s ease",
+                  }}
+                />
+              ))}
+            </div>
+            <h2 className="font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white break-keep">
               등급만 던지고 끝내지 않아
             </h2>
-            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">
-              <span className="block">등급 → 근거 → 해석을 한 번에 정리해줌.</span>
-              <span className="block">마지막엔 2주 실행 팁까지.</span>
+            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400 break-keep">
+              <span className="block">등급 → 근거 → 해석을 한 번에</span>
+              <span className="block">정리해줌. 빈틈없이.</span>
             </p>
 
             <div className="mt-10">
@@ -294,17 +279,24 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <h2 className="font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white">
-              누가 더 좋은 사주인지, 딱 정리
+            <div className="mb-4">
+              <IconSwords
+                size={36}
+                stroke={1.5}
+                style={{
+                  color: "#FF6B6B",
+                  animation: "swordClash 2s ease-in-out infinite",
+                }}
+              />
+            </div>
+            <h2 className="font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white break-keep">
+              누가 더 좋은 사주인지,{" "}
+              <span className="inline-block">딱 정리</span>
             </h2>
-            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">
+            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400 break-keep">
               <span className="block">2천원으로 둘을 비교해줌.</span>
               <span className="block">결과는 등급으로 깔끔하게.</span>
             </p>
-
-            <div className="mt-8">
-              <BattleVSBadges />
-            </div>
 
             <div className="mt-10">
               <ImagePlaceholder
