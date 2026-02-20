@@ -46,7 +46,11 @@
   --c-saju-metal-muted: 235 235 240;
   --c-saju-water-muted: 80 145 240;
 
-  --c-rank-s: 217 70 239;
+  --c-rank-s: 255 59 47;     /* #FF3B2F */
+  --c-rank-a: 248 64 240;    /* #F840F0 */
+  --c-rank-b: 240 144 0;     /* #F09000 */
+  --c-rank-c: 160 188 200;   /* #A0BCC8 */
+  --c-rank-d: 184 122 64;    /* #B87A40 */
 
   /* 2. Semantic Mapping */
   --bg-primary: var(--c-dark-bg);

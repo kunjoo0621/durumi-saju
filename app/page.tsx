@@ -101,7 +101,7 @@ function KakaoCTA({ onClick }: { onClick: () => void }) {
 
 /* ─── icon constants ─── */
 
-const AWARD_COLORS = ["#A855F7", "#EF4444", "#22C55E", "#EAB308", "#6B7280"];
+const AWARD_COLORS = ["#FF3B2F", "#F840F0", "#F09000", "#A0BCC8", "#B87A40"];
 
 const CATEGORY_ICONS = [IconCoins, IconHeart, IconBriefcase, IconActivity, IconUsers];
 

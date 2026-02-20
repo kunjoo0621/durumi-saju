@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { getGradeColor } from "@/lib/utils/grade-colors";
 
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
@@ -23,11 +24,11 @@ const GRID_OPACITIES = [0.04, 0.06, 0.08, 0.10, 0.12];
 const ACCENT = "#FF6B6B";
 
 const GRADE_BADGE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  S: { bg: "rgba(168,85,247,0.20)", text: "#C084FC", border: "rgba(168,85,247,0.30)" },
-  A: { bg: "rgba(239,68,68,0.20)", text: "#F87171", border: "rgba(239,68,68,0.30)" },
-  B: { bg: "rgba(34,197,94,0.20)", text: "#4ADE80", border: "rgba(34,197,94,0.30)" },
-  C: { bg: "rgba(234,179,8,0.20)", text: "#FACC15", border: "rgba(234,179,8,0.30)" },
-  D: { bg: "rgba(107,114,128,0.20)", text: "#9CA3AF", border: "rgba(107,114,128,0.30)" },
+  S: { bg: getGradeColor("S").bg, text: getGradeColor("S").text, border: getGradeColor("S").glow },
+  A: { bg: getGradeColor("A").bg, text: getGradeColor("A").text, border: getGradeColor("A").glow },
+  B: { bg: getGradeColor("B").bg, text: getGradeColor("B").text, border: getGradeColor("B").glow },
+  C: { bg: getGradeColor("C").bg, text: getGradeColor("C").text, border: getGradeColor("C").glow },
+  D: { bg: getGradeColor("D").bg, text: getGradeColor("D").text, border: getGradeColor("D").glow },
 };
 
 const DEFAULT_BADGE = GRADE_BADGE_STYLES.D;

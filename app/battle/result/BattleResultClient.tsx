@@ -316,7 +316,7 @@ export default function BattleResultClient() {
               className="rounded-2xl overflow-hidden flex"
               style={{ backgroundColor: "#141414" }}
             >
-              <div className="w-1 shrink-0" style={{ backgroundColor: "#A855F7" }} />
+              <div className="w-1 shrink-0" style={{ backgroundColor: "#FF3B2F" }} />
               <div className="p-6 flex-1">
                 <h3 className="text-lg font-bold text-text-primary mb-4">
                   냉정한 상성 진단: {RELATIONSHIP_LABELS[relationshipType] || "기타"}

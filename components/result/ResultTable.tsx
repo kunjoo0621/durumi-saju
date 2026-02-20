@@ -13,6 +13,7 @@ import {
   percentileRankFromComposite,
   topPercentFromPercentileRank,
 } from "@/lib/gradeSystem";
+import { getGradeBadge } from "@/lib/utils/grade-colors";
 
 const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
 
@@ -22,20 +23,20 @@ const LEGACY_GRADE_STYLES = {
     text: "text-primary-rank-s",
   },
   A: {
-    background: "bg-primary/15",
-    text: "text-primary",
+    background: "bg-primary-rank-a/15",
+    text: "text-primary-rank-a",
   },
   B: {
-    background: "bg-saju-wood/10",
-    text: "text-saju-wood-muted",
+    background: "bg-primary-rank-b/15",
+    text: "text-primary-rank-b",
   },
   C: {
-    background: "bg-saju-earth/10",
-    text: "text-saju-earth-muted",
+    background: "bg-primary-rank-c/15",
+    text: "text-primary-rank-c",
   },
   D: {
-    background: "bg-background-secondary",
-    text: "text-text-secondary",
+    background: "bg-primary-rank-d/15",
+    text: "text-primary-rank-d",
   },
 } as const;
 
@@ -211,8 +212,7 @@ export default function ResultTable({
           <div className="mt-6 flex flex-col items-center text-center gap-4">
             <OverallGradeBadgeSlot
               grade={safeTier.grade as OverallGradeLabel}
-              badgeSrc={null}
-              // TODO: 배지 이미지 전달받으면 badgeSrc 연결
+              badgeSrc={getGradeBadge(safeTier.grade)}
               size={152}
             />
             <div className="text-xl font-bold text-text-secondary">

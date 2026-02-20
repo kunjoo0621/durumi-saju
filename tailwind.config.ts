@@ -24,6 +24,10 @@ const config: Config = {
           hover: "rgb(var(--primary-hover) / <alpha-value>)",
           kakao: "rgb(var(--c-kakao) / <alpha-value>)",
           "rank-s": "rgb(var(--c-rank-s) / <alpha-value>)",
+          "rank-a": "rgb(var(--c-rank-a) / <alpha-value>)",
+          "rank-b": "rgb(var(--c-rank-b) / <alpha-value>)",
+          "rank-c": "rgb(var(--c-rank-c) / <alpha-value>)",
+          "rank-d": "rgb(var(--c-rank-d) / <alpha-value>)",
         },
         border: {
           DEFAULT: "rgb(var(--border-default) / <alpha-value>)",
