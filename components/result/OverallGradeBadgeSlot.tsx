@@ -34,7 +34,7 @@ export default function OverallGradeBadgeSlot({
 
   if (resolvedBadge) {
     const normalizedSize = typeof size === "number" && Number.isFinite(size)
-      ? Math.min(220, Math.max(96, Math.round(size)))
+      ? Math.min(220, Math.max(48, Math.round(size)))
       : 152;
     return (
       <div

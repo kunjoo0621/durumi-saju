@@ -153,27 +153,28 @@ export default function ResultTable({
       <div className="grid grid-cols-1 gap-6">
         <div
           className="rounded-3xl p-6 md:p-8"
-          style={{
-            backgroundColor: gradeColor.bg,
-            boxShadow: `0 0 40px ${gradeColor.glow}`,
-          }}
+          style={{ backgroundColor: '#141414' }}
         >
-          <div className="mt-6 flex flex-col items-center text-center gap-4">
-            <OverallGradeBadgeSlot
-              grade={safeTier.grade as OverallGradeLabel}
-              badgeSrc={getGradeBadge(safeTier.grade)}
-              size={152}
-            />
-            <div className="text-3xl font-bold font-aggro" style={{ color: gradeColor.main }}>
-              {safeTier.grade}등급
+          <div className="mt-6 flex flex-col items-center text-center">
+            <div className="mb-4">
+              <OverallGradeBadgeSlot
+                grade={safeTier.grade as OverallGradeLabel}
+                badgeSrc={getGradeBadge(safeTier.grade)}
+                size={64}
+              />
             </div>
-            <div className="text-lg font-bold text-gray-400">
-              상위 {safeTier.topPercent}%
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-3xl font-bold font-aggro" style={{ color: gradeColor.main }}>
+                {safeTier.grade}등급
+              </span>
+              <span className="text-lg font-bold text-gray-400">
+                · 상위 {safeTier.topPercent}%
+              </span>
             </div>
-            <div className="mt-3 text-2xl font-bold text-white line-clamp-2">
+            <div className="mt-4 text-2xl font-bold text-white line-clamp-2">
               {safeTier.title}
             </div>
-            <p className="max-w-sm text-sm text-text-tertiary text-center leading-[1.75]">
+            <p className="mt-3 max-w-sm text-[16px] text-gray-400 text-center leading-7">
               {safeTier.description}
             </p>
             {safeTier.confidence === "low" && (
