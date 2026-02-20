@@ -5,7 +5,6 @@ import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import MenuDrawer from "./MenuDrawer";
-import { GRADE_GLOWS, type OverallGradeLabel } from "@/components/result/OverallGradeBadgeSlot";
 
 /* ─── scroll-reveal hook ─── */
 
@@ -32,38 +31,98 @@ function useScrollReveal<T extends HTMLElement = HTMLDivElement>() {
   return { ref, visible };
 }
 
-/* ─── grade badge ─── */
+/* ─── cycling grade badge ─── */
 
-function GradeBadge({
-  grade,
-  size = 80,
-  delay = 0,
-  visible,
-}: {
-  grade: OverallGradeLabel;
-  size?: number;
-  delay?: number;
-  visible: boolean;
-}) {
-  const glow = GRADE_GLOWS[grade] ?? GRADE_GLOWS.D;
+const GRADE_COLORS: Record<string, string> = {
+  S: "#A855F7",
+  A: "#EF4444",
+  B: "#22C55E",
+  C: "#EAB308",
+  D: "#6B7280",
+};
+
+const GRADE_ORDER = ["S", "A", "B", "C", "D"] as const;
+
+function CyclingGradeBadge() {
+  const [index, setIndex] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % GRADE_ORDER.length);
+        setFading(false);
+      }, 250);
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  const grade = GRADE_ORDER[index];
+  const color = GRADE_COLORS[grade];
+
   return (
-    <div
-      className="flex items-center justify-center"
+    <span
+      className="inline-flex items-center justify-center text-2xl font-aggro font-bold px-4 py-1 rounded-lg"
       style={{
-        width: size,
-        height: size,
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(12px)",
-        transition: `opacity 0.5s ease-out ${delay}ms, transform 0.5s ease-out ${delay}ms`,
+        color,
+        backgroundColor: `${color}1A`,
+        boxShadow: `0 0 20px ${color}4D`,
+        opacity: fading ? 0 : 1,
+        transition: "all 0.5s ease",
       }}
     >
-      <div
-        className="absolute -inset-4 rounded-full"
-        style={{ background: glow }}
-        aria-hidden="true"
-      />
-      <span className="relative text-3xl font-aggro font-bold text-white/90">
-        {grade}
+      {grade}
+    </span>
+  );
+}
+
+/* ─── battle VS badges ─── */
+
+const GRADE_ORDER_REVERSE = ["D", "C", "B", "A", "S"] as const;
+
+function BattleVSBadges() {
+  const [index, setIndex] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % GRADE_ORDER.length);
+        setFading(false);
+      }, 250);
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  const leftGrade = GRADE_ORDER[index];
+  const rightGrade = GRADE_ORDER_REVERSE[index];
+  const leftColor = GRADE_COLORS[leftGrade];
+  const rightColor = GRADE_COLORS[rightGrade];
+
+  const badgeStyle = (color: string): React.CSSProperties => ({
+    color,
+    backgroundColor: `${color}1A`,
+    boxShadow: `0 0 20px ${color}4D`,
+    opacity: fading ? 0 : 1,
+    transition: "all 0.5s ease",
+  });
+
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <span
+        className="inline-flex items-center justify-center text-xl font-aggro font-bold px-4 py-1 rounded-lg"
+        style={badgeStyle(leftColor)}
+      >
+        ?
+      </span>
+      <span className="text-sm text-gray-500">VS</span>
+      <span
+        className="inline-flex items-center justify-center text-xl font-aggro font-bold px-4 py-1 rounded-lg"
+        style={badgeStyle(rightColor)}
+      >
+        ?
       </span>
     </div>
   );
@@ -154,7 +213,6 @@ function LandingPageInner() {
   const hero = useScrollReveal<HTMLElement>();
   const grade = useScrollReveal<HTMLElement>();
   const battle = useScrollReveal<HTMLElement>();
-  const cta = useScrollReveal<HTMLElement>();
 
   const revealStyle = (visible: boolean): React.CSSProperties => ({
     opacity: visible ? 1 : 0,
@@ -187,10 +245,14 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <h2 className="font-aggro text-2xl font-bold text-white">
+            <CyclingGradeBadge />
+            <h2 className="mt-4 font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white">
               내 사주, S등급일까 D등급일까.
             </h2>
-            <p className="mt-3 text-sm text-gray-400">천원. 3분. 끝.</p>
+            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">
+              <span className="block">비싼데 뻔한 사주 말고,</span>
+              <span className="block">천원으로 내 사주 등급부터 확인해.</span>
+            </p>
             <div className="mt-10">
               <ImagePlaceholder
                 src="/images/landing/section-01.png"
@@ -208,32 +270,12 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <h2 className="font-aggro text-xl font-bold text-white">
-              등급만 주고 끝?
+            <h2 className="font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white">
+              등급만 던지고 끝내지 않아
             </h2>
-            <h2 className="font-aggro text-xl font-bold text-white mt-1">
-              그건 점집이지.
-            </h2>
-            <p className="mt-3 text-sm text-gray-400">
-              왜 이 등급인지 전부 까발림.
-            </p>
-
-            {/* 등급 배지 S B D */}
-            <div className="mt-8 flex items-center justify-center gap-10">
-              {(["S", "B", "D"] as const).map((g, i) => (
-                <div key={g} className="relative">
-                  <GradeBadge
-                    grade={g}
-                    size={80}
-                    delay={i * 100}
-                    visible={grade.visible}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-6 text-xs text-gray-500">
-              재물운 · 연애운 · 직장운 · 건강운 · 대인운
+            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">
+              <span className="block">등급 → 근거 → 해석을 한 번에 정리해줌.</span>
+              <span className="block">마지막엔 2주 실행 팁까지.</span>
             </p>
 
             <div className="mt-10">
@@ -252,59 +294,23 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <h2 className="font-aggro text-xl font-bold text-white">
-              사주 배틀 한판.
+            <h2 className="font-aggro text-[32px] leading-[1.15] sm:text-[40px] font-bold text-white">
+              누가 더 좋은 사주인지, 딱 정리
             </h2>
-            <p className="mt-3 text-sm text-gray-400 leading-relaxed">
-              <span className="block">친구 사주가 나보다 나은지,</span>
-              <span className="block">2천원이면 결판남.</span>
-              <span className="block">지면 할 말 없음.</span>
+            <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">
+              <span className="block">2천원으로 둘을 비교해줌.</span>
+              <span className="block">결과는 등급으로 깔끔하게.</span>
             </p>
+
+            <div className="mt-8">
+              <BattleVSBadges />
+            </div>
 
             <div className="mt-10">
               <ImagePlaceholder
                 src="/images/landing/section-03.png"
                 alt="1:1 사주배틀 소개 이미지"
               />
-            </div>
-
-            {/* 미니 VS 프리뷰 */}
-            <div className="mt-8 flex items-center justify-center gap-6">
-              {/* A등급 (왕관) */}
-              <div className="flex flex-col items-center">
-                <span className="text-sm mb-1">👑</span>
-                <div className="relative">
-                  <GradeBadge grade="A" size={60} delay={0} visible={battle.visible} />
-                </div>
-              </div>
-
-              <span className="font-aggro text-lg font-bold text-white/60">VS</span>
-
-              {/* D등급 */}
-              <div className="flex flex-col items-center">
-                <span className="text-sm mb-1 opacity-0">👑</span>
-                <div className="relative">
-                  <GradeBadge grade="D" size={60} delay={100} visible={battle.visible} />
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-4 text-sm text-gray-400">3승 2패 — 신승</p>
-          </div>
-        </section>
-
-        {/* ── 섹션 4: 최종 CTA ── */}
-        <section
-          ref={cta.ref}
-          style={revealStyle(cta.visible)}
-          className="relative py-16 md:py-20 pb-40"
-        >
-          <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <h2 className="font-aggro text-lg font-bold text-white">
-              준비됐으면, 시작.
-            </h2>
-            <div className="mt-6">
-              <KakaoCTA onClick={handleStart} />
             </div>
           </div>
         </section>
