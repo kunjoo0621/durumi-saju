@@ -156,22 +156,22 @@ export default function ResultTable({
           style={{ backgroundColor: '#141414' }}
         >
           <div className="mt-6 flex flex-col items-center text-center">
-            <div className="mb-4">
+            <div className="mb-5">
               <OverallGradeBadgeSlot
                 grade={safeTier.grade as OverallGradeLabel}
                 badgeSrc={getGradeBadge(safeTier.grade)}
-                size={96}
+                size={120}
               />
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl font-bold font-aggro" style={{ color: gradeColor.main }}>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-lg font-bold" style={{ color: gradeColor.main }}>
                 {safeTier.grade}등급
               </span>
-              <span className="text-2xl font-bold font-aggro text-gray-400">
+              <span className="text-lg font-bold text-gray-400">
                 · 상위 {safeTier.topPercent}%
               </span>
             </div>
-            <div className="mt-4 text-2xl font-bold text-white line-clamp-2">
+            <div className="mt-5 text-2xl font-bold font-aggro text-white line-clamp-2">
               {safeTier.title}
             </div>
             <p className="mt-3 max-w-sm text-[16px] text-gray-400 text-center leading-7">
