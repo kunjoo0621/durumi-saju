@@ -171,7 +171,7 @@ export default function ResultTable({
                 · 상위 {safeTier.topPercent}%
               </span>
             </div>
-            <div className="mt-5 text-2xl font-bold font-aggro text-white line-clamp-2">
+            <div className="mt-10 text-2xl font-bold font-aggro text-white line-clamp-2">
               {safeTier.title}
             </div>
             <p className="mt-3 max-w-sm text-[16px] text-gray-400 text-center leading-7">

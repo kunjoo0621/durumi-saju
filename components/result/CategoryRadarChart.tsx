@@ -19,19 +19,9 @@ const CATEGORY_ORDER: CategoryKey[] = ["재물운", "연애운", "직장운", "�
 
 const BASE_ANGLE_OFFSET = -90;
 const LEVELS = [20, 40, 60, 80, 100];
-const GRID_OPACITIES = [0.04, 0.06, 0.08, 0.10, 0.12];
+const GRID_OPACITIES = [0.03, 0.04, 0.06, 0.07, 0.08];
 
 const ACCENT = "#FF6B6B";
-
-const GRADE_BADGE_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  S: { bg: getGradeColor("S").bg, text: getGradeColor("S").text, border: getGradeColor("S").glow },
-  A: { bg: getGradeColor("A").bg, text: getGradeColor("A").text, border: getGradeColor("A").glow },
-  B: { bg: getGradeColor("B").bg, text: getGradeColor("B").text, border: getGradeColor("B").glow },
-  C: { bg: getGradeColor("C").bg, text: getGradeColor("C").text, border: getGradeColor("C").glow },
-  D: { bg: getGradeColor("D").bg, text: getGradeColor("D").text, border: getGradeColor("D").glow },
-};
-
-const DEFAULT_BADGE = GRADE_BADGE_STYLES.D;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -105,7 +95,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
 
   const angleStep = 360 / orderedCategories.length;
   const outerRadius = 112;
-  const labelRadius = 146;
+  const labelRadius = 150;
 
   const axisAngles = useMemo(
     () => orderedCategories.map((_, i) => BASE_ANGLE_OFFSET + i * angleStep),
@@ -143,7 +133,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
   );
 
   return (
-    <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
+    <div className="rounded-3xl p-6 md:p-8" style={{ backgroundColor: '#141414' }}>
       <div className="mb-4">
         <h3 className="text-title-3 text-text-primary font-semibold">카테고리별 등급</h3>
       </div>
@@ -156,8 +146,8 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
         >
           <defs>
             <radialGradient id="radarFill" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor={ACCENT} stopOpacity="0.35" />
-              <stop offset="100%" stopColor={ACCENT} stopOpacity="0.08" />
+              <stop offset="0%" stopColor={ACCENT} stopOpacity="0.15" />
+              <stop offset="100%" stopColor={ACCENT} stopOpacity="0.03" />
             </radialGradient>
             <filter id="glow">
               <feGaussianBlur stdDeviation="4" result="blur" />
@@ -186,7 +176,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                   key={angle}
                   x1="0" y1="0"
                   x2={p.x.toFixed(2)} y2={p.y.toFixed(2)}
-                  stroke="rgba(255,255,255,0.06)"
+                  stroke="rgba(255,255,255,0.04)"
                   strokeWidth="1"
                 />
               );
@@ -200,9 +190,9 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
               d={dataPath}
               fill="none"
               stroke={ACCENT}
-              strokeWidth="8"
+              strokeWidth="6"
               strokeLinejoin="round"
-              opacity="0.15"
+              opacity="0.10"
               filter="url(#glow)"
             />
             {/* Fill */}
@@ -212,7 +202,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
               stroke={ACCENT}
               strokeWidth="2.5"
               strokeLinejoin="round"
-              opacity="0.9"
+              opacity="0.85"
             />
             {/* Data point dots */}
             {dataPoints.map((p, i) => (
@@ -220,7 +210,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                 key={i}
                 cx={p.x.toFixed(2)}
                 cy={p.y.toFixed(2)}
-                r="4"
+                r="3"
                 fill={ACCENT}
                 stroke="white"
                 strokeWidth="1.5"
@@ -228,73 +218,24 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
             ))}
           </g>
 
-          {/* Labels, badges, scores */}
+          {/* Labels (single line: 카테고리 등급 · 점수) */}
           <g>
             {labelPoints.map((label) => {
-              const gradeKey = label.item.grade.toUpperCase().charAt(0);
-              const style = GRADE_BADGE_STYLES[gradeKey] || DEFAULT_BADGE;
-              const badgeW = 28;
-              const badgeH = 18;
-              const badgeGap = 3;
-              const scoreGap = 2;
-
-              const badgeX = label.anchor === "start"
-                ? label.x
-                : label.anchor === "end"
-                  ? label.x - badgeW
-                  : label.x - badgeW / 2;
-              const badgeY = label.y + label.dy + badgeGap;
-              const scoreY = badgeY + badgeH + scoreGap + 10;
-
+              const gradeColor = getGradeColor(label.item.grade).main;
               return (
-                <g key={label.item.key}>
-                  {/* Category name */}
-                  <text
-                    x={label.x.toFixed(2)}
-                    y={label.y.toFixed(2)}
-                    dy={label.dy}
-                    textAnchor={label.anchor as any}
-                    fill="rgba(209,213,219,1)"
-                    style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
-                  >
-                    {label.item.key}
-                  </text>
-
-                  {/* Grade badge - border */}
-                  <rect
-                    x={badgeX}
-                    y={badgeY}
-                    width={badgeW}
-                    height={badgeH}
-                    rx={5}
-                    fill={style.bg}
-                    stroke={style.border}
-                    strokeWidth="1"
-                  />
-                  {/* Grade badge - text */}
-                  <text
-                    x={badgeX + badgeW / 2}
-                    y={badgeY + badgeH / 2}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill={style.text}
-                    style={{ fontSize: 11, fontWeight: 700 }}
-                  >
-                    {label.item.grade}
-                  </text>
-
-                  {/* Score text */}
-                  <text
-                    x={badgeX + badgeW / 2}
-                    y={scoreY}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill="rgba(107,114,128,1)"
-                    style={{ fontSize: 10, fontWeight: 500 }}
-                  >
-                    {label.item.score}점
-                  </text>
-                </g>
+                <text
+                  key={label.item.key}
+                  x={label.x.toFixed(2)}
+                  y={label.y.toFixed(2)}
+                  dy={label.dy}
+                  textAnchor={label.anchor as any}
+                  dominantBaseline="central"
+                  style={{ fontSize: 13 }}
+                >
+                  <tspan fill="white" fontWeight={500}>{label.item.key} </tspan>
+                  <tspan fill={gradeColor} fontWeight={700}>{label.item.grade}</tspan>
+                  <tspan fill="rgba(156,163,175,1)" fontWeight={500}> · {label.item.score}점</tspan>
+                </text>
               );
             })}
           </g>

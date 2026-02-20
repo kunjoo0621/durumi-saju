@@ -152,34 +152,21 @@ function LandingPageInner() {
   const [visibleCount, setVisibleCount] = useState(0);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-
-    const step = () => {
+    const interval = setInterval(() => {
       setVisibleCount((prev) => {
-        if (prev < 5) {
-          timer = setTimeout(step, 300);
-          return prev + 1;
-        }
-        timer = setTimeout(() => {
-          setVisibleCount(0);
-          timer = setTimeout(step, 500);
-        }, 2000);
-        return prev;
+        if (prev >= 5) return 0;
+        return prev + 1;
       });
-    };
-
-    timer = setTimeout(step, 300);
-    return () => clearTimeout(timer);
+    }, 400);
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white">
       <style>{`
-        @keyframes swordClash {
-          0%, 100% { transform: scale(1) rotate(0deg); }
-          25% { transform: scale(1.15) rotate(-8deg); }
-          50% { transform: scale(1) rotate(0deg); }
-          75% { transform: scale(1.15) rotate(8deg); }
+        @keyframes swordPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.08); }
         }
       `}</style>
 
@@ -206,13 +193,13 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <div className="mb-4">
+            <div className="flex justify-center w-full mb-4">
               <IconAward
-                size={36}
+                size={32}
                 stroke={1.5}
                 style={{
                   color: AWARD_COLORS[awardColorIndex],
-                  transition: "color 0.5s ease",
+                  transition: "color 0.8s ease-in-out",
                 }}
               />
             </div>
@@ -241,11 +228,11 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <div className="flex gap-4 justify-center mb-4">
+            <div className="flex justify-center items-center gap-3 w-full mb-4">
               {CATEGORY_ICONS.map((Icon, i) => (
                 <Icon
                   key={i}
-                  size={24}
+                  size={20}
                   stroke={1.5}
                   className="text-gray-400"
                   style={{
@@ -279,13 +266,13 @@ function LandingPageInner() {
           className="relative py-16 md:py-20"
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
-            <div className="mb-4">
+            <div className="flex justify-center w-full mb-4">
               <IconSwords
-                size={36}
+                size={32}
                 stroke={1.5}
                 style={{
                   color: "#FF6B6B",
-                  animation: "swordClash 2s ease-in-out infinite",
+                  animation: "swordPulse 2.5s ease-in-out infinite",
                 }}
               />
             </div>
