@@ -623,7 +623,7 @@ export default function BattleInputPage() {
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col">
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary border-b border-white/5">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D] border-b border-white/5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
             onClick={handleBack}

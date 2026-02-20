@@ -54,7 +54,7 @@ export default function MenuPage() {
 
   return (
     <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white flex flex-col">
-      <header className="sticky top-0 z-[100] bg-[rgb(var(--c-dark-bg))] px-5 py-5 border-b border-white/5">
+      <header className="sticky top-0 z-[100] bg-[#0D0D0D] px-5 py-5 border-b border-white/5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
           <h1 className="text-title-3 font-aggro text-white">메뉴 선택</h1>

@@ -413,7 +413,7 @@ function CheckoutForm({
         />
       )}
 
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
             onClick={() => router.push(redirectBack)}
@@ -438,8 +438,8 @@ function CheckoutForm({
             </>
           ) : (
             <>
-              <p className="text-[18px] font-semibold">전체 결과표 + 8개 섹션 리포트가 열려요</p>
-              <p className="text-[15px] text-text-secondary">결과는 계정에 저장돼서 다시 볼 수 있어요</p>
+              <h2 className="text-2xl font-bold font-aggro text-white">천원이면 네 사주 전부 까발려줌</h2>
+              <p className="text-sm text-gray-400">결과는 저장되니까 언제든 다시 볼 수 있어</p>
             </>
           )}
 
@@ -459,45 +459,45 @@ function CheckoutForm({
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-background-secondary p-5 space-y-2">
-              <div className="text-[14px] text-text-secondary">입력 정보 확인</div>
-              <dl className="space-y-1.5 text-[14px]">
+            <div className="rounded-2xl p-5" style={{ backgroundColor: '#141414' }}>
+              <div className="text-sm text-gray-500 mb-3">입력 정보 확인</div>
+              <dl>
                 {displayInputs.name && (
-                  <div className="flex justify-between">
-                    <dt className="text-text-secondary">이름</dt>
-                    <dd className="text-text-primary font-medium">{displayInputs.name}</dd>
+                  <div className="flex justify-between py-3 border-b border-white/5">
+                    <dt className="text-sm text-gray-400">이름</dt>
+                    <dd className="text-sm text-white font-medium">{displayInputs.name}</dd>
                   </div>
                 )}
                 {displayInputs.birthYear && displayInputs.birthMonth && displayInputs.birthDay && (
-                  <div className="flex justify-between">
-                    <dt className="text-text-secondary">생년월일</dt>
-                    <dd className="text-text-primary font-medium">
+                  <div className="flex justify-between py-3 border-b border-white/5">
+                    <dt className="text-sm text-gray-400">생년월일</dt>
+                    <dd className="text-sm text-white font-medium">
                       {displayInputs.calendarType === "lunar" ? "음력 " : ""}{displayInputs.birthYear}.{displayInputs.birthMonth}.{displayInputs.birthDay}
                     </dd>
                   </div>
                 )}
                 {!displayInputs.unknownBirthTime && displayInputs.birthHour && displayInputs.birthMinute && (
-                  <div className="flex justify-between">
-                    <dt className="text-text-secondary">태어난 시간</dt>
-                    <dd className="text-text-primary font-medium">{displayInputs.birthHour}:{displayInputs.birthMinute}</dd>
+                  <div className="flex justify-between py-3 border-b border-white/5">
+                    <dt className="text-sm text-gray-400">태어난 시간</dt>
+                    <dd className="text-sm text-white font-medium">{displayInputs.birthHour}:{displayInputs.birthMinute}</dd>
                   </div>
                 )}
                 {displayInputs.unknownBirthTime && (
-                  <div className="flex justify-between">
-                    <dt className="text-text-secondary">태어난 시간</dt>
-                    <dd className="text-text-primary font-medium">모름</dd>
+                  <div className="flex justify-between py-3 border-b border-white/5">
+                    <dt className="text-sm text-gray-400">태어난 시간</dt>
+                    <dd className="text-sm text-white font-medium">모름</dd>
                   </div>
                 )}
                 {displayInputs.birthLocation && (
-                  <div className="flex justify-between">
-                    <dt className="text-text-secondary">출생지</dt>
-                    <dd className="text-text-primary font-medium">{displayInputs.birthLocation}</dd>
+                  <div className="flex justify-between py-3 border-b border-white/5">
+                    <dt className="text-sm text-gray-400">출생지</dt>
+                    <dd className="text-sm text-white font-medium">{displayInputs.birthLocation}</dd>
                   </div>
                 )}
                 {displayInputs.gender && (
-                  <div className="flex justify-between">
-                    <dt className="text-text-secondary">성별</dt>
-                    <dd className="text-text-primary font-medium">{displayInputs.gender}</dd>
+                  <div className="flex justify-between py-3">
+                    <dt className="text-sm text-gray-400">성별</dt>
+                    <dd className="text-sm text-white font-medium">{displayInputs.gender}</dd>
                   </div>
                 )}
               </dl>
@@ -526,7 +526,7 @@ function CheckoutForm({
           {mockPayment && (
             <div className="rounded-2xl bg-background-secondary p-5">
               <div className="text-[13px] text-text-tertiary">
-                테스트 결제로 바로 진행됩니다.
+                테스트 결제로 바로 진행돼
               </div>
             </div>
           )}
@@ -545,9 +545,18 @@ function CheckoutForm({
             type="button"
             onClick={handlePay}
             disabled={paying || !hasRequiredInput || !sessionId || (!mockPayment && !widgetReady)}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+            className="w-full rounded-xl px-4 py-4 text-lg font-bold text-white leading-none transition-all duration-200 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
+            style={{ backgroundColor: paying ? undefined : '#FF6B6B' }}
           >
-            {paying ? "결제창 여는 중..." : `${amount.toLocaleString()}원 결제하기`}
+            {paying ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                결제창 여는 중...
+              </span>
+            ) : `${amount.toLocaleString()}원 결제하기`}
           </button>
         </div>
       </div>

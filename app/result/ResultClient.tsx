@@ -338,7 +338,7 @@ export default function ResultClient() {
   return (
     <div className="min-h-screen bg-background-primary animate-fadeIn">
       {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary border-b border-white/5">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D] border-b border-white/5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
           <h1 className="text-title-3 text-text-primary text-center font-aggro">사주보는 두루미</h1>

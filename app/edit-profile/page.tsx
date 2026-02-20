@@ -223,7 +223,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col overflow-hidden">
-      <header className="px-5 py-5 sticky top-0 z-[100] bg-background-primary shrink-0">
+      <header className="px-5 py-5 sticky top-0 z-[100] bg-[#0D0D0D] shrink-0">
         <div className="max-w-[640px] mx-auto flex items-center">
           <button
             type="button"

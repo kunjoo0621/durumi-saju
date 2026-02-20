@@ -491,7 +491,7 @@ export default function Home() {
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col">
       {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-background-primary">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           {/* 뒤로가기 버튼 */}
           {currentStep > 0 && (

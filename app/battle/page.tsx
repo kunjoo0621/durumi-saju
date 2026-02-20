@@ -34,7 +34,7 @@ export default function BattlePage() {
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col animate-fadeIn">
-      <header className="sticky top-0 z-[100] bg-background-primary px-6 py-5 border-b border-white/5">
+      <header className="sticky top-0 z-[100] bg-[#0D0D0D] px-6 py-5 border-b border-white/5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
             type="button"

@@ -71,7 +71,7 @@ export default function CoinsPage() {
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
-      <header className="sticky top-0 z-[100] bg-background-primary px-5 py-5">
+      <header className="sticky top-0 z-[100] bg-[#0D0D0D] px-5 py-5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
             onClick={() => router.back()}
