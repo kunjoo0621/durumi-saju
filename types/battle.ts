@@ -49,6 +49,21 @@ export type BattleLlmAnalysis = {
   playerBSummary: string;
 };
 
+export type BattleListItem = {
+  id: string;
+  player_a_name: string;
+  player_b_name: string;
+  player_a_grade: string;
+  player_b_grade: string;
+  overall_winner: "A" | "B" | "draw";
+  overall_intensity: BattleIntensity;
+  wins_a: number;
+  wins_b: number;
+  draws: number;
+  relationship_type: RelationshipType;
+  created_at: string;
+};
+
 export type BattleResult = {
   playerA: {
     name: string;

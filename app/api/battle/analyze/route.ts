@@ -6,6 +6,7 @@ import { resolveSajuEnrichedData, type InputPayload } from "@/lib/analysis";
 import { calculateServerScoring } from "@/lib/utils/saju-scoring";
 import { compareBattle } from "@/lib/utils/battle-compare";
 import { runBattleAnalysis } from "@/lib/battle-prompt";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
 
 type BattleAnalyzeBody = {
@@ -118,7 +119,33 @@ export async function POST(request: NextRequest) {
       relationshipType: body.relationshipType,
     };
 
-    return NextResponse.json({ ok: true, result });
+    // Fire-and-forget DB save — failure doesn't block response
+    let battleId: string | null = null;
+    try {
+      const { data: inserted } = await supabaseAdmin
+        .from("saju_battles")
+        .insert({
+          user_id: userId,
+          player_a_name: body.playerA.name,
+          player_b_name: body.playerB.name,
+          player_a_grade: scoringA.tier.grade,
+          player_b_grade: scoringB.tier.grade,
+          overall_winner: comparison.overallWinner,
+          overall_intensity: comparison.overallIntensity,
+          wins_a: comparison.winsA,
+          wins_b: comparison.winsB,
+          draws: comparison.draws,
+          relationship_type: body.relationshipType,
+          full_result: result,
+        })
+        .select("id")
+        .single();
+      battleId = inserted?.id ?? null;
+    } catch (e) {
+      console.error("[BATTLE_ANALYZE] DB save failed:", e);
+    }
+
+    return NextResponse.json({ ok: true, result, battleId });
   } catch (error: any) {
     console.error("[BATTLE_ANALYZE]", error);
     return NextResponse.json(

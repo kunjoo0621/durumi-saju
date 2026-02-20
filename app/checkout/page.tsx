@@ -146,7 +146,7 @@ function CheckoutContent() {
           }
           sessionStorage.setItem("sajuBattleJustPaid", "1");
           sessionStorage.removeItem("sajuOrderId");
-          router.replace("/battle/result");
+          router.replace(`/battle/result${analyzeData.battleId ? `?id=${analyzeData.battleId}` : ""}`);
         } else {
           sessionStorage.setItem("sajuJustPaid", "1");
           sessionStorage.removeItem("sajuOrderId");
@@ -356,7 +356,7 @@ function CheckoutForm({
           }
           sessionStorage.setItem("sajuBattleJustPaid", "1");
           sessionStorage.removeItem("sajuOrderId");
-          router.push("/battle/result");
+          router.push(`/battle/result${data.battleId ? `?id=${data.battleId}` : ""}`);
           return;
         }
 

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../../MenuDrawer";
-import { useBattleResult, useBattleStore } from "@/store/useBattleStore";
+import { useBattleResult } from "@/store/useBattleStore";
 import BattleRadarChart from "@/components/battle/BattleRadarChart";
 import BattleVsCard from "@/components/battle/BattleVsCard";
 import OverallGradeBadgeSlot from "@/components/result/OverallGradeBadgeSlot";
@@ -21,19 +21,53 @@ function overallVerdictStyle(winner: "A" | "B" | "draw") {
 
 export default function BattleResultClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status } = useSession();
   const battleResult = useBattleResult();
   const [result, setResult] = useState<BattleResult | null>(null);
+  const [dbLoading, setDbLoading] = useState(false);
+
+  const battleId = searchParams.get("id");
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/?returnTo=/battle");
       return;
     }
+
+    // If ?id= param exists, load from DB
+    if (battleId) {
+      setDbLoading(true);
+      fetch(`/api/battles/${battleId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
+        .then((data) => {
+          if (data.battle?.full_result) {
+            setResult(data.battle.full_result as BattleResult);
+          }
+        })
+        .catch(() => {
+          // DB load failed — fall through to empty state
+        })
+        .finally(() => setDbLoading(false));
+      return;
+    }
+
+    // Otherwise use Zustand store
     if (battleResult) {
       setResult(battleResult);
     }
-  }, [status, battleResult, router]);
+  }, [status, battleResult, router, battleId]);
+
+  if (dbLoading) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center px-6">
+        <div className="text-text-secondary text-[14px]">불러오는 중...</div>
+      </div>
+    );
+  }
 
   if (!result) {
     return (
