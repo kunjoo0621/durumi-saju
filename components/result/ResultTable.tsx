@@ -133,8 +133,9 @@ export default function ResultTable({
     ];
     const orderMap = new Map(SECTION_ORDER.map((icon, i) => [icon, i]));
     const sorted = [...safeSections].sort((a, b) => {
-      const ai = orderMap.get(a.icon) ?? SECTION_ORDER.length;
-      const bi = orderMap.get(b.icon) ?? SECTION_ORDER.length;
+      const BEFORE_RISK = 6.5; // 미지 아이콘은 🩺(6)과 🚧(7) 사이에 배치
+      const ai = orderMap.get(a.icon) ?? BEFORE_RISK;
+      const bi = orderMap.get(b.icon) ?? BEFORE_RISK;
       return ai - bi;
     });
 
