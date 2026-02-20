@@ -54,18 +54,19 @@ export default function MenuPage() {
 
   return (
     <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white flex flex-col">
-      <header className="sticky top-0 z-[100] bg-[#0D0D0D] px-5 py-5 border-b border-white/5">
+      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <div className="w-10" />
-          <h1 className="text-2xl font-aggro text-white">
-            {session.user?.name ? `${session.user.name}아, 뭐 볼 거야?` : '뭐 볼 거야?'}
-          </h1>
+          <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
           <MenuDrawer />
         </div>
       </header>
 
       <main className="flex-1 px-5 pb-12">
         <section className="max-w-[640px] mx-auto pt-10 space-y-4">
+          <h2 className="text-2xl font-aggro text-white">
+            {session.user?.name ? `${session.user.name}아, 뭐 볼 거야?` : '뭐 볼 거야?'}
+          </h2>
           <button
             type="button"
             onClick={handleSajuClick}
@@ -74,7 +75,7 @@ export default function MenuPage() {
               "w-full p-6 rounded-2xl text-left transition-colors duration-200 cursor-pointer",
               checking ? "opacity-70 cursor-wait" : "active:bg-white/5",
             ].join(" ")}
-            style={{ backgroundColor: 'rgba(255, 107, 107, 0.05)' }}
+            style={{ backgroundColor: '#1A1414' }}
           >
             <h2 className="font-aggro text-xl text-white font-bold">
               {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
@@ -103,7 +104,7 @@ export default function MenuPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/start")}
-                  className="flex-1 h-11 rounded-xl border border-white/10 bg-zinc-800 text-zinc-300 text-[14px] font-semibold"
+                  className="flex-1 h-11 rounded-xl bg-zinc-800 text-zinc-300 text-[14px] font-semibold"
                 >
                   새로 사주 보기
                 </button>
@@ -119,7 +120,7 @@ export default function MenuPage() {
               "w-full p-6 rounded-2xl text-left transition-colors duration-200 cursor-pointer",
               isBattleDisabled ? "cursor-not-allowed opacity-55" : "active:bg-white/5",
             ].join(" ")}
-            style={{ backgroundColor: 'rgba(168, 85, 247, 0.05)' }}
+            style={{ backgroundColor: '#161420' }}
           >
             <h2 className="font-aggro text-xl text-white font-bold">1:1 사주배틀</h2>
             <p className="text-sm text-gray-400 mt-2 leading-relaxed">
