@@ -160,14 +160,14 @@ export default function ResultTable({
               <OverallGradeBadgeSlot
                 grade={safeTier.grade as OverallGradeLabel}
                 badgeSrc={getGradeBadge(safeTier.grade)}
-                size={64}
+                size={96}
               />
             </div>
             <div className="flex items-center justify-center gap-2">
-              <span className="text-3xl font-bold font-aggro" style={{ color: gradeColor.main }}>
+              <span className="text-2xl font-bold font-aggro" style={{ color: gradeColor.main }}>
                 {safeTier.grade}등급
               </span>
-              <span className="text-lg font-bold text-gray-400">
+              <span className="text-2xl font-bold font-aggro text-gray-400">
                 · 상위 {safeTier.topPercent}%
               </span>
             </div>
