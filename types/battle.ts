@@ -47,6 +47,7 @@ export type BattleLlmAnalysis = {
   overallComment: string;
   playerASummary: string;
   playerBSummary: string;
+  compatibilityAnalysis?: string;
 };
 
 export type BattleListItem = {

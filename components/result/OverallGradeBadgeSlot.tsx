@@ -13,7 +13,7 @@ type OverallGradeBadgeSlotProps = {
   className?: string;
 };
 
-const GRADE_GLOWS: Record<OverallGradeLabel, string> = {
+export const GRADE_GLOWS: Record<OverallGradeLabel, string> = {
   S: "radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)",
   A: "radial-gradient(circle, rgba(239,68,68,0.2) 0%, transparent 70%)",
   B: "radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%)",
