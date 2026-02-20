@@ -41,7 +41,7 @@ export async function GET() {
     const { data: results, error } = await supabaseAdmin
       .from("saju_results")
       .select(
-        "id, name, birth_date, birth_time, region, gender, calendar_type, unlocked_at, created_at"
+        "id, name, birth_date, birth_time, region, gender, calendar_type, unlocked_at, created_at, full_json"
       )
       .eq("user_id", userId)
       .in("id", resultIds);
@@ -55,7 +55,18 @@ export async function GET() {
       .map((item) => resultMap.get(item.result_id))
       .filter(Boolean);
 
-    return NextResponse.json({ results: ordered });
+    const enriched = ordered.map((item: any) => {
+      const { full_json, ...rest } = item;
+      return {
+        ...rest,
+        grade: full_json?.tier?.grade ?? null,
+        score: full_json?.tier?.composite != null
+          ? Math.round(full_json.tier.composite)
+          : null,
+      };
+    });
+
+    return NextResponse.json({ results: enriched });
   } catch (error: any) {
     return NextResponse.json(
       { error: "조회 중 오류가 발생했습니다.", details: error?.message },

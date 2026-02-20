@@ -438,8 +438,7 @@ function CheckoutForm({
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-bold font-aggro text-white">천원이면 네 사주 전부 까발려줌</h2>
-              <p className="text-sm text-gray-400">결과는 저장되니까 언제든 다시 볼 수 있어</p>
+              <h2 className="text-2xl font-bold font-aggro text-white text-center">결제하면 바로 네 사주 까발려줌</h2>
             </>
           )}
 
@@ -541,6 +540,7 @@ function CheckoutForm({
 
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
+          <p className="text-sm text-gray-400 text-center mb-2">결과는 저장되니까 안심해</p>
           <button
             type="button"
             onClick={handlePay}

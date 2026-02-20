@@ -3,11 +3,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
+import Image from "next/image";
 import MenuDrawer from "../../MenuDrawer";
 import { useStoreActions } from "@/store/useInputStore";
-import OverallGradeBadgeSlot from "@/components/result/OverallGradeBadgeSlot";
+import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import type { BattleListItem } from "@/types/battle";
-import type { OverallGradeLabel } from "@/components/result/OverallGradeBadgeSlot";
 
 type ResultItem = {
   id: string;
@@ -19,6 +19,8 @@ type ResultItem = {
   calendar_type: "solar" | "lunar" | null;
   unlocked_at: string | null;
   created_at: string | null;
+  grade: string | null;
+  score: number | null;
 };
 
 type Tab = "saju" | "battle";
@@ -31,6 +33,132 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   other: "기타",
 };
 
+/* ── 날짜 포맷 ── */
+function formatResultDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString("ko-KR", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${date.getMonth() + 1}.${date.getDate()}`;
+  }
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+}
+
+/* ── 스와이프 카드 ── */
+function SwipeableCard({
+  children,
+  onDelete,
+}: {
+  children: React.ReactNode;
+  onDelete: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startX = useRef(0);
+  const currentX = useRef(0);
+  const isDragging = useRef(false);
+  const isOpen = useRef(false);
+  const [translateX, setTranslateX] = useState(0);
+
+  const DELETE_WIDTH = 80;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    isDragging.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    const diff = e.touches[0].clientX - startX.current;
+    const base = isOpen.current ? -DELETE_WIDTH : 0;
+    const next = Math.min(0, Math.max(-DELETE_WIDTH, base + diff));
+    currentX.current = next;
+    setTranslateX(next);
+  };
+
+  const handleTouchEnd = () => {
+    isDragging.current = false;
+    if (currentX.current < -DELETE_WIDTH / 2) {
+      setTranslateX(-DELETE_WIDTH);
+      isOpen.current = true;
+    } else {
+      setTranslateX(0);
+      isOpen.current = false;
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative overflow-hidden rounded-xl">
+      {/* 삭제 버튼 (뒤에 깔림) */}
+      <button
+        type="button"
+        onClick={onDelete}
+        className="absolute right-0 top-0 bottom-0 flex items-center justify-center text-white text-[14px] font-semibold bg-red-600"
+        style={{ width: DELETE_WIDTH }}
+      >
+        삭제
+      </button>
+      {/* 카드 본체 */}
+      <div
+        className="relative z-10 bg-[#141414]"
+        style={{
+          transform: `translateX(${translateX}px)`,
+          transition: isDragging.current ? "none" : "transform 0.25s ease-out",
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ── 삭제 확인 모달 ── */
+function DeleteModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60">
+      <div className="bg-[#1C1C1C] rounded-2xl p-6 mx-6 w-full max-w-[320px] text-center">
+        <p className="text-text-primary text-[16px] font-semibold">
+          결과를 삭제할까?
+        </p>
+        <p className="text-text-secondary text-[13px] mt-2">
+          삭제하면 복구할 수 없어.
+        </p>
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 h-[44px] rounded-xl bg-white/10 text-text-primary text-[14px] font-semibold"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 h-[44px] rounded-xl bg-red-600 text-white text-[14px] font-semibold"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 메인 페이지 ── */
 export default function MyResultsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -48,6 +176,13 @@ export default function MyResultsPage() {
   const [battleLoading, setBattleLoading] = useState(false);
   const [battleError, setBattleError] = useState(false);
   const battleFetched = useRef(false);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "saju" | "battle";
+    id: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchResults = async () => {
     setLoading(true);
@@ -102,11 +237,28 @@ export default function MyResultsPage() {
     }
   }, [tab, session, fetchBattles]);
 
-  const formatBirthDate = (value: string | null) => {
-    if (!value) return "";
-    const parts = value.split("-");
-    if (parts.length !== 3) return value;
-    return `${parts[0]}.${parts[1]}.${parts[2]}`;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const endpoint =
+        deleteTarget.type === "saju"
+          ? `/api/results/${deleteTarget.id}`
+          : `/api/battles/${deleteTarget.id}`;
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+
+      if (deleteTarget.type === "saju") {
+        setResults((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      } else {
+        setBattles((prev) => prev.filter((b) => b.id !== deleteTarget.id));
+      }
+    } catch {
+      // 실패 시 무시 — 재시도 가능
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
   };
 
   const handleAddAnother = () => {
@@ -200,27 +352,71 @@ export default function MyResultsPage() {
             <>
               {results.length > 0 && (
                 <div className="space-y-3">
-                  {results.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => router.push(`/result?resultId=${item.id}`)}
-                      className="w-full bg-background-secondary rounded-xl p-4 text-left"
-                    >
-                      <div className="text-text-primary font-semibold text-[15px]">
-                        {item.name || `사주 #${item.id.slice(0, 6)}`}
-                      </div>
-                      <div className="text-text-secondary text-[13px] mt-1">
-                        {item.calendar_type === "lunar" ? "음력" : "양력"} {formatBirthDate(item.birth_date)}
-                        {item.birth_time ? ` ${item.birth_time}` : ""}
-                        {item.region ? ` · ${item.region}` : ""}
-                        {item.gender ? ` · ${item.gender}` : ""}
-                      </div>
-                      <div className="text-text-tertiary text-[12px] mt-2">
-                        {item.unlocked_at ? new Date(item.unlocked_at).toLocaleString() : "저장됨"}
-                      </div>
-                    </button>
-                  ))}
+                  {results.map((item) => {
+                    const gradeColor = item.grade ? getGradeColor(item.grade) : null;
+                    const badgeSrc = item.grade ? getGradeBadge(item.grade) : null;
+                    const dateStr = item.unlocked_at || item.created_at;
+
+                    return (
+                      <SwipeableCard
+                        key={item.id}
+                        onDelete={() => setDeleteTarget({ type: "saju", id: item.id })}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/result?resultId=${item.id}`)}
+                          className="w-full flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors"
+                        >
+                          {/* 배지 래퍼 */}
+                          {badgeSrc && gradeColor ? (
+                            <div
+                              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: gradeColor.bg }}
+                            >
+                              <Image
+                                src={badgeSrc}
+                                alt={`${item.grade}등급`}
+                                width={32}
+                                height={32}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-white/5">
+                              <span className="text-text-tertiary text-[14px]">?</span>
+                            </div>
+                          )}
+
+                          {/* 텍스트 */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-primary font-semibold text-[15px] truncate">
+                                {item.name || `사주 #${item.id.slice(0, 6)}`}
+                              </span>
+                              <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-2">
+                                {dateStr ? formatResultDate(dateStr) : ""}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between mt-0.5">
+                              <span className="text-[13px]" style={{ color: gradeColor?.text || "#888" }}>
+                                {item.grade ? `${item.grade}등급` : ""}
+                                {item.grade && item.score != null ? " · " : ""}
+                                {item.score != null ? `${item.score}점` : ""}
+                              </span>
+                              <svg className="w-4 h-4 text-text-tertiary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                            <div className="text-text-secondary text-[12px] mt-0.5">
+                              {item.birth_date
+                                ? `${item.birth_date.replace(/-/g, ".")}`
+                                : ""}
+                              {item.gender ? ` · ${item.gender}` : ""}
+                            </div>
+                          </div>
+                        </button>
+                      </SwipeableCard>
+                    );
+                  })}
                 </div>
               )}
 
@@ -240,7 +436,7 @@ export default function MyResultsPage() {
               {!fetchError && results.length === 0 && (
                 <div className="pt-12 flex flex-col items-center text-center space-y-6">
                   <p className="text-[15px] text-text-secondary">
-                    아직 사주를 본 적이 없어요.
+                    아직 결과가 없어
                   </p>
                   <div className="w-full space-y-3">
                     <button
@@ -300,62 +496,67 @@ export default function MyResultsPage() {
                 <div className="space-y-3">
                   {battles.map((b) => {
                     const isWinnerA = b.overall_winner === "A";
-                    const isWinnerB = b.overall_winner === "B";
                     const isDraw = b.overall_winner === "draw";
+                    const winnerGrade = isDraw
+                      ? b.player_a_grade
+                      : isWinnerA
+                        ? b.player_a_grade
+                        : b.player_b_grade;
+                    const winnerColor = getGradeColor(winnerGrade);
+                    const winnerBadge = getGradeBadge(winnerGrade);
+                    const dateStr = b.created_at;
 
                     return (
-                      <button
+                      <SwipeableCard
                         key={b.id}
-                        type="button"
-                        onClick={() => router.push(`/battle/result?id=${b.id}`)}
-                        className="w-full bg-background-secondary rounded-xl p-4 text-left"
+                        onDelete={() => setDeleteTarget({ type: "battle", id: b.id })}
                       >
-                        {/* Names row */}
-                        <div className="flex items-center justify-center gap-2">
-                          <span
-                            className={`text-[15px] font-semibold ${
-                              isWinnerA ? "text-[#22C55E]" : isDraw ? "text-text-primary" : "text-gray-400"
-                            }`}
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/battle/result?id=${b.id}`)}
+                          className="w-full flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors"
+                        >
+                          {/* 승자 배지 */}
+                          <div
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: winnerColor.bg }}
                           >
-                            {b.player_a_name}
-                          </span>
-                          <span className="text-xs text-gray-500">VS</span>
-                          <span
-                            className={`text-[15px] font-semibold ${
-                              isWinnerB ? "text-[#22C55E]" : isDraw ? "text-text-primary" : "text-gray-400"
-                            }`}
-                          >
-                            {b.player_b_name}
-                          </span>
-                        </div>
+                            <Image
+                              src={winnerBadge}
+                              alt={`${winnerGrade}등급`}
+                              width={32}
+                              height={32}
+                            />
+                          </div>
 
-                        {/* Grade badges */}
-                        <div className="flex items-center justify-center gap-6 mt-3">
-                          <OverallGradeBadgeSlot
-                            grade={b.player_a_grade as OverallGradeLabel}
-                            size={40}
-                          />
-                          <OverallGradeBadgeSlot
-                            grade={b.player_b_grade as OverallGradeLabel}
-                            size={40}
-                          />
-                        </div>
-
-                        {/* Record + intensity */}
-                        <div className="text-center text-[13px] text-text-secondary mt-2">
-                          {b.wins_a}승 {b.wins_b}패 {b.draws}무 · {b.overall_intensity}
-                        </div>
-
-                        {/* Relationship tag + date */}
-                        <div className="flex items-center justify-between mt-3">
-                          <span className="text-[12px] text-text-tertiary px-2 py-0.5 rounded-full bg-white/5">
-                            {RELATIONSHIP_LABELS[b.relationship_type] || "기타"}
-                          </span>
-                          <span className="text-[12px] text-text-tertiary">
-                            {b.created_at ? new Date(b.created_at).toLocaleDateString() : ""}
-                          </span>
-                        </div>
-                      </button>
+                          {/* 텍스트 */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-text-primary font-semibold text-[15px] truncate">
+                                {b.player_a_name} vs {b.player_b_name}
+                              </span>
+                              <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-2">
+                                {dateStr ? formatResultDate(dateStr) : ""}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between mt-0.5">
+                              <span className="text-[13px] text-text-secondary">
+                                {b.player_a_grade}등급 vs {b.player_b_grade}등급
+                              </span>
+                              <svg className="w-4 h-4 text-text-tertiary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                            <div className="text-text-secondary text-[12px] mt-0.5">
+                              {RELATIONSHIP_LABELS[b.relationship_type] || "기타"}
+                              {" · "}
+                              {b.wins_a}:{b.wins_b}
+                              {" "}
+                              {b.overall_intensity}
+                            </div>
+                          </div>
+                        </button>
+                      </SwipeableCard>
                     );
                   })}
                 </div>
@@ -364,7 +565,7 @@ export default function MyResultsPage() {
               {!battleLoading && !battleError && battles.length === 0 && (
                 <div className="pt-12 flex flex-col items-center text-center space-y-6">
                   <p className="text-[15px] text-text-secondary">
-                    아직 배틀 기록이 없어요.
+                    아직 배틀 기록이 없어
                   </p>
                   <div className="w-full space-y-3">
                     <button
@@ -372,7 +573,7 @@ export default function MyResultsPage() {
                       onClick={() => router.push("/battle")}
                       className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
                     >
-                      배틀 시작하기
+                      사주 배틀 하러가기
                     </button>
                     <button
                       type="button"
@@ -412,6 +613,14 @@ export default function MyResultsPage() {
           )}
         </div>
       </main>
+
+      {/* 삭제 확인 모달 */}
+      {deleteTarget && (
+        <DeleteModal
+          onConfirm={handleDelete}
+          onCancel={() => !deleting && setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

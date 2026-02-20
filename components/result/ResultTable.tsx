@@ -129,23 +129,26 @@ export default function ResultTable({
       '💼', // 직장/커리어
       '🩺', // 건강/에너지
       '🚧', // 경고/리스크
-      '✅', // 종합 판정
+      '🎯', // 요즘 1등 이슈
+      '✅', // 종합 판정 (반드시 마지막)
     ];
     const orderMap = new Map(SECTION_ORDER.map((icon, i) => [icon, i]));
-    const sorted = [...safeSections].sort((a, b) => {
-      const BEFORE_RISK = 6.5; // 미지 아이콘은 🩺(6)과 🚧(7) 사이에 배치
-      const ai = orderMap.get(a.icon) ?? BEFORE_RISK;
-      const bi = orderMap.get(b.icon) ?? BEFORE_RISK;
-      return ai - bi;
-    });
 
+    const all = [...safeSections];
     if (safeCoreFearAxisBlock) {
-      sorted.push({
+      all.push({
         icon: '🎯',
         title: '요즘 1등 이슈',
         content: safeCoreFearAxisBlock,
       });
     }
+
+    const sorted = all.sort((a, b) => {
+      const BEFORE_RISK = 6.5; // 미지 아이콘은 🩺(6)과 🚧(7) 사이에 배치
+      const ai = orderMap.get(a.icon) ?? BEFORE_RISK;
+      const bi = orderMap.get(b.icon) ?? BEFORE_RISK;
+      return ai - bi;
+    });
 
     return sorted;
   }, [safeSections, safeCoreFearAxisBlock]);
