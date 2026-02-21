@@ -9,7 +9,7 @@ import {
 import type { EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 2;
+export const SCORING_VERSION = 3;
 
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
@@ -55,7 +55,7 @@ export function parseScoringInput(enriched: EnrichedSajuData | null | undefined)
 
   return {
     elementDist: enriched.elementDist as unknown as Record<string, number>,
-    strength: enriched.strength?.result as ScoringInput["strength"],
+    strength: ((enriched.strength as unknown as Record<string, unknown>)?.legacy ?? enriched.strength?.result) as ScoringInput["strength"],
     tenStars: Array.isArray(enriched.tenStars) ? enriched.tenStars : [],
     relationships: enriched.relationships || { hap: [], chung: [], hyung: [] },
     shinsal: Array.isArray(enriched.shinsal)
@@ -226,6 +226,27 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (chungHyungCount >= 3) 대인운 -= 4;
   if (elem.hasDeficiency) 대인운 -= 3;
   if (elem.hasDominance) 대인운 -= 3;
+
+  // ── 신규 신살 스코어링 ──
+  const ss = input.shinsal || [];
+  const hasShinsal = (keyword: string) => ss.some((s) => String(s).includes(keyword));
+
+  // 장성 → 직장운 +4
+  if (hasShinsal("장성")) 직장운 += 4;
+  // 괴강 → 직장운 +3, 대인운 -3
+  if (hasShinsal("괴강")) { 직장운 += 3; 대인운 -= 3; }
+  // 천덕/월덕 → 건강운 +3
+  if (hasShinsal("천덕") || hasShinsal("월덕")) 건강운 += 3;
+  // 학당 → 직장운 +3
+  if (hasShinsal("학당")) 직장운 += 3;
+  // 백호 → 건강운 -4
+  if (hasShinsal("백호")) 건강운 -= 4;
+  // 재살 → 건강운 -2
+  if (hasShinsal("재살")) 건강운 -= 2;
+  // 공망 위치별 차등 감점
+  if (hasShinsal("공망") && hasShinsal("년지")) 대인운 -= 3;
+  if (hasShinsal("공망") && hasShinsal("월지")) 직장운 -= 3;
+  if (hasShinsal("공망") && hasShinsal("시지")) 연애운 -= 3;
 
   // ── confidence clamp ──
   const confidence = determineConfidence(input);

@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import type { ShinsalMatch, ShinsalType } from "@/lib/utils/saju-enrichment";
+import { SHINSAL_DESCRIPTIONS } from "@/lib/utils/saju-enrichment";
 
 const TYPE_DOT_COLOR: Record<ShinsalType, string> = {
   good: "#22C55E",
@@ -9,16 +10,10 @@ const TYPE_DOT_COLOR: Record<ShinsalType, string> = {
   neutral: "#6B7280",
 };
 
-const SHINSAL_MEANING: Record<string, string> = {
-  dohwa: "매력과 인기",
-  yeokma: "이동과 변화",
-  hwagae: "예술과 고독",
-  gyeopsal: "돌발 위기",
-  yangin: "강렬한 기운",
-  chuneul: "귀인의 도움",
-  munchang: "학문과 지혜",
-  hongryeom: "강렬한 이성 매력",
-  hyunchim: "예리함, 불안정",
+const TYPE_LABEL: Record<ShinsalType, string> = {
+  good: "길",
+  bad: "흉",
+  neutral: "중",
 };
 
 interface ShinsalBadgesProps {
@@ -32,27 +27,45 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
   return (
     <div className="mt-4">
       <p className="text-sm text-gray-500 mb-2">신살</p>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {matches.map((m) => {
           const dotColor = TYPE_DOT_COLOR[m.type];
-          const meaning = SHINSAL_MEANING[m.key];
+          const desc = SHINSAL_DESCRIPTIONS[m.key] ?? "";
           return (
-            <span
+            <div
               key={m.key}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A1A1A] text-xs"
+              className="bg-[#1A1A1A] rounded-xl px-3 py-2.5"
             >
-              <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: dotColor }}
-              />
-              <span className="font-medium text-gray-300">{m.label}</span>
-              {meaning && (
-                <>
-                  <span className="text-gray-600">·</span>
-                  <span className="text-gray-500">{meaning}</span>
-                </>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: dotColor }}
+                />
+                <span className="text-xs font-medium text-gray-300 truncate">
+                  {m.label}
+                </span>
+                <span
+                  className="text-[10px] ml-auto flex-shrink-0"
+                  style={{ color: dotColor }}
+                >
+                  {TYPE_LABEL[m.type]}
+                </span>
+              </div>
+              {desc && (
+                <p className="text-[11px] text-gray-500 leading-tight">
+                  {desc}
+                </p>
               )}
-            </span>
+              {m.detectedAt.length > 0 && (
+                <p className="text-[10px] text-gray-600 mt-1">
+                  {m.detectedAt
+                    .map((pos) =>
+                      pos === "year" ? "년주" : pos === "month" ? "월주" : pos === "day" ? "일주" : "시주"
+                    )
+                    .join(", ")}
+                </p>
+              )}
+            </div>
           );
         })}
       </div>

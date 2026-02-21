@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { createDateFnsAdapter } from "@gracefullight/saju/adapters/date-fns";
-import { getFourPillars } from "@gracefullight/saju";
+import { getFourPillars, analyzeTwelveStages } from "@gracefullight/saju";
 import {
   BRANCH_INFO as ENRICH_BRANCH_INFO,
   STEM_ELEMENT as ENRICH_STEM_ELEMENT,
@@ -10,8 +10,11 @@ import {
   findRelationships,
   findShinsal,
   formatEnrichedSajuText,
+  getPillar12Shinsal,
   judgeStrength,
+  determineYongshin,
   type EnrichedSajuData,
+  type TwelveStageEntry,
 } from "./saju-enrichment";
 
 export { formatEnrichedSajuText } from "./saju-enrichment";
@@ -20,7 +23,7 @@ export { formatEnrichedSajuText } from "./saju-enrichment";
 let cachedAdapter: Awaited<ReturnType<typeof createDateFnsAdapter>> | null = null;
 let adapterPromise: Promise<Awaited<ReturnType<typeof createDateFnsAdapter>>> | null = null;
 
-async function getAdapter() {
+export async function getAdapter() {
   if (cachedAdapter) return cachedAdapter;
   if (adapterPromise) return adapterPromise;
 
@@ -49,6 +52,11 @@ export type SajuData = {
   month: SajuPillar;
   day: SajuPillar;
   hour: SajuPillar;
+  meta?: {
+    isSummerTimeCorrected?: boolean;
+    birthLongitudeDeg?: number;
+    equationOfTimeMinutes?: number;
+  };
 };
 
 export type ElementType = "wood" | "fire" | "earth" | "metal" | "water";
@@ -223,6 +231,68 @@ export function getElementBorderClass(element?: ElementType | null) {
   return ELEMENT_BORDER_CLASSES[element];
 }
 
+// ── 패치 1: 한국 서머타임(DST) 기간 ──
+// [시작년, 시작월, 시작일, 종료년, 종료월, 종료일]  (+1시간)
+const KOREA_DST_PERIODS: readonly [number, number, number, number, number, number][] = [
+  [1948, 6, 1, 1948, 9, 12],
+  [1949, 4, 3, 1949, 9, 10],
+  [1950, 4, 1, 1950, 9, 9],
+  [1951, 5, 6, 1951, 9, 8],
+  [1955, 5, 5, 1955, 9, 8],
+  [1956, 5, 20, 1956, 9, 29],
+  [1957, 5, 5, 1957, 9, 21],
+  [1958, 5, 4, 1958, 9, 20],
+  [1959, 5, 3, 1959, 9, 19],
+  [1960, 5, 1, 1960, 9, 17],
+  [1987, 5, 10, 1987, 10, 10],
+  [1988, 5, 8, 1988, 10, 8],
+];
+
+export function isInKoreaDST(year: number, month: number, day: number): boolean {
+  const v = year * 10000 + month * 100 + day;
+  for (const [sy, sm, sd, ey, em, ed] of KOREA_DST_PERIODS) {
+    if (year !== sy) continue;
+    if (v >= sy * 10000 + sm * 100 + sd && v <= ey * 10000 + em * 100 + ed) return true;
+  }
+  return false;
+}
+
+// ── 패치 2: 지역별 대표 경도 매핑 ──
+const REGION_LONGITUDE: Record<string, number> = {
+  "서울": 126.9778,
+  "경기": 127.0094,
+  "인천": 126.7052,
+  "강원": 127.7296,
+  "충북": 127.4913,
+  "충남": 126.8000,
+  "대전": 127.3845,
+  "세종": 127.0090,
+  "전북": 127.1480,
+  "전남": 126.9910,
+  "광주": 126.8526,
+  "경북": 128.5055,
+  "경남": 128.6811,
+  "대구": 128.6014,
+  "울산": 129.3114,
+  "부산": 129.0756,
+  "제주": 126.5312,
+  "해외": 126.9778,
+};
+const DEFAULT_LONGITUDE = 126.9778;
+
+export function getRegionLongitude(region?: string): number {
+  return REGION_LONGITUDE[region ?? ""] ?? DEFAULT_LONGITUDE;
+}
+
+// ── 패치 3: 균시차(Equation of Time) ──
+export function calculateEquationOfTime(year: number, month: number, day: number): number {
+  const start = new Date(year, 0, 1).getTime();
+  const current = new Date(year, month - 1, day).getTime();
+  const N = Math.floor((current - start) / 86_400_000) + 1;
+  const Brad = ((360 / 365) * (N - 81) * Math.PI) / 180;
+  return 9.87 * Math.sin(2 * Brad) - 7.53 * Math.cos(Brad) - 1.5 * Math.sin(Brad);
+}
+
 /**
  * 사주팔자 계산
  */
@@ -231,33 +301,43 @@ export async function calculateSaju(
   month: number,
   day: number,
   hour?: number,
-  minute?: number
+  minute?: number,
+  options?: { birthLocation?: string },
 ): Promise<SajuData | null> {
   try {
-    // 시간이 없으면 기본값 사용 (12시)
     const birthHour = hour ?? 12;
     const birthMinute = minute ?? 0;
 
-    // Date 객체 생성
-    const birthDate = new Date(year, month - 1, day, birthHour, birthMinute);
+    // ── 패치 1: 서머타임 보정 ──
+    // DST 기간이면 시계가 1시간 빠르므로 1시간 차감하여 실제 KST 복원
+    const isDST = isInKoreaDST(year, month, day);
+    let birthDate = new Date(year, month - 1, day, birthHour, birthMinute);
+    if (isDST) {
+      birthDate = new Date(birthDate.getTime() - 60 * 60 * 1000);
+    }
 
-    // 캐시된 어댑터 사용
+    // ── 패치 2: 출생지 경도 ──
+    const longitudeDeg = getRegionLongitude(options?.birthLocation);
+
+    // ── 패치 3: 균시차(EoT)를 경도에 합산 ──
+    // 라이브러리 내부 균태양시 보정: Δmin = 4 × (lon - 135)
+    // EoT를 경도에 환산(lon + EoT/4)하면 시주에만 진태양시 반영
+    // 최종: Δmin = 4 × (lon - 135) + EoT
+    const eotMinutes = calculateEquationOfTime(year, month, day);
+    const adjustedLongitude = longitudeDeg + eotMinutes / 4;
+
     const adapter = await getAdapter();
 
-    // DateFnsDate 형식으로 변환
     const dateFnsDate = {
       date: birthDate,
       timeZone: "Asia/Seoul",
     };
 
-    // 사주팔자 계산
     const result = getFourPillars(dateFnsDate, {
       adapter,
-      longitudeDeg: 126.9778, // 서울 경도
+      longitudeDeg: adjustedLongitude,
     });
 
-    // 각 주(pillar)는 "甲子" 형태의 2글자 문자열
-    // 첫 글자: 천간(heavenlyStem), 두번째 글자: 지지(earthlyBranch)
     return {
       year: {
         heavenlyStem: result.year[0],
@@ -278,6 +358,11 @@ export async function calculateSaju(
         heavenlyStem: result.hour[0],
         earthlyBranch: result.hour[1],
         hiddenStems: EARTHLY_BRANCH_HIDDEN_STEMS[result.hour[1]] || [],
+      },
+      meta: {
+        isSummerTimeCorrected: isDST,
+        birthLongitudeDeg: longitudeDeg,
+        equationOfTimeMinutes: Math.round(eotMinutes * 100) / 100,
       },
     };
   } catch (error) {
@@ -405,10 +490,38 @@ export function enrichSajuData(saju: SajuData, opts?: { isTimeUnknown?: boolean 
   const dayMaster = ENRICH_STEM_ELEMENT[dayStem];
   const elementDist = calculateElementDistribution(stems, branches);
   const elementAnalysis = analyzeElementBalance(elementDist);
-  const strength = judgeStrength(dayMaster.element, elementDist, stems.length + branches.length, isTimeUnknown);
+  const strength = judgeStrength(dayMaster.element, elementDist, stems.length + branches.length, isTimeUnknown, {
+    monthBranch,
+    dayBranch,
+    hourBranch: isTimeUnknown ? undefined : hourBranch,
+    allBranches: branches,
+    allStems: stems,
+    dayStem,
+  });
   const tenStars = calculateTenStars(stems, branches);
   const relationships = findRelationships(branches);
-  const shinsal = findShinsal(dayBranch, dayStem, monthBranch, branches, isTimeUnknown);
+  const shinsal = findShinsal(dayBranch, dayStem, monthBranch, branches, isTimeUnknown, stems);
+
+  // 12운성 계산
+  const yearPillarStr = yearStem + yearBranch;
+  const monthPillarStr = monthStem + monthBranch;
+  const dayPillarStr = dayStem + dayBranch;
+  const hourPillarStr = hourStem + hourBranch;
+
+  const rawStages = analyzeTwelveStages(yearPillarStr, monthPillarStr, dayPillarStr, hourPillarStr);
+
+  const toStageEntry = (s: { korean: string; hanja: string; meaning: string; strength: "strong" | "neutral" | "weak" }): TwelveStageEntry => ({
+    korean: s.korean,
+    hanja: s.hanja,
+    meaning: s.meaning,
+    strength: s.strength,
+  });
+
+  // 용신 판정
+  const yongshin = determineYongshin(dayMaster.element, strength, elementDist, monthBranch);
+
+  // 12신살 위치별 매핑
+  const pillar12Shinsal = getPillar12Shinsal(branches, isTimeUnknown);
 
   return {
     pillars: {
@@ -429,6 +542,14 @@ export function enrichSajuData(saju: SajuData, opts?: { isTimeUnknown?: boolean 
     tenStars,
     relationships,
     shinsal,
+    twelveStages: {
+      year: toStageEntry(rawStages.year),
+      month: toStageEntry(rawStages.month),
+      day: toStageEntry(rawStages.day),
+      hour: isTimeUnknown ? null : toStageEntry(rawStages.hour),
+    },
+    yongshin,
+    pillar12Shinsal,
     isTimeUnknown,
   };
 }

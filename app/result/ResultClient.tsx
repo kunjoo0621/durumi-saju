@@ -53,9 +53,9 @@ export default function ResultClient() {
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
-  const shinsalResult = useMemo(() => {
+  const enriched = useMemo(() => {
     if (!sajuData) return null;
-    return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime }).shinsal;
+    return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime });
   }, [sajuData, unknownBirthTime]);
   const [allowedByPayment, setAllowedByPayment] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -372,9 +372,9 @@ export default function ResultClient() {
                   ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
                 </p>
               )}
-              <SajuChart sajuData={sajuData} />
-              {shinsalResult && shinsalResult.matches.length > 0 && (
-                <ShinsalBadges matches={shinsalResult.matches} note={shinsalResult.meta?.note} />
+              <SajuChart sajuData={sajuData} enriched={enriched} />
+              {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
+                <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
               )}
             </div>
           )}

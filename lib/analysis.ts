@@ -1333,16 +1333,18 @@ sections 개수는 반드시 9개.
   → 현재 직업 상태에서 이 기질이 구체적으로 어떤 마찰을 만드는지.
   → 마무리: 짧고 날카로운 한 줄. "재능은 있는데 재능에 기대는 게 제일 위험한 타입이야."
 
-[섹션 2] 타고난 무기 — 구조: "강점의 함정"
-  → 역할: 사주에서 객관적으로 강한 요소를 짚어주는 섹션.
-  → 이것은 위로/격려가 아니다. 사주 구조에서 팩트로 강한 부분을 말하는 것이다.
-  → 톤: "이건 네가 잘하는 게 아니라, 사주가 원래 그런 거야" — 담담하게, 칭찬 아닌 사실 전달.
-  → 분량: 3~5문장 (300~500자).
-  → 강점을 말한 뒤 반드시 그 강점의 함정이나 리스크를 붙여라.
-  → 구조: "~는 타고났어. 근데 ~가 문제야." 또는 "~는 강해. 대신 ~가 약해."
-  → 예시:
-    - "식신(食神)이 강해서 표현력은 타고났어. 근데 그게 장점인 줄도 모르고 엉뚱한 데 에너지 쓰고 있을 가능성이 높지."
-    - "정관(正官)이 자리 잡고 있어서 일을 맡기면 결과는 내는 구조야. 문제는 그 과정에서 네 몸과 마음이 갈려나간다는 거지."
+[섹션 2] 타고난 무기 — 규칙
+  → 이 섹션의 목적: 사주에서 객관적으로 강한 요소를 알려주는 것.
+  → 비율: 강점 70%, 함정 30%. 강점이 메인이고, 함정은 짧게 한줄로 붙여라.
+  → 타이틀: 반드시 강점을 드러내는 제목으로. 부정적 타이틀 금지.
+    - ❌ "넘치는 물, 막힌 배수구"
+    - ❌ "양날의 검"
+    - ✅ "타고난 언변, 입만 열면 사람이 몰린다"
+    - ✅ "금의 갑옷, 웬만한 충격은 버틴다"
+  → 강점 서술: "이건 네가 잘하는 게 아니라 사주가 원래 그런 거야" 톤 유지하되, 실제로 강한 점을 구체적으로 설명해라.
+  → 함정은 마지막 1~2문장으로만: "근데 이거 하나 조심해. ~하면 ~된다." 정도.
+  → 이 섹션은 위로/격려가 아니다. 하지만 좋은 사실을 좋다고 말하는 것은 격려가 아니라 팩트다.
+  → 금지: "안타까운", "아쉬운", "못 따라오는", "기회가 없거나" 같은 부정적 결론으로 끝내지 마라.
   → 금지: "대단해", "훌륭해", "잘될 거야" 같은 칭찬/격려 표현 금지.
 
 [섹션 3] 대인/사회성 — 구조: "상황극 진입"
@@ -1847,7 +1849,7 @@ export async function resolveSajuText(input: InputPayload) {
 
   try {
     const { calculateSaju, formatSajuText } = await import("@/lib/utils/saju");
-    const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
+    const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute, { birthLocation: input.birthLocation });
     if (!saju) return existing;
     return formatSajuText(saju, { isTimeUnknown: Boolean(input.unknownBirthTime) });
   } catch (error) {
@@ -1859,6 +1861,7 @@ export async function resolveSajuText(input: InputPayload) {
 export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
   sajuText: string | null;
   enriched: any | null;
+  fortune: any | null;
 }> {
   const existing = input.saju?.trim() || null;
 
@@ -1866,7 +1869,7 @@ export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
   const month = Number(input.birthMonth);
   const day = Number(input.birthDay);
   if (!year || !month || !day) {
-    return { sajuText: existing, enriched: null };
+    return { sajuText: existing, enriched: null, fortune: null };
   }
 
   let calcYear = year;
@@ -1877,12 +1880,12 @@ export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
     try {
       const { convertLunarToSolar } = await import("@/lib/utils/lunar");
       const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
-      if (!converted) return { sajuText: existing, enriched: null };
+      if (!converted) return { sajuText: existing, enriched: null, fortune: null };
       calcYear = converted.year;
       calcMonth = converted.month;
       calcDay = converted.day;
     } catch {
-      return { sajuText: existing, enriched: null };
+      return { sajuText: existing, enriched: null, fortune: null };
     }
   }
 
@@ -1891,17 +1894,45 @@ export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
 
   try {
     const { calculateSaju, enrichSajuData, formatEnrichedSajuText } = await import("@/lib/utils/saju");
-    const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
+    const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute, { birthLocation: input.birthLocation });
     if (!saju) {
       console.error("[SAJU] calculateSaju returned null", { hash: inputHash(calcYear, calcMonth, calcDay, hour, minute) });
-      return { sajuText: existing, enriched: null };
+      return { sajuText: existing, enriched: null, fortune: null };
     }
     const enriched = enrichSajuData(saju, { isTimeUnknown: Boolean(input.unknownBirthTime) });
     const sajuText = formatEnrichedSajuText(enriched);
-    return { sajuText, enriched };
+
+    // 대운/세운 계산
+    const yearPillar = saju.year.heavenlyStem + saju.year.earthlyBranch;
+    const monthPillar = saju.month.heavenlyStem + saju.month.earthlyBranch;
+    const dayPillar = saju.day.heavenlyStem + saju.day.earthlyBranch;
+    const hourPillar = saju.hour.heavenlyStem + saju.hour.earthlyBranch;
+
+    let fortune = null;
+    try {
+      const { calculateFortune } = await import("@/lib/utils/saju-fortune");
+      fortune = await calculateFortune({
+        birthYear: calcYear,
+        birthMonth: calcMonth,
+        birthDay: calcDay,
+        birthHour: hour,
+        birthMinute: minute,
+        gender: input.gender === "남" || input.gender === "male" ? "male" : "female",
+        birthLocation: input.birthLocation,
+        yearPillar,
+        monthPillar,
+        dayPillar,
+        hourPillar,
+        isTimeUnknown: Boolean(input.unknownBirthTime),
+      });
+    } catch (fortuneError) {
+      console.warn("[FORTUNE] 대운/세운 계산 실패 (분석은 계속 진행)", fortuneError);
+    }
+
+    return { sajuText, enriched, fortune };
   } catch (error) {
     console.error("[SAJU] failed to resolve saju enriched data", { hash: inputHash(calcYear, calcMonth, calcDay, hour, minute), error });
-    return { sajuText: existing, enriched: null };
+    return { sajuText: existing, enriched: null, fortune: null };
   }
 }
 

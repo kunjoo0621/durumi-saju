@@ -1,5 +1,31 @@
 "use client";
 
+const SECTION_BADGES: Record<string, { label: string; color: string; bg: string }> = {
+  '🧭': { label: '성격', color: '#60A5FA', bg: 'rgba(96, 165, 250, 0.15)' },
+  '💎': { label: '강점', color: '#4ADE80', bg: 'rgba(74, 222, 128, 0.15)' },
+  '🧩': { label: '관계', color: '#9CA3AF', bg: 'rgba(156, 163, 175, 0.12)' },
+  '💰': { label: '재물', color: '#9CA3AF', bg: 'rgba(156, 163, 175, 0.12)' },
+  '💞': { label: '연애', color: '#9CA3AF', bg: 'rgba(156, 163, 175, 0.12)' },
+  '💼': { label: '직장', color: '#9CA3AF', bg: 'rgba(156, 163, 175, 0.12)' },
+  '🩺': { label: '건강', color: '#9CA3AF', bg: 'rgba(156, 163, 175, 0.12)' },
+  '🚧': { label: '주의', color: '#F87171', bg: 'rgba(248, 113, 113, 0.15)' },
+  '🎯': { label: '분석', color: '#A78BFA', bg: 'rgba(167, 139, 250, 0.15)' },
+  '✅': { label: '종합', color: '#9CA3AF', bg: 'rgba(156, 163, 175, 0.12)' },
+};
+
+function SectionBadge({ emoji }: { emoji: string }) {
+  const badge = SECTION_BADGES[emoji];
+  if (!badge) return null;
+  return (
+    <span
+      className="text-[11px] font-medium px-2 py-0.5 rounded-md shrink-0"
+      style={{ color: badge.color, backgroundColor: badge.bg }}
+    >
+      {badge.label}
+    </span>
+  );
+}
+
 type SectionHeaderProps = {
   icon: string;
   title: string;
@@ -17,8 +43,9 @@ export default function SectionHeader({ icon, title, expanded, onToggle, id }: S
       aria-expanded={expanded}
       aria-controls={id}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <span className="text-3xl" aria-hidden="true">{icon}</span>
+        <SectionBadge emoji={icon} />
         <span className="text-title-3 text-text-primary">{title}</span>
       </div>
       <svg
