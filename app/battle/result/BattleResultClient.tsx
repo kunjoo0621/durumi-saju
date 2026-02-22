@@ -54,9 +54,16 @@ export default function BattleResultClient() {
         .then((data) => {
           if (data.battle?.full_result) {
             setResult(data.battle.full_result as BattleResult);
+          } else if (battleResult) {
+            setResult(battleResult);
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // DB 조회 실패 시 Zustand fallback
+          if (battleResult) {
+            setResult(battleResult);
+          }
+        })
         .finally(() => setDbLoading(false));
       return;
     }

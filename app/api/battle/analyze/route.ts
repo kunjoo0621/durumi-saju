@@ -149,30 +149,45 @@ export async function POST(request: NextRequest) {
       relationshipType: body.relationshipType,
     };
 
-    // Fire-and-forget DB save — failure doesn't block response
+    // DB 저장 (동기 + 1회 재시도)
+    const battleRow = {
+      user_id: userId,
+      player_a_name: body.playerA.name,
+      player_b_name: body.playerB.name,
+      player_a_grade: scoringA.tier.grade,
+      player_b_grade: scoringB.tier.grade,
+      overall_winner: comparison.overallWinner,
+      overall_intensity: comparison.overallIntensity,
+      wins_a: comparison.winsA,
+      wins_b: comparison.winsB,
+      draws: comparison.draws,
+      relationship_type: body.relationshipType,
+      full_result: result,
+    };
+
     let battleId: string | null = null;
-    try {
-      const { data: inserted } = await supabaseAdmin
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { data: inserted, error: insertError } = await supabaseAdmin
         .from("saju_battles")
-        .insert({
-          user_id: userId,
-          player_a_name: body.playerA.name,
-          player_b_name: body.playerB.name,
-          player_a_grade: scoringA.tier.grade,
-          player_b_grade: scoringB.tier.grade,
-          overall_winner: comparison.overallWinner,
-          overall_intensity: comparison.overallIntensity,
-          wins_a: comparison.winsA,
-          wins_b: comparison.winsB,
-          draws: comparison.draws,
-          relationship_type: body.relationshipType,
-          full_result: result,
-        })
+        .insert(battleRow)
         .select("id")
         .single();
-      battleId = inserted?.id ?? null;
-    } catch (e) {
-      console.error("[BATTLE_ANALYZE] DB save failed:", e);
+
+      if (!insertError && inserted?.id) {
+        battleId = inserted.id;
+        break;
+      }
+
+      if (attempt === 0) {
+        console.warn("[BATTLE_ANALYZE] DB save attempt 1 failed, retrying:", insertError?.message);
+        await new Promise((r) => setTimeout(r, 500));
+      } else {
+        console.error("[BATTLE_ANALYZE] DB save failed after retry:", insertError?.message);
+        return NextResponse.json(
+          { error: "배틀 결과 저장에 실패했습니다. 다시 시도해주세요." },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({ ok: true, result, battleId });
