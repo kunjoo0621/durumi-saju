@@ -13,6 +13,7 @@ import FortuneTimeline from "@/components/saju/FortuneTimeline";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
+import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -60,23 +61,7 @@ export default function ResultClient() {
     return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime });
   }, [sajuData, unknownBirthTime]);
   const [wonguExpanded, setWonguExpanded] = useState(false);
-
-  const currentDaeunTenStar = useMemo(() => {
-    if (!result?.fortune) return null;
-    const currentYear = new Date().getFullYear();
-    const bYear = resultBirthYear || Number(birthYear);
-    if (!bYear) return null;
-    const age = currentYear - bYear + 1;
-    const current = result.fortune.daeun.pillars.find(
-      (p) => age >= p.startAge && age <= p.endAge
-    );
-    return current?.tenStar ?? null;
-  }, [result?.fortune, resultBirthYear, birthYear]);
-
-  const badShinsalCount = useMemo(() => {
-    if (!enriched?.shinsal) return 0;
-    return enriched.shinsal.matches.filter((m) => m.type === "bad").length;
-  }, [enriched?.shinsal]);
+  const wonguRef = useRef<HTMLDivElement>(null);
   const [allowedByPayment, setAllowedByPayment] = useState(() => {
     if (typeof window === "undefined") return false;
     const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
@@ -386,7 +371,7 @@ export default function ResultClient() {
 
           {/* 내 사주 원국 — 최상단 */}
           {sajuData && (
-            <div className="bg-background-secondary rounded-3xl p-5 md:p-8">
+            <div ref={wonguRef} className="bg-background-secondary rounded-3xl p-5 md:p-8">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-white">내 사주 원국</h3>
                 {displayBirthDate && (
@@ -399,39 +384,16 @@ export default function ResultClient() {
               {/* 항상 보이는 영역: 4주 테이블 */}
               <SajuChart sajuData={sajuData} enriched={enriched} hideStrengthPanel />
 
-              {/* 요약 칩 */}
-              {enriched && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {enriched.strength && (
-                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
-                      {enriched.strength.result}
-                    </span>
-                  )}
-                  {enriched.yongshin && (
-                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
-                      용신 {enriched.yongshin.eokbu}
-                    </span>
-                  )}
-                  {currentDaeunTenStar && (
-                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
-                      대운 {currentDaeunTenStar}
-                    </span>
-                  )}
-                  {badShinsalCount > 0 && (
-                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
-                      흉살 {badShinsalCount}개
-                    </span>
-                  )}
-                </div>
+              {/* 펼치기 버튼 (접힌 상태에서만 보임) */}
+              {!wonguExpanded && (
+                <button
+                  onClick={() => setWonguExpanded(true)}
+                  className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-10 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
+                >
+                  상세 분석 보기
+                  <IconChevronDown className="w-4 h-4" />
+                </button>
               )}
-
-              {/* 토글 버튼 */}
-              <button
-                onClick={() => setWonguExpanded((prev) => !prev)}
-                className="w-full bg-[#1A1A1A] text-sm font-medium text-gray-300 py-3 rounded-lg mt-4 transition-colors hover:bg-[#222222]"
-              >
-                {wonguExpanded ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
-              </button>
 
               {/* 접기/펼치기 영역: 오행 → 신강 → 용신 → 운세 → 신살 */}
               <div
@@ -455,6 +417,18 @@ export default function ResultClient() {
                       <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
                     </>
                   )}
+
+                  {/* 접기 버튼 (펼친 상태에서 컨텐츠 하단) */}
+                  <button
+                    onClick={() => {
+                      setWonguExpanded(false);
+                      wonguRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-8 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
+                  >
+                    상세 분석 접기
+                    <IconChevronUp className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </div>
