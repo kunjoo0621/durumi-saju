@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import ResultTable from "@/components/result/ResultTable";
 import MenuDrawer from "../MenuDrawer";
-import SajuChart from "@/components/saju/SajuChart";
+import SajuChart, { StrengthPanel } from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
 import ShinsalBadges from "@/components/saju/ShinsalBadges";
@@ -59,6 +59,24 @@ export default function ResultClient() {
     if (!sajuData) return null;
     return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime });
   }, [sajuData, unknownBirthTime]);
+  const [wonguExpanded, setWonguExpanded] = useState(false);
+
+  const currentDaeunTenStar = useMemo(() => {
+    if (!result?.fortune) return null;
+    const currentYear = new Date().getFullYear();
+    const bYear = resultBirthYear || Number(birthYear);
+    if (!bYear) return null;
+    const age = currentYear - bYear + 1;
+    const current = result.fortune.daeun.pillars.find(
+      (p) => age >= p.startAge && age <= p.endAge
+    );
+    return current?.tenStar ?? null;
+  }, [result?.fortune, resultBirthYear, birthYear]);
+
+  const badShinsalCount = useMemo(() => {
+    if (!enriched?.shinsal) return 0;
+    return enriched.shinsal.matches.filter((m) => m.type === "bad").length;
+  }, [enriched?.shinsal]);
   const [allowedByPayment, setAllowedByPayment] = useState(() => {
     if (typeof window === "undefined") return false;
     const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
@@ -377,22 +395,68 @@ export default function ResultClient() {
                   </span>
                 )}
               </div>
-              <SajuChart sajuData={sajuData} enriched={enriched} />
-              {result?.fortune && (resultBirthYear || Number(birthYear)) > 0 && (
-                <>
-                  <div className="h-px bg-[#222222] my-8" />
-                  <FortuneTimeline
-                    fortune={result.fortune}
-                    birthYear={resultBirthYear || Number(birthYear)}
-                  />
-                </>
+
+              {/* 항상 보이는 영역: 4주 테이블 */}
+              <SajuChart sajuData={sajuData} enriched={enriched} hideStrengthPanel />
+
+              {/* 요약 칩 */}
+              {enriched && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {enriched.strength && (
+                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
+                      {enriched.strength.result}
+                    </span>
+                  )}
+                  {enriched.yongshin && (
+                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
+                      용신 {enriched.yongshin.eokbu}
+                    </span>
+                  )}
+                  {currentDaeunTenStar && (
+                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
+                      대운 {currentDaeunTenStar}
+                    </span>
+                  )}
+                  {badShinsalCount > 0 && (
+                    <span className="bg-[#1A1A1A] text-xs text-gray-400 px-2.5 py-1 rounded-full">
+                      흉살 {badShinsalCount}개
+                    </span>
+                  )}
+                </div>
               )}
-              {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
-                <>
-                  <div className="h-px bg-[#222222] my-8" />
-                  <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
-                </>
-              )}
+
+              {/* 토글 버튼 */}
+              <button
+                onClick={() => setWonguExpanded((prev) => !prev)}
+                className="w-full bg-[#1A1A1A] text-sm font-medium text-gray-300 py-3 rounded-lg mt-4 transition-colors hover:bg-[#222222]"
+              >
+                {wonguExpanded ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
+              </button>
+
+              {/* 접기/펼치기 영역: 오행 → 신강 → 용신 → 운세 → 신살 */}
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+                style={{ gridTemplateRows: wonguExpanded ? "1fr" : "0fr" }}
+              >
+                <div className="overflow-hidden">
+                  {enriched && <StrengthPanel enriched={enriched} />}
+                  {result?.fortune && (resultBirthYear || Number(birthYear)) > 0 && (
+                    <>
+                      <div className="h-px bg-[#222222] my-8" />
+                      <FortuneTimeline
+                        fortune={result.fortune}
+                        birthYear={resultBirthYear || Number(birthYear)}
+                      />
+                    </>
+                  )}
+                  {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
+                    <>
+                      <div className="h-px bg-[#222222] my-8" />
+                      <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

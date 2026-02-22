@@ -30,6 +30,7 @@ import {
 type SajuChartProps = {
   sajuData: SajuData;
   enriched?: EnrichedSajuData | null;
+  hideStrengthPanel?: boolean;
 };
 
 /* ── 오행색 매핑 ── */
@@ -329,7 +330,7 @@ const StrengthPanel = memo(function StrengthPanel({
 });
 
 /* ── Main SajuChart ── */
-function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
+function SajuChartInner({ sajuData, enriched, hideStrengthPanel }: SajuChartProps) {
   const pillars = useMemo(() => computePillarDisplayData(sajuData), [sajuData]);
   const dayEl = enriched?.dayMaster.element ?? "목";
 
@@ -458,10 +459,11 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
       </div>
 
       {/* 신강/용신/오행밸런스 패널 */}
-      {enriched && <StrengthPanel enriched={enriched} />}
+      {!hideStrengthPanel && enriched && <StrengthPanel enriched={enriched} />}
     </div>
   );
 }
 
+export { StrengthPanel };
 export const SajuChart = memo(SajuChartInner);
 export default SajuChart;
