@@ -26,7 +26,7 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-400 mb-2">신살</p>
+      <p className="text-sm font-medium text-gray-400 mb-4">신살</p>
       <div className="grid grid-cols-2 gap-2">
         {matches.map((m) => {
           const dotColor = TYPE_DOT_COLOR[m.type];
@@ -45,7 +45,7 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
                   {m.label}
                 </span>
                 <span
-                  className="text-[10px] ml-auto flex-shrink-0"
+                  className="text-[11px] ml-auto flex-shrink-0"
                   style={{ color: dotColor }}
                 >
                   {TYPE_LABEL[m.type]}
@@ -57,7 +57,7 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
                 </p>
               )}
               {m.detectedAt.length > 0 && (
-                <p className="text-[10px] text-gray-600 mt-1">
+                <p className="text-[11px] text-gray-600 mt-1">
                   {m.detectedAt
                     .map((pos) =>
                       pos === "year" ? "년주" : pos === "month" ? "월주" : pos === "day" ? "일주" : "시주"

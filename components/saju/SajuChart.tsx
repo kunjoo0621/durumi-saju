@@ -158,17 +158,41 @@ const StrengthPanel = memo(function StrengthPanel({
       {/* 신강/신약 분석 */}
       <p className={SECTION_TITLE}>신강/신약 분석</p>
 
-      {/* 스펙트럼 바: 극약 [바+도트] 극왕 */}
-      <div className="mt-3">
+      {/* Desktop: 8단계 라벨 + 바 */}
+      <div className="hidden sm:block mt-4">
+        <div className="flex justify-between mb-1.5">
+          {STRENGTH_LEVELS.map((level) => {
+            const isCurrent = level === strength.result;
+            return (
+              <span
+                key={level}
+                className={isCurrent ? "text-xs font-bold whitespace-nowrap" : "text-[11px] text-gray-600 whitespace-nowrap"}
+                style={isCurrent ? { color: spectrumColor } : undefined}
+              >
+                {level}
+              </span>
+            );
+          })}
+        </div>
+        <div className="relative h-1.5 rounded-full" style={{ background: SPECTRUM_GRADIENT }}>
+          <div
+            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
+            style={{ left: `${spectrumPos}%`, backgroundColor: spectrumColor }}
+          />
+        </div>
+      </div>
+
+      {/* Mobile: 극약 [바] 극왕 */}
+      <div className="sm:hidden mt-4">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-600 shrink-0">극약</span>
+          <span className="text-[11px] text-gray-600 shrink-0">극약</span>
           <div className="relative flex-1 h-1.5 rounded-full" style={{ background: SPECTRUM_GRADIENT }}>
             <div
               className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
               style={{ left: `${spectrumPos}%`, backgroundColor: spectrumColor }}
             />
           </div>
-          <span className="text-[10px] text-gray-600 shrink-0">극왕</span>
+          <span className="text-[11px] text-gray-600 shrink-0">극왕</span>
         </div>
       </div>
 
@@ -201,7 +225,7 @@ const StrengthPanel = memo(function StrengthPanel({
         <span className={SECTION_TITLE}>용신</span>
         <span className={SECTION_TITLE}>기신</span>
       </div>
-      <div className="flex justify-between mb-1">
+      <div className="flex justify-between mb-4">
         <span className={SUB_TEXT}>나에게 필요한 기운</span>
         <span className={SUB_TEXT}>피해야 할 기운</span>
       </div>
@@ -236,7 +260,7 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="h-px bg-[#222222] my-5" />
 
       {/* 오행 분포 */}
-      <p className={`${SECTION_TITLE} mb-2`}>오행 분포</p>
+      <p className={`${SECTION_TITLE} mb-4`}>오행 분포</p>
       <div className="flex rounded-lg overflow-hidden h-4">
         {elements.map((el) => {
           const ratio = totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0;
@@ -260,17 +284,17 @@ const StrengthPanel = memo(function StrengthPanel({
               <span className="text-xs font-medium" style={{ color: KR_ELEMENT_HEX[el] }}>
                 {el}
               </span>
-              <span className="text-[10px] text-gray-500">
+              <span className="text-[11px] text-gray-500">
                 {count} ({totalElement > 0 ? Math.round((count / totalElement) * 100) : 0}%)
               </span>
               {isYongshin && (
-                <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">용신</span>
+                <span className="text-[11px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">용신</span>
               )}
               {isDeficient && (
-                <span className="text-[10px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">결핍</span>
+                <span className="text-[11px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">결핍</span>
               )}
               {isGisin && !isDeficient && (
-                <span className="text-[10px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">기신</span>
+                <span className="text-[11px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">기신</span>
               )}
             </div>
           );
@@ -299,7 +323,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
               {p.key === "day" ? "일주" : p.label}
             </span>
             {p.key === "day" && (
-              <span className="ml-0.5 text-[10px] text-gray-600">(나)</span>
+              <span className="ml-0.5 text-[11px] text-gray-600">(나)</span>
             )}
           </div>
         ))}
