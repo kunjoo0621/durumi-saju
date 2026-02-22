@@ -73,6 +73,11 @@ const JOHU_DESCRIPTIONS: Record<string, string> = {
   "동절(겨울) → 화(火)로 한기 보충": "겨울생, 따뜻한 기운 보정",
 };
 
+/* ── 섹션 라벨 스타일: text-xs text-gray-500 tracking-wider ── */
+const SECTION_LABEL = "text-xs text-gray-500 tracking-wider";
+/* ── 설명/보조 텍스트: text-sm text-gray-400 ── */
+const SUB_TEXT = "text-sm text-gray-400";
+
 /* ── Header Cell (생시/생일/생월/생년) ── */
 const HeaderCell = memo(function HeaderCell({
   label,
@@ -83,7 +88,7 @@ const HeaderCell = memo(function HeaderCell({
 }) {
   return (
     <div className="py-2 text-center">
-      <span className="text-xs font-medium text-gray-500">
+      <span className={SECTION_LABEL}>
         {label}
       </span>
       {isDayStem && (
@@ -228,20 +233,22 @@ const StrengthPanel = memo(function StrengthPanel({
 
   return (
     <div className="mt-4 space-y-3">
-      {/* 신강/신약 */}
+      {/* 신강/신약 카드 */}
       <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm text-gray-400">신강/신약</span>
-          <span
-            className={`text-sm font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}
-          >
-            {strength.result}
-          </span>
+        <div className="flex items-center justify-between">
+          <span className={SECTION_LABEL}>신강/신약</span>
+          <div className="text-right">
+            <span
+              className={`text-lg font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}
+            >
+              {strength.result}
+            </span>
+            {strengthDesc && (
+              <p className={SUB_TEXT}>{strengthDesc}</p>
+            )}
+          </div>
         </div>
-        {strengthDesc && (
-          <p className="text-sm text-gray-400 mb-3 text-right">{strengthDesc}</p>
-        )}
-        <div className="flex justify-between">
+        <div className="flex justify-between mt-3">
           {deukItems.map((item) => (
             <div key={item.key} className="flex items-center gap-1">
               {item.value ? (
@@ -249,10 +256,10 @@ const StrengthPanel = memo(function StrengthPanel({
               ) : (
                 <IconCircleXFilled size={14} style={{ color: "#4B5563" }} />
               )}
-              <span className="text-xs text-gray-300">
+              <span className={SUB_TEXT}>
                 {DEUK_LABELS[item.key]}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className={`${SUB_TEXT} opacity-60`}>
                 {DEUK_HINTS[item.key]}
               </span>
             </div>
@@ -260,15 +267,15 @@ const StrengthPanel = memo(function StrengthPanel({
         </div>
       </div>
 
-      {/* 용신 / 기신 */}
+      {/* 용신 / 기신 카드 */}
       <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <div className="flex justify-between mb-1">
-          <span className="text-xs text-gray-500">용신</span>
-          <span className="text-xs text-gray-500">기신</span>
-        </div>
         <div className="flex justify-between mb-0.5">
-          <span className="text-xs text-gray-500">나에게 필요한 기운</span>
-          <span className="text-xs text-gray-500">피해야 할 기운</span>
+          <span className={SECTION_LABEL}>용신</span>
+          <span className={SECTION_LABEL}>기신</span>
+        </div>
+        <div className="flex justify-between mb-1">
+          <span className={SUB_TEXT}>나에게 필요한 기운</span>
+          <span className={SUB_TEXT}>피해야 할 기운</span>
         </div>
         <div className="flex justify-between items-baseline">
           <span
@@ -285,14 +292,14 @@ const StrengthPanel = memo(function StrengthPanel({
           </span>
         </div>
         <div className="mt-2 space-y-0.5">
-          <p className="text-xs text-gray-500">
+          <p className={SUB_TEXT}>
             희신:{" "}
             <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
               {yongshin.heesin}({heesinHanja})
             </span>
           </p>
           {yongshin.johu && johuDesc && (
-            <p className="text-xs text-gray-500">
+            <p className={SUB_TEXT}>
               조후:{" "}
               <span style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}>
                 {yongshin.johu}({ELEMENT_TO_HANJA[yongshin.johu]})
@@ -303,9 +310,9 @@ const StrengthPanel = memo(function StrengthPanel({
         </div>
       </div>
 
-      {/* 오행 밸런스 바 */}
+      {/* 오행 분포 카드 */}
       <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <p className="text-sm text-gray-400 mb-2">오행 분포</p>
+        <p className={`${SECTION_LABEL} mb-2`}>오행 분포</p>
         <div className="flex rounded-lg overflow-hidden h-4">
           {elements.map((el) => {
             const ratio = totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0;
@@ -329,18 +336,16 @@ const StrengthPanel = memo(function StrengthPanel({
             const isGisin = el === yongshin.gisin;
             const isDeficient = count === 0;
             return (
-              <div key={el} className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center gap-0.5">
-                  <span
-                    className="text-xs font-medium"
-                    style={{ color: KR_ELEMENT_HEX[el] }}
-                  >
-                    {el}
-                  </span>
-                  <span className="text-[10px] text-gray-500">
-                    {count}
-                  </span>
-                </div>
+              <div key={el} className="flex items-center gap-1">
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: KR_ELEMENT_HEX[el] }}
+                >
+                  {el}
+                </span>
+                <span className="text-[10px] text-gray-500">
+                  {count}
+                </span>
                 {isYongshin && (
                   <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">
                     용신
@@ -426,7 +431,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
         {enriched?.twelveStages && (
           <>
             <div className="col-span-4 mt-1">
-              <span className="text-[10px] text-gray-600 pl-1">12운성</span>
+              <span className={`${SECTION_LABEL} pl-1`}>12운성</span>
             </div>
             {pillars.map((p) => {
               const pos = PILLAR_KEY_TO_POS[p.key];
@@ -446,7 +451,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
         {enriched?.pillar12Shinsal && (
           <>
             <div className="col-span-4 mt-1">
-              <span className="text-[10px] text-gray-600 pl-1">12신살</span>
+              <span className={`${SECTION_LABEL} pl-1`}>12신살</span>
             </div>
             {pillars.map((p) => {
               const pos = PILLAR_KEY_TO_POS[p.key];
