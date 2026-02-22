@@ -266,61 +266,54 @@ const StrengthPanel = memo(function StrengthPanel({
       <p className={`${SECTION_TITLE} mb-4`}>오행 분포</p>
       {(() => {
         const BAR_HEX: Record<KoreanElement, string> = { 목: "#22C55E", 화: "#EF4444", 토: "#EAB308", 금: "#A0A0A0", 수: "#3B82F6" };
-        const DARK_BG = new Set<KoreanElement>(["목", "화", "수"]);
+        const MAX_HEIGHT = 80;
+        const MIN_HEIGHT = 20;
 
         const sorted = [...elements]
-          .map((el) => ({ el, count: elementDist[el], ratio: totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0 }))
-          .sort((a, b) => b.ratio - a.ratio);
+          .map((el) => ({ el, count: elementDist[el] }))
+          .sort((a, b) => b.count - a.count);
+        const maxCount = Math.max(...sorted.map((s) => s.count), 1);
 
-        const inBar = sorted.filter((s) => s.ratio >= 20);
-        const belowBar = sorted.filter((s) => s.ratio > 0 && s.ratio < 20);
-        const deficient = sorted.filter((s) => s.count === 0);
-
-        const tag = (el: KoreanElement) =>
-          el === yongshin.eokbu ? " 용신" : el === yongshin.gisin ? " 기신" : "";
+        const getTag = (el: KoreanElement) => {
+          if (el === yongshin.eokbu) return { label: "용신", cls: "bg-amber-500/20 text-amber-400" };
+          if (el === yongshin.gisin) return { label: "기신", cls: "bg-gray-500/20 text-gray-400" };
+          return null;
+        };
 
         return (
-          <>
-            {/* 스택바 */}
-            <div className="flex rounded-lg overflow-hidden h-10">
-              {sorted.filter((s) => s.ratio > 0).map((s) => {
-                const isDark = DARK_BG.has(s.el);
-                const showInside = s.ratio >= 20;
-                return (
-                  <div
-                    key={s.el}
-                    className="flex items-center justify-center"
-                    style={{ width: `${s.ratio}%`, backgroundColor: BAR_HEX[s.el] }}
-                  >
-                    {showInside && (
-                      <span className={`text-xs font-medium ${isDark ? "text-white" : "text-gray-900"}`}>
-                        {s.el} {s.count}
-                        {tag(s.el) && (
-                          <span className="opacity-80 text-[11px]">{tag(s.el)}</span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* 바 아래: 좁은 영역 + 결핍 */}
-            {(belowBar.length > 0 || deficient.length > 0) && (
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                {belowBar.map((s) => (
-                  <span key={s.el} className="text-xs font-medium" style={{ color: BAR_HEX[s.el] }}>
-                    {s.el} {s.count}{tag(s.el)}
+          <div className="flex items-end justify-center gap-3 sm:gap-5">
+            {sorted.map((s) => {
+              const isDeficient = s.count === 0;
+              const barH = isDeficient ? 0 : (s.count / maxCount) * MAX_HEIGHT + MIN_HEIGHT - (MIN_HEIGHT * s.count / maxCount ? 0 : 0);
+              const height = isDeficient ? 0 : Math.round((s.count / maxCount) * (MAX_HEIGHT - MIN_HEIGHT) + MIN_HEIGHT);
+              const tag = isDeficient ? { label: "결핍", cls: "bg-red-500/20 text-red-400" } : getTag(s.el);
+              return (
+                <div key={s.el} className="flex flex-col items-center gap-1.5">
+                  {/* 바 */}
+                  {isDeficient ? (
+                    <div className="w-8 sm:w-10 h-5 border border-dashed border-gray-600 rounded-md" />
+                  ) : (
+                    <div
+                      className="w-8 sm:w-10 rounded-md"
+                      style={{ height: `${height}px`, backgroundColor: BAR_HEX[s.el] }}
+                    />
+                  )}
+                  {/* 오행명 */}
+                  <span className="text-xs font-medium" style={{ color: BAR_HEX[s.el] }}>
+                    {s.el}
                   </span>
-                ))}
-                {deficient.map((s) => (
-                  <span key={s.el} className="text-xs font-medium text-red-400">
-                    {s.el} 0 결핍
-                  </span>
-                ))}
-              </div>
-            )}
-          </>
+                  {/* 개수 */}
+                  <span className="text-lg font-bold text-white">{s.count}</span>
+                  {/* 태그 */}
+                  {tag && (
+                    <span className={`text-[11px] ${tag.cls} px-1.5 py-0.5 rounded`}>
+                      {tag.label}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         );
       })()}
 
