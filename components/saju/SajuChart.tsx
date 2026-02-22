@@ -160,7 +160,73 @@ const StrengthPanel = memo(function StrengthPanel({
 
   return (
     <div>
-      {/* divider: 원국 테이블 ↔ 신강 */}
+      {/* divider: 원국 테이블 ↔ 오행 */}
+      <div className="h-px bg-[#222222] my-8" />
+
+      {/* 오행 분포 */}
+      <p className={`${SECTION_TITLE} mb-6`}>오행 분포</p>
+      {(() => {
+        const BAR_HEX: Record<KoreanElement, string> = { 목: "#22C55E", 화: "#EF4444", 토: "#EAB308", 금: "#A0A0A0", 수: "#3B82F6" };
+
+        const sorted = [...elements]
+          .map((el) => ({ el, count: elementDist[el] }))
+          .sort((a, b) => b.count - a.count);
+        const maxCount = Math.max(...sorted.map((s) => s.count), 1);
+
+        const getTag = (el: KoreanElement) => {
+          if (elementDist[el] === 0) return { label: "결핍", cls: "bg-red-500/20 text-red-400" };
+          if (el === yongshin.eokbu) return { label: "용신", cls: "bg-amber-500/20 text-amber-400" };
+          if (el === yongshin.gisin) return { label: "기신", cls: "bg-gray-500/20 text-gray-400" };
+          return null;
+        };
+
+        return (
+          <div className="flex items-end justify-center gap-4 sm:gap-6">
+            {sorted.map((s) => {
+              const isDeficient = s.count === 0;
+              const barHeight = isDeficient ? 0 : Math.max(Math.round((s.count / maxCount) * 100), 24);
+              const tag = getTag(s.el);
+              return (
+                <div key={s.el} className="flex flex-col items-center" style={{ width: 48 }}>
+                  {/* 바 컨테이너 — 고정 높이, 아래 정렬 */}
+                  <div className="h-[100px] flex items-end mb-2">
+                    {isDeficient ? (
+                      <div className="w-12 h-6 border border-dashed border-gray-600 rounded-md" />
+                    ) : (
+                      <div
+                        className={`w-12 rounded-md${s.el === yongshin.eokbu ? " border-2 border-amber-400" : ""}`}
+                        style={{
+                          height: `${barHeight}px`,
+                          backgroundColor: BAR_HEX[s.el],
+                          opacity: s.el === yongshin.gisin ? 0.5 : 1,
+                        }}
+                      />
+                    )}
+                  </div>
+                  {/* 오행명 */}
+                  <span className="text-xs font-medium" style={{ color: BAR_HEX[s.el] }}>
+                    {s.el}
+                  </span>
+                  {/* 개수 */}
+                  <span className="text-base font-bold text-white mt-0.5">{s.count}</span>
+                  {/* 태그 — 고정 높이로 정렬 유지 */}
+                  <div className="h-6 flex items-center mt-1">
+                    {tag && (
+                      <span className={`text-[11px] ${tag.cls} px-1.5 py-0.5 rounded`}>
+                        {tag.label}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      <SajuFeedback text={getOhaengFeedback(elementDist)} />
+
+      {/* divider: 오행 ↔ 신강 */}
       <div className="h-px bg-[#222222] my-8" />
 
       {/* 신강/신약 분석 */}
@@ -258,72 +324,6 @@ const StrengthPanel = memo(function StrengthPanel({
       </div>
 
       <SajuFeedback text={getYongshinFeedback(yongshin.eokbu)} />
-
-      {/* divider: 용신 ↔ 오행 */}
-      <div className="h-px bg-[#222222] my-8" />
-
-      {/* 오행 분포 */}
-      <p className={`${SECTION_TITLE} mb-6`}>오행 분포</p>
-      {(() => {
-        const BAR_HEX: Record<KoreanElement, string> = { 목: "#22C55E", 화: "#EF4444", 토: "#EAB308", 금: "#A0A0A0", 수: "#3B82F6" };
-
-        const sorted = [...elements]
-          .map((el) => ({ el, count: elementDist[el] }))
-          .sort((a, b) => b.count - a.count);
-        const maxCount = Math.max(...sorted.map((s) => s.count), 1);
-
-        const getTag = (el: KoreanElement) => {
-          if (elementDist[el] === 0) return { label: "결핍", cls: "bg-red-500/20 text-red-400" };
-          if (el === yongshin.eokbu) return { label: "용신", cls: "bg-amber-500/20 text-amber-400" };
-          if (el === yongshin.gisin) return { label: "기신", cls: "bg-gray-500/20 text-gray-400" };
-          return null;
-        };
-
-        return (
-          <div className="flex items-end justify-center gap-4 sm:gap-6">
-            {sorted.map((s) => {
-              const isDeficient = s.count === 0;
-              const barHeight = isDeficient ? 0 : Math.max(Math.round((s.count / maxCount) * 100), 24);
-              const tag = getTag(s.el);
-              return (
-                <div key={s.el} className="flex flex-col items-center" style={{ width: 48 }}>
-                  {/* 바 컨테이너 — 고정 높이, 아래 정렬 */}
-                  <div className="h-[100px] flex items-end mb-2">
-                    {isDeficient ? (
-                      <div className="w-12 h-6 border border-dashed border-gray-600 rounded-md" />
-                    ) : (
-                      <div
-                        className={`w-12 rounded-md${s.el === yongshin.eokbu ? " border-2 border-amber-400" : ""}`}
-                        style={{
-                          height: `${barHeight}px`,
-                          backgroundColor: BAR_HEX[s.el],
-                          opacity: s.el === yongshin.gisin ? 0.5 : 1,
-                        }}
-                      />
-                    )}
-                  </div>
-                  {/* 오행명 */}
-                  <span className="text-xs font-medium" style={{ color: BAR_HEX[s.el] }}>
-                    {s.el}
-                  </span>
-                  {/* 개수 */}
-                  <span className="text-base font-bold text-white mt-0.5">{s.count}</span>
-                  {/* 태그 — 고정 높이로 정렬 유지 */}
-                  <div className="h-6 flex items-center mt-1">
-                    {tag && (
-                      <span className={`text-[11px] ${tag.cls} px-1.5 py-0.5 rounded`}>
-                        {tag.label}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })()}
-
-      <SajuFeedback text={getOhaengFeedback(elementDist)} />
     </div>
   );
 });

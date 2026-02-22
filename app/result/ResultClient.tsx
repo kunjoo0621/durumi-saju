@@ -378,12 +378,6 @@ export default function ResultClient() {
                 )}
               </div>
               <SajuChart sajuData={sajuData} enriched={enriched} />
-              {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
-                <>
-                  <div className="h-px bg-[#222222] my-8" />
-                  <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
-                </>
-              )}
               {result?.fortune && (resultBirthYear || Number(birthYear)) > 0 && (
                 <>
                   <div className="h-px bg-[#222222] my-8" />
@@ -391,6 +385,12 @@ export default function ResultClient() {
                     fortune={result.fortune}
                     birthYear={resultBirthYear || Number(birthYear)}
                   />
+                </>
+              )}
+              {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
+                <>
+                  <div className="h-px bg-[#222222] my-8" />
+                  <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
                 </>
               )}
             </div>
