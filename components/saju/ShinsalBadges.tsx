@@ -25,7 +25,7 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
   if (matches.length === 0) return null;
 
   return (
-    <div className="mt-4">
+    <div>
       <p className="text-xs text-gray-500 tracking-wider mb-2">신살</p>
       <div className="grid grid-cols-2 gap-2">
         {matches.map((m) => {

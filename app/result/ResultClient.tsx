@@ -365,7 +365,7 @@ export default function ResultClient() {
 
           {/* 내 사주 원국 — 최상단 */}
           {sajuData && (
-            <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
+            <div className="bg-background-secondary rounded-3xl p-5 md:p-8">
               <h3 className="text-lg font-bold text-white mb-1">내 사주 원국</h3>
               {displayBirthDate && (
                 <p className="text-sm text-gray-500 mb-4">
@@ -374,7 +374,10 @@ export default function ResultClient() {
               )}
               <SajuChart sajuData={sajuData} enriched={enriched} />
               {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
-                <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
+                <>
+                  <div className="h-px bg-[#222222] my-5" />
+                  <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
+                </>
               )}
             </div>
           )}

@@ -88,7 +88,7 @@ const SHINSAL_TYPE_COLOR: Record<ShinsalType, string> = {
 
 const SECTION_LABEL = "text-xs text-gray-500 tracking-wider";
 const SUB_TEXT = "text-sm text-gray-400";
-const ROW_LABEL = "text-xs text-gray-600 self-center";
+const ROW_LABEL = "hidden sm:block text-xs text-gray-600 self-center";
 
 const DEUK_HINTS: Record<string, string> = {
   deukryeong: "(계절)",
@@ -139,113 +139,116 @@ const StrengthPanel = memo(function StrengthPanel({
     : null;
 
   return (
-    <div className="mt-4 space-y-3">
-      {/* 신강/신약 분석 카드 */}
-      <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <span className={SECTION_LABEL}>신강/신약 분석</span>
-          <div className="text-right">
-            <span className={`text-lg font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}>
-              {strength.result}
-            </span>
-            {strengthDesc && <p className={SUB_TEXT}>{strengthDesc}</p>}
+    <div>
+      {/* divider: 원국 테이블 ↔ 신강 */}
+      <div className="h-px bg-[#222222] my-5" />
+
+      {/* 신강/신약 분석 */}
+      <div className="flex items-center justify-between">
+        <span className={SECTION_LABEL}>신강/신약 분석</span>
+        <div className="text-right">
+          <span className={`text-lg font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}>
+            {strength.result}
+          </span>
+          {strengthDesc && <p className={SUB_TEXT}>{strengthDesc}</p>}
+        </div>
+      </div>
+      <div className="flex justify-between mt-3">
+        {deukItems.map((item) => (
+          <div key={item.key} className="flex items-center gap-1">
+            {item.value ? (
+              <IconCircleCheckFilled size={14} style={{ color: "#FF6B6B" }} />
+            ) : (
+              <IconCircleXFilled size={14} style={{ color: "#4B5563" }} />
+            )}
+            <span className={SUB_TEXT}>{DEUK_LABELS[item.key]}</span>
+            <span className={`${SUB_TEXT} opacity-60`}>{DEUK_HINTS[item.key]}</span>
           </div>
-        </div>
-        <div className="flex justify-between mt-3">
-          {deukItems.map((item) => (
-            <div key={item.key} className="flex items-center gap-1">
-              {item.value ? (
-                <IconCircleCheckFilled size={14} style={{ color: "#FF6B6B" }} />
-              ) : (
-                <IconCircleXFilled size={14} style={{ color: "#4B5563" }} />
-              )}
-              <span className={SUB_TEXT}>{DEUK_LABELS[item.key]}</span>
-              <span className={`${SUB_TEXT} opacity-60`}>{DEUK_HINTS[item.key]}</span>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
 
-      {/* 용신 / 기신 카드 */}
-      <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <div className="flex justify-between mb-0.5">
-          <span className={SECTION_LABEL}>용신</span>
-          <span className={SECTION_LABEL}>기신</span>
-        </div>
-        <div className="flex justify-between mb-1">
-          <span className={SUB_TEXT}>나에게 필요한 기운</span>
-          <span className={SUB_TEXT}>피해야 할 기운</span>
-        </div>
-        <div className="flex justify-between items-baseline">
-          <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}>
-            {yongshin.eokbu}({eokbuHanja})
+      {/* divider: 신강 ↔ 용신 */}
+      <div className="h-px bg-[#222222] my-5" />
+
+      {/* 용신 / 기신 */}
+      <div className="flex justify-between mb-0.5">
+        <span className={SECTION_LABEL}>용신</span>
+        <span className={SECTION_LABEL}>기신</span>
+      </div>
+      <div className="flex justify-between mb-1">
+        <span className={SUB_TEXT}>나에게 필요한 기운</span>
+        <span className={SUB_TEXT}>피해야 할 기운</span>
+      </div>
+      <div className="flex justify-between items-baseline">
+        <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}>
+          {yongshin.eokbu}({eokbuHanja})
+        </span>
+        <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}>
+          {yongshin.gisin}({gisinHanja})
+        </span>
+      </div>
+      <div className="mt-2 space-y-0.5">
+        <p className={SUB_TEXT}>
+          희신:{" "}
+          <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
+            {yongshin.heesin}({heesinHanja})
           </span>
-          <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}>
-            {yongshin.gisin}({gisinHanja})
-          </span>
-        </div>
-        <div className="mt-2 space-y-0.5">
+          {" "}&mdash; 용신을 돕는 기운
+        </p>
+        {yongshin.johu && johuDesc && (
           <p className={SUB_TEXT}>
-            희신:{" "}
-            <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
-              {yongshin.heesin}({heesinHanja})
+            조후:{" "}
+            <span style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}>
+              {yongshin.johu}({ELEMENT_TO_HANJA[yongshin.johu]})
             </span>
-            {" "}&mdash; 용신을 돕는 기운
+            {" "}&mdash; {johuDesc}
           </p>
-          {yongshin.johu && johuDesc && (
-            <p className={SUB_TEXT}>
-              조후:{" "}
-              <span style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}>
-                {yongshin.johu}({ELEMENT_TO_HANJA[yongshin.johu]})
-              </span>
-              {" "}&mdash; {johuDesc}
-            </p>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* 오행 분포 카드 */}
-      <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <p className={`${SECTION_LABEL} mb-2`}>오행 분포</p>
-        <div className="flex rounded-lg overflow-hidden h-4">
-          {elements.map((el) => {
-            const ratio = totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0;
-            if (ratio === 0) return null;
-            return (
-              <div
-                key={el}
-                style={{ width: `${ratio}%`, backgroundColor: KR_ELEMENT_HEX[el], opacity: 0.8 }}
-              />
-            );
-          })}
-        </div>
-        <div className="flex justify-between mt-2">
-          {elements.map((el) => {
-            const count = elementDist[el];
-            const isYongshin = el === yongshin.eokbu;
-            const isGisin = el === yongshin.gisin;
-            const isDeficient = count === 0;
-            return (
-              <div key={el} className="flex items-center gap-1">
-                <span className="text-xs font-medium" style={{ color: KR_ELEMENT_HEX[el] }}>
-                  {el}
-                </span>
-                <span className="text-[10px] text-gray-500">
-                  {count} ({totalElement > 0 ? Math.round((count / totalElement) * 100) : 0}%)
-                </span>
-                {isYongshin && (
-                  <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">용신</span>
-                )}
-                {isDeficient && (
-                  <span className="text-[10px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">결핍</span>
-                )}
-                {isGisin && !isDeficient && (
-                  <span className="text-[10px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">기신</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+      {/* divider: 용신 ↔ 오행 */}
+      <div className="h-px bg-[#222222] my-5" />
+
+      {/* 오행 분포 */}
+      <p className={`${SECTION_LABEL} mb-2`}>오행 분포</p>
+      <div className="flex rounded-lg overflow-hidden h-4">
+        {elements.map((el) => {
+          const ratio = totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0;
+          if (ratio === 0) return null;
+          return (
+            <div
+              key={el}
+              style={{ width: `${ratio}%`, backgroundColor: KR_ELEMENT_HEX[el], opacity: 0.8 }}
+            />
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-2">
+        {elements.map((el) => {
+          const count = elementDist[el];
+          const isYongshin = el === yongshin.eokbu;
+          const isGisin = el === yongshin.gisin;
+          const isDeficient = count === 0;
+          return (
+            <div key={el} className="flex items-center gap-1">
+              <span className="text-xs font-medium" style={{ color: KR_ELEMENT_HEX[el] }}>
+                {el}
+              </span>
+              <span className="text-[10px] text-gray-500">
+                {count} ({totalElement > 0 ? Math.round((count / totalElement) * 100) : 0}%)
+              </span>
+              {isYongshin && (
+                <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">용신</span>
+              )}
+              {isDeficient && (
+                <span className="text-[10px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">결핍</span>
+              )}
+              {isGisin && !isDeficient && (
+                <span className="text-[10px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">기신</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -260,14 +263,10 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
     <div>
       {/* 5열 그리드: [라벨][시주][일주][월주][년주] */}
       <div
-        className="gap-x-2 gap-y-0"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "2.5rem 1fr 1fr 1fr 1fr",
-        }}
+        className="grid gap-x-2 gap-y-0 grid-cols-4 sm:grid-cols-[2.5rem_1fr_1fr_1fr_1fr]"
       >
         {/* ── Row: Header ── */}
-        <div />
+        <div className="hidden sm:block" />
         {pillars.map((p) => (
           <div key={`h-${p.key}`} className="py-2 text-center">
             <span className={SECTION_LABEL}>
@@ -304,7 +303,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
         })}
 
         {/* ── Row: 천간 십성 (no label) ── */}
-        <div />
+        <div className="hidden sm:block" />
         {pillars.map((p) => (
           <div key={`st-${p.key}`} className="py-1 text-center">
             <span className="text-xs" style={{ color: getTenGodHex(p.stemTenGod, dayEl) }}>
@@ -327,7 +326,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
         ))}
 
         {/* ── Row: 지지 십성 (no label) ── */}
-        <div />
+        <div className="hidden sm:block" />
         {pillars.map((p) => (
           <div key={`bt-${p.key}`} className="py-1 text-center">
             <span className="text-xs" style={{ color: getTenGodHex(p.branchTenGod, dayEl) }}>
