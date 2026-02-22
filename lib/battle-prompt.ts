@@ -2,6 +2,7 @@ import { callGemini, shouldFallback, DEFAULT_MODELS } from "@/lib/analysis";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import type { ServerScores, TierResult } from "@/lib/utils/saju-scoring";
 import { scoreToGrade } from "@/lib/utils/saju-scoring";
+import type { BattleInteraction } from "@/lib/utils/battle-interaction";
 import type {
   BattleComparison,
   BattleLlmAnalysis,
@@ -9,10 +10,10 @@ import type {
 } from "@/types/battle";
 
 const RELATIONSHIP_TONE: Record<RelationshipType, string> = {
-  lover: "연인 관계에 맞게 애정 있지만 솔직한 톤으로 분석하라. '커플 사주궁합'의 관점에서 서술하라. 반말 유지, 위로/격려 금지.",
+  lover: "연인 관계에 맞게 솔직한 톤으로 분석하라. '커플 상성 진단'의 관점에서 서술하라. 반말 유지, 위로/격려 금지.",
   friend: "친구 관계에 맞게 재미있고 가벼운 톤으로 분석하라. 친구 간 우열 비교를 유쾌하게 풀어라.",
   colleague: "직장동료 관계에 맞게 프로페셔널하면서도 위트 있는 톤으로 분석하라. 업무 스타일 차이에 초점을 맞춰라.",
-  family: "가족 관계에 맞게 따뜻하지만 객관적인 톤으로 분석하라. 가족 내 역할과 시너지를 언급하라. 반말 유지, 위로/격려 금지.",
+  family: "가족 관계에 맞게 객관적인 톤으로 분석하라. 가족 내 역할과 시너지를 언급하라. 반말 유지, 위로/격려 금지.",
   other: "일반적인 톤으로 두 사람의 사주를 비교 분석하라.",
 };
 
@@ -57,6 +58,23 @@ export const BATTLE_SYSTEM_PROMPT = `너는 "두루미"라는 이름의 냉정�
 예: "甲은 용신이 토인데 재물운에서 토 관련 요소가 약하다. 乙은 기신이 목인데 오히려 재물에서 목의 영향을 받지 않는 구조라 유리하다."
 사주 데이터(sajuTextA/sajuTextB)에 용신/기신/희신 정보가 포함되어 있다. 반드시 활용해라.
 
+## 상호작용 데이터 활용
+사주 데이터에 "두 사주 상호작용 분석" 블록이 포함된다. 이 데이터를 반드시 활용해라:
+- 용신 상보성: overallComment와 compatibilityAnalysis에서 핵심 축으로 사용. "A의 강한 오행이 B의 용신을 채워준다/기신을 자극한다"를 구체적으로 서술.
+- 일간 관계(합/충/생/극/비화): headVerdict에서 두 사람의 근본적 역학을 한 문장으로 설명할 때 사용해라. 합이면 끌림, 충이면 충돌, 생이면 일방적 도움, 극이면 제압 구조.
+- 오행 상보율: 두 사람이 만났을 때 부족한 기운이 채워지는지 여부. compatibilityAnalysis에서 구체적으로 언급.
+- 대운 동기화: 현재 시점에서 두 사람의 운 흐름이 어떻게 맞물리는지. overallComment에서 "지금 시기"에 대한 언급으로 활용.
+
+[핵심]
+숫자와 구조를 근거로 구체적으로 서술해라. "서로 맞아/안 맞아" 같은 모호한 표현 금지.
+
+## 섹션 독립성 규칙
+categoryComments, overallComment, playerSummary, compatibilityAnalysis는 각각 고유한 인사이트를 담아라. 같은 문장이나 표현을 두 필드 이상에서 반복하지 마라.
+- categoryComments: 각 카테고리의 승패 원인을 용신/기신으로 설명 (개별 카테고리 단위)
+- overallComment: 두 사주의 역학 관계 + 대운 시기 언급 (전체 구조 단위)
+- playerASummary / playerBSummary: 해당 플레이어의 강점/약점 카테고리 요약 (개인 단위)
+- compatibilityAnalysis: 상호작용 데이터 기반 관계 역학 (관계 단위)
+
 ## 출력 JSON 스키마
 {
   "headVerdict": "한 줄 요약 판정문 (예: 'A의 압도적 승리!' 또는 '팽팽한 접전, 결국 B의 신승')",
@@ -84,6 +102,9 @@ export function buildBattleUserInfo(opts: {
   relationshipType: RelationshipType;
   sajuTextA?: string | null;
   sajuTextB?: string | null;
+  interaction?: BattleInteraction;
+  fortuneBlockA?: string;
+  fortuneBlockB?: string;
 }): string {
   const {
     nameA, nameB,
@@ -92,6 +113,8 @@ export function buildBattleUserInfo(opts: {
     comparison,
     relationshipType,
     sajuTextA, sajuTextB,
+    interaction,
+    fortuneBlockA, fortuneBlockB,
   } = opts;
 
   const fmtScores = (scores: ServerScores) =>
@@ -115,16 +138,45 @@ export function buildBattleUserInfo(opts: {
     ? `\n[하이라이트 카테고리]\n"${highlight.category}"가 점수차(${highlight.diff}점)가 가장 큰 결정적 항목이다. categoryComments에서 이 카테고리는 반드시 2~3문장으로 상세히 분석하라.`
     : "";
 
+  // Build interaction block
+  let interactionBlock = "";
+  if (interaction) {
+    const lines: string[] = ["\n[두 사주 상호작용 분석]"];
+    lines.push(`일간 관계: ${interaction.dayStemRelation.type} — ${interaction.dayStemRelation.detail}`);
+    lines.push(`용신 상보성: ${interaction.yongshinCompat.summary}`);
+    if (interaction.yongshinCompat.aHelpsB) lines.push(`  - ${nameA}의 강한 오행이 ${nameB}의 용신을 보강`);
+    if (interaction.yongshinCompat.bHelpsA) lines.push(`  - ${nameB}의 강한 오행이 ${nameA}의 용신을 보강`);
+    if (interaction.yongshinCompat.aHurtsB) lines.push(`  - ${nameA}의 강한 오행이 ${nameB}의 기신을 자극`);
+    if (interaction.yongshinCompat.bHurtsA) lines.push(`  - ${nameB}의 강한 오행이 ${nameA}의 기신을 자극`);
+    lines.push(`오행 상보율: ${interaction.elementCoverage.percent}% (5행 중 ${Math.round(interaction.elementCoverage.percent / 20)}개 충족)`);
+    if (interaction.elementCoverage.coveredByOther.a.length > 0) {
+      lines.push(`  - ${nameA}에게 부족한 [${interaction.elementCoverage.coveredByOther.a.join(",")}]을 ${nameB}가 채워줌`);
+    }
+    if (interaction.elementCoverage.coveredByOther.b.length > 0) {
+      lines.push(`  - ${nameB}에게 부족한 [${interaction.elementCoverage.coveredByOther.b.join(",")}]을 ${nameA}가 채워줌`);
+    }
+    if (interaction.fortuneSync) {
+      lines.push(`대운 동기화: ${interaction.fortuneSync.synced ? "동기화됨" : "비동기"}`);
+      lines.push(`  - ${nameA} 현재 대운: ${interaction.fortuneSync.currentDaeunA}`);
+      lines.push(`  - ${nameB} 현재 대운: ${interaction.fortuneSync.currentDaeunB}`);
+      lines.push(`  - ${interaction.fortuneSync.summary}`);
+    }
+    interactionBlock = lines.join("\n");
+  }
+
   return `
 [甲] ${nameA}
 종합: ${tierA.grade}등급 (composite: ${tierA.composite}, 상위 ${tierA.topPercent}%)
 ${fmtScores(scoresA)}
 ${sajuTextA ? `사주: ${sajuTextA}` : ""}
+${fortuneBlockA || ""}
 
 [乙] ${nameB}
 종합: ${tierB.grade}등급 (composite: ${tierB.composite}, 상위 ${tierB.topPercent}%)
 ${fmtScores(scoresB)}
 ${sajuTextB ? `사주: ${sajuTextB}` : ""}
+${fortuneBlockB || ""}
+${interactionBlock}
 
 [카테고리별 대결 결과 (서버 확정)]
 ${matchLines.join("\n")}
@@ -155,6 +207,9 @@ export async function runBattleAnalysis(opts: {
   relationshipType: RelationshipType;
   sajuTextA?: string | null;
   sajuTextB?: string | null;
+  interaction?: BattleInteraction;
+  fortuneBlockA?: string;
+  fortuneBlockB?: string;
 }): Promise<BattleLlmAnalysis> {
   const userInfo = buildBattleUserInfo(opts);
   const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
@@ -174,7 +229,8 @@ export async function runBattleAnalysis(opts: {
           playerBSummary: parsed.playerBSummary || "",
           compatibilityAnalysis: parsed.compatibilityAnalysis || "",
         };
-      } catch {
+      } catch (parseErr) {
+        console.warn("[BATTLE_LLM] 응답 파싱 실패:", model, parseErr);
         lastError = { message: "LLM 응답 파싱 실패" };
         continue;
       }

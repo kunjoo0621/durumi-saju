@@ -2014,7 +2014,7 @@ export async function resolveSajuText(input: InputPayload) {
   }
 }
 
-function buildFortunePromptBlock(fortune: any | null, birthYear: number): string {
+export function buildFortunePromptBlock(fortune: any | null, birthYear: number): string {
   if (!fortune?.daeun?.pillars?.length) return "";
   const currentYear = new Date().getFullYear();
   const age = currentYear - birthYear + 1; // 한국 나이

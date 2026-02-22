@@ -35,6 +35,7 @@ export default function BattleResultClient() {
   const [result, setResult] = useState<BattleResult | null>(null);
   const [dbLoading, setDbLoading] = useState(false);
   const [shareText, setShareText] = useState("");
+  const [dbError, setDbError] = useState(false);
 
   const battleId = searchParams.get("id");
 
@@ -58,8 +59,9 @@ export default function BattleResultClient() {
             setResult(battleResult);
           }
         })
-        .catch(() => {
-          // DB 조회 실패 시 Zustand fallback
+        .catch((err) => {
+          console.warn("[BATTLE_RESULT] DB 조회 실패, Zustand fallback:", err);
+          setDbError(true);
           if (battleResult) {
             setResult(battleResult);
           }
@@ -206,6 +208,12 @@ export default function BattleResultClient() {
 
       <main className="px-6 py-8">
         <div className="max-w-[640px] mx-auto space-y-6">
+
+          {dbError && (
+            <div className="rounded-xl bg-[#1A1A1A] px-4 py-3 text-[13px] text-gray-400 text-center">
+              저장된 결과를 불러오지 못했습니다. 캐시된 데이터를 표시합니다.
+            </div>
+          )}
 
           {/* === 5-1. 헤더 판정 영역 === */}
           <div className="rounded-3xl bg-background-secondary p-6 md:p-8 text-center">

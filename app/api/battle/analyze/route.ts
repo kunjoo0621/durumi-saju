@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getSupabaseUserId } from "@/lib/server/user";
-import { resolveSajuEnrichedData, type InputPayload } from "@/lib/analysis";
+import { resolveSajuEnrichedData, type InputPayload, buildFortunePromptBlock } from "@/lib/analysis";
 import { calculateServerScoring } from "@/lib/utils/saju-scoring";
 import { compareBattle } from "@/lib/utils/battle-compare";
 import { runBattleAnalysis } from "@/lib/battle-prompt";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { calculateFortune } from "@/lib/utils/saju-fortune";
+import { calculateBattleInteraction } from "@/lib/utils/battle-interaction";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
 
 type BattleAnalyzeBody = {
@@ -109,6 +111,51 @@ export async function POST(request: NextRequest) {
       elementDist: scoringB.scoringInput.elementDist,
     });
 
+    // Fortune for both players
+    const birthYearA = Number(body.playerA.birthYear);
+    const birthYearB = Number(body.playerB.birthYear);
+
+    const [fortuneA, fortuneB] = await Promise.all([
+      calculateFortune({
+        birthYear: birthYearA,
+        birthMonth: Number(body.playerA.birthMonth),
+        birthDay: Number(body.playerA.birthDay),
+        birthHour: body.playerA.unknownBirthTime ? undefined : Number(body.playerA.birthHour),
+        birthMinute: body.playerA.unknownBirthTime ? undefined : Number(body.playerA.birthMinute),
+        gender: body.playerA.gender as "male" | "female",
+        birthLocation: body.playerA.birthLocation,
+        yearPillar: enrichedA.pillars.year,
+        monthPillar: enrichedA.pillars.month,
+        dayPillar: enrichedA.pillars.day,
+        hourPillar: enrichedA.pillars.hour ?? "",
+        isTimeUnknown: body.playerA.unknownBirthTime,
+      }),
+      calculateFortune({
+        birthYear: birthYearB,
+        birthMonth: Number(body.playerB.birthMonth),
+        birthDay: Number(body.playerB.birthDay),
+        birthHour: body.playerB.unknownBirthTime ? undefined : Number(body.playerB.birthHour),
+        birthMinute: body.playerB.unknownBirthTime ? undefined : Number(body.playerB.birthMinute),
+        gender: body.playerB.gender as "male" | "female",
+        birthLocation: body.playerB.birthLocation,
+        yearPillar: enrichedB.pillars.year,
+        monthPillar: enrichedB.pillars.month,
+        dayPillar: enrichedB.pillars.day,
+        hourPillar: enrichedB.pillars.hour ?? "",
+        isTimeUnknown: body.playerB.unknownBirthTime,
+      }),
+    ]);
+
+    const fortuneBlockA = buildFortunePromptBlock(fortuneA, birthYearA);
+    const fortuneBlockB = buildFortunePromptBlock(fortuneB, birthYearB);
+
+    // Interaction analysis
+    const interaction = calculateBattleInteraction(
+      enrichedA, enrichedB,
+      fortuneA, fortuneB,
+      birthYearA, birthYearB,
+    );
+
     // Compare
     const comparison = compareBattle(
       scoringA.scores,
@@ -131,6 +178,9 @@ export async function POST(request: NextRequest) {
       relationshipType: body.relationshipType,
       sajuTextA,
       sajuTextB,
+      interaction,
+      fortuneBlockA,
+      fortuneBlockB,
     });
 
     const result = {
