@@ -366,12 +366,14 @@ export default function ResultClient() {
           {/* 내 사주 원국 — 최상단 */}
           {sajuData && (
             <div className="bg-background-secondary rounded-3xl p-5 md:p-8">
-              <h3 className="text-lg font-bold text-white mb-1">내 사주 원국</h3>
-              {displayBirthDate && (
-                <p className="text-sm text-gray-500 mb-4">
-                  ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
-                </p>
-              )}
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-white">내 사주 원국</h3>
+                {displayBirthDate && (
+                  <span className="text-xs text-gray-500">
+                    ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
+                  </span>
+                )}
+              </div>
               <SajuChart sajuData={sajuData} enriched={enriched} />
               {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
                 <>

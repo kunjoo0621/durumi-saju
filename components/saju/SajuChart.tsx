@@ -11,7 +11,6 @@ import type {
   EnrichedSajuData,
   KoreanElement,
   ShinsalType,
-  Pillar12ShinsalEntry,
 } from "@/lib/utils/saju-enrichment";
 import {
   ELEMENT_TO_HANJA,
@@ -53,11 +52,9 @@ function getElementHex(element: ElementType | null): string {
 
 /* ── 십성 → 오행 매핑 (일간 기준) ── */
 
-// X를 극하는 오행 (관성 기준): CONTROLS 역방향
 const CONTROLLED_BY: Record<KoreanElement, KoreanElement> = {
   목: "금", 화: "수", 토: "목", 금: "화", 수: "토",
 };
-// X를 생하는 오행 (인성 기준): GENERATES 역방향
 const GENERATED_BY: Record<KoreanElement, KoreanElement> = {
   목: "수", 화: "목", 토: "화", 금: "토", 수: "금",
 };
@@ -87,8 +84,9 @@ const SHINSAL_TYPE_COLOR: Record<ShinsalType, string> = {
 };
 
 const SECTION_LABEL = "text-xs text-gray-500 tracking-wider";
+const SECTION_TITLE = "text-sm font-medium text-gray-400";
 const SUB_TEXT = "text-sm text-gray-400";
-const ROW_LABEL = "hidden sm:block text-xs text-gray-600 self-center";
+const ROW_LABEL = "hidden sm:block text-xs text-[#9CA3AF] self-center";
 
 const DEUK_HINTS: Record<string, string> = {
   deukryeong: "(계절)",
@@ -111,6 +109,19 @@ const PILLAR_KEY_TO_POS: Record<string, "year" | "month" | "day" | "hour"> = {
   hour: "hour", day: "day", month: "month", year: "year",
 };
 
+/* ── 신강/신약 스펙트럼 ── */
+
+const STRENGTH_LEVELS = ["극약", "태약", "신약", "중화신약", "중화신강", "신강", "태강", "극왕"];
+const STRENGTH_POS: Record<string, number> = {
+  "극약": 0, "태약": 14.3, "신약": 28.6, "중화신약": 42.9,
+  "중화신강": 57.1, "신강": 71.4, "태강": 85.7, "극왕": 100,
+};
+const STRENGTH_HEX: Record<string, string> = {
+  "극약": "#3B82F6", "태약": "#4A7DD3", "신약": "#5878B2", "중화신약": "#647491",
+  "중화신강": "#80717D", "신강": "#AA6F77", "태강": "#D56D71", "극왕": "#FF6B6B",
+};
+const SPECTRUM_GRADIENT = "linear-gradient(to right, #3B82F6, #6B7280 50%, #FF6B6B)";
+
 /* ── 신강/신약 + 용신 + 오행 패널 ── */
 const StrengthPanel = memo(function StrengthPanel({
   enriched,
@@ -119,8 +130,9 @@ const StrengthPanel = memo(function StrengthPanel({
 }) {
   const { strength, yongshin, elementDist } = enriched;
   const d = strength.details;
-  const isStrong = ["극왕", "태강", "신강", "중화신강"].includes(strength.result);
   const strengthDesc = STRENGTH_DESCRIPTIONS[strength.result] ?? "";
+  const spectrumPos = STRENGTH_POS[strength.result] ?? 50;
+  const spectrumColor = STRENGTH_HEX[strength.result] ?? "#6B7280";
   const totalElement = Object.values(elementDist).reduce((a, b) => a + b, 0);
   const elements: KoreanElement[] = ["목", "화", "토", "금", "수"];
 
@@ -144,15 +156,58 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="h-px bg-[#222222] my-5" />
 
       {/* 신강/신약 분석 */}
-      <div className="flex items-center justify-between">
-        <span className={SECTION_LABEL}>신강/신약 분석</span>
-        <div className="text-right">
-          <span className={`text-lg font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}>
-            {strength.result}
-          </span>
-          {strengthDesc && <p className={SUB_TEXT}>{strengthDesc}</p>}
+      <p className={SECTION_TITLE}>신강/신약 분석</p>
+
+      {/* Desktop: 8단계 라벨 */}
+      <div className="hidden sm:flex justify-between mt-3 mb-1.5">
+        {STRENGTH_LEVELS.map((level) => {
+          const isCurrent = level === strength.result;
+          return (
+            <span
+              key={level}
+              className={isCurrent ? "text-xs font-bold text-center" : "text-[10px] text-gray-600 text-center"}
+              style={isCurrent ? { color: spectrumColor } : undefined}
+            >
+              {level.length > 3 ? (
+                <>
+                  <span className="block leading-tight">{level.slice(0, 2)}</span>
+                  <span className="block leading-tight">{level.slice(2)}</span>
+                </>
+              ) : level}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Desktop: 스펙트럼 바 */}
+      <div className="hidden sm:block relative h-1.5 rounded-full" style={{ background: SPECTRUM_GRADIENT }}>
+        <div
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
+          style={{ left: `${spectrumPos}%`, backgroundColor: spectrumColor }}
+        />
+      </div>
+
+      {/* Mobile: 극약 [바] 극왕 */}
+      <div className="sm:hidden mt-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-600 shrink-0">극약</span>
+          <div className="relative flex-1 h-1.5 rounded-full" style={{ background: SPECTRUM_GRADIENT }}>
+            <div
+              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
+              style={{ left: `${spectrumPos}%`, backgroundColor: spectrumColor }}
+            />
+          </div>
+          <span className="text-[10px] text-gray-600 shrink-0">극왕</span>
         </div>
       </div>
+
+      {/* 결과 + 설명 */}
+      <p className="text-center mt-2.5">
+        <span className="text-sm font-bold" style={{ color: spectrumColor }}>{strength.result}</span>
+        {strengthDesc && <span className="text-sm text-gray-400"> · {strengthDesc}</span>}
+      </p>
+
+      {/* 득령/득지/득시/득세 */}
       <div className="flex justify-between mt-3">
         {deukItems.map((item) => (
           <div key={item.key} className="flex items-center gap-1">
@@ -172,8 +227,8 @@ const StrengthPanel = memo(function StrengthPanel({
 
       {/* 용신 / 기신 */}
       <div className="flex justify-between mb-0.5">
-        <span className={SECTION_LABEL}>용신</span>
-        <span className={SECTION_LABEL}>기신</span>
+        <span className={SECTION_TITLE}>용신</span>
+        <span className={SECTION_TITLE}>기신</span>
       </div>
       <div className="flex justify-between mb-1">
         <span className={SUB_TEXT}>나에게 필요한 기운</span>
@@ -210,7 +265,7 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="h-px bg-[#222222] my-5" />
 
       {/* 오행 분포 */}
-      <p className={`${SECTION_LABEL} mb-2`}>오행 분포</p>
+      <p className={`${SECTION_TITLE} mb-2`}>오행 분포</p>
       <div className="flex rounded-lg overflow-hidden h-4">
         {elements.map((el) => {
           const ratio = totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0;
@@ -261,7 +316,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
 
   return (
     <div>
-      {/* 5열 그리드: [라벨][시주][일주][월주][년주] */}
+      {/* 그리드: 모바일 4열 / sm+ 5열(라벨포함) */}
       <div
         className="grid gap-x-2 gap-y-0 grid-cols-4 sm:grid-cols-[2.5rem_1fr_1fr_1fr_1fr]"
       >
@@ -302,7 +357,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
           );
         })}
 
-        {/* ── Row: 천간 십성 (no label) ── */}
+        {/* ── Row: 천간 십성 ── */}
         <div className="hidden sm:block" />
         {pillars.map((p) => (
           <div key={`st-${p.key}`} className="py-1 text-center">
@@ -325,7 +380,7 @@ function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
           </div>
         ))}
 
-        {/* ── Row: 지지 십성 (no label) ── */}
+        {/* ── Row: 지지 십성 ── */}
         <div className="hidden sm:block" />
         {pillars.map((p) => (
           <div key={`bt-${p.key}`} className="py-1 text-center">
