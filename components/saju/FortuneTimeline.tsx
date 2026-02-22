@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { IconMessageCircleFilled } from "@tabler/icons-react";
 import type { FortuneResult, DaeunEntry, SeunEntry } from "@/lib/utils/saju-fortune";
 
 // ── 한줄평 템플릿 (십성 기반, deterministic) ──
@@ -69,10 +70,7 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
   return (
     <div className="space-y-5">
       {/* 블록 제목 */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm">📅</span>
-        <h4 className="text-sm font-bold text-white tracking-wide">운세 흐름</h4>
-      </div>
+      <p className="text-base font-semibold text-gray-300 mb-6">운세 흐름</p>
 
       {/* 대운 (10년 주기) */}
       <div className="space-y-2">
@@ -89,9 +87,12 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           })}
         </div>
         {daeunSummary && (
-          <p className="text-xs text-gray-400 leading-relaxed mt-1">
-            지금 대운: <span className="text-amber-400/90">{currentDaeun!.tenStar}운</span> — {daeunSummary}
-          </p>
+          <div className="bg-[#1A1A1A] rounded-xl px-4 py-3 mt-3 flex items-start gap-2">
+            <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
+            <p className="text-sm text-gray-300">
+              지금 대운: {currentDaeun!.tenStar}운 — {daeunSummary}
+            </p>
+          </div>
         )}
       </div>
 
@@ -110,9 +111,12 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           })}
         </div>
         {seunSummary && (
-          <p className="text-xs text-gray-400 leading-relaxed mt-1">
-            올해: <span className="text-amber-400/90">{currentSeun!.tenStar}운</span> — {seunSummary}
-          </p>
+          <div className="bg-[#1A1A1A] rounded-xl px-4 py-3 mt-3 flex items-start gap-2">
+            <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
+            <p className="text-sm text-gray-300">
+              올해: {currentSeun!.tenStar}운 — {seunSummary}
+            </p>
+          </div>
         )}
       </div>
     </div>
