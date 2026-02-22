@@ -84,7 +84,7 @@ const SHINSAL_TYPE_COLOR: Record<ShinsalType, string> = {
 };
 
 const SECTION_LABEL = "text-xs text-gray-500 tracking-wider";
-const SECTION_TITLE = "text-sm font-medium text-gray-400";
+const SECTION_TITLE = "text-base font-semibold text-gray-300";
 const SUB_TEXT = "text-sm text-gray-400";
 const ROW_LABEL = "hidden sm:block text-xs text-[#9CA3AF] self-center";
 
@@ -153,7 +153,7 @@ const StrengthPanel = memo(function StrengthPanel({
   return (
     <div>
       {/* divider: 원국 테이블 ↔ 신강 */}
-      <div className="h-px bg-[#222222] my-5" />
+      <div className="h-px bg-[#222222] my-8" />
 
       {/* 신강/신약 분석 */}
       <p className={SECTION_TITLE}>신강/신약 분석</p>
@@ -218,46 +218,46 @@ const StrengthPanel = memo(function StrengthPanel({
       </div>
 
       {/* divider: 신강 ↔ 용신 */}
-      <div className="h-px bg-[#222222] my-5" />
+      <div className="h-px bg-[#222222] my-8" />
 
-      {/* 용신 / 기신 */}
-      <div className="flex justify-between mb-0.5">
-        <span className={SECTION_TITLE}>용신</span>
-        <span className={SECTION_TITLE}>기신</span>
-      </div>
-      <div className="flex justify-between mb-4">
-        <span className={SUB_TEXT}>나에게 필요한 기운</span>
-        <span className={SUB_TEXT}>피해야 할 기운</span>
-      </div>
-      <div className="flex justify-between items-baseline">
-        <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}>
-          {yongshin.eokbu}({eokbuHanja})
-        </span>
-        <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}>
-          {yongshin.gisin}({gisinHanja})
-        </span>
-      </div>
-      <div className="mt-2 space-y-0.5">
-        <p className={SUB_TEXT}>
-          희신:{" "}
-          <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
-            {yongshin.heesin}({heesinHanja})
-          </span>
-          {" "}&mdash; 용신을 돕는 기운
-        </p>
-        {yongshin.johu && johuDesc && (
-          <p className={SUB_TEXT}>
-            조후:{" "}
-            <span style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}>
-              {yongshin.johu}({ELEMENT_TO_HANJA[yongshin.johu]})
-            </span>
-            {" "}&mdash; {johuDesc}
+      {/* 용신 / 기신 2열 카드 */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* 용신 카드 */}
+        <div className="bg-[#1A1A1A] rounded-xl p-4">
+          <p className="text-xs text-gray-500">용신</p>
+          <p className="text-xs text-gray-500 mb-3">나에게 필요한 기운</p>
+          <p className="text-2xl font-bold text-center my-2" style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}>
+            {yongshin.eokbu}({eokbuHanja})
           </p>
-        )}
+          <p className={`${SUB_TEXT} mt-3`}>
+            희신:{" "}
+            <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
+              {yongshin.heesin}({heesinHanja})
+            </span>
+          </p>
+          <p className="text-xs text-gray-500">&mdash; 용신을 돕는 기운</p>
+        </div>
+        {/* 기신 카드 */}
+        <div className="bg-[#1A1A1A] rounded-xl p-4">
+          <p className="text-xs text-gray-500">기신</p>
+          <p className="text-xs text-gray-500 mb-3">피해야 할 기운</p>
+          <p className="text-2xl font-bold text-center my-2" style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}>
+            {yongshin.gisin}({gisinHanja})
+          </p>
+        </div>
       </div>
+      {yongshin.johu && johuDesc && (
+        <p className={`${SUB_TEXT} mt-3`}>
+          조후:{" "}
+          <span style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}>
+            {yongshin.johu}({ELEMENT_TO_HANJA[yongshin.johu]})
+          </span>
+          {" "}&mdash; {johuDesc}
+        </p>
+      )}
 
       {/* divider: 용신 ↔ 오행 */}
-      <div className="h-px bg-[#222222] my-5" />
+      <div className="h-px bg-[#222222] my-8" />
 
       {/* 오행 분포 */}
       <p className={`${SECTION_TITLE} mb-4`}>오행 분포</p>

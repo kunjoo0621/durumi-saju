@@ -377,7 +377,7 @@ export default function ResultClient() {
               <SajuChart sajuData={sajuData} enriched={enriched} />
               {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
                 <>
-                  <div className="h-px bg-[#222222] my-5" />
+                  <div className="h-px bg-[#222222] my-8" />
                   <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
                 </>
               )}

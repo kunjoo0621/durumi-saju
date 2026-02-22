@@ -26,7 +26,7 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-400 mb-4">신살</p>
+      <p className="text-base font-semibold text-gray-300 mb-4">신살</p>
       <div className="grid grid-cols-2 gap-2">
         {matches.map((m) => {
           const dotColor = TYPE_DOT_COLOR[m.type];
