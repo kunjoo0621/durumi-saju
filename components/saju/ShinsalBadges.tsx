@@ -27,7 +27,7 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
 
   return (
     <div>
-      <p className="text-base font-semibold text-gray-300 mb-4">신살</p>
+      <p className="text-base font-semibold text-gray-300 mb-6">신살</p>
       <div className="bg-[#1A1A1A] rounded-xl px-4 py-3 mb-6 flex items-start gap-2">
         <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
         <p className="text-sm text-gray-300">{getShinsalFeedback(matches)}</p>

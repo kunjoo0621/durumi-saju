@@ -164,10 +164,10 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="h-px bg-[#222222] my-8" />
 
       {/* 신강/신약 분석 */}
-      <p className={SECTION_TITLE}>신강/신약 분석</p>
+      <p className={`${SECTION_TITLE} mb-6`}>신강/신약 분석</p>
 
       {/* Desktop: 8단계 라벨 + 바 */}
-      <div className="hidden sm:block mt-4">
+      <div className="hidden sm:block">
         <div className="flex justify-between mb-1.5">
           {STRENGTH_LEVELS.map((level) => {
             const isCurrent = level === strength.result;
@@ -191,7 +191,7 @@ const StrengthPanel = memo(function StrengthPanel({
       </div>
 
       {/* Mobile: 극약 [바] 극왕 */}
-      <div className="sm:hidden mt-4">
+      <div className="sm:hidden">
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-gray-600 shrink-0">극약</span>
           <div className="relative flex-1 h-1.5 rounded-full" style={{ background: SPECTRUM_GRADIENT }}>
@@ -231,7 +231,7 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="h-px bg-[#222222] my-8" />
 
       {/* 용신 / 기신 2열 카드 */}
-      <p className={`${SECTION_TITLE} mb-4`}>용신 분석</p>
+      <p className={`${SECTION_TITLE} mb-6`}>용신 분석</p>
       <div className="grid grid-cols-2 gap-3">
         {/* 용신 카드 */}
         <div className="bg-[#1A1A1A] rounded-xl p-4">
@@ -263,7 +263,7 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="h-px bg-[#222222] my-8" />
 
       {/* 오행 분포 */}
-      <p className={`${SECTION_TITLE} mb-4`}>오행 분포</p>
+      <p className={`${SECTION_TITLE} mb-6`}>오행 분포</p>
       {(() => {
         const BAR_HEX: Record<KoreanElement, string> = { 목: "#22C55E", 화: "#EF4444", 토: "#EAB308", 금: "#A0A0A0", 수: "#3B82F6" };
 
@@ -290,11 +290,15 @@ const StrengthPanel = memo(function StrengthPanel({
                   {/* 바 컨테이너 — 고정 높이, 아래 정렬 */}
                   <div className="h-[100px] flex items-end mb-2">
                     {isDeficient ? (
-                      <div className="w-10 h-6 border border-dashed border-gray-600 rounded-md" />
+                      <div className="w-12 h-6 border border-dashed border-gray-600 rounded-md" />
                     ) : (
                       <div
-                        className="w-10 rounded-md"
-                        style={{ height: `${barHeight}px`, backgroundColor: BAR_HEX[s.el] }}
+                        className={`w-12 rounded-md${s.el === yongshin.eokbu ? " border-2 border-amber-400" : ""}`}
+                        style={{
+                          height: `${barHeight}px`,
+                          backgroundColor: BAR_HEX[s.el],
+                          opacity: s.el === yongshin.gisin ? 0.5 : 1,
+                        }}
                       />
                     )}
                   </div>
