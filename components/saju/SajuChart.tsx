@@ -113,7 +113,7 @@ const PILLAR_KEY_TO_POS: Record<string, "year" | "month" | "day" | "hour"> = {
 function SajuFeedback({ text }: { text: string }) {
   if (!text) return null;
   return (
-    <div className="flex items-start gap-2 mt-4">
+    <div className="bg-[#1A1A1A] rounded-xl px-4 py-3 mt-4 flex items-start gap-2">
       <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
       <p className="text-sm text-gray-300">{text}</p>
     </div>
@@ -235,6 +235,7 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="grid grid-cols-2 gap-3">
         {/* 용신 카드 */}
         <div className="bg-[#1A1A1A] rounded-xl p-4">
+          <p className="text-xs text-gray-500">용신</p>
           <p className="text-xs text-gray-500 mb-3">나에게 필요한 기운</p>
           <p className="text-2xl font-bold text-center my-2" style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}>
             {yongshin.eokbu}({eokbuHanja})
@@ -249,6 +250,7 @@ const StrengthPanel = memo(function StrengthPanel({
         </div>
         {/* 기신 카드 */}
         <div className="bg-[#1A1A1A] rounded-xl p-4">
+          <p className="text-xs text-gray-500">기신</p>
           <p className="text-xs text-gray-500 mb-3">피해야 할 기운</p>
           <p className="text-2xl font-bold text-center my-2" style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}>
             {yongshin.gisin}({gisinHanja})
