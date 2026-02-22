@@ -114,7 +114,7 @@ const PILLAR_KEY_TO_POS: Record<string, "year" | "month" | "day" | "hour"> = {
 function SajuFeedback({ text }: { text: string }) {
   if (!text) return null;
   return (
-    <div className="bg-[#1A1A1A] rounded-xl px-4 py-3 mt-6 flex items-start gap-2">
+    <div className="bg-[rgba(255,107,107,0.08)] rounded-xl px-4 py-3 mt-6 flex items-start gap-2">
       <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
       <p className="text-sm text-gray-300">{text}</p>
     </div>

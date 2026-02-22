@@ -87,7 +87,7 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           })}
         </div>
         {daeunSummary && (
-          <div className="bg-[#1A1A1A] rounded-xl px-4 py-3 mt-3 flex items-start gap-2">
+          <div className="bg-[rgba(255,107,107,0.08)] rounded-xl px-4 py-3 mt-3 flex items-start gap-2">
             <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
             <p className="text-sm text-gray-300">
               지금 대운: {currentDaeun!.tenStar}운 — {daeunSummary}
@@ -111,7 +111,7 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           })}
         </div>
         {seunSummary && (
-          <div className="bg-[#1A1A1A] rounded-xl px-4 py-3 mt-3 flex items-start gap-2">
+          <div className="bg-[rgba(255,107,107,0.08)] rounded-xl px-4 py-3 mt-3 flex items-start gap-2">
             <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
             <p className="text-sm text-gray-300">
               올해: {currentSeun!.tenStar}운 — {seunSummary}
