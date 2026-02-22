@@ -363,10 +363,10 @@ export default function ResultClient() {
             </div>
           )}
 
-          {/* 내 사주 원본 — 최상단 */}
+          {/* 내 사주 원국 — 최상단 */}
           {sajuData && (
             <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
-              <h3 className="text-lg font-bold text-white mb-1">내 사주 원본</h3>
+              <h3 className="text-lg font-bold text-white mb-1">내 사주 원국</h3>
               {displayBirthDate && (
                 <p className="text-sm text-gray-500 mb-4">
                   ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)

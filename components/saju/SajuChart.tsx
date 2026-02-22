@@ -297,6 +297,7 @@ const StrengthPanel = memo(function StrengthPanel({
             <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
               {yongshin.heesin}({heesinHanja})
             </span>
+            {" "}&mdash; 용신을 돕는 기운
           </p>
           {yongshin.johu && johuDesc && (
             <p className={SUB_TEXT}>
@@ -344,7 +345,7 @@ const StrengthPanel = memo(function StrengthPanel({
                   {el}
                 </span>
                 <span className="text-[10px] text-gray-500">
-                  {count}
+                  {count} ({totalElement > 0 ? Math.round((count / totalElement) * 100) : 0}%)
                 </span>
                 {isYongshin && (
                   <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">

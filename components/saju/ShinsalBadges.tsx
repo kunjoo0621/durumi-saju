@@ -11,9 +11,9 @@ const TYPE_DOT_COLOR: Record<ShinsalType, string> = {
 };
 
 const TYPE_LABEL: Record<ShinsalType, string> = {
-  good: "길",
-  bad: "흉",
-  neutral: "중",
+  good: "길성",
+  bad: "흉살",
+  neutral: "중성",
 };
 
 interface ShinsalBadgesProps {
