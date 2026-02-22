@@ -264,45 +264,65 @@ const StrengthPanel = memo(function StrengthPanel({
 
       {/* 오행 분포 */}
       <p className={`${SECTION_TITLE} mb-4`}>오행 분포</p>
-      <div className="flex rounded-lg overflow-hidden h-4">
-        {elements.map((el) => {
-          const ratio = totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0;
-          if (ratio === 0) return null;
-          return (
-            <div
-              key={el}
-              style={{ width: `${ratio}%`, backgroundColor: KR_ELEMENT_HEX[el], opacity: 0.8 }}
-            />
-          );
-        })}
-      </div>
-      <div className="flex justify-between mt-2">
-        {elements.map((el) => {
-          const count = elementDist[el];
-          const isYongshin = el === yongshin.eokbu;
-          const isGisin = el === yongshin.gisin;
-          const isDeficient = count === 0;
-          return (
-            <div key={el} className="flex items-center gap-1">
-              <span className="text-xs font-medium" style={{ color: KR_ELEMENT_HEX[el] }}>
-                {el}
-              </span>
-              <span className="text-[11px] text-gray-500">
-                {count} ({totalElement > 0 ? Math.round((count / totalElement) * 100) : 0}%)
-              </span>
-              {isYongshin && (
-                <span className="text-[11px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">용신</span>
-              )}
-              {isDeficient && (
-                <span className="text-[11px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">결핍</span>
-              )}
-              {isGisin && !isDeficient && (
-                <span className="text-[11px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">기신</span>
-              )}
+      {(() => {
+        const BAR_HEX: Record<KoreanElement, string> = { 목: "#22C55E", 화: "#EF4444", 토: "#EAB308", 금: "#A0A0A0", 수: "#3B82F6" };
+        const DARK_BG = new Set<KoreanElement>(["목", "화", "수"]);
+
+        const sorted = [...elements]
+          .map((el) => ({ el, count: elementDist[el], ratio: totalElement > 0 ? (elementDist[el] / totalElement) * 100 : 0 }))
+          .sort((a, b) => b.ratio - a.ratio);
+
+        const inBar = sorted.filter((s) => s.ratio >= 20);
+        const belowBar = sorted.filter((s) => s.ratio > 0 && s.ratio < 20);
+        const deficient = sorted.filter((s) => s.count === 0);
+
+        const tag = (el: KoreanElement) =>
+          el === yongshin.eokbu ? " 용신" : el === yongshin.gisin ? " 기신" : "";
+
+        return (
+          <>
+            {/* 스택바 */}
+            <div className="flex rounded-lg overflow-hidden h-10">
+              {sorted.filter((s) => s.ratio > 0).map((s) => {
+                const isDark = DARK_BG.has(s.el);
+                const showInside = s.ratio >= 20;
+                return (
+                  <div
+                    key={s.el}
+                    className="flex items-center justify-center"
+                    style={{ width: `${s.ratio}%`, backgroundColor: BAR_HEX[s.el] }}
+                  >
+                    {showInside && (
+                      <span className={`text-xs font-medium ${isDark ? "text-white" : "text-gray-900"}`}>
+                        {s.el} {s.count}
+                        {tag(s.el) && (
+                          <span className="opacity-80 text-[11px]">{tag(s.el)}</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+
+            {/* 바 아래: 좁은 영역 + 결핍 */}
+            {(belowBar.length > 0 || deficient.length > 0) && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                {belowBar.map((s) => (
+                  <span key={s.el} className="text-xs font-medium" style={{ color: BAR_HEX[s.el] }}>
+                    {s.el} {s.count}{tag(s.el)}
+                  </span>
+                ))}
+                {deficient.map((s) => (
+                  <span key={s.el} className="text-xs font-medium text-red-400">
+                    {s.el} 0 결핍
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <SajuFeedback text={getOhaengFeedback(elementDist)} />
     </div>
