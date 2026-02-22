@@ -3,7 +3,6 @@
 import { memo, useMemo } from "react";
 import {
   computePillarDisplayData,
-  getElementTextClass,
   getElementName,
   type SajuData,
   type ElementType,
@@ -16,6 +15,8 @@ import type {
 } from "@/lib/utils/saju-enrichment";
 import {
   ELEMENT_TO_HANJA,
+  GENERATES,
+  CONTROLS,
   STRENGTH_DESCRIPTIONS,
 } from "@/lib/utils/saju-enrichment";
 import {
@@ -28,11 +29,13 @@ type SajuChartProps = {
   enriched?: EnrichedSajuData | null;
 };
 
+/* ── 오행색 매핑 ── */
+
 const ELEMENT_HEX: Record<ElementType, string> = {
   wood: "#22C55E",
   fire: "#EF4444",
   earth: "#EAB308",
-  metal: "#F5F5F5",
+  metal: "#D1D5DB",
   water: "#3B82F6",
 };
 
@@ -40,7 +43,7 @@ const KR_ELEMENT_HEX: Record<KoreanElement, string> = {
   목: "#22C55E",
   화: "#EF4444",
   토: "#EAB308",
-  금: "#F5F5F5",
+  금: "#D1D5DB",
   수: "#3B82F6",
 };
 
@@ -48,11 +51,44 @@ function getElementHex(element: ElementType | null): string {
   return element ? ELEMENT_HEX[element] : ELEMENT_HEX.metal;
 }
 
+/* ── 십성 → 오행 매핑 (일간 기준) ── */
+
+// X를 극하는 오행 (관성 기준): CONTROLS 역방향
+const CONTROLLED_BY: Record<KoreanElement, KoreanElement> = {
+  목: "금", 화: "수", 토: "목", 금: "화", 수: "토",
+};
+// X를 생하는 오행 (인성 기준): GENERATES 역방향
+const GENERATED_BY: Record<KoreanElement, KoreanElement> = {
+  목: "수", 화: "목", 토: "화", 금: "토", 수: "금",
+};
+
+function getTenGodElement(tenGod: string, dayEl: KoreanElement): KoreanElement {
+  switch (tenGod) {
+    case "비견": case "겁재": return dayEl;
+    case "식신": case "상관": return GENERATES[dayEl];
+    case "편재": case "정재": return CONTROLS[dayEl];
+    case "편관": case "정관": return CONTROLLED_BY[dayEl];
+    case "편인": case "정인": return GENERATED_BY[dayEl];
+    default: return dayEl;
+  }
+}
+
+function getTenGodHex(tenGod: string | null, dayEl: KoreanElement): string {
+  if (!tenGod) return "#6B7280";
+  return KR_ELEMENT_HEX[getTenGodElement(tenGod, dayEl)];
+}
+
+/* ── 공통 스타일 ── */
+
 const SHINSAL_TYPE_COLOR: Record<ShinsalType, string> = {
   good: "#22C55E",
   bad: "#EF4444",
   neutral: "#6B7280",
 };
+
+const SECTION_LABEL = "text-xs text-gray-500 tracking-wider";
+const SUB_TEXT = "text-sm text-gray-400";
+const ROW_LABEL = "text-xs text-gray-600 self-center";
 
 const DEUK_HINTS: Record<string, string> = {
   deukryeong: "(계절)",
@@ -60,149 +96,22 @@ const DEUK_HINTS: Record<string, string> = {
   deuksi: "(시간)",
   deukse: "(주변)",
 };
-
 const DEUK_LABELS: Record<string, string> = {
   deukryeong: "득령",
   deukji: "득지",
   deuksi: "득시",
   deukse: "득세",
 };
-
 const JOHU_DESCRIPTIONS: Record<string, string> = {
   "하절(여름) → 수(水)로 열기 조절": "여름생, 차가운 기운 보정",
   "동절(겨울) → 화(火)로 한기 보충": "겨울생, 따뜻한 기운 보정",
 };
 
-/* ── 섹션 라벨 스타일: text-xs text-gray-500 tracking-wider ── */
-const SECTION_LABEL = "text-xs text-gray-500 tracking-wider";
-/* ── 설명/보조 텍스트: text-sm text-gray-400 ── */
-const SUB_TEXT = "text-sm text-gray-400";
+const PILLAR_KEY_TO_POS: Record<string, "year" | "month" | "day" | "hour"> = {
+  hour: "hour", day: "day", month: "month", year: "year",
+};
 
-/* ── Header Cell (생시/생일/생월/생년) ── */
-const HeaderCell = memo(function HeaderCell({
-  label,
-  isDayStem,
-}: {
-  label: string;
-  isDayStem: boolean;
-}) {
-  return (
-    <div className="py-2 text-center">
-      <span className={SECTION_LABEL}>
-        {label}
-      </span>
-      {isDayStem && (
-        <span className="ml-1 text-[10px] text-gray-600">(일간)</span>
-      )}
-    </div>
-  );
-});
-
-/* ── Stem / Branch Cell (한자 + 오행 라벨) ── */
-const CharCell = memo(function CharCell({
-  label,
-  element,
-  isDayHighlight,
-}: {
-  label: string;
-  element: ElementType | null;
-  isDayHighlight: boolean;
-}) {
-  const textClass = getElementTextClass(element);
-  const elementName = element ? getElementName(element) : null;
-  const hex = getElementHex(element);
-
-  return (
-    <div
-      className={`py-3 text-center rounded-xl ${
-        isDayHighlight ? "bg-[#222222]" : "bg-[#1A1A1A]"
-      }`}
-      style={
-        isDayHighlight
-          ? { border: `1px solid ${hex}33` }
-          : undefined
-      }
-    >
-      <div
-        className={`text-2xl font-bold ${textClass}`}
-        style={
-          isDayHighlight
-            ? { textShadow: `0 0 12px ${hex}4D` }
-            : undefined
-        }
-      >
-        {label}
-      </div>
-      {elementName && (
-        <div
-          className={`text-xs mt-1 ${textClass}`}
-          style={{ opacity: 0.75 }}
-        >
-          {elementName}
-        </div>
-      )}
-    </div>
-  );
-});
-
-/* ── TenGod Cell (십성) ── */
-const TenGodCell = memo(function TenGodCell({ tenGod }: { tenGod: string | null }) {
-  return (
-    <div className="py-1.5 text-center">
-      <span className="text-xs text-gray-500">
-        {tenGod || "-"}
-      </span>
-    </div>
-  );
-});
-
-/* ── 12운성 Cell ── */
-const TwelveStageCell = memo(function TwelveStageCell({
-  korean,
-  strength,
-}: {
-  korean: string | null;
-  strength?: "strong" | "neutral" | "weak";
-}) {
-  const color =
-    strength === "strong"
-      ? "text-green-400"
-      : strength === "weak"
-        ? "text-red-400"
-        : "text-gray-400";
-  return (
-    <div className="py-1.5 text-center">
-      <span className={`text-xs ${color}`}>{korean || "-"}</span>
-    </div>
-  );
-});
-
-/* ── 12신살 Cell ── */
-const TwelveShinsalCell = memo(function TwelveShinsalCell({
-  entry,
-}: {
-  entry: Pillar12ShinsalEntry | null;
-}) {
-  if (!entry) {
-    return (
-      <div className="py-1.5 text-center">
-        <span className="text-xs text-gray-600">-</span>
-      </div>
-    );
-  }
-  const dotColor = SHINSAL_TYPE_COLOR[entry.type];
-  return (
-    <div className="py-1.5 text-center flex items-center justify-center gap-1">
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: dotColor }}
-      />
-      <span className="text-xs text-gray-400">{entry.name}</span>
-    </div>
-  );
-});
-
-/* ── 신강/신약 + 용신 + 오행밸런스 패널 ── */
+/* ── 신강/신약 + 용신 + 오행 패널 ── */
 const StrengthPanel = memo(function StrengthPanel({
   enriched,
 }: {
@@ -212,7 +121,6 @@ const StrengthPanel = memo(function StrengthPanel({
   const d = strength.details;
   const isStrong = ["극왕", "태강", "신강", "중화신강"].includes(strength.result);
   const strengthDesc = STRENGTH_DESCRIPTIONS[strength.result] ?? "";
-
   const totalElement = Object.values(elementDist).reduce((a, b) => a + b, 0);
   const elements: KoreanElement[] = ["목", "화", "토", "금", "수"];
 
@@ -226,26 +134,21 @@ const StrengthPanel = memo(function StrengthPanel({
   const eokbuHanja = ELEMENT_TO_HANJA[yongshin.eokbu];
   const gisinHanja = ELEMENT_TO_HANJA[yongshin.gisin];
   const heesinHanja = ELEMENT_TO_HANJA[yongshin.heesin];
-
   const johuDesc = yongshin.johuReason
     ? JOHU_DESCRIPTIONS[yongshin.johuReason] ?? yongshin.johuReason
     : null;
 
   return (
     <div className="mt-4 space-y-3">
-      {/* 신강/신약 카드 */}
+      {/* 신강/신약 분석 카드 */}
       <div className="bg-[#1A1A1A] rounded-xl p-4">
         <div className="flex items-center justify-between">
-          <span className={SECTION_LABEL}>신강/신약</span>
+          <span className={SECTION_LABEL}>신강/신약 분석</span>
           <div className="text-right">
-            <span
-              className={`text-lg font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}
-            >
+            <span className={`text-lg font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}>
               {strength.result}
             </span>
-            {strengthDesc && (
-              <p className={SUB_TEXT}>{strengthDesc}</p>
-            )}
+            {strengthDesc && <p className={SUB_TEXT}>{strengthDesc}</p>}
           </div>
         </div>
         <div className="flex justify-between mt-3">
@@ -256,12 +159,8 @@ const StrengthPanel = memo(function StrengthPanel({
               ) : (
                 <IconCircleXFilled size={14} style={{ color: "#4B5563" }} />
               )}
-              <span className={SUB_TEXT}>
-                {DEUK_LABELS[item.key]}
-              </span>
-              <span className={`${SUB_TEXT} opacity-60`}>
-                {DEUK_HINTS[item.key]}
-              </span>
+              <span className={SUB_TEXT}>{DEUK_LABELS[item.key]}</span>
+              <span className={`${SUB_TEXT} opacity-60`}>{DEUK_HINTS[item.key]}</span>
             </div>
           ))}
         </div>
@@ -278,16 +177,10 @@ const StrengthPanel = memo(function StrengthPanel({
           <span className={SUB_TEXT}>피해야 할 기운</span>
         </div>
         <div className="flex justify-between items-baseline">
-          <span
-            className="text-lg font-bold"
-            style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}
-          >
+          <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}>
             {yongshin.eokbu}({eokbuHanja})
           </span>
-          <span
-            className="text-lg font-bold"
-            style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}
-          >
+          <span className="text-lg font-bold" style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}>
             {yongshin.gisin}({gisinHanja})
           </span>
         </div>
@@ -321,11 +214,7 @@ const StrengthPanel = memo(function StrengthPanel({
             return (
               <div
                 key={el}
-                style={{
-                  width: `${ratio}%`,
-                  backgroundColor: KR_ELEMENT_HEX[el],
-                  opacity: 0.8,
-                }}
+                style={{ width: `${ratio}%`, backgroundColor: KR_ELEMENT_HEX[el], opacity: 0.8 }}
               />
             );
           })}
@@ -338,29 +227,20 @@ const StrengthPanel = memo(function StrengthPanel({
             const isDeficient = count === 0;
             return (
               <div key={el} className="flex items-center gap-1">
-                <span
-                  className="text-xs font-medium"
-                  style={{ color: KR_ELEMENT_HEX[el] }}
-                >
+                <span className="text-xs font-medium" style={{ color: KR_ELEMENT_HEX[el] }}>
                   {el}
                 </span>
                 <span className="text-[10px] text-gray-500">
                   {count} ({totalElement > 0 ? Math.round((count / totalElement) * 100) : 0}%)
                 </span>
                 {isYongshin && (
-                  <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">
-                    용신
-                  </span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">용신</span>
                 )}
                 {isDeficient && (
-                  <span className="text-[10px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">
-                    결핍
-                  </span>
+                  <span className="text-[10px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">결핍</span>
                 )}
                 {isGisin && !isDeficient && (
-                  <span className="text-[10px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">
-                    기신
-                  </span>
+                  <span className="text-[10px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">기신</span>
                 )}
               </div>
             );
@@ -371,97 +251,133 @@ const StrengthPanel = memo(function StrengthPanel({
   );
 });
 
-/* ── pillar key → enriched data position 매핑 ── */
-const PILLAR_KEY_TO_POS: Record<string, "year" | "month" | "day" | "hour"> = {
-  hour: "hour",
-  day: "day",
-  month: "month",
-  year: "year",
-};
-
 /* ── Main SajuChart ── */
 function SajuChartInner({ sajuData, enriched }: SajuChartProps) {
-  const pillars = useMemo(
-    () => computePillarDisplayData(sajuData),
-    [sajuData]
-  );
+  const pillars = useMemo(() => computePillarDisplayData(sajuData), [sajuData]);
+  const dayEl = enriched?.dayMaster.element ?? "목";
 
   return (
     <div>
-      <div className="grid grid-cols-4 gap-2">
-        {/* Header row */}
+      {/* 5열 그리드: [라벨][시주][일주][월주][년주] */}
+      <div
+        className="gap-x-2 gap-y-0"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "2.5rem 1fr 1fr 1fr 1fr",
+        }}
+      >
+        {/* ── Row: Header ── */}
+        <div />
         {pillars.map((p) => (
-          <HeaderCell
-            key={`h-${p.key}`}
-            label={p.label}
-            isDayStem={p.key === "day"}
-          />
+          <div key={`h-${p.key}`} className="py-2 text-center">
+            <span className={SECTION_LABEL}>
+              {p.key === "day" ? "일주" : p.label}
+            </span>
+            {p.key === "day" && (
+              <span className="ml-0.5 text-[10px] text-gray-600">(나)</span>
+            )}
+          </div>
         ))}
 
-        {/* Stem row */}
+        {/* ── Row: 천간 (label + cards) ── */}
+        <div className={ROW_LABEL}>천간</div>
+        {pillars.map((p) => {
+          const hex = getElementHex(p.stemElement);
+          const isDayCol = p.key === "day";
+          return (
+            <div
+              key={`s-${p.key}`}
+              className={`py-2.5 text-center rounded-xl ${isDayCol ? "bg-[#222222]" : "bg-[#1A1A1A]"}`}
+              style={isDayCol ? { border: `1px solid ${hex}33` } : undefined}
+            >
+              <div
+                className="text-xl font-bold text-[#E5E5E5]"
+                style={isDayCol ? { textShadow: `0 0 12px ${hex}4D` } : undefined}
+              >
+                {p.stemLabel}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: getElementHex(p.stemElement) }}>
+                {p.stemElement ? getElementName(p.stemElement) : ""}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* ── Row: 천간 십성 (no label) ── */}
+        <div />
         {pillars.map((p) => (
-          <CharCell
-            key={`s-${p.key}`}
-            label={p.stemLabel}
-            element={p.stemElement}
-            isDayHighlight={p.key === "day"}
-          />
+          <div key={`st-${p.key}`} className="py-1 text-center">
+            <span className="text-xs" style={{ color: getTenGodHex(p.stemTenGod, dayEl) }}>
+              {p.stemTenGod || "-"}
+            </span>
+          </div>
         ))}
 
-        {/* Stem TenGod row */}
+        {/* ── Row: 지지 (label + cards) ── */}
+        <div className={ROW_LABEL}>지지</div>
         {pillars.map((p) => (
-          <TenGodCell key={`st-${p.key}`} tenGod={p.stemTenGod} />
+          <div key={`b-${p.key}`} className="py-2.5 text-center rounded-xl bg-[#1A1A1A]">
+            <div className="text-xl font-bold text-[#E5E5E5]">
+              {p.branchLabel}
+            </div>
+            <div className="text-xs mt-0.5" style={{ color: getElementHex(p.branchElement) }}>
+              {p.branchElement ? getElementName(p.branchElement) : ""}
+            </div>
+          </div>
         ))}
 
-        {/* Branch row */}
+        {/* ── Row: 지지 십성 (no label) ── */}
+        <div />
         {pillars.map((p) => (
-          <CharCell
-            key={`b-${p.key}`}
-            label={p.branchLabel}
-            element={p.branchElement}
-            isDayHighlight={false}
-          />
+          <div key={`bt-${p.key}`} className="py-1 text-center">
+            <span className="text-xs" style={{ color: getTenGodHex(p.branchTenGod, dayEl) }}>
+              {p.branchTenGod || "-"}
+            </span>
+          </div>
         ))}
 
-        {/* Branch TenGod row */}
-        {pillars.map((p) => (
-          <TenGodCell key={`bt-${p.key}`} tenGod={p.branchTenGod} />
-        ))}
-
-        {/* 12운성 row */}
+        {/* ── Row: 12운성 ── */}
         {enriched?.twelveStages && (
           <>
-            <div className="col-span-4 mt-1">
-              <span className={`${SECTION_LABEL} pl-1`}>12운성</span>
-            </div>
+            <div className={ROW_LABEL}>12운성</div>
             {pillars.map((p) => {
               const pos = PILLAR_KEY_TO_POS[p.key];
               const stage = enriched.twelveStages[pos];
+              const color =
+                stage?.strength === "strong"
+                  ? "text-green-400"
+                  : stage?.strength === "weak"
+                    ? "text-red-400"
+                    : "text-gray-400";
               return (
-                <TwelveStageCell
-                  key={`ts-${p.key}`}
-                  korean={stage?.korean ?? null}
-                  strength={stage?.strength}
-                />
+                <div key={`ts-${p.key}`} className="py-1 text-center">
+                  <span className={`text-xs ${color}`}>{stage?.korean ?? "-"}</span>
+                </div>
               );
             })}
           </>
         )}
 
-        {/* 12신살 row */}
+        {/* ── Row: 12신살 ── */}
         {enriched?.pillar12Shinsal && (
           <>
-            <div className="col-span-4 mt-1">
-              <span className={`${SECTION_LABEL} pl-1`}>12신살</span>
-            </div>
+            <div className={ROW_LABEL}>12신살</div>
             {pillars.map((p) => {
               const pos = PILLAR_KEY_TO_POS[p.key];
               const entry = enriched.pillar12Shinsal[pos];
+              if (!entry) {
+                return (
+                  <div key={`ss-${p.key}`} className="py-1 text-center">
+                    <span className="text-xs text-gray-600">-</span>
+                  </div>
+                );
+              }
+              const dotColor = SHINSAL_TYPE_COLOR[entry.type];
               return (
-                <TwelveShinsalCell
-                  key={`ss-${p.key}`}
-                  entry={entry}
-                />
+                <div key={`ss-${p.key}`} className="py-1 text-center flex items-center justify-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+                  <span className="text-xs text-gray-400">{entry.name}</span>
+                </div>
               );
             })}
           </>
