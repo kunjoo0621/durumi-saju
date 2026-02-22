@@ -17,10 +17,14 @@ import {
   GENERATES,
   CONTROLS,
   STRENGTH_DESCRIPTIONS,
+  getStrengthFeedback,
+  getYongshinFeedback,
+  getOhaengFeedback,
 } from "@/lib/utils/saju-enrichment";
 import {
   IconCircleCheckFilled,
   IconCircleXFilled,
+  IconMessageCircleFilled,
 } from "@tabler/icons-react";
 
 type SajuChartProps = {
@@ -104,6 +108,17 @@ const DEUK_LABELS: Record<string, string> = {
 const PILLAR_KEY_TO_POS: Record<string, "year" | "month" | "day" | "hour"> = {
   hour: "hour", day: "day", month: "month", year: "year",
 };
+
+/* ── 한줄평 컴포넌트 ── */
+function SajuFeedback({ text }: { text: string }) {
+  if (!text) return null;
+  return (
+    <div className="flex items-start gap-2 mt-4">
+      <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
+      <p className="text-sm text-gray-300">{text}</p>
+    </div>
+  );
+}
 
 /* ── 신강/신약 스펙트럼 ── */
 
@@ -210,6 +225,8 @@ const StrengthPanel = memo(function StrengthPanel({
         ))}
       </div>
 
+      <SajuFeedback text={getStrengthFeedback(strength.result, d.deukse)} />
+
       {/* divider: 신강 ↔ 용신 */}
       <div className="h-px bg-[#222222] my-8" />
 
@@ -239,6 +256,8 @@ const StrengthPanel = memo(function StrengthPanel({
           <p className="text-sm text-gray-500 mt-3">이 기운이 강한 시기 주의</p>
         </div>
       </div>
+
+      <SajuFeedback text={getYongshinFeedback(yongshin.eokbu)} />
 
       {/* divider: 용신 ↔ 오행 */}
       <div className="h-px bg-[#222222] my-8" />
@@ -284,6 +303,8 @@ const StrengthPanel = memo(function StrengthPanel({
           );
         })}
       </div>
+
+      <SajuFeedback text={getOhaengFeedback(elementDist)} />
     </div>
   );
 });

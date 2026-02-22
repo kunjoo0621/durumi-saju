@@ -2,7 +2,8 @@
 
 import { memo } from "react";
 import type { ShinsalMatch, ShinsalType } from "@/lib/utils/saju-enrichment";
-import { SHINSAL_DESCRIPTIONS } from "@/lib/utils/saju-enrichment";
+import { SHINSAL_DESCRIPTIONS, getShinsalFeedback } from "@/lib/utils/saju-enrichment";
+import { IconMessageCircleFilled } from "@tabler/icons-react";
 
 const TYPE_DOT_COLOR: Record<ShinsalType, string> = {
   good: "#22C55E",
@@ -27,6 +28,10 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
   return (
     <div>
       <p className="text-base font-semibold text-gray-300 mb-4">신살</p>
+      <div className="flex items-start gap-2 mb-4">
+        <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
+        <p className="text-sm text-gray-300">{getShinsalFeedback(matches)}</p>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {matches.map((m) => {
           const dotColor = TYPE_DOT_COLOR[m.type];

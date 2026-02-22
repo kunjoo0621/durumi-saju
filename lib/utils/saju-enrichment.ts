@@ -1318,3 +1318,97 @@ export function formatEnrichedSajuText(data: EnrichedSajuData): string {
 
   return lines.join("\n");
 }
+
+/* ===== 한줄평 생성 함수들 ===== */
+
+export function getStrengthFeedback(
+  strengthLevel: string,
+  hasDeukse: boolean,
+): string {
+  const feedbacks: Record<string, string> = {
+    "극왕_O": "체력도 주변 지원도 넘쳐. 에너지 조절이 핵심이야",
+    "극왕_X": "혼자서 이 에너지를 감당 중. 터지기 전에 방향을 잡아",
+    "태강_O": "주변까지 밀어주니까 과해. 브레이크가 필요한 사주",
+    "태강_X": "기운은 센데 도와주는 사람이 없어. 혼자 버티는 타입",
+    "신강_O": "체력 좋고 주변 도움도 받아. 꽤 괜찮은 구조야",
+    "신강_X": "기운은 있는데 다 혼자 해야 해. 동료를 만들어",
+    "중화신강_O": "균형 잡힌 편이야. 살짝 강한 게 오히려 추진력이 돼",
+    "중화신강_X": "균형은 잡혀있는데 혼자 힘으로 유지 중이야",
+    "중화신약_O": "살짝 부족하지만 주변에서 채워주고 있어",
+    "중화신약_X": "겉보기엔 괜찮은데, 무리하면 금방 흔들리는 구조야",
+    "신약_O": "체력은 약한데 주변이 버텨주고 있어. 고마운 사주",
+    "신약_X": "쉽게 지치는 체질. 무리하면 바로 몸이 반응해",
+    "태약_O": "에너지가 많이 부족해. 주변 도움이 그나마 다행이야",
+    "태약_X": "에너지가 많이 부족해. 충전 시간을 꼭 확보해",
+    "극약_O": "기운이 거의 바닥인데 주변이 겨우 잡아주고 있어",
+    "극약_X": "기운이 거의 바닥이야. 쉬는 게 제일 중요한 사주",
+  };
+  const key = `${strengthLevel}_${hasDeukse ? "O" : "X"}`;
+  return feedbacks[key] || "독특한 에너지 구조를 가지고 있어";
+}
+
+export function getYongshinFeedback(yongshinElement: KoreanElement): string {
+  const feedbacks: Record<string, string> = {
+    "목": "이것저것 고민만 하지 말고 일단 시작해. 새 출발이 약이야",
+    "화": "속으로만 삭이지 말고 밖으로 표현해. 그게 너한테 필요한 거야",
+    "토": "마음 잡아줄 안정적인 환경이 제일 중요해",
+    "금": "이것저것 벌리지 말고 하나를 끝까지 밀어붙여",
+    "수": "너무 빡빡하게 굴지 마. 유연하게 흐름을 타는 법을 배워",
+  };
+  return feedbacks[yongshinElement] || "";
+}
+
+export function getOhaengFeedback(
+  distribution: Record<KoreanElement, number>,
+): string {
+  const entries = (Object.entries(distribution) as [KoreanElement, number][]);
+  const max = entries.reduce((a, b) => (a[1] > b[1] ? a : b));
+  const min = entries.reduce((a, b) => (a[1] < b[1] ? a : b));
+  const zeros = entries.filter(([, v]) => v === 0);
+  const highs = entries.filter(([, v]) => v >= 3);
+  const allSimilar = max[1] - min[1] <= 1;
+
+  if (zeros.length > 0 && highs.length > 0) {
+    return `${max[0]}은 넘치는데 ${zeros[0][0]}은 텅 비었어. 극단적인 구조야`;
+  }
+  if (highs.length >= 2) {
+    return `${highs[0][0]}하고 ${highs[1][0]}에 몰려있어. 나머지가 설 자리가 없어`;
+  }
+  if (highs.length === 1) {
+    return `${max[0]} 기운에 올인한 사주. 장점이자 약점이야`;
+  }
+  if (zeros.length > 0) {
+    return `${zeros[0][0]} 기운이 완전 제로. 그쪽 관련된 일에서 약할 수 있어`;
+  }
+  if (allSimilar) {
+    return "오행이 고르게 퍼져있어. 드문 균형형이야";
+  }
+  return `약간 ${max[0]} 쪽으로 쏠렸지만 크게 나쁘진 않아`;
+}
+
+export function getShinsalFeedback(
+  shinsals: ShinsalMatch[],
+): string {
+  const gil = shinsals.filter((s) => s.type === "good").length;
+  const hyung = shinsals.filter((s) => s.type === "bad").length;
+
+  const names = shinsals.map((s) => s.label);
+  if (names.some((n) => n.includes("도화"))) {
+    return "이성한테 끌리는 매력이 있어. 감정 조절이 관건";
+  }
+  if (names.some((n) => n.includes("역마"))) {
+    return "가만히 있으면 답답한 사주. 움직여야 운이 열려";
+  }
+  if (names.some((n) => n.includes("화개"))) {
+    return "예술이나 학문 쪽에 재능이 있어. 고독할 수 있어";
+  }
+  if (names.some((n) => n.includes("공망"))) {
+    return "비어있는 자리가 있어. 그 부분은 노력으로 채워야 해";
+  }
+
+  if (hyung === 0 && gil > 0) return "좋은 신살이 많아. 타고난 복이 있는 편이야";
+  if (gil === 0 && hyung > 0) return "주의할 게 좀 있어. 아래 내용 꼼꼼히 읽어봐";
+  if (hyung > gil) return "주의 신호가 많은 편이야. 미리 알면 피할 수 있어";
+  if (gil > hyung) return "좋은 기운이 더 많아. 흉살만 조심하면 돼";
+  return "길한 기운과 주의할 기운이 섞여있어. 균형이 중요해";
+}
