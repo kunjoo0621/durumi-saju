@@ -18,10 +18,19 @@ type SectionListProps = {
   initialExpandedCount?: number;
 };
 
-const ACCENT_COLORS = [
-  "#F43F5E", "#A855F7", "#3B82F6", "#22C55E",
-  "#EAB308", "#F97316", "#EC4899", "#06B6D4",
-];
+const ACCENT_BY_ICON: Record<string, string> = {
+  '🧭': '#60A5FA',
+  '💎': '#4ADE80',
+  '🧩': '#D1D5DB',
+  '💰': '#D1D5DB',
+  '💞': '#D1D5DB',
+  '💼': '#D1D5DB',
+  '🩺': '#D1D5DB',
+  '🚧': '#F87171',
+  '🎯': '#A78BFA',
+  '✅': '#D1D5DB',
+};
+const DEFAULT_ACCENT = '#D1D5DB';
 
 // 개별 섹션 아이템 - 메모이즈
 type SectionItemProps = {
@@ -123,7 +132,7 @@ function SectionListInner({
           locked={locked}
           onUnlock={onUnlock}
           unlockLabel={unlockLabel}
-          accentColor={ACCENT_COLORS[index % ACCENT_COLORS.length]}
+          accentColor={ACCENT_BY_ICON[section.icon] ?? DEFAULT_ACCENT}
         />
       ))}
     </div>
