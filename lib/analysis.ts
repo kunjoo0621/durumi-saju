@@ -1195,6 +1195,47 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
 5) 재현성: 같은 입력이면 같은 출력(랜덤/즉흥/말바꾸기 금지)
 
 ────────────────────────────────
+===== 해석의 핵심 축: 용신 =====
+사주 데이터에 억부용신, 기신, 희신이 포함되어 있다. 모든 카테고리 해석에서 이것을 중심축으로 사용해라.
+
+[원리]
+- 용신 = 이 사람에게 가장 필요한 기운. 보충하면 운이 좋아진다.
+- 기신 = 피해야 할 기운. 이 기운이 강한 환경/시기에 문제가 생긴다.
+- 희신 = 용신을 돕는 기운. 보조적 역할.
+
+[각 섹션에서의 적용 — 반드시 따라라]
+- 타고난기질: 용신이 부족해서 생기는 성격적 약점을 짚어라. "용신이 토인데 토가 부족하니까 마음이 붕 뜨는 구조"처럼.
+- 타고난무기: 용신 오행과 연결되는 강점이 있으면 강조. 없으면 "용신 방향으로 개발해야 할 무기"를 제안.
+- 재물: "용신 오행 관련 업종/활동에서 재물 기회가 온다" + "기신 오행 관련 투자/소비는 돈이 샌다" — 구체적 업종/활동명 제시. 예: 용신 토면 "부동산, 안정적 저축, 실물 자산", 기신 목이면 "신생 스타트업 투자, 충동 쇼핑".
+- 연애: "용신 오행의 기운을 가진 사람(예: 토=안정감 주는 사람, 화=열정적인 사람)이 맞다" + "기신 오행이 강한 상대와는 갈등이 잦다"
+- 직장: 용신 오행의 환경이 맞는 직장 — 토=안정적 대기업/공기업, 화=자유로운 분위기, 금=체계적/규율 있는 조직, 수=유연한 환경, 목=성장 중인 조직
+- 건강: "기신 오행이 강한 시기에 해당 장기 주의" — 오행-장기: 목=간/담, 화=심장/소장, 토=위/비장, 금=폐/대장, 수=신장/방광
+- 경고: "기신이 가장 위험하게 작용하는 영역 1가지"를 짚어라.
+
+[조후용신 활용]
+- 조후용신 오행이 사주에 이미 충분하면(2개 이상): "계절적으로는 A가 필요하지만 이미 넘치니까 억부용신(B)으로 제어하는 게 핵심"
+- 조후용신 = 억부용신이면: "계절적으로도 구조적으로도 같은 기운이 필요한 사주" — 강화
+- 조후용신 ≠ 억부용신이고 부족하면: 두 용신 모두 언급하되 억부용신 우선
+
+[핵심]
+"조심해", "노력해봐" 같은 모호한 조언 금지.
+반드시 "뭘(용신 오행 관련 구체적 대상)" + "어떻게(보충/회피)" 수준으로 써라.
+
+────────────────────────────────
+===== 원국 한줄평과의 역할 분리 =====
+사용자 화면의 원국 영역에는 이미 데이터 기반 한줄 진단이 표시된다:
+- 신강/신약: 상태 진단 ("체력 좋고 주변 도움도 받아. 꽤 괜찮은 구조야")
+- 용신: 방향 제시 ("마음 잡아줄 안정적인 환경이 제일 중요해")
+- 오행: 분포 요약 ("수 기운에 올인한 사주. 장점이자 약점이야")
+- 신살: 길흉 비율 ("좋은 기운이 더 많아. 흉살만 조심하면 돼")
+
+너의 역할은 이 한줄 진단을 반복하는 게 아니다.
+한줄평이 "무엇이다"를 말했으니, 너는 "그래서 어떻게 해야 하는데"를 말해라.
+
+나쁜 예 (반복): "수 기운이 넘치는 사주야. 한쪽으로 치우쳐 있어."
+좋은 예 (행동): "수가 넘치니까 토 기운으로 잡아야 해. 규칙적인 루틴, 같은 시간에 일어나기, 일정 관리 — 이런 '안정감을 만드는 습관'이 네 사주에는 약이야."
+
+────────────────────────────────
 [섹션 독립성 규칙]
 - 각 섹션은 반드시 고유한 인사이트를 전달해야 한다. 다른 섹션과 내용이 겹치면 안 된다.
 - 같은 사주 요소(예: 겁살, 수 과다)를 여러 섹션에서 언급할 수 있지만, 반드시 해당 섹션의 주제에 맞는 다른 관점에서 해석해야 한다.
@@ -1710,15 +1751,17 @@ export async function callGemini(
       const data = await sdkModel.generateContent({
         contents: [{ role: "user", parts: [{ text: userInfo }] }],
         generationConfig: {
-          maxOutputTokens: model.includes("lite") ? 8192 : 16384,
+          maxOutputTokens: model.includes("lite") ? 12288 : 16384,
           responseMimeType: "application/json",
-        },
+          temperature: 0.75,
+        } as any,
       });
 
       const response = data?.response;
       const finishReason = (response as any)?.candidates?.[0]?.finishReason;
       if (finishReason === "MAX_TOKENS") {
-        console.warn(`[callGemini][SDK] 응답이 maxOutputTokens에서 잘림 (finishReason: MAX_TOKENS, model: ${model})`);
+        console.warn(`[callGemini][SDK] MAX_TOKENS reached, falling back (model: ${model})`);
+        return { ok: false as const, status: 500, apiStatus: "MAX_TOKENS", message: "응답이 maxOutputTokens에서 잘림" };
       }
 
       const textFromMethod = response?.text?.()?.trim();
@@ -1756,8 +1799,9 @@ export async function callGemini(
         { role: "user", parts: [{ text: userInfo }] },
       ],
       generationConfig: {
-        maxOutputTokens: model.includes("lite") ? 8192 : 16384,
+        maxOutputTokens: model.includes("lite") ? 12288 : 16384,
         response_mime_type: "application/json",
+        temperature: 0.75,
       },
     }),
   });
@@ -1771,7 +1815,8 @@ export async function callGemini(
 
   const finishReason = data?.candidates?.[0]?.finishReason;
   if (finishReason === "MAX_TOKENS") {
-    console.warn(`[callGemini][REST] 응답이 maxOutputTokens에서 잘림 (finishReason: MAX_TOKENS, model: ${model})`);
+    console.warn(`[callGemini][REST] MAX_TOKENS reached, falling back (model: ${model})`);
+    return { ok: false as const, status: 500, apiStatus: "MAX_TOKENS", message: "응답이 maxOutputTokens에서 잘림" };
   }
 
   const text = data?.candidates?.[0]?.content?.parts
@@ -1789,7 +1834,7 @@ export async function callGemini(
 export function shouldFallback(status: number, apiStatus?: string) {
   if (status === 429 || status === 503) return true;
   if (!apiStatus) return false;
-  return apiStatus === "RESOURCE_EXHAUSTED" || apiStatus === "UNAVAILABLE";
+  return apiStatus === "RESOURCE_EXHAUSTED" || apiStatus === "UNAVAILABLE" || apiStatus === "MAX_TOKENS";
 }
 
 export function buildInputHash(input: InputPayload) {
@@ -2050,7 +2095,6 @@ export async function runFullAnalysis(input: InputPayload) {
 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일
 달력구분: ${input.calendarType === "lunar" ? "음력" : "양력"}
 출생시간: ${input.unknownBirthTime ? "모름" : `${input.birthHour}시 ${input.birthMinute}분`}
-출생지역: ${input.birthLocation}
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}${shinsalPromptBlock}
@@ -2175,7 +2219,6 @@ export async function runTeaserAnalysis(input: InputPayload) {
 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일
 달력구분: ${input.calendarType === "lunar" ? "음력" : "양력"}
 출생시간: ${input.unknownBirthTime ? "모름" : `${input.birthHour}시 ${input.birthMinute}분`}
-출생지역: ${input.birthLocation}
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}
