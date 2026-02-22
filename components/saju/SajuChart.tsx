@@ -100,10 +100,6 @@ const DEUK_LABELS: Record<string, string> = {
   deuksi: "득시",
   deukse: "득세",
 };
-const JOHU_DESCRIPTIONS: Record<string, string> = {
-  "하절(여름) → 수(水)로 열기 조절": "여름생, 차가운 기운 보정",
-  "동절(겨울) → 화(火)로 한기 보충": "겨울생, 따뜻한 기운 보정",
-};
 
 const PILLAR_KEY_TO_POS: Record<string, "year" | "month" | "day" | "hour"> = {
   hour: "hour", day: "day", month: "month", year: "year",
@@ -146,9 +142,6 @@ const StrengthPanel = memo(function StrengthPanel({
   const eokbuHanja = ELEMENT_TO_HANJA[yongshin.eokbu];
   const gisinHanja = ELEMENT_TO_HANJA[yongshin.gisin];
   const heesinHanja = ELEMENT_TO_HANJA[yongshin.heesin];
-  const johuDesc = yongshin.johuReason
-    ? JOHU_DESCRIPTIONS[yongshin.johuReason] ?? yongshin.johuReason
-    : null;
 
   return (
     <div>
@@ -221,10 +214,10 @@ const StrengthPanel = memo(function StrengthPanel({
       <div className="h-px bg-[#222222] my-8" />
 
       {/* 용신 / 기신 2열 카드 */}
+      <p className={`${SECTION_TITLE} mb-4`}>용신</p>
       <div className="grid grid-cols-2 gap-3">
         {/* 용신 카드 */}
         <div className="bg-[#1A1A1A] rounded-xl p-4">
-          <p className="text-xs text-gray-500">용신</p>
           <p className="text-xs text-gray-500 mb-3">나에게 필요한 기운</p>
           <p className="text-2xl font-bold text-center my-2" style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}>
             {yongshin.eokbu}({eokbuHanja})
@@ -234,27 +227,18 @@ const StrengthPanel = memo(function StrengthPanel({
             <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
               {yongshin.heesin}({heesinHanja})
             </span>
+            {" "}&mdash; 용신을 돕는 기운
           </p>
-          <p className="text-xs text-gray-500">&mdash; 용신을 돕는 기운</p>
         </div>
         {/* 기신 카드 */}
         <div className="bg-[#1A1A1A] rounded-xl p-4">
-          <p className="text-xs text-gray-500">기신</p>
           <p className="text-xs text-gray-500 mb-3">피해야 할 기운</p>
           <p className="text-2xl font-bold text-center my-2" style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}>
             {yongshin.gisin}({gisinHanja})
           </p>
+          <p className="text-sm text-gray-500 mt-3">이 기운이 강한 시기 주의</p>
         </div>
       </div>
-      {yongshin.johu && johuDesc && (
-        <p className={`${SUB_TEXT} mt-3`}>
-          조후:{" "}
-          <span style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}>
-            {yongshin.johu}({ELEMENT_TO_HANJA[yongshin.johu]})
-          </span>
-          {" "}&mdash; {johuDesc}
-        </p>
-      )}
 
       {/* divider: 용신 ↔ 오행 */}
       <div className="h-px bg-[#222222] my-8" />
