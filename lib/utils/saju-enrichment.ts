@@ -361,9 +361,26 @@ function getTwelveStageForBranch(dayStem: string, branch: string): string {
   return TWELVE_STAGE_NAMES[stageIdx];
 }
 
-/** 일간 기준 해당 지지가 생왕지(장생/관대/건록/제왕)인지 */
-function isLifeProsperityStage(dayStem: string, branch: string): boolean {
-  return LIFE_PROSPERITY_STAGES.has(getTwelveStageForBranch(dayStem, branch));
+/** 일간 기준 해당 지지가 일간을 돕는지 (하이브리드: 12운성 생왕지 OR 지장간 본기 비화/인성) */
+function isHelpfulBranch(dayStem: string, branch: string): boolean {
+  // 1) 12운성 생왕지 체크
+  if (LIFE_PROSPERITY_STAGES.has(getTwelveStageForBranch(dayStem, branch))) {
+    return true;
+  }
+  // 2) 지장간 본기(가장 높은 weight) 오행이 일간과 비화/인성 관계인지
+  const branchInfo = BRANCH_INFO[branch];
+  const stemInfo = STEM_ELEMENT[dayStem];
+  if (!branchInfo || !stemInfo) return false;
+  const mainHidden = branchInfo.jijanggan[0]; // 본기 (첫 번째 = 최고 weight)
+  if (!mainHidden) return false;
+  const hiddenElement = STEM_ELEMENT[mainHidden.stem]?.element;
+  if (!hiddenElement) return false;
+  const dayElement = stemInfo.element;
+  // 비화: 같은 오행
+  if (hiddenElement === dayElement) return true;
+  // 인성: 지장간 오행이 일간을 생하는 관계 (GENERATES[hidden] === day)
+  if (GENERATES[hiddenElement] === dayElement) return true;
+  return false;
 }
 
 export type StrengthLevel = "극왕" | "태강" | "신강" | "중화신강" | "중화신약" | "신약" | "태약" | "극약";
@@ -423,15 +440,15 @@ export function judgeStrength(
 
   // ── 4가지 세부 판정 (12운성 기반) ──
 
-  // 득령: 월지의 12운성이 생왕지인지
-  const deukryeong = isLifeProsperityStage(context.dayStem, context.monthBranch);
+  // 득령: 월지가 일간을 돕는지 (12운성 생왕지 OR 지장간 본기 비화/인성)
+  const deukryeong = isHelpfulBranch(context.dayStem, context.monthBranch);
 
-  // 득지: 일지의 12운성이 생왕지인지
-  const deukji = isLifeProsperityStage(context.dayStem, context.dayBranch);
+  // 득지: 일지가 일간을 돕는지
+  const deukji = isHelpfulBranch(context.dayStem, context.dayBranch);
 
-  // 득시: 시지의 12운성이 생왕지인지 (시주 미상 시 false)
+  // 득시: 시지가 일간을 돕는지 (시주 미상 시 false)
   const deuksi = context.hourBranch
-    ? isLifeProsperityStage(context.dayStem, context.hourBranch)
+    ? isHelpfulBranch(context.dayStem, context.hourBranch)
     : false;
 
   // 득세: 천간(일간 제외) 중 비겁(같은 오행) 또는 인성(일간을 생하는 오행)이 2개 이상
