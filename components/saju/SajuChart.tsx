@@ -266,8 +266,6 @@ const StrengthPanel = memo(function StrengthPanel({
       <p className={`${SECTION_TITLE} mb-4`}>오행 분포</p>
       {(() => {
         const BAR_HEX: Record<KoreanElement, string> = { 목: "#22C55E", 화: "#EF4444", 토: "#EAB308", 금: "#A0A0A0", 수: "#3B82F6" };
-        const MAX_HEIGHT = 80;
-        const MIN_HEIGHT = 20;
 
         const sorted = [...elements]
           .map((el) => ({ el, count: elementDist[el] }))
@@ -275,41 +273,45 @@ const StrengthPanel = memo(function StrengthPanel({
         const maxCount = Math.max(...sorted.map((s) => s.count), 1);
 
         const getTag = (el: KoreanElement) => {
+          if (elementDist[el] === 0) return { label: "결핍", cls: "bg-red-500/20 text-red-400" };
           if (el === yongshin.eokbu) return { label: "용신", cls: "bg-amber-500/20 text-amber-400" };
           if (el === yongshin.gisin) return { label: "기신", cls: "bg-gray-500/20 text-gray-400" };
           return null;
         };
 
         return (
-          <div className="flex items-end justify-center gap-3 sm:gap-5">
+          <div className="flex items-end justify-center gap-4 sm:gap-6">
             {sorted.map((s) => {
               const isDeficient = s.count === 0;
-              const barH = isDeficient ? 0 : (s.count / maxCount) * MAX_HEIGHT + MIN_HEIGHT - (MIN_HEIGHT * s.count / maxCount ? 0 : 0);
-              const height = isDeficient ? 0 : Math.round((s.count / maxCount) * (MAX_HEIGHT - MIN_HEIGHT) + MIN_HEIGHT);
-              const tag = isDeficient ? { label: "결핍", cls: "bg-red-500/20 text-red-400" } : getTag(s.el);
+              const barHeight = isDeficient ? 0 : Math.max(Math.round((s.count / maxCount) * 100), 24);
+              const tag = getTag(s.el);
               return (
-                <div key={s.el} className="flex flex-col items-center gap-1.5">
-                  {/* 바 */}
-                  {isDeficient ? (
-                    <div className="w-8 sm:w-10 h-5 border border-dashed border-gray-600 rounded-md" />
-                  ) : (
-                    <div
-                      className="w-8 sm:w-10 rounded-md"
-                      style={{ height: `${height}px`, backgroundColor: BAR_HEX[s.el] }}
-                    />
-                  )}
+                <div key={s.el} className="flex flex-col items-center" style={{ width: 48 }}>
+                  {/* 바 컨테이너 — 고정 높이, 아래 정렬 */}
+                  <div className="h-[100px] flex items-end mb-2">
+                    {isDeficient ? (
+                      <div className="w-10 h-6 border border-dashed border-gray-600 rounded-md" />
+                    ) : (
+                      <div
+                        className="w-10 rounded-md"
+                        style={{ height: `${barHeight}px`, backgroundColor: BAR_HEX[s.el] }}
+                      />
+                    )}
+                  </div>
                   {/* 오행명 */}
                   <span className="text-xs font-medium" style={{ color: BAR_HEX[s.el] }}>
                     {s.el}
                   </span>
                   {/* 개수 */}
-                  <span className="text-lg font-bold text-white">{s.count}</span>
-                  {/* 태그 */}
-                  {tag && (
-                    <span className={`text-[11px] ${tag.cls} px-1.5 py-0.5 rounded`}>
-                      {tag.label}
-                    </span>
-                  )}
+                  <span className="text-base font-bold text-white mt-0.5">{s.count}</span>
+                  {/* 태그 — 고정 높이로 정렬 유지 */}
+                  <div className="h-6 flex items-center mt-1">
+                    {tag && (
+                      <span className={`text-[11px] ${tag.cls} px-1.5 py-0.5 rounded`}>
+                        {tag.label}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
