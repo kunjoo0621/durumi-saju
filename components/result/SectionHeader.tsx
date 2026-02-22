@@ -45,18 +45,20 @@ export default function SectionHeader({ icon, title, expanded, onToggle, id }: S
     >
       <div className="flex items-center gap-2">
         <span className="text-3xl" aria-hidden="true">{icon}</span>
-        <SectionBadge emoji={icon} />
         <span className="text-title-3 text-text-primary">{title}</span>
       </div>
-      <svg
-        className={`w-5 h-5 text-text-secondary transition-transform ${expanded ? "rotate-180" : ""}`}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
+      <div className="flex items-center gap-2 shrink-0">
+        <SectionBadge emoji={icon} />
+        <svg
+          className={`w-5 h-5 text-text-secondary transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
     </button>
   );
 }
