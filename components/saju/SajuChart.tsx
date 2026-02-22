@@ -158,37 +158,8 @@ const StrengthPanel = memo(function StrengthPanel({
       {/* 신강/신약 분석 */}
       <p className={SECTION_TITLE}>신강/신약 분석</p>
 
-      {/* Desktop: 8단계 라벨 */}
-      <div className="hidden sm:flex justify-between mt-3 mb-1.5">
-        {STRENGTH_LEVELS.map((level) => {
-          const isCurrent = level === strength.result;
-          return (
-            <span
-              key={level}
-              className={isCurrent ? "text-xs font-bold text-center" : "text-[10px] text-gray-600 text-center"}
-              style={isCurrent ? { color: spectrumColor } : undefined}
-            >
-              {level.length > 3 ? (
-                <>
-                  <span className="block leading-tight">{level.slice(0, 2)}</span>
-                  <span className="block leading-tight">{level.slice(2)}</span>
-                </>
-              ) : level}
-            </span>
-          );
-        })}
-      </div>
-
-      {/* Desktop: 스펙트럼 바 */}
-      <div className="hidden sm:block relative h-1.5 rounded-full" style={{ background: SPECTRUM_GRADIENT }}>
-        <div
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
-          style={{ left: `${spectrumPos}%`, backgroundColor: spectrumColor }}
-        />
-      </div>
-
-      {/* Mobile: 극약 [바] 극왕 */}
-      <div className="sm:hidden mt-3">
+      {/* 스펙트럼 바: 극약 [바+도트] 극왕 */}
+      <div className="mt-3">
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-600 shrink-0">극약</span>
           <div className="relative flex-1 h-1.5 rounded-full" style={{ background: SPECTRUM_GRADIENT }}>
@@ -208,9 +179,9 @@ const StrengthPanel = memo(function StrengthPanel({
       </p>
 
       {/* 득령/득지/득시/득세 */}
-      <div className="flex justify-between mt-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
         {deukItems.map((item) => (
-          <div key={item.key} className="flex items-center gap-1">
+          <div key={item.key} className="flex items-center gap-1 whitespace-nowrap">
             {item.value ? (
               <IconCircleCheckFilled size={14} style={{ color: "#FF6B6B" }} />
             ) : (
