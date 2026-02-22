@@ -190,3 +190,12 @@ select:focus {
 .animate-fadeIn {
   animation: fadeIn 300ms ease-out both;
 }
+
+/* ===== 스크롤바 숨김 유틸 ===== */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

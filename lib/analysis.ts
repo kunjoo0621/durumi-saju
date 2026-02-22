@@ -41,6 +41,7 @@ export type AnalysisResult = {
     content: string;
   }>;
   coreFearAxisBlock: string;
+  fortune?: import("@/lib/utils/saju-fortune").FortuneResult | null;
 };
 
 export type TeaserSection = {
@@ -1235,6 +1236,22 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
 이 예시를 그대로 복사하지 말고, 사용자의 직업/상황에 맞게 자연스럽게 녹여라.
 
 ────────────────────────────────
+===== 대운/세운 활용 =====
+사주 데이터에 현재 대운(10년 주기)과 올해 세운(연운)이 포함되어 있다.
+이것을 기존 섹션 해석에 자연스럽게 녹여라. 별도 섹션을 만들지 마라.
+
+[활용 방법]
+- 직장 섹션: "현재 편관 대운이라 직장에서 압박이 강해지는 시기야" 같이 시기적 맥락 제공
+- 재물 섹션: "올해 상관 세운이라 새로운 수입원이 생길 수 있어" 같이 올해 흐름 반영
+- 건강 섹션: "현재 대운의 12운성이 쇠(衰)라 체력 관리에 신경 써야 할 때" 같이 연결
+- 경고 섹션: 대운/세운에서 기신 오행이 강한 시기면 위험도가 높아짐을 언급
+
+[핵심]
+- 원국 분석(타고난 구조) + 대운/세운 분석(지금 시기) = 입체적 해석
+- "타고난 사주는 이런데, 지금 대운이 이래서 특히 조심해야 할 때야" — 이런 흐름
+- 대운/세운을 모든 섹션에 넣지 마라. 가장 관련 있는 2~3개 섹션에만 자연스럽게 녹여라.
+
+────────────────────────────────
 ===== 원국 한줄평과의 역할 분리 =====
 사용자 화면의 원국 영역에는 이미 데이터 기반 한줄 진단이 표시된다:
 - 신강/신약: 상태 진단 ("체력 좋고 주변 도움도 받아. 꽤 괜찮은 구조야")
@@ -1997,6 +2014,42 @@ export async function resolveSajuText(input: InputPayload) {
   }
 }
 
+function buildFortunePromptBlock(fortune: any | null, birthYear: number): string {
+  if (!fortune?.daeun?.pillars?.length) return "";
+  const currentYear = new Date().getFullYear();
+  const age = currentYear - birthYear + 1; // 한국 나이
+  const daeun = fortune.daeun;
+  const seun: any[] = fortune.seun || [];
+
+  // 현재 대운 찾기
+  const currentDaeun = daeun.pillars.find((p: any) => age >= p.startAge && age <= p.endAge);
+  const currentSeun = seun.find((s: any) => s.year === currentYear);
+
+  const lines = ["\n\n[현재 대운/세운]"];
+  if (currentDaeun) {
+    lines.push(`현재 대운: ${currentDaeun.pillar} / ${currentDaeun.startAge}~${currentDaeun.endAge}세 / ${currentDaeun.tenStar}운 / 12운성: ${currentDaeun.twelveStage}`);
+  }
+  if (currentSeun) {
+    lines.push(`올해 세운: ${currentSeun.pillar} / ${currentSeun.year}년 / ${currentSeun.tenStar}운`);
+  }
+
+  lines.push("\n대운 흐름 (전체):");
+  for (const p of daeun.pillars) {
+    const marker = currentDaeun && p.index === currentDaeun.index ? " ← 현재" : "";
+    lines.push(`${p.startAge}~${p.endAge}세: ${p.pillar} ${p.tenStar} ${p.twelveStage}${marker}`);
+  }
+
+  if (seun.length > 0) {
+    lines.push("\n세운 흐름 (전후):");
+    for (const s of seun) {
+      const marker = s.year === currentYear ? " ← 올해" : "";
+      lines.push(`${s.year}: ${s.pillar} ${s.tenStar}${marker}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
   sajuText: string | null;
   enriched: any | null;
@@ -2142,7 +2195,7 @@ export async function runFullAnalysis(input: InputPayload) {
     throw new Error("API 키가 설정되지 않았습니다.");
   }
 
-  const { sajuText: resolvedSajuText, enriched } = await resolveSajuEnrichedData(input);
+  const { sajuText: resolvedSajuText, enriched, fortune } = await resolveSajuEnrichedData(input);
   const sajuInfo = resolvedSajuText ? `\n사주팔자: ${resolvedSajuText}` : "";
 
   let shinsalPromptBlock = "";
@@ -2192,7 +2245,7 @@ export async function runFullAnalysis(input: InputPayload) {
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}${shinsalPromptBlock}
-요즘 1등 이슈: ${coreFearLabel}
+요즘 1등 이슈: ${coreFearLabel}${buildFortunePromptBlock(fortune, Number(input.birthYear))}
 
 [서버 계산 결과]
 ${serverScoreSummary}
@@ -2249,6 +2302,7 @@ ${serverScoreSummary}
         const assembled = assembleFinalResult(serverTier, serverScores, geminiText) as unknown as AnalysisResult;
         assembled.coreFearAxisBlock = resolveCoreFearAxisBlock(input, assembled.coreFearAxisBlock);
         assembled.scores = normalizeScores(serverScores);
+        if (fortune) assembled.fortune = fortune;
         return enforceNoLabelLeakAcrossResult(input, assembled);
       } catch (error: any) {
         if (process.env.NODE_ENV !== "production") {

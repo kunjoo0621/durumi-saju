@@ -9,6 +9,7 @@ import SajuChart from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
 import ShinsalBadges from "@/components/saju/ShinsalBadges";
+import FortuneTimeline from "@/components/saju/FortuneTimeline";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
@@ -52,6 +53,7 @@ export default function ResultClient() {
   const [requiresLogin, setRequiresLogin] = useState(false);
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
+  const [resultBirthYear, setResultBirthYear] = useState<number>(0);
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
   const enriched = useMemo(() => {
     if (!sajuData) return null;
@@ -168,6 +170,7 @@ export default function ResultClient() {
           const [year, month, day] = inputBirthDate.split("-").map((value: string) => Number(value));
           setDisplayCalendarType(inputCalendarType);
           setDisplayBirthDate(formatDisplayDate(year, month, day));
+          setResultBirthYear(year);
 
           let calcYear = year;
           let calcMonth = month;
@@ -379,6 +382,15 @@ export default function ResultClient() {
                 <>
                   <div className="h-px bg-[#222222] my-8" />
                   <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
+                </>
+              )}
+              {result?.fortune && (resultBirthYear || Number(birthYear)) > 0 && (
+                <>
+                  <div className="h-px bg-[#222222] my-8" />
+                  <FortuneTimeline
+                    fortune={result.fortune}
+                    birthYear={resultBirthYear || Number(birthYear)}
+                  />
                 </>
               )}
             </div>

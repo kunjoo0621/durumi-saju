@@ -26,6 +26,7 @@ export type AnalysisResult = {
     content: string;
   }>;
   coreFearAxisBlock: string;
+  fortune?: import("@/lib/utils/saju-fortune").FortuneResult | null;
 };
 
 export type TeaserResult = {
