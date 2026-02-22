@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { useAllInputs, useStoreActions } from "@/store/useInputStore";
 import MenuDrawer from "../MenuDrawer";
 
@@ -490,6 +491,11 @@ export default function Home() {
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col">
+      {/* 토스 SDK 프리로드 — checkout 진입 시 캐시에서 즉시 로드 */}
+      <Script
+        src="https://js.tosspayments.com/v2/standard"
+        strategy="lazyOnload"
+      />
       {/* 헤더 */}
       <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">

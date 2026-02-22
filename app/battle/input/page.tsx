@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Script from "next/script";
 import MenuDrawer from "../../MenuDrawer";
 import {
   useBattleStore,
@@ -628,6 +629,11 @@ export default function BattleInputPage() {
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col">
+      {/* 토스 SDK 프리로드 */}
+      <Script
+        src="https://js.tosspayments.com/v2/standard"
+        strategy="lazyOnload"
+      />
       <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D] border-b border-white/5">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
