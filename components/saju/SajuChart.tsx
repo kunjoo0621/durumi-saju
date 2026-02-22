@@ -14,6 +14,14 @@ import type {
   ShinsalType,
   Pillar12ShinsalEntry,
 } from "@/lib/utils/saju-enrichment";
+import {
+  ELEMENT_TO_HANJA,
+  STRENGTH_DESCRIPTIONS,
+} from "@/lib/utils/saju-enrichment";
+import {
+  IconCircleCheckFilled,
+  IconCircleXFilled,
+} from "@tabler/icons-react";
 
 type SajuChartProps = {
   sajuData: SajuData;
@@ -44,6 +52,25 @@ const SHINSAL_TYPE_COLOR: Record<ShinsalType, string> = {
   good: "#22C55E",
   bad: "#EF4444",
   neutral: "#6B7280",
+};
+
+const DEUK_HINTS: Record<string, string> = {
+  deukryeong: "(계절)",
+  deukji: "(자리)",
+  deuksi: "(시간)",
+  deukse: "(주변)",
+};
+
+const DEUK_LABELS: Record<string, string> = {
+  deukryeong: "득령",
+  deukji: "득지",
+  deuksi: "득시",
+  deukse: "득세",
+};
+
+const JOHU_DESCRIPTIONS: Record<string, string> = {
+  "하절(여름) → 수(水)로 열기 조절": "여름생, 차가운 기운 보정",
+  "동절(겨울) → 화(火)로 한기 보충": "겨울생, 따뜻한 기운 보정",
 };
 
 /* ── Header Cell (생시/생일/생월/생년) ── */
@@ -176,18 +203,34 @@ const StrengthPanel = memo(function StrengthPanel({
 }: {
   enriched: EnrichedSajuData;
 }) {
-  const { strength, yongshin, elementDist, dayMaster } = enriched;
+  const { strength, yongshin, elementDist } = enriched;
   const d = strength.details;
   const isStrong = ["극왕", "태강", "신강", "중화신강"].includes(strength.result);
+  const strengthDesc = STRENGTH_DESCRIPTIONS[strength.result] ?? "";
 
   const totalElement = Object.values(elementDist).reduce((a, b) => a + b, 0);
   const elements: KoreanElement[] = ["목", "화", "토", "금", "수"];
+
+  const deukItems: { key: string; value: boolean }[] = [
+    { key: "deukryeong", value: d.deukryeong },
+    { key: "deukji", value: d.deukji },
+    { key: "deuksi", value: d.deuksi },
+    { key: "deukse", value: d.deukse },
+  ];
+
+  const eokbuHanja = ELEMENT_TO_HANJA[yongshin.eokbu];
+  const gisinHanja = ELEMENT_TO_HANJA[yongshin.gisin];
+  const heesinHanja = ELEMENT_TO_HANJA[yongshin.heesin];
+
+  const johuDesc = yongshin.johuReason
+    ? JOHU_DESCRIPTIONS[yongshin.johuReason] ?? yongshin.johuReason
+    : null;
 
   return (
     <div className="mt-4 space-y-3">
       {/* 신강/신약 */}
       <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <span className="text-sm text-gray-400">신강/신약</span>
           <span
             className={`text-sm font-bold ${isStrong ? "text-blue-400" : "text-orange-400"}`}
@@ -195,62 +238,68 @@ const StrengthPanel = memo(function StrengthPanel({
             {strength.result}
           </span>
         </div>
-        <div className="flex gap-3 text-xs text-gray-500">
-          <span>
-            득령{d.deukryeong ? "✅" : "❌"}
-          </span>
-          <span>
-            득지{d.deukji ? "✅" : "❌"}
-          </span>
-          <span>
-            득시{d.deuksi ? "✅" : "❌"}
-          </span>
-          <span>
-            득세{d.deukse ? "✅" : "❌"}
-          </span>
-        </div>
-        <div className="text-xs text-gray-600 mt-1">
-          도움 {strength.helpCount} vs 억제 {strength.resistCount}
+        {strengthDesc && (
+          <p className="text-sm text-gray-400 mb-3 text-right">{strengthDesc}</p>
+        )}
+        <div className="flex justify-between">
+          {deukItems.map((item) => (
+            <div key={item.key} className="flex items-center gap-1">
+              {item.value ? (
+                <IconCircleCheckFilled size={14} style={{ color: "#FF6B6B" }} />
+              ) : (
+                <IconCircleXFilled size={14} style={{ color: "#4B5563" }} />
+              )}
+              <span className="text-xs text-gray-300">
+                {DEUK_LABELS[item.key]}
+              </span>
+              <span className="text-xs text-gray-500">
+                {DEUK_HINTS[item.key]}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* 용신 */}
+      {/* 용신 / 기신 */}
       <div className="bg-[#1A1A1A] rounded-xl p-4">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm text-gray-400">용신</span>
-          <div className="flex items-center gap-2">
-            <span
-              className="text-sm font-bold"
-              style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}
-            >
-              {yongshin.eokbu}({yongshin.eokbu === dayMaster.element ? "비겁" : "억부"})
-            </span>
-            {yongshin.johu && (
-              <>
-                <span className="text-gray-600">/</span>
-                <span
-                  className="text-sm font-bold"
-                  style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}
-                >
-                  {yongshin.johu}(조후)
-                </span>
-              </>
-            )}
-          </div>
+        <div className="flex justify-between mb-1">
+          <span className="text-xs text-gray-500">용신</span>
+          <span className="text-xs text-gray-500">기신</span>
         </div>
-        <div className="flex items-center gap-4 text-xs mt-1">
-          <span className="text-gray-500">
-            기신:{" "}
-            <span style={{ color: KR_ELEMENT_HEX[yongshin.gisin] }}>
-              {yongshin.gisin}
-            </span>
+        <div className="flex justify-between mb-0.5">
+          <span className="text-xs text-gray-500">나에게 필요한 기운</span>
+          <span className="text-xs text-gray-500">피해야 할 기운</span>
+        </div>
+        <div className="flex justify-between items-baseline">
+          <span
+            className="text-lg font-bold"
+            style={{ color: KR_ELEMENT_HEX[yongshin.eokbu] }}
+          >
+            {yongshin.eokbu}({eokbuHanja})
           </span>
-          <span className="text-gray-500">
+          <span
+            className="text-lg font-bold"
+            style={{ color: KR_ELEMENT_HEX[yongshin.gisin], opacity: 0.6 }}
+          >
+            {yongshin.gisin}({gisinHanja})
+          </span>
+        </div>
+        <div className="mt-2 space-y-0.5">
+          <p className="text-xs text-gray-500">
             희신:{" "}
             <span style={{ color: KR_ELEMENT_HEX[yongshin.heesin] }}>
-              {yongshin.heesin}
+              {yongshin.heesin}({heesinHanja})
             </span>
-          </span>
+          </p>
+          {yongshin.johu && johuDesc && (
+            <p className="text-xs text-gray-500">
+              조후:{" "}
+              <span style={{ color: KR_ELEMENT_HEX[yongshin.johu] }}>
+                {yongshin.johu}({ELEMENT_TO_HANJA[yongshin.johu]})
+              </span>
+              {" "}&mdash; {johuDesc}
+            </p>
+          )}
         </div>
       </div>
 
@@ -274,19 +323,42 @@ const StrengthPanel = memo(function StrengthPanel({
           })}
         </div>
         <div className="flex justify-between mt-2">
-          {elements.map((el) => (
-            <div key={el} className="text-center">
-              <span
-                className="text-xs font-medium"
-                style={{ color: KR_ELEMENT_HEX[el] }}
-              >
-                {el}
-              </span>
-              <span className="text-[10px] text-gray-500 ml-0.5">
-                {elementDist[el]}
-              </span>
-            </div>
-          ))}
+          {elements.map((el) => {
+            const count = elementDist[el];
+            const isYongshin = el === yongshin.eokbu;
+            const isGisin = el === yongshin.gisin;
+            const isDeficient = count === 0;
+            return (
+              <div key={el} className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center gap-0.5">
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: KR_ELEMENT_HEX[el] }}
+                  >
+                    {el}
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    {count}
+                  </span>
+                </div>
+                {isYongshin && (
+                  <span className="text-[10px] bg-amber-500/20 text-amber-400 rounded px-1.5 py-0.5 leading-none">
+                    용신
+                  </span>
+                )}
+                {isDeficient && (
+                  <span className="text-[10px] bg-red-500/20 text-red-400 rounded px-1.5 py-0.5 leading-none">
+                    결핍
+                  </span>
+                )}
+                {isGisin && !isDeficient && (
+                  <span className="text-[10px] bg-gray-500/20 text-gray-400 rounded px-1.5 py-0.5 leading-none">
+                    기신
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
