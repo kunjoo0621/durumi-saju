@@ -1183,41 +1183,41 @@ export function getPillar12Shinsal(
 
 export const SHINSAL_DESCRIPTIONS: Record<string, string> = {
   // 삼합 기반
-  dohwa: "매력과 인기가 많으나 색정의 유혹에 주의",
-  yeokma: "이동·변동이 많고 활동적인 기운",
-  hwagae: "예술·학문에 뛰어난 재능, 고독할 수 있음",
-  gyeopsal: "예상치 못한 재물 손실이나 도난 주의",
-  jangseong: "리더십과 통솔력이 뛰어남",
-  jaesal: "갑작스러운 재난·사고에 주의",
-  cheonsal: "하늘이 내린 시련, 정신적 고통",
-  jisal: "땅에서 오는 어려움, 주거 변동",
-  mangsin: "체면 손상이나 명예 실추에 주의",
+  dohwa: "이성을 끄는 매력",
+  yeokma: "변화와 이동의 기운",
+  hwagae: "학문·예술 재능",
+  gyeopsal: "재물 손실 주의",
+  jangseong: "리더십과 통솔력",
+  jaesal: "재난·사고 주의",
+  cheonsal: "정신적 시련 주의",
+  jisal: "주거 변동 주의",
+  mangsin: "명예 실추 주의",
   // 일간 기반
-  yangin: "강한 추진력이 있으나 다혈질적 성향 주의",
-  chuneul: "귀인의 도움이 있어 위기를 넘김",
-  munchang: "문서·학업 운이 뛰어남",
-  hongryeom: "이성 매력이 강하나 감정 기복 주의",
-  hyunchim: "날카로운 판단력, 의료·기술 분야 적성",
+  yangin: "강한 기운, 다툼 주의",
+  chuneul: "귀인의 도움",
+  munchang: "학업·시험 유리",
+  hongryeom: "이성 매력, 감정 기복",
+  hyunchim: "손재주, 기술 재능",
   // 기타
-  baekho: "급격한 사고·수술·혈광 주의",
-  goegang: "강인한 의지와 결단력, 타협 어려움",
-  gongmang: "해당 주의 기운이 비어 허무감이 올 수 있음",
-  cheondeok: "하늘의 덕으로 재앙을 면함",
-  woldeok: "월덕의 보호로 흉사를 피함",
-  hakdang: "학업·연구에 두각을 나타냄",
+  baekho: "수술·사고 주의",
+  goegang: "성격 강함, 리더십",
+  gongmang: "기운이 비어있음",
+  cheondeok: "재앙을 면함",
+  woldeok: "매달 복이 들어옴",
+  hakdang: "배움의 재능",
   // 12신살 (위치별)
-  "겁살": "예상치 못한 재물 손실이나 도난 주의",
-  "재살": "갑작스러운 재난·사고에 주의",
-  "천살": "하늘이 내린 시련, 정신적 고통",
-  "지살": "땅에서 오는 어려움, 주거 변동",
-  "년살": "이성 관련 구설이나 시비 주의",
-  "월살": "건강과 가정사에 변동이 올 수 있음",
-  "망신살": "체면 손상이나 명예 실추에 주의",
-  "장성살": "리더십과 통솔력이 뛰어남",
-  "반안살": "안정과 권위를 얻는 길한 기운",
-  "역마살": "이동·변동이 많고 활동적인 기운",
-  "육해살": "가까운 사람과의 갈등·배신 주의",
-  "화개살": "예술·학문에 뛰어난 재능, 고독할 수 있음",
+  "겁살": "재물 손실 주의",
+  "재살": "재난·사고 주의",
+  "천살": "정신적 시련 주의",
+  "지살": "주거 변동 주의",
+  "년살": "이성 구설 주의",
+  "월살": "건강·가정 변동",
+  "망신살": "명예 실추 주의",
+  "장성살": "리더십과 통솔력",
+  "반안살": "안정과 편안함",
+  "역마살": "변화와 이동의 기운",
+  "육해살": "가까운 이와 갈등 주의",
+  "화개살": "학문·예술 재능",
 };
 
 // ── 신강/신약 8단계 설명 ──
@@ -1391,24 +1391,14 @@ export function getShinsalFeedback(
 ): string {
   const gil = shinsals.filter((s) => s.type === "good").length;
   const hyung = shinsals.filter((s) => s.type === "bad").length;
+  const total = shinsals.length;
 
-  const names = shinsals.map((s) => s.label);
-  if (names.some((n) => n.includes("도화"))) {
-    return "이성한테 끌리는 매력이 있어. 감정 조절이 관건";
-  }
-  if (names.some((n) => n.includes("역마"))) {
-    return "가만히 있으면 답답한 사주. 움직여야 운이 열려";
-  }
-  if (names.some((n) => n.includes("화개"))) {
-    return "예술이나 학문 쪽에 재능이 있어. 고독할 수 있어";
-  }
-  if (names.some((n) => n.includes("공망"))) {
-    return "비어있는 자리가 있어. 그 부분은 노력으로 채워야 해";
-  }
-
+  if (total === 0) return "";
   if (hyung === 0 && gil > 0) return "좋은 신살이 많아. 타고난 복이 있는 편이야";
   if (gil === 0 && hyung > 0) return "주의할 게 좀 있어. 아래 내용 꼼꼼히 읽어봐";
-  if (hyung > gil) return "주의 신호가 많은 편이야. 미리 알면 피할 수 있어";
+  if (hyung >= 3) return "주의 신호가 꽤 많아. 미리 알면 대비할 수 있어";
+  if (gil >= 3) return "길한 기운이 강해. 타고난 운이 좋은 편이야";
+  if (hyung > gil) return "주의할 게 좀 더 많아. 아래 신살들 체크해봐";
   if (gil > hyung) return "좋은 기운이 더 많아. 흉살만 조심하면 돼";
-  return "길한 기운과 주의할 기운이 섞여있어. 균형이 중요해";
+  return "길한 기운과 주의할 기운이 반반이야. 균형이 중요해";
 }
