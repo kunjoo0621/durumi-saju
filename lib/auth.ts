@@ -2,6 +2,30 @@ import { type NextAuthOptions } from "next-auth";
 import KakaoProvider from "next-auth/providers/kakao";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function upsertUserWithRetry(kakaoId: string, nickname: string | null): Promise<string> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .upsert(
+        { kakao_id: kakaoId, nickname },
+        { onConflict: "kakao_id" }
+      )
+      .select("id")
+      .single();
+
+    if (!error && data?.id) return data.id;
+
+    if (attempt === 0) {
+      console.warn(`[auth] upsert attempt 1 failed, retrying in 500ms:`, error?.message);
+      await sleep(500);
+    }
+  }
+
+  throw new Error(`[auth] Supabase user upsert failed for kakao_id=${kakaoId}`);
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     KakaoProvider({
@@ -13,6 +37,9 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30일
+  },
+  pages: {
+    error: "/auth/error",
   },
   callbacks: {
     async jwt({ token, account, profile }) {
@@ -27,21 +54,11 @@ export const authOptions: NextAuthOptions = {
         token.picture = kakaoProfile.properties?.profile_image || token.picture;
         token.email = kakaoProfile.kakao_account?.email || token.email;
 
-        const kakaoId = token.kakaoId;
-        const nickname = token.name || null;
+        const kakaoId = token.kakaoId as string | undefined;
+        const nickname = (token.name as string) || null;
         if (kakaoId) {
-          const { data, error } = await supabaseAdmin
-            .from("users")
-            .upsert(
-              { kakao_id: kakaoId, nickname },
-              { onConflict: "kakao_id" }
-            )
-            .select("id")
-            .single();
-
-          if (!error && data?.id) {
-            token.supabaseUserId = data.id;
-          }
+          const userId = await upsertUserWithRetry(kakaoId, nickname);
+          token.supabaseUserId = userId;
         }
       }
 

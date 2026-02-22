@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 
 export default function MenuDrawer() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { login, signing } = useKakaoLogin();
   const [isOpen, setIsOpen] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [checkingResults, setCheckingResults] = useState(false);
@@ -195,8 +197,9 @@ export default function MenuDrawer() {
               {status !== "loading" && !session?.user && (
                 <button
                   type="button"
-                  onClick={() => signIn("kakao")}
-                  className="mx-5 my-4 h-12 w-[calc(100%-40px)] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+                  onClick={() => login()}
+                  disabled={signing}
+                  className="mx-5 my-4 h-12 w-[calc(100%-40px)] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
                     <path

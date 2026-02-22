@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import Image from "next/image";
 import MenuDrawer from "../../MenuDrawer";
 import { useStoreActions } from "@/store/useInputStore";
@@ -162,6 +163,7 @@ function DeleteModal({
 export default function MyResultsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { login, signing } = useKakaoLogin();
   const { reset } = useStoreActions();
 
   const [tab, setTab] = useState<Tab>("saju");
@@ -288,8 +290,9 @@ export default function MyResultsPage() {
           <div className="text-center space-y-4">
             <p className="text-text-secondary">로그인하면 저장된 결과를 확인할 수 있어요.</p>
             <button
-              onClick={() => signIn("kakao", { callbackUrl: "/menu" })}
-              className="px-6 py-3 rounded-xl text-button-md bg-[#FEE500] text-black font-semibold"
+              onClick={() => login("/menu")}
+              disabled={signing}
+              className="px-6 py-3 rounded-xl text-button-md bg-[#FEE500] text-black font-semibold disabled:opacity-50"
             >
               카카오로 시작하기
             </button>

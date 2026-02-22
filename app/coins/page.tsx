@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 
 export default function CoinsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { login } = useKakaoLogin();
   const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [returnTo, setReturnTo] = useState("/start");
@@ -23,7 +25,7 @@ export default function CoinsPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      signIn("kakao", { callbackUrl: "/coins" });
+      login("/coins");
     }
   }, [status]);
 

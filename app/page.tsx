@@ -2,8 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import MenuDrawer from "./MenuDrawer";
 import {
   IconAward,
@@ -81,12 +81,13 @@ function ImagePlaceholder({
 
 /* ─── kakao CTA button ─── */
 
-function KakaoCTA({ onClick }: { onClick: () => void }) {
+function KakaoCTA({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full h-[54px] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+      disabled={disabled}
+      className="w-full h-[54px] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
     >
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
         <path
@@ -123,9 +124,10 @@ function LandingPageInner() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const { login, signing } = useKakaoLogin();
   const handleStart = useCallback(() => {
-    signIn("kakao", { callbackUrl });
-  }, [callbackUrl]);
+    login(callbackUrl);
+  }, [callbackUrl, login]);
 
   /* scroll-reveal refs */
   const hero = useScrollReveal<HTMLElement>();
@@ -299,7 +301,7 @@ function LandingPageInner() {
       <div className="fixed inset-x-0 bottom-0 z-[130] bg-[linear-gradient(0deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_calc(70px+env(safe-area-inset-bottom)),rgba(0,0,0,0)_100%)] px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
           <p className="mb-2 text-center text-[12px] text-zinc-400">로그인하면 결과가 저장돼요</p>
-          <KakaoCTA onClick={handleStart} />
+          <KakaoCTA onClick={handleStart} disabled={signing} />
         </div>
       </div>
     </div>

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 
 type ProfileForm = {
   name: string;
@@ -56,6 +57,7 @@ const normalizeBirthDate = (value: string) => {
 export default function EditProfilePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { login, signing } = useKakaoLogin();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export default function EditProfilePage() {
       setAuthRequired(true);
       if (!attemptedSignInRef.current) {
         attemptedSignInRef.current = true;
-        signIn("kakao", { callbackUrl: "/edit-profile" });
+        login("/edit-profile");
       }
       return;
     }
@@ -98,7 +100,7 @@ export default function EditProfilePage() {
           setAuthRequired(true);
           if (!attemptedSignInRef.current) {
             attemptedSignInRef.current = true;
-            signIn("kakao", { callbackUrl: "/edit-profile" });
+            login("/edit-profile");
           }
           return;
         }
@@ -257,10 +259,11 @@ export default function EditProfilePage() {
               <p className="text-[14px] text-text-secondary mb-6">로그인이 필요합니다.</p>
               <button
                 type="button"
-                onClick={() => signIn("kakao", { callbackUrl: "/edit-profile" })}
-                className="btn-primary px-6 py-3 rounded-xl text-[15px] font-semibold"
+                onClick={() => login("/edit-profile")}
+                disabled={signing}
+                className="btn-primary px-6 py-3 rounded-xl text-[15px] font-semibold disabled:opacity-50"
               >
-                카카오로 로그인
+                {signing ? "로그인 중..." : "카카오로 로그인"}
               </button>
             </div>
           ) : (

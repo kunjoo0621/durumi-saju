@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import ResultTable from "@/components/result/ResultTable";
 import MenuDrawer from "../MenuDrawer";
 import SajuChart, { StrengthPanel } from "@/components/saju/SajuChart";
@@ -26,6 +27,7 @@ export default function ResultClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { login, signing } = useKakaoLogin();
 
   // 최적화된 선택자 사용
   const inputs = useAllInputs();
@@ -278,10 +280,11 @@ export default function ResultClient() {
             결제 직후에는 바로 확인할 수 있지만, 나중에 다시 보려면 로그인이 필요해요.
           </p>
           <button
-            onClick={() => signIn("kakao", { callbackUrl: "/result" })}
-            className="btn-primary px-8 py-4 rounded-2xl text-button-md transition-colors"
+            onClick={() => login("/result")}
+            disabled={signing}
+            className="btn-primary px-8 py-4 rounded-2xl text-button-md transition-colors disabled:opacity-50"
           >
-            카카오로 로그인
+            {signing ? "로그인 중..." : "카카오로 로그인"}
           </button>
         </div>
       </div>
@@ -361,10 +364,11 @@ export default function ResultClient() {
                 나중에 다시 보려면 로그인하고 내역에 저장하세요.
               </p>
               <button
-                onClick={() => signIn("kakao", { callbackUrl: "/result" })}
-                className="w-full rounded-xl px-4 py-3 text-[14px] font-semibold text-text-primary bg-primary"
+                onClick={() => login("/result")}
+                disabled={signing}
+                className="w-full rounded-xl px-4 py-3 text-[14px] font-semibold text-text-primary bg-primary disabled:opacity-50"
               >
-                카카오로 저장하기
+                {signing ? "로그인 중..." : "카카오로 저장하기"}
               </button>
             </div>
           )}
