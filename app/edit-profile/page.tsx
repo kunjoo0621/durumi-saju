@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
-import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 
 type ProfileForm = {
   name: string;
@@ -66,7 +66,7 @@ export default function EditProfilePage() {
   const [showErrors, setShowErrors] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const attemptedSignInRef = useRef(false);
-  const keyboardHeight = useKeyboardHeight();
+  const vpHeight = useViewportHeight();
   const [form, setForm] = useState<ProfileForm>({
     name: "",
     birthDate: "",
@@ -205,7 +205,10 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col overflow-hidden">
+    <div
+      className="fixed inset-x-0 top-0 bg-background-primary text-text-primary flex flex-col overflow-hidden"
+      style={{ height: vpHeight || '100dvh' }}
+    >
       <header className="px-5 py-5 shrink-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center">
           <button
@@ -439,14 +442,8 @@ export default function EditProfilePage() {
 
       {!loading && session?.user && (
         <footer
-          className={keyboardHeight > 0
-            ? "fixed left-0 right-0 z-50 bg-[#0D0D0D] px-5 pt-3 pb-3"
-            : "shrink-0 bg-[#0D0D0D] px-5 pt-3"
-          }
-          style={keyboardHeight > 0
-            ? { bottom: keyboardHeight }
-            : { paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }
-          }
+          className="shrink-0 bg-[#0D0D0D] px-5 pt-3"
+          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
         >
           <div className="max-w-[640px] mx-auto">
             <button

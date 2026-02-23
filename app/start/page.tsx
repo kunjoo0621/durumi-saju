@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { useAllInputs, useStoreActions } from "@/store/useInputStore";
-import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 import MenuDrawer from "../MenuDrawer";
 
 // 상수를 모듈 레벨로 이동 (렌더링마다 재생성 방지)
@@ -64,7 +64,7 @@ export default function Home() {
     unknownBirthTime,
   } = formData;
 
-  const keyboardHeight = useKeyboardHeight();
+  const vpHeight = useViewportHeight();
 
   // 생년월일 포맷팅용 상태
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
@@ -465,7 +465,10 @@ export default function Home() {
   };
 
   return (
-    <div className="h-[100dvh] bg-background-primary flex flex-col">
+    <div
+      className="fixed inset-x-0 top-0 bg-background-primary flex flex-col"
+      style={{ height: vpHeight || '100dvh' }}
+    >
       {/* 토스 SDK 프리로드 — checkout 진입 시 캐시에서 즉시 로드 */}
       <Script
         src="https://js.tosspayments.com/v2/standard"
@@ -539,16 +542,10 @@ export default function Home() {
         </div>
       </main>
 
-      {/* 하단 영역 — 키보드 닫힘: flex flow / 키보드 열림: fixed */}
+      {/* 하단 영역 — 루트가 vpHeight이므로 항상 shrink-0 */}
       <footer
-        className={keyboardHeight > 0
-          ? "fixed left-0 right-0 z-50 bg-[#0D0D0D] px-5 pt-3 pb-3"
-          : "shrink-0 bg-[#0D0D0D] px-5 pt-3"
-        }
-        style={keyboardHeight > 0
-          ? { bottom: keyboardHeight }
-          : { paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }
-        }
+        className="shrink-0 bg-[#0D0D0D] px-5 pt-3"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">

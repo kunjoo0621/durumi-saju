@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Script from "next/script";
-import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 import MenuDrawer from "../../MenuDrawer";
 import {
   useBattleStore,
@@ -72,7 +72,7 @@ export default function BattleInputPage() {
   const [birthDateErrorB, setBirthDateErrorB] = useState("");
   const [birthTimeErrorB, setBirthTimeErrorB] = useState("");
 
-  const keyboardHeight = useKeyboardHeight();
+  const vpHeight = useViewportHeight();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -618,7 +618,10 @@ export default function BattleInputPage() {
   const isLastStep = step === TOTAL_STEPS - 1;
 
   return (
-    <div className="h-[100dvh] bg-background-primary flex flex-col">
+    <div
+      className="fixed inset-x-0 top-0 bg-background-primary flex flex-col"
+      style={{ height: vpHeight || '100dvh' }}
+    >
       {/* 토스 SDK 프리로드 */}
       <Script
         src="https://js.tosspayments.com/v2/standard"
@@ -647,14 +650,8 @@ export default function BattleInputPage() {
       </main>
 
       <footer
-        className={keyboardHeight > 0
-          ? "fixed left-0 right-0 z-50 bg-[#0D0D0D] px-6 pt-3 pb-3"
-          : "shrink-0 bg-[#0D0D0D] px-6 pt-3"
-        }
-        style={keyboardHeight > 0
-          ? { bottom: keyboardHeight }
-          : { paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }
-        }
+        className="shrink-0 bg-[#0D0D0D] px-6 pt-3"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
