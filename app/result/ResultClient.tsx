@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import ResultTable from "@/components/result/ResultTable";
-import MenuDrawer from "../MenuDrawer";
+import Header from "@/components/layout/Header";
 import SajuChart, { StrengthPanel } from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
@@ -346,14 +346,7 @@ export default function ResultClient() {
 
   return (
     <div className="min-h-screen bg-background-primary animate-fadeIn">
-      {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
-        <div className="max-w-[640px] mx-auto flex items-center justify-between">
-          <div className="w-10" />
-          <h1 className="text-title-3 text-text-primary text-center font-aggro">사주보는 두루미</h1>
-          <MenuDrawer />
-        </div>
-      </header>
+      <Header showBack />
 
       {/* 메인 콘텐츠 */}
       <main className="px-6 py-8">

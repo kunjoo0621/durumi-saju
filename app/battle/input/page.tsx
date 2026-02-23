@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Script from "next/script";
-import MenuDrawer from "../../MenuDrawer";
+import Header from "@/components/layout/Header";
 import {
   useBattleStore,
   useBattleActions,
@@ -634,21 +634,7 @@ export default function BattleInputPage() {
         src="https://js.tosspayments.com/v2/standard"
         strategy="lazyOnload"
       />
-      <header className="px-6 py-5 shrink-0 z-[100] bg-[#0D0D0D]">
-        <div className="max-w-[640px] mx-auto flex items-center justify-between">
-          <button
-            onClick={handleBack}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
-            aria-label="이전 단계로"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-title-3 text-text-primary font-aggro">1:1 사주배틀</h1>
-          <MenuDrawer />
-        </div>
-      </header>
+      <Header showBack onBack={handleBack} />
 
       <main className="flex-1 px-6 pb-40 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">

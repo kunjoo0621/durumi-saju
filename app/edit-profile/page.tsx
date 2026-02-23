@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import Header from "@/components/layout/Header";
 
 type ProfileForm = {
   name: string;
@@ -224,28 +225,8 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col overflow-hidden">
-      <header className="px-5 py-5 shrink-0 z-[100] bg-[#0D0D0D]">
-        <div className="max-w-[640px] mx-auto flex items-center">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
-            aria-label="뒤로가기"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="flex-1 text-center text-title-3 text-text-primary">내 정보 수정</h1>
-          <div className="w-10" />
-        </div>
-      </header>
+    <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col">
+      <Header showBack title="프로필 수정" />
 
       <main className="px-5 pb-32 flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-[640px] mx-auto space-y-7 pt-10">

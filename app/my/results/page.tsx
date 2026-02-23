@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import Image from "next/image";
-import MenuDrawer from "../../MenuDrawer";
+import Header from "@/components/layout/Header";
 import { useStoreActions } from "@/store/useInputStore";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import type { BattleListItem } from "@/types/battle";
@@ -285,13 +285,7 @@ export default function MyResultsPage() {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-background-primary flex flex-col">
-        <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
-          <div className="max-w-[640px] mx-auto flex items-center justify-between">
-            <div className="w-10" />
-            <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
-            <MenuDrawer />
-          </div>
-        </header>
+        <Header title="내 결과" />
         <main className="flex-1 px-5 pb-24 flex items-center justify-center">
           <div className="text-center space-y-4">
             <p className="text-text-secondary">로그인하면 저장된 결과를 확인할 수 있어요.</p>
@@ -310,21 +304,7 @@ export default function MyResultsPage() {
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
-        <div className="max-w-[640px] mx-auto flex items-center justify-between">
-          <button
-            onClick={() => router.push("/menu")}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
-            aria-label="메뉴로 돌아가기"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-title-3 text-text-primary font-aggro">내 결과</h1>
-          <MenuDrawer />
-        </div>
-      </header>
+      <Header showBack title="내 결과" onBack={() => router.push("/menu")} />
 
       {/* Tabs */}
       <div className="max-w-[640px] mx-auto w-full px-5">
