@@ -66,7 +66,6 @@ export default function EditProfilePage() {
   const [showErrors, setShowErrors] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const attemptedSignInRef = useRef(false);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [form, setForm] = useState<ProfileForm>({
     name: "",
     birthDate: "",
@@ -144,30 +143,10 @@ export default function EditProfilePage() {
     };
   }, [session, status]);
 
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-
-    const handleResize = () => {
-      const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
-      setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
-    };
-
-    handleResize();
-    viewport.addEventListener("resize", handleResize);
-    viewport.addEventListener("scroll", handleResize);
-    const onFocusIn = () => handleResize();
-    const onFocusOut = () => setTimeout(handleResize, 50);
-    window.addEventListener("focusin", onFocusIn);
-    window.addEventListener("focusout", onFocusOut);
-
-    return () => {
-      viewport.removeEventListener("resize", handleResize);
-      viewport.removeEventListener("scroll", handleResize);
-      window.removeEventListener("focusin", onFocusIn);
-      window.removeEventListener("focusout", onFocusOut);
-    };
-  }, []);
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const el = e.target;
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 400);
+  };
 
   const requiredErrors = useMemo(() => {
     const birthDigits = form.birthDate.replace(/\D/g, "");
@@ -228,7 +207,7 @@ export default function EditProfilePage() {
     <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col">
       <Header showBack title="프로필 수정" />
 
-      <main className="px-5 pb-32 flex-1 min-h-0 overflow-y-auto">
+      <main className="px-5 pb-6 flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-[640px] mx-auto space-y-7 pt-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-text-secondary">
@@ -259,6 +238,7 @@ export default function EditProfilePage() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="예: 두루미"
                   className={`w-full h-[52px] text-[16px] ${showErrors && requiredErrors.name ? "input-error" : ""}`}
+                  onFocus={handleInputFocus}
                 />
                 {showErrors && requiredErrors.name && (
                   <p className="mt-2 text-[14px] text-primary">필수 입력 항목입니다</p>
@@ -299,6 +279,7 @@ export default function EditProfilePage() {
                   placeholder="예: 1990.05.15"
                   maxLength={10}
                   className={`w-full h-[52px] text-[16px] ${showErrors && requiredErrors.birthDate ? "input-error" : ""}`}
+                  onFocus={handleInputFocus}
                 />
                 {showErrors && requiredErrors.birthDate && (
                   <p className="mt-2 text-[14px] text-primary">필수 입력 항목입니다</p>
@@ -311,6 +292,7 @@ export default function EditProfilePage() {
                   value={form.birthTime}
                   onChange={(e) => setForm({ ...form, birthTime: e.target.value })}
                   className="w-full h-[52px] text-[16px]"
+                  onFocus={handleInputFocus}
                 >
                   {TIME_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -435,9 +417,9 @@ export default function EditProfilePage() {
       </main>
 
       {!loading && session?.user && (
-        <div
-          className="fixed left-0 right-0 bg-background-primary px-5 py-5 transition-[bottom] duration-150 ease-out"
-          style={{ bottom: `${keyboardOffset}px` }}
+        <footer
+          className="shrink-0 bg-[#0D0D0D] px-5 py-5"
+          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))' }}
         >
           <div className="max-w-[640px] mx-auto">
             <button
@@ -449,7 +431,7 @@ export default function EditProfilePage() {
               {saving ? "저장 중..." : "저장하기"}
             </button>
           </div>
-        </div>
+        </footer>
       )}
 
       {toast && (

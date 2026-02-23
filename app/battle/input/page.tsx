@@ -71,35 +71,16 @@ export default function BattleInputPage() {
   const [birthDateErrorB, setBirthDateErrorB] = useState("");
   const [birthTimeErrorB, setBirthTimeErrorB] = useState("");
 
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
-
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/?returnTo=/battle");
     }
   }, [status, router]);
 
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    let rafId: number | null = null;
-    const handleResize = () => {
-      if (rafId) return;
-      rafId = requestAnimationFrame(() => {
-        const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
-        setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
-        rafId = null;
-      });
-    };
-    handleResize();
-    viewport.addEventListener("resize", handleResize);
-    viewport.addEventListener("scroll", handleResize);
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      viewport.removeEventListener("resize", handleResize);
-      viewport.removeEventListener("scroll", handleResize);
-    };
-  }, []);
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const el = e.target;
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 400);
+  };
 
   const validateBirthDate = (year: string, month: string, day: string): string => {
     if (!year || !month || !day) return "";
@@ -329,6 +310,7 @@ export default function BattleInputPage() {
                     onChange={(e) => setPlayerA({ name: e.target.value })}
                     placeholder="예: 두루미"
                     className="w-full text-[15px] h-[52px]"
+                    onFocus={handleInputFocus}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -357,6 +339,7 @@ export default function BattleInputPage() {
                     placeholder="예: 1990 / 05 / 15"
                     maxLength={14}
                     className="w-full text-[15px] h-[52px]"
+                    onFocus={handleInputFocus}
                   />
                   {birthDateErrorA && <p className="mt-2 text-[13px] text-primary">{birthDateErrorA}</p>}
                 </div>
@@ -371,6 +354,7 @@ export default function BattleInputPage() {
                       placeholder="예: 09 : 30"
                       maxLength={7}
                       className="w-full text-[15px] h-[52px]"
+                      onFocus={handleInputFocus}
                     />
                     {birthTimeErrorA && <p className="mt-2 text-[13px] text-primary">{birthTimeErrorA}</p>}
                   </div>
@@ -466,6 +450,7 @@ export default function BattleInputPage() {
               placeholder="예: 홍길동"
               className="w-full text-[15px] h-[52px]"
               autoFocus
+              onFocus={handleInputFocus}
             />
           </div>
         );
@@ -502,6 +487,7 @@ export default function BattleInputPage() {
                 placeholder="예: 1990 / 05 / 15"
                 maxLength={14}
                 className="w-full text-[15px] h-[52px]"
+                onFocus={handleInputFocus}
               />
               {birthDateErrorB && <p className="mt-2 text-[13px] text-primary">{birthDateErrorB}</p>}
             </div>
@@ -516,6 +502,7 @@ export default function BattleInputPage() {
                   placeholder="예: 09 : 30"
                   maxLength={7}
                   className="w-full text-[15px] h-[52px]"
+                  onFocus={handleInputFocus}
                 />
                 {birthTimeErrorB && <p className="mt-2 text-[13px] text-primary">{birthTimeErrorB}</p>}
               </div>
@@ -636,15 +623,15 @@ export default function BattleInputPage() {
       />
       <Header showBack onBack={handleBack} />
 
-      <main className="flex-1 px-6 pb-40 overflow-y-auto">
+      <main className="flex-1 px-6 pb-6 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {renderStep()}
         </div>
       </main>
 
-      <div
-        className="fixed left-0 right-0 bg-background-primary px-6 py-4 transition-[bottom] duration-150 ease-out"
-        style={{ bottom: `${keyboardOffset}px` }}
+      <footer
+        className="shrink-0 bg-[#0D0D0D] px-6 py-4"
+        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }}
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
@@ -665,7 +652,7 @@ export default function BattleInputPage() {
             {isLastStep ? "2,000원 결제하고 대결하기" : "다음"}
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

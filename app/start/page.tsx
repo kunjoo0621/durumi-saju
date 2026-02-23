@@ -68,8 +68,10 @@ export default function Home() {
   const [birthTimeDisplay, setBirthTimeDisplay] = useState("");
   const [birthDateError, setBirthDateError] = useState("");
   const [birthTimeError, setBirthTimeError] = useState("");
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const isKeyboardOpen = keyboardOffset > 0;
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const el = e.target;
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 400);
+  };
 
   const validateBirthDate = (year: string, month: string, day: string): string => {
     if (!year || !month || !day) return "";
@@ -119,40 +121,6 @@ export default function Home() {
       setBirthTimeDisplay(`${digits.slice(0, 2)} : ${digits.slice(2, 4)}`);
     }
   }, [birthHour, birthMinute]);
-
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-
-    let rafId: number | null = null;
-
-    // requestAnimationFrame으로 디바운스 - 여러 이벤트를 한 프레임으로 배치
-    const handleResize = () => {
-      if (rafId) return;
-      rafId = requestAnimationFrame(() => {
-        const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
-        setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
-        rafId = null;
-      });
-    };
-
-    handleResize();
-    viewport.addEventListener("resize", handleResize);
-    viewport.addEventListener("scroll", handleResize);
-
-    const onFocusIn = () => handleResize();
-    const onFocusOut = () => setTimeout(handleResize, 50);
-    window.addEventListener("focusin", onFocusIn);
-    window.addEventListener("focusout", onFocusOut);
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      viewport.removeEventListener("resize", handleResize);
-      viewport.removeEventListener("scroll", handleResize);
-      window.removeEventListener("focusin", onFocusIn);
-      window.removeEventListener("focusout", onFocusOut);
-    };
-  }, []);
 
   const totalSteps = QUESTIONS.length;
 
@@ -276,6 +244,7 @@ export default function Home() {
               placeholder="예: 두루미"
               className="w-full text-[15px] h-[52px]"
               autoFocus
+              onFocus={handleInputFocus}
               aria-label="이름"
             />
           </div>
@@ -315,6 +284,7 @@ export default function Home() {
                 placeholder="예: 1990 / 05 / 15"
                 maxLength={14}
                 className="w-full text-[15px] h-[52px]"
+                onFocus={handleInputFocus}
                 aria-label="생년월일"
               />
               {birthDateError && (
@@ -335,6 +305,7 @@ export default function Home() {
                   placeholder="예: 09 : 30"
                   maxLength={7}
                   className="w-full text-[15px] h-[52px]"
+                  onFocus={handleInputFocus}
                   aria-label="태어난 시간"
                 />
                 {birthTimeError && (
@@ -502,7 +473,7 @@ export default function Home() {
       />
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 px-5 pb-40 overflow-y-auto">
+      <main className="flex-1 px-5 pb-6 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {/* 질문 */}
           <div>
@@ -516,10 +487,10 @@ export default function Home() {
         </div>
       </main>
 
-      {/* 하단 고정 영역 (프로그레스바 + 다음 버튼) */}
-      <div
-        className="fixed left-0 right-0 bg-background-primary px-5 py-4 transition-[bottom] duration-150 ease-out"
-        style={{ bottom: `${keyboardOffset}px` }}
+      {/* 하단 영역 (프로그레스바 + 다음 버튼) */}
+      <footer
+        className="shrink-0 bg-[#0D0D0D] px-5 py-4"
+        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }}
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
@@ -546,7 +517,7 @@ export default function Home() {
             {currentStep === totalSteps - 1 ? "결과 받기" : "다음"}
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
