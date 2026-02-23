@@ -247,16 +247,22 @@ export default function MyResultsPage() {
         deleteTarget.type === "saju"
           ? `/api/results/${deleteTarget.id}`
           : `/api/battles/${deleteTarget.id}`;
+      console.log("[삭제 요청]", deleteTarget);
       const res = await fetch(endpoint, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("[삭제 실패]", res.status, body);
+        throw new Error(body?.error || "삭제 실패");
+      }
 
       if (deleteTarget.type === "saju") {
         setResults((prev) => prev.filter((r) => r.id !== deleteTarget.id));
       } else {
         setBattles((prev) => prev.filter((b) => b.id !== deleteTarget.id));
       }
-    } catch {
-      // 실패 시 무시 — 재시도 가능
+    } catch (err: any) {
+      console.error("[삭제 에러]", err);
+      alert(err?.message || "삭제에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
