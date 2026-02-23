@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { useAllInputs, useStoreActions } from "@/store/useInputStore";
-import { useViewportHeight } from "@/hooks/useViewportHeight";
 import MenuDrawer from "../MenuDrawer";
 
 // 상수를 모듈 레벨로 이동 (렌더링마다 재생성 방지)
@@ -64,13 +63,13 @@ export default function Home() {
     unknownBirthTime,
   } = formData;
 
-  const vpHeight = useViewportHeight();
-
   // 생년월일 포맷팅용 상태
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
   const [birthTimeDisplay, setBirthTimeDisplay] = useState("");
   const [birthDateError, setBirthDateError] = useState("");
   const [birthTimeError, setBirthTimeError] = useState("");
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const isKeyboardOpen = keyboardOffset > 0;
 
   const validateBirthDate = (year: string, month: string, day: string): string => {
     if (!year || !month || !day) return "";
@@ -121,9 +120,38 @@ export default function Home() {
     }
   }, [birthHour, birthMinute]);
 
-  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const el = e.target;
-    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 400);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    let rafId: number | null = null;
+
+    // requestAnimationFrame으로 디바운스 - 여러 이벤트를 한 프레임으로 배치
+    const handleResize = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
+        setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
+        rafId = null;
+      });
+    };
+
+    handleResize();
+    viewport.addEventListener("resize", handleResize);
+    viewport.addEventListener("scroll", handleResize);
+
+    const onFocusIn = () => handleResize();
+    const onFocusOut = () => setTimeout(handleResize, 50);
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      viewport.removeEventListener("resize", handleResize);
+      viewport.removeEventListener("scroll", handleResize);
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
+    };
   }, []);
 
   const totalSteps = QUESTIONS.length;
@@ -246,9 +274,8 @@ export default function Home() {
               value={formData.name}
               onChange={(e) => setField("name", e.target.value)}
               placeholder="예: 두루미"
-              className="w-full text-[16px] h-[52px]"
+              className="w-full text-[15px] h-[52px]"
               autoFocus
-              onFocus={handleInputFocus}
               aria-label="이름"
             />
           </div>
@@ -287,8 +314,7 @@ export default function Home() {
                 onChange={handleBirthDateChange}
                 placeholder="예: 1990 / 05 / 15"
                 maxLength={14}
-                className="w-full text-[16px] h-[52px]"
-                onFocus={handleInputFocus}
+                className="w-full text-[15px] h-[52px]"
                 aria-label="생년월일"
               />
               {birthDateError && (
@@ -308,8 +334,7 @@ export default function Home() {
                   onChange={handleBirthTimeChange}
                   placeholder="예: 09 : 30"
                   maxLength={7}
-                  className="w-full text-[16px] h-[52px]"
-                  onFocus={handleInputFocus}
+                  className="w-full text-[15px] h-[52px]"
                   aria-label="태어난 시간"
                 />
                 {birthTimeError && (
@@ -465,10 +490,7 @@ export default function Home() {
   };
 
   return (
-    <div
-      className="fixed inset-x-0 top-0 bg-background-primary flex flex-col"
-      style={{ height: vpHeight || '100dvh' }}
-    >
+    <div className="h-[100dvh] bg-background-primary flex flex-col">
       {/* 토스 SDK 프리로드 — checkout 진입 시 캐시에서 즉시 로드 */}
       <Script
         src="https://js.tosspayments.com/v2/standard"
@@ -528,7 +550,7 @@ export default function Home() {
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 px-5 overflow-y-auto overscroll-contain">
+      <main className="flex-1 px-5 pb-40 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {/* 질문 */}
           <div>
@@ -542,10 +564,10 @@ export default function Home() {
         </div>
       </main>
 
-      {/* 하단 영역 — 루트가 vpHeight이므로 항상 shrink-0 */}
-      <footer
-        className="shrink-0 bg-[#0D0D0D] px-5 pt-3"
-        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
+      {/* 하단 고정 영역 (프로그레스바 + 다음 버튼) */}
+      <div
+        className="fixed left-0 right-0 bg-background-primary px-5 py-4 transition-[bottom] duration-150 ease-out"
+        style={{ bottom: `${keyboardOffset}px` }}
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
@@ -567,12 +589,12 @@ export default function Home() {
           <button
             onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
             disabled={!canProceed()}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[16px] font-semibold leading-none transition-all duration-200"
+            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
           >
             {currentStep === totalSteps - 1 ? "결과 받기" : "다음"}
           </button>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
-import { useViewportHeight } from "@/hooks/useViewportHeight";
 
 type ProfileForm = {
   name: string;
@@ -66,7 +65,7 @@ export default function EditProfilePage() {
   const [showErrors, setShowErrors] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const attemptedSignInRef = useRef(false);
-  const vpHeight = useViewportHeight();
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [form, setForm] = useState<ProfileForm>({
     name: "",
     birthDate: "",
@@ -144,9 +143,29 @@ export default function EditProfilePage() {
     };
   }, [session, status]);
 
-  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const el = e.target;
-    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 400);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleResize = () => {
+      const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
+      setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
+    };
+
+    handleResize();
+    viewport.addEventListener("resize", handleResize);
+    viewport.addEventListener("scroll", handleResize);
+    const onFocusIn = () => handleResize();
+    const onFocusOut = () => setTimeout(handleResize, 50);
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
+
+    return () => {
+      viewport.removeEventListener("resize", handleResize);
+      viewport.removeEventListener("scroll", handleResize);
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
+    };
   }, []);
 
   const requiredErrors = useMemo(() => {
@@ -205,10 +224,7 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div
-      className="fixed inset-x-0 top-0 bg-background-primary text-text-primary flex flex-col overflow-hidden"
-      style={{ height: vpHeight || '100dvh' }}
-    >
+    <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col overflow-hidden">
       <header className="px-5 py-5 shrink-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center">
           <button
@@ -231,7 +247,7 @@ export default function EditProfilePage() {
         </div>
       </header>
 
-      <main className="px-5 flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <main className="px-5 pb-32 flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-[640px] mx-auto space-y-7 pt-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-text-secondary">
@@ -261,7 +277,6 @@ export default function EditProfilePage() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="예: 두루미"
-                  onFocus={handleInputFocus}
                   className={`w-full h-[52px] text-[16px] ${showErrors && requiredErrors.name ? "input-error" : ""}`}
                 />
                 {showErrors && requiredErrors.name && (
@@ -302,7 +317,6 @@ export default function EditProfilePage() {
                   onChange={(e) => setForm({ ...form, birthDate: formatBirthDate(e.target.value) })}
                   placeholder="예: 1990.05.15"
                   maxLength={10}
-                  onFocus={handleInputFocus}
                   className={`w-full h-[52px] text-[16px] ${showErrors && requiredErrors.birthDate ? "input-error" : ""}`}
                 />
                 {showErrors && requiredErrors.birthDate && (
@@ -315,7 +329,6 @@ export default function EditProfilePage() {
                 <select
                   value={form.birthTime}
                   onChange={(e) => setForm({ ...form, birthTime: e.target.value })}
-                  onFocus={handleInputFocus}
                   className="w-full h-[52px] text-[16px]"
                 >
                   {TIME_OPTIONS.map((option) => (
@@ -441,9 +454,9 @@ export default function EditProfilePage() {
       </main>
 
       {!loading && session?.user && (
-        <footer
-          className="shrink-0 bg-[#0D0D0D] px-5 pt-3"
-          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
+        <div
+          className="fixed left-0 right-0 bg-background-primary px-5 py-5 transition-[bottom] duration-150 ease-out"
+          style={{ bottom: `${keyboardOffset}px` }}
         >
           <div className="max-w-[640px] mx-auto">
             <button
@@ -455,7 +468,7 @@ export default function EditProfilePage() {
               {saving ? "저장 중..." : "저장하기"}
             </button>
           </div>
-        </footer>
+        </div>
       )}
 
       {toast && (
