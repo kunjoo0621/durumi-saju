@@ -8,7 +8,6 @@ import {
   Briefcase,
   Heartbeat,
   Warning,
-  Target,
   Star,
 } from "@phosphor-icons/react";
 
@@ -21,7 +20,6 @@ export type SectionKey =
   | "career"
   | "health"
   | "warning"
-  | "analysis"
   | "overall";
 
 export const SECTION_META: Record<
@@ -36,7 +34,6 @@ export const SECTION_META: Record<
   career:      { Icon: Briefcase, label: "직장", color: "#9CA3AF", bg: "rgba(156, 163, 175, 0.12)", accent: "#D1D5DB" },
   health:      { Icon: Heartbeat, label: "건강", color: "#9CA3AF", bg: "rgba(156, 163, 175, 0.12)", accent: "#D1D5DB" },
   warning:     { Icon: Warning, label: "주의", color: "#F87171", bg: "rgba(248, 113, 113, 0.15)", accent: "#F87171" },
-  analysis:    { Icon: Target, label: "분석", color: "#A78BFA", bg: "rgba(167, 139, 250, 0.15)", accent: "#A78BFA" },
   overall:     { Icon: Star, label: "종합", color: "#9CA3AF", bg: "rgba(156, 163, 175, 0.12)", accent: "#D1D5DB" },
 };
 
@@ -49,7 +46,6 @@ export const SECTION_ORDER: SectionKey[] = [
   "career",
   "health",
   "warning",
-  "analysis",
   "overall",
 ];
 
@@ -62,7 +58,6 @@ const EMOJI_TO_KEY: Record<string, SectionKey> = {
   "💼": "career",
   "🩺": "health",
   "🚧": "warning",
-  "🎯": "analysis",
   "✅": "overall",
 };
 

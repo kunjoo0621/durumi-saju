@@ -71,11 +71,6 @@ export default function ResultTable({
     };
   }, [result]);
 
-  const safeCoreFearAxisBlock = useMemo(() => {
-    const raw = (result as Partial<AnalysisResult>)?.coreFearAxisBlock;
-    return typeof raw === "string" && raw.trim() ? raw : "";
-  }, [result]);
-
   const safeSections = useMemo(() => {
     const raw = (result as Partial<AnalysisResult>)?.sections;
     if (!Array.isArray(raw)) return [];
@@ -123,16 +118,7 @@ export default function ResultTable({
   const composedSections = useMemo(() => {
     const orderMap = new Map(SECTION_ORDER.map((key, i) => [key, i]));
 
-    const all = [...safeSections];
-    if (safeCoreFearAxisBlock) {
-      all.push({
-        icon: '🎯',
-        title: '요즘 1등 이슈',
-        content: safeCoreFearAxisBlock,
-      });
-    }
-
-    const sorted = all.sort((a, b) => {
+    const sorted = [...safeSections].sort((a, b) => {
       const BEFORE_RISK = 6.5; // 미지 아이콘은 health(6)과 warning(7) 사이에 배치
       const ai = orderMap.get(resolveKey(a.icon)) ?? BEFORE_RISK;
       const bi = orderMap.get(resolveKey(b.icon)) ?? BEFORE_RISK;
@@ -140,7 +126,7 @@ export default function ResultTable({
     });
 
     return sorted;
-  }, [safeSections, safeCoreFearAxisBlock]);
+  }, [safeSections]);
 
   return (
     <div className="space-y-6">
