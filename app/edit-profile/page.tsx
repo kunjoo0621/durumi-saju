@@ -149,12 +149,6 @@ export default function EditProfilePage() {
     setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   }, []);
 
-  const handleMainTap = useCallback(() => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-  }, []);
-
   const requiredErrors = useMemo(() => {
     const birthDigits = form.birthDate.replace(/\D/g, "");
     return {
@@ -234,7 +228,7 @@ export default function EditProfilePage() {
         </div>
       </header>
 
-      <main className="px-5 flex-1 min-h-0 overflow-y-auto overscroll-contain" onClick={handleMainTap}>
+      <main className="px-5 flex-1 min-h-0 overflow-y-auto overscroll-contain">
         <div className="max-w-[640px] mx-auto space-y-7 pt-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-text-secondary">

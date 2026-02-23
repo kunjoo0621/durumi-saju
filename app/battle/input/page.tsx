@@ -85,12 +85,6 @@ export default function BattleInputPage() {
     setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   }, []);
 
-  const handleMainTap = useCallback(() => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-  }, []);
-
   const validateBirthDate = (year: string, month: string, day: string): string => {
     if (!year || !month || !day) return "";
     const y = Number(year);
@@ -646,7 +640,7 @@ export default function BattleInputPage() {
         </div>
       </header>
 
-      <main className="flex-1 px-6 overflow-y-auto overscroll-contain" onClick={handleMainTap}>
+      <main className="flex-1 px-6 overflow-y-auto overscroll-contain">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {renderStep()}
         </div>

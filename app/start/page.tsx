@@ -126,12 +126,6 @@ export default function Home() {
     setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   }, []);
 
-  const handleMainTap = useCallback(() => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-  }, []);
-
   const totalSteps = QUESTIONS.length;
 
   const handleNext = () => {
@@ -531,7 +525,7 @@ export default function Home() {
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 px-5 overflow-y-auto overscroll-contain" onClick={handleMainTap}>
+      <main className="flex-1 px-5 overflow-y-auto overscroll-contain">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {/* 질문 */}
           <div>
