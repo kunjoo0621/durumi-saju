@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Script from "next/script";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import MenuDrawer from "../../MenuDrawer";
 import {
   useBattleStore,
@@ -71,7 +72,7 @@ export default function BattleInputPage() {
   const [birthDateErrorB, setBirthDateErrorB] = useState("");
   const [birthTimeErrorB, setBirthTimeErrorB] = useState("");
 
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -79,26 +80,15 @@ export default function BattleInputPage() {
     }
   }, [status, router]);
 
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    let rafId: number | null = null;
-    const handleResize = () => {
-      if (rafId) return;
-      rafId = requestAnimationFrame(() => {
-        const bottomOffset = window.innerHeight - viewport.height - viewport.offsetTop;
-        setKeyboardOffset(Math.max(0, Math.round(bottomOffset)));
-        rafId = null;
-      });
-    };
-    handleResize();
-    viewport.addEventListener("resize", handleResize);
-    viewport.addEventListener("scroll", handleResize);
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      viewport.removeEventListener("resize", handleResize);
-      viewport.removeEventListener("scroll", handleResize);
-    };
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const el = e.target;
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+  }, []);
+
+  const handleMainTap = useCallback(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
   }, []);
 
   const validateBirthDate = (year: string, month: string, day: string): string => {
@@ -328,7 +318,8 @@ export default function BattleInputPage() {
                     value={playerA.name}
                     onChange={(e) => setPlayerA({ name: e.target.value })}
                     placeholder="예: 두루미"
-                    className="w-full text-[15px] h-[52px]"
+                    className="w-full text-[16px] h-[52px]"
+                    onFocus={handleInputFocus}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -356,7 +347,8 @@ export default function BattleInputPage() {
                     onChange={(e) => handleBirthDateChange(e, "A")}
                     placeholder="예: 1990 / 05 / 15"
                     maxLength={14}
-                    className="w-full text-[15px] h-[52px]"
+                    className="w-full text-[16px] h-[52px]"
+                    onFocus={handleInputFocus}
                   />
                   {birthDateErrorA && <p className="mt-2 text-[13px] text-primary">{birthDateErrorA}</p>}
                 </div>
@@ -370,7 +362,8 @@ export default function BattleInputPage() {
                       onChange={(e) => handleBirthTimeChange(e, "A")}
                       placeholder="예: 09 : 30"
                       maxLength={7}
-                      className="w-full text-[15px] h-[52px]"
+                      className="w-full text-[16px] h-[52px]"
+                      onFocus={handleInputFocus}
                     />
                     {birthTimeErrorA && <p className="mt-2 text-[13px] text-primary">{birthTimeErrorA}</p>}
                   </div>
@@ -464,8 +457,9 @@ export default function BattleInputPage() {
               value={playerB.name}
               onChange={(e) => setPlayerBField("name", e.target.value)}
               placeholder="예: 홍길동"
-              className="w-full text-[15px] h-[52px]"
+              className="w-full text-[16px] h-[52px]"
               autoFocus
+              onFocus={handleInputFocus}
             />
           </div>
         );
@@ -501,7 +495,8 @@ export default function BattleInputPage() {
                 onChange={(e) => handleBirthDateChange(e, "B")}
                 placeholder="예: 1990 / 05 / 15"
                 maxLength={14}
-                className="w-full text-[15px] h-[52px]"
+                className="w-full text-[16px] h-[52px]"
+                onFocus={handleInputFocus}
               />
               {birthDateErrorB && <p className="mt-2 text-[13px] text-primary">{birthDateErrorB}</p>}
             </div>
@@ -515,7 +510,8 @@ export default function BattleInputPage() {
                   onChange={(e) => handleBirthTimeChange(e, "B")}
                   placeholder="예: 09 : 30"
                   maxLength={7}
-                  className="w-full text-[15px] h-[52px]"
+                  className="w-full text-[16px] h-[52px]"
+                  onFocus={handleInputFocus}
                 />
                 {birthTimeErrorB && <p className="mt-2 text-[13px] text-primary">{birthTimeErrorB}</p>}
               </div>
@@ -650,15 +646,15 @@ export default function BattleInputPage() {
         </div>
       </header>
 
-      <main className="flex-1 px-6 pb-40 overflow-y-auto">
+      <main className="flex-1 px-6 overflow-y-auto overscroll-contain" onClick={handleMainTap}>
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {renderStep()}
         </div>
       </main>
 
-      <div
-        className="fixed left-0 right-0 bg-background-primary px-6 py-4 transition-[bottom] duration-150 ease-out"
-        style={{ bottom: `${keyboardOffset}px` }}
+      <footer
+        className="shrink-0 bg-[#0D0D0D] px-6 pt-3"
+        style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight : 'max(16px, env(safe-area-inset-bottom, 16px))' }}
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
@@ -674,12 +670,12 @@ export default function BattleInputPage() {
             type="button"
             onClick={isLastStep ? handleSubmit : handleNext}
             disabled={!canProceed()}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+            className="btn-primary w-full rounded-xl px-4 py-4 text-[16px] font-semibold leading-none transition-all duration-200"
           >
             {isLastStep ? "2,000원 결제하고 대결하기" : "다음"}
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
