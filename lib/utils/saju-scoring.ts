@@ -6,10 +6,10 @@ import {
   type GradeLabel,
   type ConfidenceLevel,
 } from "@/lib/gradeSystem";
-import type { EnrichedSajuData } from "./saju-enrichment";
+import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 3;
+export const SCORING_VERSION = 7;
 
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
@@ -32,6 +32,12 @@ export type ScoringInput = {
   shinsalBadCount: number;
   isTimeUnknown: boolean;
   hasManselyeok: boolean;
+  // v5 가점 관련
+  has건록제왕: boolean;          // 12운성 중 건록 or 제왕 존재
+  hasYongshinInStems: boolean;   // 용신 투출 (천간에 용신 오행)
+  goodShinsalCount: number;      // 길신살 (type=good) 개수
+  hasYongshinMonthRoot: boolean; // 용신이 월지에 뿌리 (월지 오행 === 용신)
+  hasSamhap: boolean;            // 삼합 존재 여부
 };
 
 function clampInt(value: number, min: number, max: number) {
@@ -50,8 +56,42 @@ export function parseScoringInput(enriched: EnrichedSajuData | null | undefined)
       shinsalBadCount: 0,
       isTimeUnknown: true,
       hasManselyeok: false,
+      has건록제왕: false,
+      hasYongshinInStems: false,
+      goodShinsalCount: 0,
+      hasYongshinMonthRoot: false,
+      hasSamhap: false,
     };
   }
+
+  // ── v5 가점 필드 계산 ──
+  const stages = enriched.twelveStages;
+  const stageNames = stages
+    ? [stages.year?.korean, stages.month?.korean, stages.day?.korean, stages.hour?.korean].filter(Boolean)
+    : [];
+  const has건록제왕 = stageNames.some((s) => s === "건록" || s === "제왕");
+
+  const yongshinElem = enriched.yongshin?.eokbu ?? null;
+  let hasYongshinInStems = false;
+  if (yongshinElem && enriched.pillars) {
+    const stems = [
+      enriched.pillars.year?.[0], enriched.pillars.month?.[0],
+      enriched.pillars.day?.[0], enriched.pillars.hour?.[0],
+    ].filter(Boolean) as string[];
+    hasYongshinInStems = stems.some((s) => STEM_ELEMENT[s]?.element === yongshinElem);
+  }
+
+  const goodShinsalCount = Array.isArray(enriched.shinsal)
+    ? 0  // 구버전 string[] → type 정보 없음
+    : enriched.shinsal?.matches?.filter((m) => m.type === "good").length ?? 0;
+
+  let hasYongshinMonthRoot = false;
+  if (yongshinElem && enriched.pillars?.month) {
+    const monthBranch = enriched.pillars.month[1];
+    hasYongshinMonthRoot = BRANCH_INFO[monthBranch]?.element === yongshinElem;
+  }
+
+  const hasSamhap = (enriched.relationships?.hap || []).some((h) => String(h).includes("삼합"));
 
   return {
     elementDist: enriched.elementDist as unknown as Record<string, number>,
@@ -70,6 +110,11 @@ export function parseScoringInput(enriched: EnrichedSajuData | null | undefined)
       : enriched.shinsal?.matches?.filter((m) => m.type === "bad").length ?? 0,
     isTimeUnknown: Boolean(enriched.isTimeUnknown),
     hasManselyeok: true,
+    has건록제왕,
+    hasYongshinInStems,
+    goodShinsalCount,
+    hasYongshinMonthRoot,
+    hasSamhap,
   };
 }
 
@@ -144,9 +189,11 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hasStar(input.tenStars, "비견")) 재물운 -= 6;
   if (hasStar(input.tenStars, "겁재")) 재물운 -= 7;
   if (hasBigyeobOverload) 재물운 -= 5;
-  if (elem.hasDeficiency) 재물운 -= 5;
-  if (elem.hasDominance) 재물운 -= 4;
-  if (hasChungOrHyung) 재물운 -= 3;
+  // v6: 충+형 동시인 경우에만 재물운 감점 복원
+  if (hasChung && hasHyung) 재물운 -= 3;
+  // v6: 오행결핍 2개 이상인 경우에만 재물운 감점 복원
+  if (deficientCount >= 2) 재물운 -= 3;
+  if (elem.hasDominance) 재물운 -= 2; // 오행편중: -4 → -2
   if (isSinyak) 재물운 -= 2;
 
   // ── 연애운 (35~90) ──
@@ -159,14 +206,14 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hapCount >= 2) 연애운 += 4;
   if (elem.isBalanced) 연애운 += 3;
   if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 연애운 += 3;
-  if (hasStar(input.tenStars, "비견")) 연애운 -= 5;
+  if (countStar(input.tenStars, "비견") >= 2) 연애운 -= 5; // A-2: 비견 2개 이상만 감점
   if (hasStar(input.tenStars, "겁재")) 연애운 -= 6;
   if (hasBigyeobOverload) 연애운 -= 4;
-  if (hasChung) 연애운 -= 6;
-  if (hasHyung) 연애운 -= 5;
+  if (hasChung) 연애운 -= 4; // A-4: -6 → -4
+  if (hasHyung) 연애운 -= 2; // A-1: -5 → -2 (형살은 연애 특화 아님)
   if (hasChung && hasHyung) 연애운 -= 3;
   if (hasStar(input.tenStars, "상관")) 연애운 -= 4;
-  if (elem.hasDeficiency) 연애운 -= 3;
+  if (elem.hasDeficiency) 연애운 -= 1; // A-3: -3 → -1 (건강운에서 이미 감점)
   if (elem.hasDominance) 연애운 -= 3;
   if (input.shinsalBadCount >= 2) 연애운 -= 3;
 
@@ -184,9 +231,10 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hasStar(input.tenStars, "상관") && hasGwanSung) 직장운 -= 5; // 상관견관
   if (hasBigyeobOverload) 직장운 -= 5;
   if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 직장운 -= 4;
-  if (hasChungOrHyung) 직장운 -= 4;
-  if (elem.hasDeficiency) 직장운 -= 4;
-  if (elem.hasDominance) 직장운 -= 3;
+  if (hasChung) 직장운 -= 2;  // 충: -4 → -2 (v5 카테고리 특화)
+  if (hasHyung) 직장운 -= 2; // 형살: -4 → -2 (v5 카테고리 특화)
+  // v6: 오행결핍 2개 이상인 경우에만 직장운 감점 복원
+  if (deficientCount >= 2) 직장운 -= 3;
   if (isSinyak) 직장운 -= 3;
 
   // ── 건강운 (35~88) ──
@@ -202,7 +250,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (elem.max >= 4) 건강운 -= 6; // 편중
   if (elem.max >= 5) 건강운 -= 5; // 극편중 추가
   if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 건강운 -= 5;
-  if (hasChungOrHyung) 건강운 -= 3;
+  if (hasHyung) 건강운 -= 4; // 형살: -3 → -4, 충: 건강운 제거 (v5 카테고리 특화)
   if (isSinyak) 건강운 -= 4;
   if (input.shinsalBadCount >= 2) 건강운 -= 3;
 
@@ -224,8 +272,8 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hasChung) 대인운 -= 5;
   if (hasHyung) 대인운 -= 5;
   if (chungHyungCount >= 3) 대인운 -= 4;
-  if (elem.hasDeficiency) 대인운 -= 3;
-  if (elem.hasDominance) 대인운 -= 3;
+  if (elem.hasDeficiency) 대인운 -= 2; // -3 → -2 (v5 카테고리 특화)
+  if (elem.hasDominance) 대인운 -= 2;  // -3 → -2 (v5 카테고리 특화)
 
   // ── 신규 신살 스코어링 ──
   const ss = input.shinsal || [];
@@ -301,6 +349,10 @@ function calculateAxes(input: ScoringInput) {
   if (elem.hasDeficiency) potential -= 4;
   if (elem.hasDominance) potential -= 3;
   if (Object.values(input.elementDist || {}).every((v) => v === 0)) potential -= 6;
+  // ── v5 potential 가점 ──
+  if (input.has건록제왕) potential += 4;
+  if (input.hasYongshinInStems) potential += 5;
+  if (input.goodShinsalCount >= 3) potential += 3;
   potential = clampInt(potential, 30, 90);
 
   let stability = 50;
@@ -316,6 +368,10 @@ function calculateAxes(input: ScoringInput) {
   if (bigyeobCount >= 3) stability -= 5;
   if (input.strength === "신약" || input.strength === "추정 신약") stability -= 4;
   if (Object.values(input.elementDist || {}).every((v) => v === 0)) stability -= 6;
+  // ── v5 stability 가점 ──
+  if (input.hasYongshinMonthRoot) stability += 5;
+  if (input.hasSamhap) stability += 4;
+  if (input.shinsalBadCount === 0) stability += 3;
   stability = clampInt(stability, 30, 90);
 
   let risk = 45;
@@ -360,7 +416,7 @@ function lowerGrade(grade: GradeLabel): GradeLabel {
 /** composite를 grade 범위 내로 clamp */
 function clampCompositeToGrade(composite: number, grade: GradeLabel): number {
   const min = COMPOSITE_GRADE_CUTOFFS[grade];
-  const max = grade === "S" ? 100 : GRADE_MAX[grade];
+  const max = grade === "S" ? 95 : GRADE_MAX[grade]; // 사주학 이론적 천장 95
   return clampInt(composite, min, max);
 }
 
@@ -382,12 +438,12 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
     0.25 * scores.재물운 + 0.20 * scores.연애운 + 0.25 * scores.직장운 +
     0.15 * scores.건강운 + 0.15 * scores.대인운
   );
-  const rawAdj = Math.round(0.15 * (potential - 50) + 0.15 * (stability - 50) - 0.12 * (risk - 50));
-  // 양수 방향은 억제 (최대 +8), 음수 방향은 유지 (최대 -15)
+  const rawAdj = Math.round(0.25 * (potential - 50) + 0.20 * (stability - 50) - 0.15 * (risk - 50));
+  // v6: 양수 유지 (+16), 음수 30% 증폭 (-20) — 나쁜 사주 바닥 복원
   const axisAdj = rawAdj >= 0
-    ? clampInt(rawAdj, 0, 8)
-    : clampInt(rawAdj, -15, 0);
-  let composite = clampInt(catAvg + axisAdj, 0, 100);
+    ? clampInt(rawAdj, 0, 16)
+    : clampInt(Math.round(rawAdj * 1.3), -20, 0);
+  let composite = clampInt(catAvg + axisAdj, 0, 95); // 사주학 이론적 천장 95
 
   // 단조성: composite와 catAvg 차이 15 이내 강제
   if (Math.abs(composite - catAvg) > 15) {
@@ -401,17 +457,17 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
 
   const scoreValues = Object.values(scores);
 
-  // 게이트 1: D 카테고리 수 기반 상한
+  // 게이트 1: D 카테고리 수 기반 상한 (B-1: 3+→캡C, 5→캡D)
   const dCount = scoreValues.filter((v) => v <= GRADE_MAX.D).length;
-  if (dCount >= 4) { grade = capGrade(grade, "D"); }
-  else if (dCount >= 2) { grade = capGrade(grade, "C"); }
+  if (dCount >= 5) { grade = capGrade(grade, "D"); }
+  else if (dCount >= 3) { grade = capGrade(grade, "C"); }
 
   // 게이트 2: risk 상한 — 리스크가 극단적이면 등급 제한
   if (risk >= COMPOSITE_GRADE_CUTOFFS.A) { grade = capGrade(grade, "C"); }
 
-  // 게이트 3: 최저 카테고리 극단 낮음 → -1 등급
+  // 게이트 3: 최저 카테고리 극단 낮음 → -1 등급 (B-2: ≤44)
   const minScore = Math.min(...scoreValues);
-  if (minScore <= GRADE_MAX.D - 8 && isAbove(grade, "D")) {
+  if (minScore <= 44 && isAbove(grade, "D")) {
     grade = lowerGrade(grade);
   }
 
