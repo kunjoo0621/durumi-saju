@@ -82,7 +82,7 @@ export default function BattleInputPage() {
 
   const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const el = e.target;
-    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }), 400);
   }, []);
 
   const validateBirthDate = (year: string, month: string, day: string): string => {
@@ -647,8 +647,14 @@ export default function BattleInputPage() {
       </main>
 
       <footer
-        className="shrink-0 bg-[#0D0D0D] px-6 pt-3"
-        style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight : 'max(16px, env(safe-area-inset-bottom, 16px))' }}
+        className={keyboardHeight > 0
+          ? "fixed left-0 right-0 z-50 bg-[#0D0D0D] px-6 pt-3 pb-3"
+          : "shrink-0 bg-[#0D0D0D] px-6 pt-3"
+        }
+        style={keyboardHeight > 0
+          ? { bottom: keyboardHeight }
+          : { paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }
+        }
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
