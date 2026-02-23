@@ -497,7 +497,7 @@ export default function Home() {
         strategy="lazyOnload"
       />
       {/* 헤더 */}
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
+      <header className="px-6 py-5 shrink-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           {/* 뒤로가기 버튼 */}
           {currentStep > 0 && (
@@ -550,7 +550,7 @@ export default function Home() {
       </header>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 px-5 pb-40">
+      <main className="flex-1 px-5 pb-40 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {/* 질문 */}
           <div>

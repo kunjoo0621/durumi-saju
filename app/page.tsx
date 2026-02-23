@@ -176,8 +176,8 @@ function LandingPageInner() {
       <header
         className={`sticky top-0 z-[120] px-5 py-4 transition-all duration-300 ${
           isScrolled
-            ? "bg-white/[0.08] backdrop-blur-md border-b border-white/10"
-            : "bg-transparent border-b border-transparent"
+            ? "bg-[#0D0D0D]"
+            : "bg-transparent"
         }`}
       >
         <div className="max-w-[640px] mx-auto flex items-center justify-between">

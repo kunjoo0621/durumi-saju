@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
@@ -154,7 +155,7 @@ export default function MenuDrawer() {
         </svg>
       </button>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div className="fixed inset-0 z-[200]">
           <button
             type="button"
@@ -165,7 +166,7 @@ export default function MenuDrawer() {
           />
           <div
             ref={drawerRef}
-            className="absolute right-0 top-0 h-full w-[280px] bg-zinc-900 shadow-xl animate-slideIn flex flex-col border-l border-white/10"
+            className="absolute right-0 top-0 h-full w-[280px] bg-zinc-900 shadow-xl animate-slideIn flex flex-col"
             role="dialog"
             aria-modal="true"
           >
@@ -247,7 +248,8 @@ export default function MenuDrawer() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

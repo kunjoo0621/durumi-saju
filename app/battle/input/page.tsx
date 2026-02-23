@@ -634,7 +634,7 @@ export default function BattleInputPage() {
         src="https://js.tosspayments.com/v2/standard"
         strategy="lazyOnload"
       />
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D] border-b border-white/5">
+      <header className="px-6 py-5 shrink-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
             onClick={handleBack}
