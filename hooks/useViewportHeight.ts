@@ -13,6 +13,12 @@ export function useViewportHeight() {
     }
 
     const update = () => {
+      console.log('[VP DEBUG]', {
+        'vp.height': vp.height,
+        'vp.offsetTop': vp.offsetTop,
+        'window.innerHeight': window.innerHeight,
+        'gap (innerH - vpH)': window.innerHeight - vp.height,
+      });
       setHeight(vp.height);
     };
 
