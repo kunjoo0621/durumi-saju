@@ -14,6 +14,7 @@ import {
   topPercentFromPercentileRank,
 } from "@/lib/gradeSystem";
 import { getGradeBadge, getGradeColor } from "@/lib/utils/grade-colors";
+import { SECTION_ORDER, resolveKey } from "@/lib/constants/section-icons";
 
 const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
 
@@ -120,19 +121,7 @@ export default function ResultTable({
   }, [result]);
 
   const composedSections = useMemo(() => {
-    const SECTION_ORDER = [
-      '🧭', // 타고난 기질
-      '💎', // 타고난 무기
-      '🧩', // 대인/사회성
-      '💰', // 재물
-      '💞', // 연애/관계
-      '💼', // 직장/커리어
-      '🩺', // 건강/에너지
-      '🚧', // 경고/리스크
-      '🎯', // 요즘 1등 이슈
-      '✅', // 종합 판정 (반드시 마지막)
-    ];
-    const orderMap = new Map(SECTION_ORDER.map((icon, i) => [icon, i]));
+    const orderMap = new Map(SECTION_ORDER.map((key, i) => [key, i]));
 
     const all = [...safeSections];
     if (safeCoreFearAxisBlock) {
@@ -144,9 +133,9 @@ export default function ResultTable({
     }
 
     const sorted = all.sort((a, b) => {
-      const BEFORE_RISK = 6.5; // 미지 아이콘은 🩺(6)과 🚧(7) 사이에 배치
-      const ai = orderMap.get(a.icon) ?? BEFORE_RISK;
-      const bi = orderMap.get(b.icon) ?? BEFORE_RISK;
+      const BEFORE_RISK = 6.5; // 미지 아이콘은 health(6)과 warning(7) 사이에 배치
+      const ai = orderMap.get(resolveKey(a.icon)) ?? BEFORE_RISK;
+      const bi = orderMap.get(resolveKey(b.icon)) ?? BEFORE_RISK;
       return ai - bi;
     });
 

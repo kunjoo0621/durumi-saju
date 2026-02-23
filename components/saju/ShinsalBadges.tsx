@@ -3,7 +3,7 @@
 import { memo } from "react";
 import type { ShinsalMatch, ShinsalType } from "@/lib/utils/saju-enrichment";
 import { SHINSAL_DESCRIPTIONS, getShinsalFeedback } from "@/lib/utils/saju-enrichment";
-import { IconMessageCircleFilled } from "@tabler/icons-react";
+import { ChatCircleDots } from "@phosphor-icons/react";
 
 const TYPE_DOT_COLOR: Record<ShinsalType, string> = {
   good: "#22C55E",
@@ -36,7 +36,7 @@ function ShinsalBadgesInner({ matches, note }: ShinsalBadgesProps) {
     <div>
       <p className="text-base font-semibold text-gray-300 mb-6">신살</p>
       <div className="bg-[rgba(255,107,107,0.08)] rounded-xl px-4 py-3 mb-6 flex items-start gap-2">
-        <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
+        <ChatCircleDots weight="fill" size={16} color="#FF6B6B" className="mt-0.5 shrink-0" />
         <p className="text-sm text-gray-300">{getShinsalFeedback(matches)}</p>
       </div>
       <div className="grid grid-cols-2 gap-2.5">

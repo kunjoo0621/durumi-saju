@@ -6,14 +6,15 @@ import { useSearchParams } from "next/navigation";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import MenuDrawer from "./MenuDrawer";
 import {
-  IconAward,
-  IconCoins,
-  IconHeart,
-  IconBriefcase,
-  IconActivity,
-  IconUsers,
-  IconSwords,
-} from "@tabler/icons-react";
+  Trophy,
+  CurrencyCircleDollar,
+  Heart,
+  Briefcase,
+  Pulse,
+  Users,
+  Sword,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 
 /* ─── scroll-reveal hook ─── */
 
@@ -104,7 +105,7 @@ function KakaoCTA({ onClick, disabled }: { onClick: () => void; disabled?: boole
 
 const AWARD_COLORS = ["#FF3B2F", "#F840F0", "#F09000", "#A0BCC8", "#B87A40"];
 
-const CATEGORY_ICONS = [IconCoins, IconHeart, IconBriefcase, IconActivity, IconUsers];
+const CATEGORY_ICONS: Icon[] = [CurrencyCircleDollar, Heart, Briefcase, Pulse, Users];
 
 /* ─── main page ─── */
 
@@ -140,7 +141,7 @@ function LandingPageInner() {
     transition: "opacity 0.6s ease-out, transform 0.6s ease-out",
   });
 
-  /* ── hero: IconAward color cycling ── */
+  /* ── hero: Trophy color cycling ── */
   const [awardColorIndex, setAwardColorIndex] = useState(0);
 
   useEffect(() => {
@@ -196,9 +197,9 @@ function LandingPageInner() {
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
             <div className="flex justify-center w-full mb-4">
-              <IconAward
+              <Trophy
+                weight="duotone"
                 size={32}
-                stroke={1.5}
                 style={{
                   color: AWARD_COLORS[awardColorIndex],
                   transition: "color 0.8s ease-in-out",
@@ -231,11 +232,11 @@ function LandingPageInner() {
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
             <div className="flex justify-center items-center gap-3 w-full mb-4">
-              {CATEGORY_ICONS.map((Icon, i) => (
-                <Icon
+              {CATEGORY_ICONS.map((IconComp, i) => (
+                <IconComp
                   key={i}
+                  weight="duotone"
                   size={20}
-                  stroke={1.5}
                   className="text-gray-400"
                   style={{
                     opacity: i < visibleCount ? 1 : 0,
@@ -269,9 +270,9 @@ function LandingPageInner() {
         >
           <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
             <div className="flex justify-center w-full mb-4">
-              <IconSwords
+              <Sword
+                weight="duotone"
                 size={32}
-                stroke={1.5}
                 style={{
                   color: "#FF6B6B",
                   animation: "swordPulse 2.5s ease-in-out infinite",

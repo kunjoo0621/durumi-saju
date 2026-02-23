@@ -14,7 +14,7 @@ import FortuneTimeline from "@/components/saju/FortuneTimeline";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
-import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { CaretDown, CaretUp, Lock, Warning } from "@phosphor-icons/react";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -274,7 +274,7 @@ export default function ResultClient() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
         <div className="max-w-[640px] w-full text-center">
-          <div className="mb-6 text-6xl" aria-hidden="true">🔒</div>
+          <div className="mb-6 flex justify-center" aria-hidden="true"><Lock weight="duotone" size={64} className="text-text-secondary" /></div>
           <h2 className="text-title-2 text-text-primary mb-4">재조회는 로그인 후 가능합니다</h2>
           <p className="text-body-2 text-text-secondary mb-8">
             결제 직후에는 바로 확인할 수 있지만, 나중에 다시 보려면 로그인이 필요해요.
@@ -295,7 +295,7 @@ export default function ResultClient() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
         <div className="max-w-[640px] w-full text-center">
-          <div className="mb-6 text-6xl" aria-hidden="true">⚠️</div>
+          <div className="mb-6 flex justify-center" aria-hidden="true"><Warning weight="duotone" size={64} className="text-amber-400" /></div>
           <h2 className="text-title-2 text-text-primary mb-4">분석에 실패했습니다</h2>
           <p className="text-body-2 text-text-secondary mb-4">{error}</p>
           {paidButFailed && (
@@ -395,7 +395,7 @@ export default function ResultClient() {
                   className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-10 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
                 >
                   상세 분석 보기
-                  <IconChevronDown className="w-4 h-4" />
+                  <CaretDown weight="bold" size={16} />
                 </button>
               )}
 
@@ -431,7 +431,7 @@ export default function ResultClient() {
                     className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-8 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
                   >
                     상세 분석 접기
-                    <IconChevronUp className="w-4 h-4" />
+                    <CaretUp weight="bold" size={16} />
                   </button>
                 </div>
               </div>

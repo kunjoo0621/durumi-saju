@@ -21,11 +21,7 @@ import {
   getYongshinFeedback,
   getOhaengFeedback,
 } from "@/lib/utils/saju-enrichment";
-import {
-  IconCircleCheckFilled,
-  IconCircleXFilled,
-  IconMessageCircleFilled,
-} from "@tabler/icons-react";
+import { CheckCircle, XCircle, ChatCircleDots } from "@phosphor-icons/react";
 
 type SajuChartProps = {
   sajuData: SajuData;
@@ -115,7 +111,7 @@ function SajuFeedback({ text }: { text: string }) {
   if (!text) return null;
   return (
     <div className="bg-[rgba(255,107,107,0.08)] rounded-xl px-4 py-3 mt-6 flex items-start gap-2">
-      <IconMessageCircleFilled className="w-4 h-4 text-[#FF6B6B] mt-0.5 shrink-0" />
+      <ChatCircleDots weight="fill" size={16} color="#FF6B6B" className="mt-0.5 shrink-0" />
       <p className="text-sm text-gray-300">{text}</p>
     </div>
   );
@@ -282,9 +278,9 @@ const StrengthPanel = memo(function StrengthPanel({
         {deukItems.map((item) => (
           <div key={item.key} className="flex items-center gap-1 whitespace-nowrap">
             {item.value ? (
-              <IconCircleCheckFilled size={14} style={{ color: "#FF6B6B" }} />
+              <CheckCircle weight="fill" size={14} color="#FF6B6B" />
             ) : (
-              <IconCircleXFilled size={14} style={{ color: "#4B5563" }} />
+              <XCircle weight="fill" size={14} color="#4B5563" />
             )}
             <span className={SUB_TEXT}>{DEUK_LABELS[item.key]}</span>
             <span className={`${SUB_TEXT} opacity-60`}>{DEUK_HINTS[item.key]}</span>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
-import { IconSparkles, IconSwords, IconChevronRight } from "@tabler/icons-react";
+import { Sparkle, Sword, CaretRight } from "@phosphor-icons/react";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -80,12 +80,12 @@ export default function MenuPage() {
           >
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-2">
-                <IconSparkles size={24} stroke={1.5} style={{ color: '#FF6B6B' }} />
+                <Sparkle weight="duotone" size={24} color="#FF6B6B" />
                 <h2 className="font-aggro text-xl text-white font-bold">
                   {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
                 </h2>
               </div>
-              <IconChevronRight size={20} stroke={1.5} className="text-gray-500 mt-1" />
+              <CaretRight weight="bold" size={20} className="text-gray-500 mt-1" />
             </div>
             <p className="text-sm text-gray-400 mt-2 leading-relaxed">
               천원이면 등급부터<br/>행동팁까지 전부 까발려줌
@@ -131,10 +131,10 @@ export default function MenuPage() {
           >
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-2">
-                <IconSwords size={24} stroke={1.5} style={{ color: '#A855F7' }} />
+                <Sword weight="duotone" size={24} color="#A855F7" />
                 <h2 className="font-aggro text-xl text-white font-bold">1:1 사주배틀</h2>
               </div>
-              <IconChevronRight size={20} stroke={1.5} className="text-gray-500 mt-1" />
+              <CaretRight weight="bold" size={20} className="text-gray-500 mt-1" />
             </div>
             <p className="text-sm text-gray-400 mt-2 leading-relaxed">
               둘 중 누가 더 좋은 사주인지<br/>등급으로 딱 정리해줌

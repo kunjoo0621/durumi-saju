@@ -1,5 +1,7 @@
 "use client";
 
+import { Lock } from "@phosphor-icons/react";
+
 type SectionBodyProps = {
   content?: string;
   locked?: boolean;
@@ -88,7 +90,7 @@ export default function SectionBody({ content, locked = false, onUnlock, unlockL
       </div>
       <div className="absolute inset-0 flex flex-col items-start justify-center gap-2 rounded-xl bg-black/45 px-4">
         <div className="flex items-center gap-2 text-[13px] text-text-primary">
-          <span aria-hidden="true">🔒</span>
+          <Lock weight="duotone" size={16} aria-hidden="true" />
           여기부터는 상세 해설
         </div>
         {onUnlock && (

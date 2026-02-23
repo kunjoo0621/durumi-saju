@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import SectionHeader from "./SectionHeader";
 import SectionBody from "./SectionBody";
+import { SECTION_META, resolveKey } from "@/lib/constants/section-icons";
 
 export type ResultSection = {
   icon: string;
@@ -18,18 +19,6 @@ type SectionListProps = {
   initialExpandedCount?: number;
 };
 
-const ACCENT_BY_ICON: Record<string, string> = {
-  '🧭': '#60A5FA',
-  '💎': '#4ADE80',
-  '🧩': '#D1D5DB',
-  '💰': '#D1D5DB',
-  '💞': '#D1D5DB',
-  '💼': '#D1D5DB',
-  '🩺': '#D1D5DB',
-  '🚧': '#F87171',
-  '🎯': '#A78BFA',
-  '✅': '#D1D5DB',
-};
 const DEFAULT_ACCENT = '#D1D5DB';
 
 // 개별 섹션 아이템 - 메모이즈
@@ -132,7 +121,7 @@ function SectionListInner({
           locked={locked}
           onUnlock={onUnlock}
           unlockLabel={unlockLabel}
-          accentColor={ACCENT_BY_ICON[section.icon] ?? DEFAULT_ACCENT}
+          accentColor={SECTION_META[resolveKey(section.icon)]?.accent ?? DEFAULT_ACCENT}
         />
       ))}
     </div>
