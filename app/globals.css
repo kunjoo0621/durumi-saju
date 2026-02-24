@@ -208,6 +208,6 @@ select:focus {
 }
 
 /* ===== 가로 스크롤 차단 ===== */
-html, body {
-  overflow-x: hidden;
+html {
+  overflow-x: clip;
 }

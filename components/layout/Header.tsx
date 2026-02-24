@@ -28,7 +28,7 @@ export default function Header({
   };
 
   return (
-    <header className={`${sticky ? 'sticky top-0' : ''} shrink-0 z-[100] bg-[#0D0D0D] px-6 py-5`}>
+    <header className={`shrink-0 z-[100] bg-[#0D0D0D] px-6 py-5${sticky ? ' sticky top-0' : ''}`}>
       <div className="max-w-[640px] mx-auto flex items-center justify-between">
         {showBack ? (
           <button
