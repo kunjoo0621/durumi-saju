@@ -2,8 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import { signIn, useSession } from "next-auth/react";
 import Script from "next/script";
 import MenuDrawer from "../MenuDrawer";
 import { useAllInputs } from "@/store/useInputStore";
@@ -19,67 +18,14 @@ function CheckoutLoading() {
   );
 }
 
-function CheckoutLoginPrompt({ isBattle }: { isBattle: boolean }) {
-  const router = useRouter();
-  const { login, signing } = useKakaoLogin();
-
-  const handleLogin = () => {
-    const currentUrl = window.location.pathname + window.location.search;
-    login(currentUrl);
-  };
-
-  const title = isBattle ? "사주 배틀 결과를" : "내 사주 분석 결과를";
-
-  return (
-    <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
-      <header className="shrink-0 px-6 py-5 bg-[#0D0D0D]">
-        <div className="max-w-[640px] mx-auto flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
-            aria-label="이전 화면"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
-          <div className="w-10" />
-        </div>
-      </header>
-      <main className="flex-1 min-h-0 flex items-center justify-center px-6">
-        <div className="text-center space-y-6 w-full max-w-[320px]">
-          <p className="text-lg text-white font-semibold leading-relaxed">
-            {title}<br />확인하려면
-          </p>
-          <button
-            type="button"
-            onClick={handleLogin}
-            disabled={signing}
-            className="w-full py-3.5 rounded-xl font-semibold text-[#181600] flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ backgroundColor: '#FEE500' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-              <path fill="#181600" d="M9 0C4.03 0 0 3.13 0 6.99c0 2.38 1.56 4.48 3.93 5.72l-1 3.73c-.09.32.28.58.56.39l4.4-2.94c.36.04.73.06 1.11.06 4.97 0 9-3.13 9-6.99C18 3.13 13.97 0 9 0"/>
-            </svg>
-            {signing ? "로그인 중..." : "카카오로 시작하기"}
-          </button>
-          <p className="text-sm text-gray-500">
-            결과 저장을 위해 카카오 계정이 필요해요
-          </p>
-        </div>
-      </main>
-    </div>
-  );
-}
-
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const inputs = useAllInputs();
   const battleStore = useBattleStore();
+
+  const isAuthenticated = status === "authenticated";
 
   const checkoutType: CheckoutType = (searchParams?.get("type") as CheckoutType) || "analysis";
   const isBattle = checkoutType === "battle";
@@ -252,13 +198,9 @@ function CheckoutContent() {
     );
   }
 
-  // 비로그인 → 카카오 로그인 유도
+  // 세션 로딩 중
   if (status === "loading") {
     return <CheckoutLoading />;
-  }
-
-  if (status === "unauthenticated") {
-    return <CheckoutLoginPrompt isBattle={isBattle} />;
   }
 
   return <CheckoutForm
@@ -267,6 +209,7 @@ function CheckoutContent() {
     isBattle={isBattle}
     productName={productName}
     session={session}
+    isAuthenticated={isAuthenticated}
     error={error}
     setError={setError}
     paying={paying}
@@ -294,7 +237,7 @@ function CheckoutContent() {
 
 function CheckoutForm({
   inputs, battleStore, isBattle, productName,
-  session, error, setError,
+  session, isAuthenticated, error, setError,
   paying, setPaying, orderId, setOrderId,
   sessionId, setSessionId, widgets, setWidgets,
   widgetReady, setWidgetReady, sdkReady, setSdkReady,
@@ -362,7 +305,9 @@ function CheckoutForm({
       try {
         const tossPayments = (window as any).TossPayments(clientKey);
         const userId = (session?.user as { id?: string })?.id;
-        const customerKey = userId ? `user_${userId}` : `guest_${orderId}`;
+        const customerKey = isAuthenticated && userId
+          ? `user_${userId}`
+          : (window as any).TossPayments.ANONYMOUS;
         const nextWidgets = tossPayments.widgets({ customerKey });
         await nextWidgets.setAmount({ currency: "KRW", value: amount });
         await nextWidgets.renderPaymentMethods({ selector: "#payment-method", variantKey: "DEFAULT" });
@@ -374,7 +319,7 @@ function CheckoutForm({
       }
     };
     init();
-  }, [sdkReady, clientKey, session?.user, orderId, sessionId, mockPayment]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sdkReady, clientKey, session?.user, isAuthenticated, orderId, sessionId, mockPayment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePay = async () => {
     if (!sessionId) {
@@ -451,12 +396,14 @@ function CheckoutForm({
       const successUrl = `${origin}/checkout?sessionId=${encodeURIComponent(sessionId)}${typeQuery}`;
       const failUrl = `${origin}/checkout?error=payment${typeQuery}`;
 
+      const displayInputs = isBattle ? battleStore?.playerA : inputs;
+
       await widgets.requestPayment({
         orderId: safeOrderId,
         orderName: productName,
         successUrl,
         failUrl,
-        customerName: session?.user?.name || "두루미",
+        customerName: session?.user?.name || displayInputs?.name || "두루미",
       });
     } catch (err: any) {
       setError(err?.message || "결제창 호출에 실패했습니다.");
@@ -605,7 +552,9 @@ function CheckoutForm({
 
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
-          <p className="text-sm text-gray-400 text-center mb-2">결과는 저장되니까 안심해</p>
+          <p className="text-sm text-gray-400 text-center mb-2">
+            {isAuthenticated ? "결과는 저장되니까 안심해" : "결제 후 바로 결과를 볼 수 있어"}
+          </p>
           <button
             type="button"
             onClick={handlePay}
@@ -631,6 +580,27 @@ function CheckoutForm({
               </span>
             ) : `${amount.toLocaleString()}원 결제하기`}
           </button>
+
+          {/* 비로그인 시 선택적 카카오 로그인 */}
+          {!isAuthenticated && (
+            <div className="mt-6 text-center">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-[#252525]" />
+                <span className="text-xs text-gray-600">또는</span>
+                <div className="flex-1 h-px bg-[#252525]" />
+              </div>
+              <button
+                type="button"
+                onClick={() => signIn("kakao", { callbackUrl: window.location.href })}
+                className="text-sm text-gray-400 underline underline-offset-4 decoration-gray-600"
+              >
+                카카오로 로그인하고 결제하기
+              </button>
+              <p className="text-xs text-gray-600 mt-1">
+                결과가 바로 저장돼
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
+import { hashToken, getTokensFromCookie } from "@/lib/guest-token";
 
 export async function GET(
   _request: NextRequest,
@@ -10,25 +11,48 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = await getSupabaseUserId(session);
-    if (!userId) {
-      return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-    }
+    const userId = session?.user ? await getSupabaseUserId(session) : null;
 
     const { id } = await params;
 
-    const { data: battle, error } = await supabaseAdmin
-      .from("saju_battles")
-      .select("*")
-      .eq("id", id)
-      .eq("user_id", userId)
-      .single();
+    // 로그인 사용자
+    if (userId) {
+      const { data: battle, error } = await supabaseAdmin
+        .from("saju_battles")
+        .select("*")
+        .eq("id", id)
+        .eq("user_id", userId)
+        .single();
 
-    if (error || !battle) {
-      return NextResponse.json({ error: "배틀을 찾을 수 없습니다." }, { status: 404 });
+      if (error || !battle) {
+        return NextResponse.json({ error: "배틀을 찾을 수 없습니다." }, { status: 404 });
+      }
+
+      return NextResponse.json({ battle });
     }
 
-    return NextResponse.json({ battle });
+    // 게스트
+    const tokens = await getTokensFromCookie();
+    if (tokens.length > 0) {
+      const hashes = tokens.map((t) => hashToken(t));
+      const { data: battle, error } = await supabaseAdmin
+        .from("saju_battles")
+        .select("*")
+        .eq("id", id)
+        .in("guest_token_hash", hashes)
+        .gt("guest_token_expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      if (battle) {
+        return NextResponse.json({ battle, is_guest: true });
+      }
+    }
+
+    return NextResponse.json({ error: "배틀을 찾을 수 없습니다." }, { status: 404 });
   } catch (error: any) {
     return NextResponse.json(
       { error: "배틀 조회 중 오류가 발생했습니다.", details: error?.message },

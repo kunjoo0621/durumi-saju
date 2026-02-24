@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
+import SavePromptBanner from "@/components/SavePromptBanner";
 import { useBattleResult } from "@/store/useBattleStore";
 import BattleRadarChart from "@/components/battle/BattleRadarChart";
 import BattleVsCard from "@/components/battle/BattleVsCard";
@@ -36,15 +37,29 @@ export default function BattleResultClient() {
   const [dbLoading, setDbLoading] = useState(false);
   const [shareText, setShareText] = useState("");
   const [dbError, setDbError] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
 
   const battleId = searchParams.get("id");
+  const claimParam = searchParams.get("claim") === "true";
+
+  // 로그인 후 돌아왔을 때 자동 claim
+  const claimedRef = useRef(false);
+  useEffect(() => {
+    if (!claimParam || status !== "authenticated" || claimedRef.current) return;
+    claimedRef.current = true;
+    fetch("/api/results/claim", { method: "POST" })
+      .then((res) => {
+        if (res.ok) {
+          setIsGuest(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete("claim");
+          router.replace(url.pathname + url.search);
+        }
+      })
+      .catch(() => {});
+  }, [claimParam, status, router]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/?returnTo=/battle");
-      return;
-    }
-
     if (battleId) {
       setDbLoading(true);
       fetch(`/api/battles/${battleId}`)
@@ -53,6 +68,7 @@ export default function BattleResultClient() {
           return res.json();
         })
         .then((data) => {
+          if (data.is_guest) setIsGuest(true);
           if (data.battle?.full_result) {
             setResult(data.battle.full_result as BattleResult);
           } else if (battleResult) {
@@ -73,7 +89,7 @@ export default function BattleResultClient() {
     if (battleResult) {
       setResult(battleResult);
     }
-  }, [status, battleResult, router, battleId]);
+  }, [battleResult, router, battleId]);
 
   const handleShare = useCallback(async () => {
     if (!result) return;
@@ -199,6 +215,8 @@ export default function BattleResultClient() {
               저장된 결과를 불러오지 못했습니다. 캐시된 데이터를 표시합니다.
             </div>
           )}
+
+          {isGuest && <SavePromptBanner returnTo={`/battle/result${battleId ? `?id=${battleId}` : ""}`} />}
 
           {/* === 5-1. 헤더 판정 영역 === */}
           <div className="rounded-3xl bg-background-secondary p-6 md:p-8 text-center">

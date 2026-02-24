@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
+import { generateToken, hashToken, addTokenToCookie } from "@/lib/guest-token";
 
 function isValidInput(input: InputPayload) {
   if (
@@ -30,9 +31,14 @@ function isValidInput(input: InputPayload) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = await getSupabaseUserId(session);
+    const userId = session?.user ? await getSupabaseUserId(session) : null;
+
+    let rawToken: string | null = null;
+    let guestTokenHash: string | null = null;
+
     if (!userId) {
-      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+      rawToken = generateToken();
+      guestTokenHash = hashToken(rawToken);
     }
 
     const input = (await request.json()) as InputPayload;
@@ -62,6 +68,7 @@ export async function POST(request: NextRequest) {
       .from("prepayment_sessions")
       .insert({
         user_id: userId,
+        guest_token_hash: guestTokenHash,
         input_hash: inputHash,
         payload,
       })
@@ -72,7 +79,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error?.message || "임시 저장에 실패했습니다." }, { status: 500 });
     }
 
-    return NextResponse.json({ sessionId: data.id });
+    const response = NextResponse.json({ sessionId: data.id });
+
+    if (rawToken) {
+      await addTokenToCookie(response, rawToken);
+    }
+
+    return response;
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || "임시 저장 중 오류가 발생했습니다." },

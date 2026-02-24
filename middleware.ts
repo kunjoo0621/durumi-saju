@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PROTECTED_PAGES = ["/result", "/coins", "/edit-profile", "/my/results", "/battle/result"];
+const PROTECTED_PAGES = ["/coins", "/edit-profile", "/my/results"];
 const PROTECTED_APIS = ["/api/profile", "/api/coins"];
 
 export async function middleware(request: NextRequest) {
@@ -39,11 +39,9 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/payment",
-    "/result",
     "/coins",
     "/edit-profile",
     "/my/results",
-    "/battle/result",
     "/api/profile",
     "/api/coins",
   ],

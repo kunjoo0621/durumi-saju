@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import ResultTable from "@/components/result/ResultTable";
+import SavePromptBanner from "@/components/SavePromptBanner";
 import Header from "@/components/layout/Header";
 import SajuChart, { StrengthPanel } from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
@@ -14,7 +14,7 @@ import FortuneTimeline from "@/components/saju/FortuneTimeline";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
-import { CaretDown, CaretUp, Lock, Warning } from "@phosphor-icons/react";
+import { CaretDown, CaretUp, Warning } from "@phosphor-icons/react";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -27,7 +27,7 @@ export default function ResultClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { login, signing } = useKakaoLogin();
+  const [isGuest, setIsGuest] = useState(false);
 
   // 최적화된 선택자 사용
   const inputs = useAllInputs();
@@ -53,11 +53,11 @@ export default function ResultClient() {
   const [paidButFailed, setPaidButFailed] = useState(false);
 
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
-  const [requiresLogin, setRequiresLogin] = useState(false);
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
   const [resultBirthYear, setResultBirthYear] = useState<number>(0);
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
+  const claimParam = useMemo(() => searchParams?.get("claim") === "true", [searchParams]);
   const enriched = useMemo(() => {
     if (!sajuData) return null;
     return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime });
@@ -107,7 +107,6 @@ export default function ResultClient() {
   const fetchResult = useCallback(async () => {
     try {
       setLoading(true);
-      setRequiresLogin(false);
       setError("");
       setPaidButFailed(false);
 
@@ -145,18 +144,13 @@ export default function ResultClient() {
 
         clearTimeout(timeoutId);
 
-        if (res.status === 401) {
-          setRequiresLogin(true);
-          setError("");
-          return;
-        }
-
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data?.error || "결과를 불러오는데 실패했습니다.");
         }
 
         const data = await res.json();
+        setIsGuest(Boolean(data.is_guest));
         const parsed =
           typeof data.result === "string"
             ? parseJson5Loose<AnalysisResult>(data.result)
@@ -249,11 +243,30 @@ export default function ResultClient() {
   }, [fetchResult]);
 
 
+  // 로그인 후 돌아왔을 때 자동 claim
+  const claimedRef = useRef(false);
   useEffect(() => {
-    if (!resultIdParam && !allowedByPayment && status === "authenticated" && session?.user) {
+    if (!claimParam || status !== "authenticated" || claimedRef.current) return;
+    claimedRef.current = true;
+    fetch("/api/results/claim", { method: "POST" })
+      .then((res) => {
+        if (res.ok) {
+          setIsGuest(false);
+          // claim 후 URL에서 claim 파라미터 제거
+          const url = new URL(window.location.href);
+          url.searchParams.delete("claim");
+          router.replace(url.pathname + url.search);
+        }
+      })
+      .catch(() => {});
+  }, [claimParam, status, router]);
+
+  // 로그인 사용자 + resultId 없음 + 결제 직후 아님 → 내 결과 목록으로
+  useEffect(() => {
+    if (!resultIdParam && !allowedByPayment && !claimParam && status === "authenticated" && session?.user) {
       router.replace("/my/results");
     }
-  }, [resultIdParam, allowedByPayment, session, router, status]);
+  }, [resultIdParam, allowedByPayment, claimParam, session, router, status]);
 
 
   if (loading) {
@@ -265,27 +278,6 @@ export default function ResultClient() {
           </div>
           <h2 className="text-title-2 text-text-primary mb-2">{LOADING_STEPS[loadingStep].message}</h2>
           <p className="text-body-2 text-text-secondary">보통 10~20초 정도 걸려요</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (requiresLogin) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
-        <div className="max-w-[640px] w-full text-center">
-          <div className="mb-6 flex justify-center" aria-hidden="true"><Lock weight="duotone" size={64} className="text-text-secondary" /></div>
-          <h2 className="text-title-2 text-text-primary mb-4">재조회는 로그인 후 가능합니다</h2>
-          <p className="text-body-2 text-text-secondary mb-8">
-            결제 직후에는 바로 확인할 수 있지만, 나중에 다시 보려면 로그인이 필요해요.
-          </p>
-          <button
-            onClick={() => login("/result")}
-            disabled={signing}
-            className="btn-primary px-8 py-4 rounded-2xl text-button-md transition-colors disabled:opacity-50"
-          >
-            {signing ? "로그인 중..." : "카카오로 로그인"}
-          </button>
         </div>
       </div>
     );
@@ -351,20 +343,7 @@ export default function ResultClient() {
       {/* 메인 콘텐츠 */}
       <main className="px-6 py-8">
         <div className="max-w-[640px] mx-auto space-y-6">
-          {status !== "loading" && !session?.user && (
-            <div className="rounded-2xl bg-background-secondary p-4 text-text-secondary flex flex-col gap-3">
-              <p className="text-[14px]">
-                나중에 다시 보려면 로그인하고 내역에 저장하세요.
-              </p>
-              <button
-                onClick={() => login("/result")}
-                disabled={signing}
-                className="w-full rounded-xl px-4 py-3 text-[14px] font-semibold text-text-primary bg-primary disabled:opacity-50"
-              >
-                {signing ? "로그인 중..." : "카카오로 저장하기"}
-              </button>
-            </div>
-          )}
+          {isGuest && <SavePromptBanner returnTo="/result" />}
 
           {/* 내 사주 원국 — 최상단 */}
           {sajuData && (

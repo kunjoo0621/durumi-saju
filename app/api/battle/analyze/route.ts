@@ -9,6 +9,7 @@ import { runBattleAnalysis } from "@/lib/battle-prompt";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { calculateBattleInteraction } from "@/lib/utils/battle-interaction";
+import { hashToken, getTokensFromCookie, getDbExpiresAt } from "@/lib/guest-token";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
 
 type BattleAnalyzeBody = {
@@ -56,10 +57,15 @@ function hasRequiredBattleInput(p: BattlePlayerInput): boolean {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = await getSupabaseUserId(session);
-    if (!userId) {
-      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    const userId = session?.user ? await getSupabaseUserId(session) : null;
+    const guestTokens = await getTokensFromCookie();
+    const latestGuestToken = guestTokens[0] || null;
+
+    if (!userId && !latestGuestToken) {
+      return NextResponse.json({ error: "인증 정보 없음" }, { status: 401 });
     }
+
+    const guestTokenHash = latestGuestToken ? hashToken(latestGuestToken) : null;
 
     const body = (await request.json()) as BattleAnalyzeBody;
 
@@ -200,7 +206,7 @@ export async function POST(request: NextRequest) {
     };
 
     // DB 저장 (동기 + 1회 재시도)
-    const battleRow = {
+    const battleRow: Record<string, any> = {
       user_id: userId,
       player_a_name: body.playerA.name,
       player_b_name: body.playerB.name,
@@ -214,6 +220,11 @@ export async function POST(request: NextRequest) {
       relationship_type: body.relationshipType,
       full_result: result,
     };
+
+    if (!userId && guestTokenHash) {
+      battleRow.guest_token_hash = guestTokenHash;
+      battleRow.guest_token_expires_at = getDbExpiresAt();
+    }
 
     let battleId: string | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {

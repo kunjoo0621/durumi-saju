@@ -7,18 +7,94 @@ import { calculateServerScoring, SCORING_VERSION } from "@/lib/utils/saju-scorin
 import { getSupabaseUserId } from "@/lib/server/user";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
 import { parseJson5Loose } from "@/lib/json5Utils";
+import { hashToken, getTokensFromCookie } from "@/lib/guest-token";
+
+function buildResponse(data: any, access: "user" | "guest") {
+  let parsedResult: unknown = data.full_json;
+  if (typeof parsedResult === "string") {
+    try {
+      parsedResult = parseJson5Loose(parsedResult);
+    } catch (parseError: any) {
+      console.warn("[RESULTS_FULL] Failed to parse stored full_json", {
+        message: parseError?.message,
+      });
+      return NextResponse.json(
+        { error: "저장된 결과 데이터가 손상되었습니다. 고객센터에 문의해 주세요." },
+        { status: 500 }
+      );
+    }
+  }
+
+  return {
+    result: parsedResult,
+    unlockedAt: data.unlocked_at,
+    access,
+    is_guest: access === "guest",
+    input: {
+      name: data.name,
+      birthDate: data.birth_date,
+      birthTime: data.birth_time,
+      region: data.region,
+      gender: data.gender,
+      relationshipStatus: data.relationship_status,
+      employmentStatus: data.employment_status,
+      calendarType: data.calendar_type,
+      coreFearAxis: data.core_fear_axis,
+      sajuText: data.saju_text,
+    },
+  };
+}
+
+async function rescoreIfStale(parsedResult: any, data: any) {
+  const storedVersion = parsedResult?.scoringVersion ?? 0;
+  if (storedVersion < SCORING_VERSION && data.birth_date) {
+    try {
+      const [bY, bM, bD] = data.birth_date.split("-");
+      const timeParts = data.birth_time?.split(":") || [];
+      const refreshInput: InputPayload = {
+        name: data.name || "",
+        birthYear: bY || "",
+        birthMonth: bM || "",
+        birthDay: bD || "",
+        calendarType: (data.calendar_type as "solar" | "lunar") || "solar",
+        birthHour: timeParts[0] || "",
+        birthMinute: timeParts[1] || "",
+        birthLocation: data.region || "",
+        gender: data.gender || "",
+        relationshipStatus: data.relationship_status || "",
+        employmentStatus: data.employment_status || "",
+        coreFearAxis: (data.core_fear_axis || "") as InputPayload["coreFearAxis"],
+        unknownBirthTime: !data.birth_time,
+      };
+      const { enriched } = await resolveSajuEnrichedData(refreshInput);
+      const freshScoring = calculateServerScoring(enriched);
+      parsedResult.tier = { ...parsedResult.tier, ...freshScoring.tier };
+      parsedResult.scores = freshScoring.scores;
+      parsedResult.scoringVersion = SCORING_VERSION;
+      console.info("[SCORING_UPGRADE] results/full re-scored", {
+        storedVersion,
+        currentVersion: SCORING_VERSION,
+        oldGrade: parsedResult?.tier?.grade,
+        newGrade: freshScoring.tier.grade,
+      });
+    } catch (e) {
+      console.warn("[SCORING_UPGRADE] re-score failed, returning stale", e);
+    }
+  }
+}
+
+const RESULT_FIELDS =
+  "id, full_json, unlocked_at, name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type, core_fear_axis, saju_text";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    const userId = await getSupabaseUserId(session);
-    if (!userId) {
-      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
-    }
+    const userId = session?.user ? await getSupabaseUserId(session) : null;
 
     const ip = getClientIp(request.headers);
-    const minuteLimit = checkRateLimit(`result:${userId}:m`, 30, 60_000);
-    const hourLimit = checkRateLimit(`result:${userId}:h`, 300, 60 * 60_000);
+    const rateLimitKey = userId || ip;
+    const minuteLimit = checkRateLimit(`result:${rateLimitKey}:m`, 30, 60_000);
+    const hourLimit = checkRateLimit(`result:${rateLimitKey}:h`, 300, 60 * 60_000);
     if (!minuteLimit.allowed || !hourLimit.allowed) {
       console.warn("[RATE_LIMIT] /api/results/full", { userId, ip });
       const retryAfter = Math.max(minuteLimit.retryAfter, hourLimit.retryAfter);
@@ -52,134 +128,106 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "조회 조건이 필요합니다." }, { status: 400 });
     }
 
-    if (resolvedResultId) {
-      const { data: unlock, error: unlockError } = await supabaseAdmin
-        .from("result_unlocks")
-        .select("result_id")
+    // ============ 로그인 사용자: 기존 로직 (result_unlocks) ============
+    if (userId) {
+      if (resolvedResultId) {
+        const { data: unlock, error: unlockError } = await supabaseAdmin
+          .from("result_unlocks")
+          .select("result_id")
+          .eq("user_id", userId)
+          .eq("result_id", resolvedResultId)
+          .maybeSingle();
+
+        if (unlockError) {
+          return NextResponse.json({ error: unlockError.message }, { status: 500 });
+        }
+        if (!unlock?.result_id) {
+          return NextResponse.json({ error: "결제가 필요합니다." }, { status: 403 });
+        }
+      } else if (inputHash) {
+        const { data: unlock, error: unlockError } = await supabaseAdmin
+          .from("result_unlocks")
+          .select("result_id")
+          .eq("user_id", userId)
+          .eq("input_hash", inputHash)
+          .maybeSingle();
+
+        if (unlockError) {
+          return NextResponse.json({ error: unlockError.message }, { status: 500 });
+        }
+        if (!unlock?.result_id) {
+          return NextResponse.json({ error: "결제가 필요합니다." }, { status: 403 });
+        }
+        resolvedResultId = unlock.result_id;
+      }
+
+      let query = supabaseAdmin
+        .from("saju_results")
+        .select(RESULT_FIELDS)
         .eq("user_id", userId)
-        .eq("result_id", resolvedResultId)
-        .maybeSingle();
+        .order("unlocked_at", { ascending: false, nullsFirst: false })
+        .limit(1);
 
-      if (unlockError) {
-        return NextResponse.json({ error: unlockError.message }, { status: 500 });
+      if (resolvedResultId) {
+        query = query.eq("id", resolvedResultId);
+      } else if (inputHash) {
+        query = query.eq("input_hash", inputHash);
       }
-      if (!unlock?.result_id) {
-        return NextResponse.json({ error: "결제가 필요합니다." }, { status: 403 });
-      }
-    } else if (inputHash) {
-      const { data: unlock, error: unlockError } = await supabaseAdmin
-        .from("result_unlocks")
-        .select("result_id")
-        .eq("user_id", userId)
-        .eq("input_hash", inputHash)
-        .maybeSingle();
 
-      if (unlockError) {
-        return NextResponse.json({ error: unlockError.message }, { status: 500 });
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
       }
-      if (!unlock?.result_id) {
-        return NextResponse.json({ error: "결제가 필요합니다." }, { status: 403 });
+
+      if (!data?.full_json) {
+        return NextResponse.json({ error: "결과를 찾을 수 없습니다." }, { status: 404 });
       }
-      resolvedResultId = unlock.result_id;
+
+      const resp = buildResponse(data, "user");
+      if (resp instanceof NextResponse) return resp; // parse error
+
+      await rescoreIfStale(resp.result, data);
+
+      return NextResponse.json(resp);
     }
 
-    let query = supabaseAdmin
-      .from("saju_results")
-      .select(
-        "full_json, unlocked_at, name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type, core_fear_axis, saju_text"
-      )
-      .eq("user_id", userId)
-      .order("unlocked_at", { ascending: false, nullsFirst: false })
-      .limit(1);
+    // ============ guest: guest_token_hash로 직접 조회 ============
+    const tokens = await getTokensFromCookie();
+    if (tokens.length > 0) {
+      const hashes = tokens.map((t) => hashToken(t));
 
-    if (resolvedResultId) {
-      query = query.eq("id", resolvedResultId);
-    } else if (inputHash) {
-      query = query.eq("input_hash", inputHash);
-    }
+      let guestQuery = supabaseAdmin
+        .from("saju_results")
+        .select(RESULT_FIELDS)
+        .in("guest_token_hash", hashes)
+        .gt("guest_token_expires_at", new Date().toISOString())
+        .order("unlocked_at", { ascending: false, nullsFirst: false })
+        .limit(1);
 
-    const { data, error } = await query.maybeSingle();
+      if (resolvedResultId) {
+        guestQuery = guestQuery.eq("id", resolvedResultId);
+      } else if (inputHash) {
+        guestQuery = guestQuery.eq("input_hash", inputHash);
+      }
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+      const { data, error } = await guestQuery.maybeSingle();
 
-    if (!data?.full_json) {
-      return NextResponse.json({ error: "결과를 찾을 수 없습니다." }, { status: 404 });
-    }
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
 
-    let parsedResult: unknown = data.full_json;
-    if (typeof parsedResult === "string") {
-      try {
-        parsedResult = parseJson5Loose(parsedResult);
-      } catch (parseError: any) {
-        console.warn("[RESULTS_FULL] Failed to parse stored full_json", {
-          userId,
-          resultId: resolvedResultId,
-          message: parseError?.message,
-        });
-        return NextResponse.json(
-          { error: "저장된 결과 데이터가 손상되었습니다. 고객센터에 문의해 주세요." },
-          { status: 500 }
-        );
+      if (data?.full_json) {
+        const resp = buildResponse(data, "guest");
+        if (resp instanceof NextResponse) return resp;
+
+        await rescoreIfStale(resp.result, data);
+
+        return NextResponse.json(resp);
       }
     }
 
-    // 스코어링 버전이 오래되었으면 tier/scores만 실시간 재계산 (텍스트는 유지)
-    const storedVersion = (parsedResult as any)?.scoringVersion ?? 0;
-    if (storedVersion < SCORING_VERSION && data.birth_date) {
-      try {
-        const [bY, bM, bD] = data.birth_date.split("-");
-        const timeParts = data.birth_time?.split(":") || [];
-        const refreshInput: InputPayload = {
-          name: data.name || "",
-          birthYear: bY || "",
-          birthMonth: bM || "",
-          birthDay: bD || "",
-          calendarType: (data.calendar_type as "solar" | "lunar") || "solar",
-          birthHour: timeParts[0] || "",
-          birthMinute: timeParts[1] || "",
-          birthLocation: data.region || "",
-          gender: data.gender || "",
-          relationshipStatus: data.relationship_status || "",
-          employmentStatus: data.employment_status || "",
-          coreFearAxis: (data.core_fear_axis || "") as InputPayload["coreFearAxis"],
-          unknownBirthTime: !data.birth_time,
-        };
-        const { enriched } = await resolveSajuEnrichedData(refreshInput);
-        const freshScoring = calculateServerScoring(enriched);
-        const pr = parsedResult as Record<string, any>;
-        pr.tier = { ...pr.tier, ...freshScoring.tier };
-        pr.scores = freshScoring.scores;
-        pr.scoringVersion = SCORING_VERSION;
-        console.info("[SCORING_UPGRADE] results/full re-scored", {
-          storedVersion,
-          currentVersion: SCORING_VERSION,
-          oldGrade: (parsedResult as any)?.tier?.grade,
-          newGrade: freshScoring.tier.grade,
-        });
-      } catch (e) {
-        console.warn("[SCORING_UPGRADE] re-score failed, returning stale", e);
-      }
-    }
-
-    return NextResponse.json({
-      result: parsedResult,
-      unlockedAt: data.unlocked_at,
-      access: "user",
-      input: {
-        name: data.name,
-        birthDate: data.birth_date,
-        birthTime: data.birth_time,
-        region: data.region,
-        gender: data.gender,
-        relationshipStatus: data.relationship_status,
-        employmentStatus: data.employment_status,
-        calendarType: data.calendar_type,
-        coreFearAxis: data.core_fear_axis,
-        sajuText: data.saju_text,
-      },
-    });
+    return NextResponse.json({ error: "결과를 찾을 수 없습니다." }, { status: 404 });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "조회 중 오류가 발생했습니다." }, { status: 500 });
   }
