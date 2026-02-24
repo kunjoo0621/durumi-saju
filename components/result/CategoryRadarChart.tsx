@@ -133,13 +133,9 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
 
   return (
     <div className="rounded-3xl p-4 md:p-5" style={{ backgroundColor: '#141414' }}>
-      <div className="mb-3">
-        <h3 className="text-sm font-medium text-gray-500">카테고리별 등급</h3>
-      </div>
-
       <div className="mx-auto w-full">
         <svg
-          viewBox="-195 -195 390 390"
+          viewBox="-220 -200 440 400"
           className="h-auto w-full"
           aria-label="카테고리별 오각형 레이더 차트"
         >
