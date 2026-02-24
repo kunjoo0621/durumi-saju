@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import MenuDrawer from "./MenuDrawer";
 import {
   Trophy,
@@ -105,13 +104,6 @@ function LandingPageInner() {
   }, []);
 
   const router = useRouter();
-  const { status } = useSession();
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.replace(callbackUrl);
-    }
-  }, [status, router, callbackUrl]);
 
   const handleStart = useCallback(() => {
     router.push(callbackUrl);
