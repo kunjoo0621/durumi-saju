@@ -125,8 +125,9 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
     () => orderedCategories.map((item, i) => {
       const angle = axisAngles[i];
       const p = polarToCartesian(labelRadius, angle);
-      const anchor = p.x > 10 ? "start" : p.x < -10 ? "end" : "middle";
-      return { item, x: p.x, y: p.y, anchor };
+      const dy1 = p.y < -80 ? -16 : p.y > 80 ? 4 : -6;
+      const dy2 = dy1 + 22;
+      return { item, x: p.x, y: p.y, dy1, dy2 };
     }),
     [orderedCategories, axisAngles]
   );
@@ -221,23 +222,31 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
             ))}
           </g>
 
-          {/* Labels (1-line: 카테고리명 등급 · 점수) */}
+          {/* Labels (2-line: 카테고리명 / 등급 · 점수) */}
           <g>
             {labelPoints.map((label) => {
               const gradeColor = getGradeColor(label.item.grade).main;
               return (
-                <text
-                  key={label.item.key}
-                  x={label.x.toFixed(2)}
-                  y={label.y.toFixed(2)}
-                  textAnchor={label.anchor as any}
-                  dominantBaseline="central"
-                  style={{ fontSize: 12, fontWeight: 600 }}
-                >
-                  <tspan fill="rgba(255,255,255,0.85)">{label.item.key} </tspan>
-                  <tspan fill={gradeColor}>{label.item.grade}</tspan>
-                  <tspan fill="rgba(255,255,255,0.45)"> · {label.item.score}점</tspan>
-                </text>
+                <g key={label.item.key}>
+                  <text
+                    x={label.x.toFixed(2)}
+                    y={(label.y + label.dy1).toFixed(2)}
+                    textAnchor="middle"
+                    style={{ fontSize: 14, fontWeight: 600 }}
+                    fill="rgba(255,255,255,0.85)"
+                  >
+                    {label.item.key}
+                  </text>
+                  <text
+                    x={label.x.toFixed(2)}
+                    y={(label.y + label.dy2).toFixed(2)}
+                    textAnchor="middle"
+                    style={{ fontSize: 12, fontWeight: 500 }}
+                  >
+                    <tspan fill={gradeColor}>{label.item.grade}</tspan>
+                    <tspan fill="rgba(255,255,255,0.4)">{" · "}{label.item.score}점</tspan>
+                  </text>
+                </g>
               );
             })}
           </g>
