@@ -346,7 +346,7 @@ export default function ResultClient() {
 
   return (
     <div className="min-h-screen bg-background-primary animate-fadeIn">
-      <Header showBack />
+      <Header showBack sticky />
 
       {/* 메인 콘텐츠 */}
       <main className="px-6 py-8">

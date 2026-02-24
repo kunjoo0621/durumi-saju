@@ -285,7 +285,7 @@ export default function MyResultsPage() {
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-background-primary flex flex-col">
-        <Header title="내 결과" />
+        <Header sticky title="내 결과" />
         <main className="flex-1 px-5 pb-24 flex items-center justify-center">
           <div className="text-center space-y-4">
             <p className="text-text-secondary">로그인하면 저장된 결과를 확인할 수 있어요.</p>
@@ -304,7 +304,7 @@ export default function MyResultsPage() {
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
-      <Header showBack title="내 결과" onBack={() => router.push("/menu")} />
+      <Header showBack sticky title="내 결과" onBack={() => router.push("/menu")} />
 
       {/* Tabs */}
       <div className="max-w-[640px] mx-auto w-full px-5">

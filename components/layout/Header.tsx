@@ -8,12 +8,14 @@ interface HeaderProps {
   title?: string;
   showBack?: boolean;
   onBack?: () => void;
+  sticky?: boolean;
 }
 
 export default function Header({
   title = "사주보는 두루미",
   showBack = false,
   onBack,
+  sticky = false,
 }: HeaderProps) {
   const router = useRouter();
 
@@ -26,7 +28,7 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-[100] bg-[#0D0D0D] px-6 py-5">
+    <header className={`${sticky ? 'sticky top-0' : ''} shrink-0 z-[100] bg-[#0D0D0D] px-6 py-5`}>
       <div className="max-w-[640px] mx-auto flex items-center justify-between">
         {showBack ? (
           <button
