@@ -132,12 +132,20 @@ export default function MenuDrawer() {
 
   const handleMyResults = () => {
     closeMenu();
-    router.push("/my/results");
+    if (session?.user) {
+      router.push("/my/results");
+    } else {
+      login("/my/results");
+    }
   };
 
   const handleEditInfo = () => {
     closeMenu();
-    router.push("/edit-profile");
+    if (session?.user) {
+      router.push("/edit-profile");
+    } else {
+      login("/edit-profile");
+    }
   };
 
   return (
@@ -187,40 +195,38 @@ export default function MenuDrawer() {
               </div>
             ) : (
               <div className="px-5 py-6 bg-zinc-800">
-                <div className="text-[18px] font-semibold text-white">로그인이 필요해요</div>
-                <p className="mt-2 text-[14px] text-zinc-400">
-                  내 사주 결과를 저장할 수 있어요
-                </p>
+                <div className="text-[15px] text-zinc-300">
+                  로그인하면 결과를 저장할 수 있어요
+                </div>
               </div>
             )}
 
             <div className="flex-1 border-t border-white/10">
-              {status !== "loading" && !session?.user && (
-                <button
-                  type="button"
-                  onClick={() => login()}
-                  disabled={signing}
-                  className="mx-5 my-4 h-12 w-[calc(100%-40px)] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
-                    <path
-                      d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  카카오로 로그인
-                </button>
-              )}
-
-              {status !== "loading" && session?.user && (
+              {status !== "loading" && (
                 <div className="flex flex-col h-full">
+                  {!session?.user && (
+                    <button
+                      type="button"
+                      onClick={() => login()}
+                      disabled={signing}
+                      className="mx-5 my-4 h-12 w-[calc(100%-40px)] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
+                        <path
+                          d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      카카오로 시작하기
+                    </button>
+                  )}
                   <div>
                     <button
                       type="button"
                       onClick={handleMyResults}
-                      disabled={!hasResults || checkingResults}
+                      disabled={session?.user ? (!hasResults || checkingResults) : false}
                       className={`w-full text-left px-5 py-4 text-[16px] transition-colors ${
-                        !hasResults || checkingResults
+                        session?.user && (!hasResults || checkingResults)
                           ? "text-zinc-400/50 cursor-not-allowed"
                           : "text-white hover:bg-zinc-800"
                       }`}
@@ -235,15 +241,17 @@ export default function MenuDrawer() {
                       정보 수정
                     </button>
                   </div>
-                  <div className="mt-auto border-t border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => signOut({ callbackUrl: "/" })}
-                      className="w-full text-left px-5 py-4 text-[16px] text-zinc-400 hover:text-white"
-                    >
-                      로그아웃
-                    </button>
-                  </div>
+                  {session?.user && (
+                    <div className="mt-auto border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                        className="w-full text-left px-5 py-4 text-[16px] text-zinc-400 hover:text-white"
+                      >
+                        로그아웃
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

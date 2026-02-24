@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import Script from "next/script";
 import MenuDrawer from "../MenuDrawer";
 import { useAllInputs } from "@/store/useInputStore";
@@ -18,10 +19,65 @@ function CheckoutLoading() {
   );
 }
 
+function CheckoutLoginPrompt({ isBattle }: { isBattle: boolean }) {
+  const router = useRouter();
+  const { login, signing } = useKakaoLogin();
+
+  const handleLogin = () => {
+    const currentUrl = window.location.pathname + window.location.search;
+    login(currentUrl);
+  };
+
+  const title = isBattle ? "사주 배틀 결과를" : "내 사주 분석 결과를";
+
+  return (
+    <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
+      <header className="shrink-0 px-6 py-5 bg-[#0D0D0D]">
+        <div className="max-w-[640px] mx-auto flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
+            aria-label="이전 화면"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
+          <div className="w-10" />
+        </div>
+      </header>
+      <main className="flex-1 min-h-0 flex items-center justify-center px-6">
+        <div className="text-center space-y-6 w-full max-w-[320px]">
+          <p className="text-lg text-white font-semibold leading-relaxed">
+            {title}<br />확인하려면
+          </p>
+          <button
+            type="button"
+            onClick={handleLogin}
+            disabled={signing}
+            className="w-full py-3.5 rounded-xl font-semibold text-[#181600] flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ backgroundColor: '#FEE500' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path fill="#181600" d="M9 0C4.03 0 0 3.13 0 6.99c0 2.38 1.56 4.48 3.93 5.72l-1 3.73c-.09.32.28.58.56.39l4.4-2.94c.36.04.73.06 1.11.06 4.97 0 9-3.13 9-6.99C18 3.13 13.97 0 9 0"/>
+            </svg>
+            {signing ? "로그인 중..." : "카카오로 시작하기"}
+          </button>
+          <p className="text-sm text-gray-500">
+            결과 저장을 위해 카카오 계정이 필요해요
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const inputs = useAllInputs();
   const battleStore = useBattleStore();
 
@@ -194,6 +250,15 @@ function CheckoutContent() {
         <div className="text-text-secondary text-[14px]">이동 중...</div>
       </div>
     );
+  }
+
+  // 비로그인 → 카카오 로그인 유도
+  if (status === "loading") {
+    return <CheckoutLoading />;
+  }
+
+  if (status === "unauthenticated") {
+    return <CheckoutLoginPrompt isBattle={isBattle} />;
   }
 
   return <CheckoutForm

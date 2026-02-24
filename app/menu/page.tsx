@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
@@ -14,6 +14,10 @@ export default function MenuPage() {
   const [checkError, setCheckError] = useState(false);
 
   const handleSajuClick = async () => {
+    if (!session?.user) {
+      router.push("/start");
+      return;
+    }
     if (checking) return;
     setChecking(true);
     setCheckError(false);
@@ -33,24 +37,14 @@ export default function MenuPage() {
     }
   };
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/");
-    }
-  }, [status, router]);
-
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] flex items-center justify-center px-5">
         <div className="max-w-[640px] mx-auto w-full text-center text-[14px] text-zinc-400">
-          로그인 확인 중...
+          불러오는 중...
         </div>
       </div>
     );
-  }
-
-  if (!session?.user) {
-    return null;
   }
 
   return (
@@ -66,7 +60,7 @@ export default function MenuPage() {
       <main className="flex-1 px-5 pb-12">
         <section className="max-w-[640px] mx-auto pt-10 space-y-4">
           <h2 className="text-2xl font-aggro text-white text-center">
-            {session.user?.name ? `${session.user.name}아, 뭐 볼 거야?` : '뭐 볼 거야?'}
+            {session?.user?.name ? `${session.user.name}아, 뭐 볼 거야?` : '뭐 볼 거야?'}
           </h2>
           <button
             type="button"

@@ -2,8 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import MenuDrawer from "./MenuDrawer";
 import {
   Trophy,
@@ -80,27 +80,6 @@ function ImagePlaceholder({
   );
 }
 
-/* ─── kakao CTA button ─── */
-
-function KakaoCTA({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full h-[54px] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
-        <path
-          d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
-          fill="currentColor"
-        />
-      </svg>
-      카카오로 시작하기
-    </button>
-  );
-}
-
 /* ─── icon constants ─── */
 
 const AWARD_COLORS = ["#FF3B2F", "#F840F0", "#F09000", "#A0BCC8", "#B87A40"];
@@ -125,10 +104,18 @@ function LandingPageInner() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const { login, signing } = useKakaoLogin();
+  const router = useRouter();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(callbackUrl);
+    }
+  }, [status, router, callbackUrl]);
+
   const handleStart = useCallback(() => {
-    login(callbackUrl);
-  }, [callbackUrl, login]);
+    router.push(callbackUrl);
+  }, [callbackUrl, router]);
 
   /* scroll-reveal refs */
   const hero = useScrollReveal<HTMLElement>();
@@ -301,8 +288,13 @@ function LandingPageInner() {
       {/* ── 하단 스티키 CTA ── */}
       <div className="fixed inset-x-0 bottom-0 z-[130] bg-[linear-gradient(0deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_calc(70px+env(safe-area-inset-bottom)),rgba(0,0,0,0)_100%)] px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
-          <p className="mb-2 text-center text-[12px] text-zinc-400">로그인하면 결과가 저장돼요</p>
-          <KakaoCTA onClick={handleStart} disabled={signing} />
+          <button
+            type="button"
+            onClick={handleStart}
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+          >
+            시작하기
+          </button>
         </div>
       </div>
     </div>

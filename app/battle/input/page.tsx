@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import Script from "next/script";
 import Header from "@/components/layout/Header";
 import {
@@ -39,7 +38,6 @@ const TOTAL_STEPS = 7;
 
 export default function BattleInputPage() {
   const router = useRouter();
-  const { status } = useSession();
   const step = useBattleStep();
   const playerA = useBattlePlayerA();
   const playerB = useBattlePlayerB();
@@ -70,12 +68,6 @@ export default function BattleInputPage() {
   const [birthTimeDisplayB, setBirthTimeDisplayB] = useState("");
   const [birthDateErrorB, setBirthDateErrorB] = useState("");
   const [birthTimeErrorB, setBirthTimeErrorB] = useState("");
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/?returnTo=/battle");
-    }
-  }, [status, router]);
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const el = e.target;

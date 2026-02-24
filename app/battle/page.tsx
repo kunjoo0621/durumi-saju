@@ -1,36 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useEffect } from "react";
 import MenuDrawer from "../MenuDrawer";
 import { useBattleStore } from "@/store/useBattleStore";
 
 export default function BattlePage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
   const reset = useBattleStore((s) => s.reset);
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/?returnTo=/battle");
-    }
-  }, [status, router]);
 
   const handleStart = () => {
     reset();
     router.push("/battle/input");
   };
-
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background-primary flex items-center justify-center px-6">
-        <div className="text-text-secondary text-[14px]">로딩 중...</div>
-      </div>
-    );
-  }
-
-  if (!session?.user) return null;
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col animate-fadeIn">
