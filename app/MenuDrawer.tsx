@@ -12,7 +12,7 @@ export default function MenuDrawer() {
   const { login, signing } = useKakaoLogin();
   const [isOpen, setIsOpen] = useState(false);
   const [hasResults, setHasResults] = useState(false);
-  const [checkingResults, setCheckingResults] = useState(false);
+  const [resultsChecked, setResultsChecked] = useState(false);
   const [profileStatus, setProfileStatus] = useState<"unknown" | "complete" | "incomplete">("unknown");
   const drawerRef = useRef<HTMLDivElement>(null);
   const lastActiveRef = useRef<HTMLElement | null>(null);
@@ -54,10 +54,9 @@ export default function MenuDrawer() {
   }, [session]);
 
   useEffect(() => {
-    if (!isOpen || !session?.user) return;
+    if (!isOpen || !session?.user || resultsChecked) return;
 
     const checkResults = async () => {
-      setCheckingResults(true);
       try {
         const res = await fetch("/api/results");
         if (res.ok) {
@@ -65,12 +64,12 @@ export default function MenuDrawer() {
           setHasResults(Array.isArray(data.results) && data.results.length > 0);
         }
       } finally {
-        setCheckingResults(false);
+        setResultsChecked(true);
       }
     };
 
     checkResults();
-  }, [isOpen, session]);
+  }, [isOpen, session, resultsChecked]);
 
   useEffect(() => {
     if (isOpen) {
@@ -224,9 +223,9 @@ export default function MenuDrawer() {
                     <button
                       type="button"
                       onClick={handleMyResults}
-                      disabled={session?.user ? (!hasResults || checkingResults) : false}
+                      disabled={session?.user ? (resultsChecked && !hasResults) : false}
                       className={`w-full text-left px-5 py-4 text-[16px] transition-colors ${
-                        session?.user && (!hasResults || checkingResults)
+                        session?.user && resultsChecked && !hasResults
                           ? "text-zinc-400/50 cursor-not-allowed"
                           : "text-white hover:bg-zinc-800"
                       }`}
