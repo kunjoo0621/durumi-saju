@@ -18,7 +18,7 @@ type CategoryRadarChartProps = {
 const CATEGORY_ORDER: CategoryKey[] = ["재물운", "연애운", "직장운", "건강운", "대인운"];
 
 const BASE_ANGLE_OFFSET = -90;
-const LEVELS = [20, 40, 60, 80, 100];
+const LEVELS = [25, 50, 75, 100, 125];
 const GRID_OPACITIES = [0.03, 0.04, 0.06, 0.07, 0.08];
 
 const ACCENT = "#FF6B6B";
@@ -94,8 +94,8 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
   }, [scoreHash]);
 
   const angleStep = 360 / orderedCategories.length;
-  const outerRadius = 100;
-  const labelRadius = 130;
+  const outerRadius = 125;
+  const labelRadius = 150;
 
   const axisAngles = useMemo(
     () => orderedCategories.map((_, i) => BASE_ANGLE_OFFSET + i * angleStep),
@@ -104,7 +104,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
 
   const guidePaths = useMemo(
     () => LEVELS.map((level, i) => {
-      const r = outerRadius * (level / 100);
+      const r = level;
       const points = axisAngles.map((a) => polarToCartesian(r, a));
       return { level, d: buildPolygonPath(points), opacity: GRID_OPACITIES[i] };
     }),
@@ -126,21 +126,20 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
       const angle = axisAngles[i];
       const p = polarToCartesian(labelRadius, angle);
       const anchor = p.x > 10 ? "start" : p.x < -10 ? "end" : "middle";
-      const dy = p.y > 10 ? 10 : p.y < -10 ? -22 : -6;
-      return { item, x: p.x, y: p.y, anchor, dy };
+      return { item, x: p.x, y: p.y, anchor };
     }),
     [orderedCategories, axisAngles]
   );
 
   return (
-    <div className="rounded-3xl p-6 md:p-8" style={{ backgroundColor: '#141414' }}>
-      <div className="mb-4">
-        <h3 className="text-title-3 text-text-primary font-semibold">카테고리별 등급</h3>
+    <div className="rounded-3xl p-4 md:p-5" style={{ backgroundColor: '#141414' }}>
+      <div className="mb-3">
+        <h3 className="text-sm font-medium text-gray-500">카테고리별 등급</h3>
       </div>
 
       <div className="mx-auto w-full">
         <svg
-          viewBox="-180 -180 360 360"
+          viewBox="-195 -195 390 390"
           className="h-auto w-full"
           aria-label="카테고리별 오각형 레이더 차트"
         >
@@ -150,7 +149,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
               <stop offset="100%" stopColor={ACCENT} stopOpacity="0.03" />
             </radialGradient>
             <filter id="glow">
-              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feGaussianBlur stdDeviation="6" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
@@ -190,9 +189,9 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
               d={dataPath}
               fill="none"
               stroke={ACCENT}
-              strokeWidth="6"
+              strokeWidth="10"
               strokeLinejoin="round"
-              opacity="0.10"
+              opacity="0.20"
               filter="url(#glow)"
             />
             {/* Fill */}
@@ -206,45 +205,43 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
             />
             {/* Data point dots */}
             {dataPoints.map((p, i) => (
-              <circle
-                key={i}
-                cx={p.x.toFixed(2)}
-                cy={p.y.toFixed(2)}
-                r="3"
-                fill={ACCENT}
-                stroke="white"
-                strokeWidth="1.5"
-              />
+              <g key={i}>
+                <circle
+                  cx={p.x.toFixed(2)}
+                  cy={p.y.toFixed(2)}
+                  r="8"
+                  fill={ACCENT}
+                  opacity="0.15"
+                />
+                <circle
+                  cx={p.x.toFixed(2)}
+                  cy={p.y.toFixed(2)}
+                  r="4"
+                  fill={ACCENT}
+                  stroke="white"
+                  strokeWidth="1.5"
+                />
+              </g>
             ))}
           </g>
 
-          {/* Labels (2-line: 카테고리명 / 등급 · 점수) */}
+          {/* Labels (1-line: 카테고리명 등급 · 점수) */}
           <g>
             {labelPoints.map((label) => {
               const gradeColor = getGradeColor(label.item.grade).main;
-              const y1 = label.y + label.dy;
-              const y2 = y1 + 16;
               return (
-                <g key={label.item.key}>
-                  <text
-                    x={label.x.toFixed(2)}
-                    y={y1.toFixed(2)}
-                    textAnchor={label.anchor as any}
-                    fill="white"
-                    style={{ fontSize: 12, fontWeight: 500 }}
-                  >
-                    {label.item.key}
-                  </text>
-                  <text
-                    x={label.x.toFixed(2)}
-                    y={y2.toFixed(2)}
-                    textAnchor={label.anchor as any}
-                    style={{ fontSize: 12 }}
-                  >
-                    <tspan fill={gradeColor} fontWeight={700}>{label.item.grade}</tspan>
-                    <tspan fill="rgba(156,163,175,1)" fontWeight={500}> · {label.item.score}점</tspan>
-                  </text>
-                </g>
+                <text
+                  key={label.item.key}
+                  x={label.x.toFixed(2)}
+                  y={label.y.toFixed(2)}
+                  textAnchor={label.anchor as any}
+                  dominantBaseline="central"
+                  style={{ fontSize: 12, fontWeight: 600 }}
+                >
+                  <tspan fill="rgba(255,255,255,0.85)">{label.item.key} </tspan>
+                  <tspan fill={gradeColor}>{label.item.grade}</tspan>
+                  <tspan fill="rgba(255,255,255,0.45)"> · {label.item.score}점</tspan>
+                </text>
               );
             })}
           </g>
