@@ -461,7 +461,7 @@ export default function Home() {
   };
 
   return (
-    <div className="h-[100dvh] bg-background-primary flex flex-col">
+    <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
       {/* 토스 SDK 프리로드 — checkout 진입 시 캐시에서 즉시 로드 */}
       <Script
         src="https://js.tosspayments.com/v2/standard"
@@ -473,7 +473,7 @@ export default function Home() {
       />
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 px-5 pb-6 overflow-y-auto">
+      <main className="flex-1 min-h-0 px-5 pb-6 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {/* 질문 */}
           <div>

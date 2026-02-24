@@ -615,7 +615,7 @@ export default function BattleInputPage() {
   const isLastStep = step === TOTAL_STEPS - 1;
 
   return (
-    <div className="h-[100dvh] bg-background-primary flex flex-col">
+    <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
       {/* 토스 SDK 프리로드 */}
       <Script
         src="https://js.tosspayments.com/v2/standard"
@@ -623,7 +623,7 @@ export default function BattleInputPage() {
       />
       <Header showBack onBack={handleBack} />
 
-      <main className="flex-1 px-6 pb-6 overflow-y-auto">
+      <main className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
           {renderStep()}
         </div>

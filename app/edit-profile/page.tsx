@@ -204,7 +204,7 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col">
+    <div className="h-[100dvh] bg-background-primary text-text-primary flex flex-col overflow-hidden">
       <Header showBack title="프로필 수정" />
 
       <main className="px-5 pb-6 flex-1 min-h-0 overflow-y-auto">
