@@ -396,7 +396,7 @@ export default function ResultClient() {
               )}
               <button
                 onClick={() => handleLeave("/menu")}
-                className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-300 bg-white/8 transition-all duration-200"
+                className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-300 bg-white/10 transition-all duration-200"
               >
                 다시 보기
               </button>
