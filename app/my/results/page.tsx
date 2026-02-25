@@ -170,14 +170,14 @@ function DeleteModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 h-[44px] rounded-xl bg-white/10 text-text-primary text-[14px] font-semibold"
+            className="flex-1 h-[48px] rounded-xl bg-white/10 text-text-primary text-[14px] font-semibold"
           >
             취소
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 h-[44px] rounded-xl bg-red-600 text-white text-[14px] font-semibold"
+            className="flex-1 h-[48px] rounded-xl bg-red-600 text-white text-[14px] font-semibold"
           >
             삭제
           </button>
@@ -364,7 +364,7 @@ export default function MyResultsPage() {
             <button
               onClick={() => login("/menu")}
               disabled={signing}
-              className="px-6 py-3 rounded-xl text-button-md bg-[#FEE500] text-black font-semibold disabled:opacity-50"
+              className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               카카오로 시작하기
             </button>
@@ -525,14 +525,14 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={handleAddAnother}
-                      className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+                      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       사주 보러가기
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[52px] rounded-xl border border-white/10 bg-background-secondary text-text-secondary text-[15px] font-semibold"
+                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
                     >
                       메뉴로
                     </button>
@@ -549,14 +549,14 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={fetchResults}
-                      className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+                      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       다시 시도
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[52px] rounded-xl border border-white/10 bg-background-secondary text-text-secondary text-[15px] font-semibold"
+                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
                     >
                       메뉴로
                     </button>
@@ -660,14 +660,14 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={() => router.push("/battle/input")}
-                      className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+                      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       사주 배틀 하러가기
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[52px] rounded-xl border border-white/10 bg-background-secondary text-text-secondary text-[15px] font-semibold"
+                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
                     >
                       메뉴로
                     </button>
@@ -684,14 +684,14 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={retryBattles}
-                      className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+                      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       다시 시도
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[52px] rounded-xl border border-white/10 bg-background-secondary text-text-secondary text-[15px] font-semibold"
+                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
                     >
                       메뉴로
                     </button>
@@ -710,7 +710,7 @@ export default function MyResultsPage() {
             <button
               type="button"
               onClick={handleAddAnother}
-              className="w-full h-[54px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+              className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
             >
               다른 사람 사주 추가하기
             </button>

@@ -512,7 +512,7 @@ export default function Home() {
           <button
             onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
             disabled={!canProceed()}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
           >
             {currentStep === totalSteps - 1 ? "결과 받기" : "다음"}
           </button>

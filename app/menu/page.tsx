@@ -125,14 +125,14 @@ export default function MenuPage() {
                 <button
                   type="button"
                   onClick={handleSajuClick}
-                  className="flex-1 h-11 rounded-xl bg-primary text-white text-[14px] font-semibold"
+                  className="btn-primary flex-1 h-11 rounded-xl text-[14px] font-semibold"
                 >
                   다시 시도
                 </button>
                 <button
                   type="button"
                   onClick={() => router.push("/start")}
-                  className="flex-1 h-11 rounded-xl bg-zinc-800 text-zinc-300 text-[14px] font-semibold"
+                  className="flex-1 h-11 rounded-xl bg-white/10 text-gray-300 text-[14px] font-semibold"
                 >
                   새로 사주 보기
                 </button>

@@ -110,7 +110,7 @@ export default function CoinsPage() {
           <button
             onClick={handlePurchase}
             disabled={loading}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
           >
             {loading ? "처리 중..." : "코인 1개(1000원) 구매"}
           </button>

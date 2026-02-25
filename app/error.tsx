@@ -22,13 +22,13 @@ export default function Error({
         <div className="flex flex-col gap-3">
           <button
             onClick={() => reset()}
-            className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors"
           >
             다시 시도
           </button>
           <button
             onClick={() => router.push("/")}
-            className="w-full px-8 py-4 rounded-2xl text-button-md text-text-secondary transition-colors hover:text-text-primary"
+            className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10 transition-colors"
           >
             홈으로 돌아가기
           </button>

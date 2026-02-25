@@ -639,7 +639,7 @@ export default function BattleInputPage() {
             type="button"
             onClick={isLastStep ? handleSubmit : handleNext}
             disabled={!canProceed()}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
           >
             {isLastStep ? "2,000원 결제하고 대결하기" : "다음"}
           </button>

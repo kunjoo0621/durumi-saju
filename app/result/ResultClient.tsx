@@ -332,7 +332,7 @@ export default function ResultClient() {
             {paidButFailed && (
               <button
                 onClick={() => fetchResult()}
-                className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+                className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors"
               >
                 다시 시도
               </button>
@@ -340,8 +340,8 @@ export default function ResultClient() {
             <button
               onClick={() => router.push(paidButFailed ? "/menu" : "/start")}
               className={paidButFailed
-                ? "w-full px-8 py-4 rounded-2xl text-button-md text-text-secondary border border-white/10 bg-background-secondary transition-colors"
-                : "btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+                ? "w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10 transition-colors"
+                : "btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors"
               }
             >
               {paidButFailed ? "메뉴로 돌아가기" : "처음으로 돌아가기"}
@@ -360,7 +360,7 @@ export default function ResultClient() {
           <p className="text-body-2 text-text-secondary mb-8">입력 정보가 없거나 결과를 찾을 수 없어요.</p>
           <button
             onClick={() => router.push("/start")}
-            className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors"
           >
             처음으로 돌아가기
           </button>
@@ -389,14 +389,14 @@ export default function ResultClient() {
               {shareableId && (
                 <button
                   onClick={handleShare}
-                  className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+                  className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
                 >
                   {copied ? "링크가 복사됐어요!" : "결과 공유하기"}
                 </button>
               )}
               <button
                 onClick={() => handleLeave("/menu")}
-                className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-300 bg-white/10 transition-all duration-200"
+                className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10 transition-all duration-200"
               >
                 다시 보기
               </button>
@@ -431,7 +431,7 @@ export default function ResultClient() {
                       setShowLeaveDialog(false);
                       signIn("kakao", { callbackUrl: "/result?claim=true" });
                     }}
-                    className="w-full h-[50px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+                    className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
                       <path
@@ -447,7 +447,7 @@ export default function ResultClient() {
                       setShowLeaveDialog(false);
                       if (pendingLeaveUrl) router.push(pendingLeaveUrl);
                     }}
-                    className="w-full h-[50px] rounded-xl text-[14px] text-gray-500 transition-colors"
+                    className="w-full h-[54px] rounded-xl text-[14px] text-gray-500 transition-colors"
                   >
                     저장하지 않고 나가기
                   </button>

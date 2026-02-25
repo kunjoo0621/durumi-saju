@@ -426,7 +426,7 @@ export default function EditProfilePage() {
               type="button"
               onClick={handleSave}
               disabled={!canSave || saving}
-              className="btn-primary w-full h-[52px] rounded-xl text-[16px] font-semibold disabled:cursor-not-allowed"
+              className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold disabled:cursor-not-allowed"
             >
               {saving ? "저장 중..." : "저장하기"}
             </button>

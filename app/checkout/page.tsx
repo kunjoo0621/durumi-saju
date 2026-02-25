@@ -180,7 +180,7 @@ function CheckoutContent() {
             <p className="text-body-2 text-text-secondary mb-6">{error}</p>
             <button
               onClick={() => router.replace(redirectBack)}
-              className="btn-primary w-full px-8 py-4 rounded-2xl text-button-md transition-colors"
+              className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors"
             >
               돌아가기
             </button>
@@ -561,8 +561,7 @@ function CheckoutForm({
             type="button"
             onClick={handlePay}
             disabled={paying || !hasRequiredInput || !sessionId || (!mockPayment && !widgetReady)}
-            className="w-full rounded-xl px-4 py-4 text-lg font-bold text-white leading-none transition-all duration-200 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
-            style={{ backgroundColor: paying ? undefined : '#FF6B6B' }}
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
           >
             {paying ? (
               <span className="flex items-center justify-center gap-2">

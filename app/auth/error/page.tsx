@@ -19,7 +19,7 @@ export default function AuthErrorPage() {
         <button
           onClick={() => login("/menu")}
           disabled={signing}
-          className="w-full max-w-xs mx-auto h-12 rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-full max-w-xs mx-auto h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {signing ? "로그인 중..." : "다시 로그인"}
         </button>
