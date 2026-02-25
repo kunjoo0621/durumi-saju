@@ -110,7 +110,7 @@ export default function MenuDrawer() {
           <div className="absolute inset-0 flex items-center justify-center p-6" onClick={closeMenu}>
             <div
               ref={modalRef}
-              className="w-full max-w-[320px] bg-[#1A1A1A] rounded-3xl overflow-hidden animate-[modalIn_0.25s_cubic-bezier(0.16,1,0.3,1)]"
+              className="w-full max-w-[360px] bg-[#1A1A1A] rounded-3xl overflow-hidden animate-[modalIn_0.25s_cubic-bezier(0.16,1,0.3,1)]"
               style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)' }}
               onClick={(e) => e.stopPropagation()}
               role="dialog"
@@ -153,8 +153,8 @@ export default function MenuDrawer() {
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0 text-left">
-                        <div className="text-[15px] font-semibold text-gray-200">내 사주 결과</div>
-                        <div className="text-xs text-gray-600 mt-0.5">이전에 본 결과 다시 보기</div>
+                        <div className="text-[16px] font-semibold text-gray-200">내 사주 결과</div>
+                        <div className="text-[13px] text-gray-500 mt-0.5">이전에 본 결과 다시 보기</div>
                       </div>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
                         <path d="M9 6l6 6-6 6"/>
@@ -165,14 +165,14 @@ export default function MenuDrawer() {
                   <div className="h-px mx-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
                   {/* 하단: 로그아웃 + 버전 */}
-                  <div className="flex items-center justify-between px-6 py-2 pb-[22px]">
+                  <div className="flex flex-col items-center px-6 py-3 pb-[22px] gap-1.5">
                     <button
                       onClick={handleLogout}
-                      className="text-[13px] text-gray-700 py-1.5 active:text-gray-500 transition-colors"
+                      className="text-[13px] text-gray-500 py-1.5 active:text-gray-300 transition-colors"
                     >
                       로그아웃
                     </button>
-                    <span className="text-[11px] text-neutral-800">v1.0</span>
+                    <span className="text-[11px] text-gray-700">v1.0</span>
                   </div>
                 </>
               ) : (
