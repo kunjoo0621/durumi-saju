@@ -87,7 +87,7 @@ export default function MenuPage() {
                 {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
               </h3>
               <p className="text-sm text-gray-400 leading-relaxed mt-2">
-                등급부터 오행 밸런스, 운세 흐름까지<br/>니 사주 낱낱이 해부해줄게
+                등급부터 운세 흐름까지<br/>낱낱이 해부해줄게
               </p>
               <p className="text-lg font-bold mt-3.5" style={{ color: '#FF6B6B' }}>
                 1,000원
@@ -159,7 +159,7 @@ export default function MenuPage() {
               </span>
               <h3 className="text-xl font-bold text-white tracking-tight">사주 배틀 하러가기</h3>
               <p className="text-sm text-gray-400 leading-relaxed mt-2">
-                둘 다 입력하면 5판 승부<br/>누가 더 좋은 팔자인지 판정해줄게
+                둘 다 입력하면 5판 승부로<br/>판정해줄게
               </p>
               <p className="text-lg font-bold mt-3.5" style={{ color: '#A855F7' }}>
                 2,000원
