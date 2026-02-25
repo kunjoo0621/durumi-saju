@@ -163,10 +163,16 @@ select:focus {
   background-color: rgb(var(--bg-tertiary)) !important;
   color: rgb(var(--text-primary)) !important;
   border: none !important;
+  transition: background-color 0.15s ease;
 }
 
-.btn-option:hover {
-  background-color: rgb(var(--bg-tertiary)) !important;
+.btn-option:hover:not(:disabled) {
+  background-color: rgba(var(--bg-tertiary), 0.8) !important;
+  filter: brightness(1.15);
+}
+
+.btn-option:active:not(:disabled) {
+  filter: brightness(0.9);
 }
 
 .btn-option--selected {
@@ -174,8 +180,13 @@ select:focus {
   color: rgb(var(--text-primary)) !important;
 }
 
-.btn-option--selected:hover {
+.btn-option--selected:hover:not(:disabled) {
   background-color: rgb(var(--primary-hover)) !important;
+  filter: none;
+}
+
+.btn-option--selected:active:not(:disabled) {
+  filter: brightness(0.92);
 }
 
 
