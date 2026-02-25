@@ -266,7 +266,7 @@ export default function ResultClient() {
     }
   }, [resultIdParam, allowedByPayment, claimParam, session, router, status]);
 
-  const [copied, setCopied] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingLeaveUrl, setPendingLeaveUrl] = useState<string | null>(null);
 
@@ -282,23 +282,12 @@ export default function ResultClient() {
     const id = resultId || resultIdParam;
     if (!id) return;
     const shareUrl = `${window.location.origin}/result/share/${id}`;
-    const grade = result?.tier?.grade;
-    const title = grade ? `${grade}등급 | 사주보는 두루미` : "사주보는 두루미";
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text: result?.tier?.title || "", url: shareUrl });
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") console.error("Share failed:", err);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch {
-        // fallback ignored
-      }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    } catch {
+      // fallback ignored
     }
   };
 
@@ -391,7 +380,7 @@ export default function ResultClient() {
                   onClick={handleShare}
                   className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
                 >
-                  {copied ? "링크가 복사됐어요!" : "결과 공유하기"}
+                  결과 공유하기
                 </button>
               )}
               <button
@@ -455,6 +444,13 @@ export default function ResultClient() {
               </div>
             </div>
           )}
+
+          {/* 클립보드 복사 토스트 */}
+          <div
+            className={`fixed bottom-20 left-1/2 -translate-x-1/2 bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+          >
+            결과 링크가 복사되었어요
+          </div>
 
           {/* 게스트용 하단 스티키 카카오 로그인 CTA */}
           {isGuest && (
