@@ -163,16 +163,15 @@ select:focus {
   background-color: rgb(var(--bg-tertiary)) !important;
   color: rgb(var(--text-primary)) !important;
   border: none !important;
-  transition: background-color 0.15s ease;
+  transition: filter 0.15s ease;
 }
 
 .btn-option:hover:not(:disabled) {
-  background-color: rgba(var(--bg-tertiary), 0.8) !important;
-  filter: brightness(1.15);
+  filter: brightness(1.3);
 }
 
 .btn-option:active:not(:disabled) {
-  filter: brightness(0.9);
+  filter: brightness(0.85);
 }
 
 .btn-option--selected {
