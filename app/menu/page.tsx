@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
-import { Sparkle, Sword, CaretRight } from "@phosphor-icons/react";
 
 export default function MenuPage() {
   const router = useRouter();
@@ -71,32 +70,53 @@ export default function MenuPage() {
           <h2 className="text-2xl font-aggro text-white text-center">
             {session?.user?.name ? `${session.user.name}아, 뭐 볼 거야?` : '뭐 볼 거야?'}
           </h2>
-          <button
-            type="button"
+
+          {/* 사주 카드 */}
+          <div
+            className="group relative bg-[#141414] rounded-2xl py-7 pl-6 pr-5 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-200 animate-[slideUp_0.5s_ease-out_both]"
+            style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
             onClick={handleSajuClick}
-            disabled={checking}
-            className={[
-              "w-full p-6 rounded-2xl text-left transition-colors duration-200 cursor-pointer",
-              checking ? "opacity-70 cursor-wait" : "active:bg-white/5",
-            ].join(" ")}
-            style={{ backgroundColor: '#181414' }}
+            role="button"
+            tabIndex={0}
           >
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-2">
-                <Sparkle weight="duotone" size={24} color="#FF6B6B" />
-                <h2 className="font-aggro text-xl text-white font-bold">
-                  {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
-                </h2>
-              </div>
-              <CaretRight weight="bold" size={20} className="text-gray-500 mt-1" />
+            <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
+              style={{ background: 'rgba(255,107,107,0.08)' }} />
+
+            <div className="relative z-[2] flex-1 min-w-0">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold mb-3"
+                style={{ background: 'rgba(255,107,107,0.08)', color: '#FF6B6B' }}>
+                개인 분석
+              </span>
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                {checking ? "내 사주 내역 확인 중…" : "내 사주 보러가기"}
+              </h3>
+              <p className="text-sm text-gray-400 leading-relaxed mt-2">
+                등급부터 오행 밸런스, 운세 흐름까지<br/>니 사주 낱낱이 해부해줄게
+              </p>
+              <p className="text-lg font-bold mt-3.5" style={{ color: '#FF6B6B' }}>
+                1,000원
+              </p>
             </div>
-            <p className="text-sm text-gray-400 mt-2 leading-relaxed">
-              천원이면 등급부터<br/>행동팁까지 전부 까발려줌
-            </p>
-            <p className="font-aggro text-lg font-bold mt-4" style={{ color: '#FF6B6B' }}>
-              1,000원
-            </p>
-          </button>
+
+            <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
+              <svg className="w-[112px] h-[112px] transition-transform duration-300 group-active:scale-110 group-active:-rotate-2" style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} viewBox="0 0 96 96" fill="none">
+                <ellipse cx="48" cy="82" rx="20" ry="4" fill="#FF6B6B" fillOpacity="0.1"/>
+                <circle cx="48" cy="40" r="28" fill="#FF6B6B" fillOpacity="0.15"/>
+                <circle cx="48" cy="40" r="28" stroke="#FF6B6B" strokeOpacity="0.45" strokeWidth="2.5"/>
+                <ellipse cx="39" cy="29" rx="9" ry="5.5" fill="white" fillOpacity="0.12" transform="rotate(-20, 39, 29)"/>
+                <path d="M48 26l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#FF6B6B" fillOpacity="0.6"/>
+                <circle cx="37" cy="43" r="2.5" fill="#FF6B6B" fillOpacity="0.5"/>
+                <circle cx="59" cy="35" r="2" fill="#FF6B6B" fillOpacity="0.45"/>
+                <circle cx="53" cy="50" r="2" fill="#FF6B6B" fillOpacity="0.35"/>
+                <path d="M37 70v-2a11 11 0 0 1 22 0v2" fill="#FF6B6B" fillOpacity="0.12" stroke="#FF6B6B" strokeOpacity="0.25" strokeWidth="2"/>
+                <rect x="32" y="70" width="32" height="7" rx="3.5" fill="#FF6B6B" fillOpacity="0.2" stroke="#FF6B6B" strokeOpacity="0.3" strokeWidth="2"/>
+                <circle cx="80" cy="20" r="3" fill="#FF6B6B" fillOpacity="0.5"/>
+                <circle cx="18" cy="52" r="2.5" fill="#FF6B6B" fillOpacity="0.3"/>
+                <path d="M74 50l1.2 3.5 3.5 1.2-3.5 1.2-1.2 3.5-1.2-3.5-3.5-1.2 3.5-1.2z" fill="#FF6B6B" fillOpacity="0.35"/>
+                <path d="M22 22l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#FF6B6B" fillOpacity="0.25"/>
+              </svg>
+            </div>
+          </div>
 
           {checkError && (
             <div className="rounded-2xl bg-zinc-900 px-5 py-5 space-y-4">
@@ -122,30 +142,49 @@ export default function MenuPage() {
             </div>
           )}
 
-          <button
-            type="button"
-            disabled={isBattleDisabled}
-            onClick={() => { if (!isBattleDisabled) router.push("/battle"); }}
+          {/* 배틀 카드 */}
+          <div
             className={[
-              "w-full p-6 rounded-2xl text-left transition-colors duration-200 cursor-pointer",
-              isBattleDisabled ? "cursor-not-allowed opacity-55" : "active:bg-white/5",
+              "group relative bg-[#141414] rounded-2xl py-7 pl-6 pr-5 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-200 animate-[slideUp_0.5s_ease-out_0.1s_both]",
+              isBattleDisabled ? "cursor-not-allowed opacity-55" : "",
             ].join(" ")}
-            style={{ backgroundColor: '#151418' }}
+            style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            onClick={() => { if (!isBattleDisabled) router.push("/battle"); }}
+            role="button"
+            tabIndex={0}
           >
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-2">
-                <Sword weight="duotone" size={24} color="#A855F7" />
-                <h2 className="font-aggro text-xl text-white font-bold">1:1 사주배틀</h2>
-              </div>
-              <CaretRight weight="bold" size={20} className="text-gray-500 mt-1" />
+            <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
+              style={{ background: 'rgba(168,85,247,0.08)' }} />
+
+            <div className="relative z-[2] flex-1 min-w-0">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold mb-3"
+                style={{ background: 'rgba(168,85,247,0.08)', color: '#A855F7' }}>
+                1:1 대결
+              </span>
+              <h3 className="text-xl font-bold text-white tracking-tight">사주 배틀 하러가기</h3>
+              <p className="text-sm text-gray-400 leading-relaxed mt-2">
+                둘 다 입력하면 5판 승부<br/>누가 더 좋은 팔자인지 판정해줄게
+              </p>
+              <p className="text-lg font-bold mt-3.5" style={{ color: '#A855F7' }}>
+                2,000원
+              </p>
             </div>
-            <p className="text-sm text-gray-400 mt-2 leading-relaxed">
-              둘 중 누가 더 좋은 사주인지<br/>등급으로 딱 정리해줌
-            </p>
-            <p className="font-aggro text-lg font-bold mt-4" style={{ color: '#A855F7' }}>
-              2,000원
-            </p>
-          </button>
+
+            <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
+              <svg className="w-[112px] h-[112px] transition-transform duration-300 group-active:scale-110 group-active:-rotate-2" style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} viewBox="0 0 96 96" fill="none">
+                <path d="M48 8L80 22V50C80 68 48 88 48 88S16 68 16 50V22L48 8Z" fill="#A855F7" fillOpacity="0.15" stroke="#A855F7" strokeOpacity="0.5" strokeWidth="2.5" strokeLinejoin="round"/>
+                <line x1="48" y1="22" x2="48" y2="76" stroke="#A855F7" strokeOpacity="0.3" strokeWidth="2"/>
+                <circle cx="34" cy="36" r="5.5" fill="#A855F7" fillOpacity="0.35" stroke="#A855F7" strokeOpacity="0.45" strokeWidth="1.5"/>
+                <path d="M25 55a9 9 0 0 1 18 0" fill="#A855F7" fillOpacity="0.2" stroke="#A855F7" strokeOpacity="0.3" strokeWidth="1.5"/>
+                <circle cx="62" cy="36" r="5.5" fill="#A855F7" fillOpacity="0.35" stroke="#A855F7" strokeOpacity="0.45" strokeWidth="1.5"/>
+                <path d="M53 55a9 9 0 0 1 18 0" fill="#A855F7" fillOpacity="0.2" stroke="#A855F7" strokeOpacity="0.3" strokeWidth="1.5"/>
+                <text x="48" y="73" textAnchor="middle" fill="#A855F7" fillOpacity="0.7" fontSize="13" fontWeight="900" fontFamily="Pretendard">VS</text>
+                <path d="M48 0l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#A855F7" fillOpacity="0.55"/>
+                <circle cx="10" cy="40" r="2" fill="#A855F7" fillOpacity="0.3"/>
+                <circle cx="86" cy="36" r="2.5" fill="#A855F7" fillOpacity="0.25"/>
+              </svg>
+            </div>
+          </div>
         </section>
       </main>
     </div>

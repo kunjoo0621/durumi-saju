@@ -45,6 +45,12 @@ const config: Config = {
           "water-muted": "rgb(var(--c-saju-water-muted) / <alpha-value>)",
         },
       },
+      keyframes: {
+        slideUp: {
+          from: { opacity: '0', transform: 'translateY(24px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
       fontSize: {
         // Major Third 1.25 Scale
         'display': ['38px', { lineHeight: '1.2', fontWeight: '700' }],
