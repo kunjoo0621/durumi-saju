@@ -47,6 +47,34 @@ export async function POST() {
     .in("guest_token_hash", hashes)
     .is("user_id", null);
 
+  // 4-c. 대표 사주 자동 설정 (claim 후, 대표 없으면)
+  try {
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("primary_result_id")
+      .eq("id", userId)
+      .single();
+
+    if (!user?.primary_result_id) {
+      const { data: firstUnlock } = await supabaseAdmin
+        .from("result_unlocks")
+        .select("result_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (firstUnlock?.result_id) {
+        await supabaseAdmin
+          .from("users")
+          .update({ primary_result_id: firstUnlock.result_id })
+          .eq("id", userId);
+      }
+    }
+  } catch (e) {
+    console.error("[claim] autoSetPrimary non-fatal error:", e);
+  }
+
   // 5. 성공 시 쿠키 전체 삭제
   const response = NextResponse.json(data);
   if (data?.success) {

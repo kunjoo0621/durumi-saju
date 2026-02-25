@@ -22,6 +22,7 @@ type ResultItem = {
   created_at: string | null;
   grade: string | null;
   score: number | null;
+  is_primary: boolean;
 };
 
 type Tab = "saju" | "battle";
@@ -51,72 +52,65 @@ function formatResultDate(dateStr: string): string {
   return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
 }
 
-/* ── 스와이프 카드 ── */
-function SwipeableCard({
-  children,
+/* ── 팝오버 메뉴 ── */
+function PopoverMenu({
+  isPrimary,
+  onSetPrimary,
   onDelete,
+  onClose,
 }: {
-  children: React.ReactNode;
+  isPrimary: boolean;
+  onSetPrimary: () => void;
   onDelete: () => void;
+  onClose: () => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const startX = useRef(0);
-  const currentX = useRef(0);
-  const isDragging = useRef(false);
-  const isOpen = useRef(false);
-  const [translateX, setTranslateX] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
 
-  const DELETE_WIDTH = 80;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    isDragging.current = true;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const diff = e.touches[0].clientX - startX.current;
-    const base = isOpen.current ? -DELETE_WIDTH : 0;
-    const next = Math.min(0, Math.max(-DELETE_WIDTH, base + diff));
-    currentX.current = next;
-    setTranslateX(next);
-  };
-
-  const handleTouchEnd = () => {
-    isDragging.current = false;
-    if (currentX.current < -DELETE_WIDTH / 2) {
-      setTranslateX(-DELETE_WIDTH);
-      isOpen.current = true;
-    } else {
-      setTranslateX(0);
-      isOpen.current = false;
-    }
-  };
+  useEffect(() => {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [onClose]);
 
   return (
-    <div ref={containerRef} className="relative overflow-hidden rounded-xl">
-      {/* 삭제 버튼 (뒤에 깔림) */}
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-1 z-30 w-[160px] bg-[#242424] rounded-xl overflow-hidden shadow-lg"
+      style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)" }}
+    >
+      {!isPrimary && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              onSetPrimary();
+              onClose();
+            }}
+            className="w-full px-4 py-3 text-left text-[14px] text-gray-200 active:bg-white/5 transition-colors"
+          >
+            대표 사주로 설정
+          </button>
+          <div className="h-px bg-white/6 mx-3" />
+        </>
+      )}
       <button
         type="button"
-        onClick={onDelete}
-        className="absolute right-0 top-0 bottom-0 flex items-center justify-center text-white text-[14px] font-semibold bg-red-600"
-        style={{ width: DELETE_WIDTH }}
+        onClick={() => {
+          onDelete();
+          onClose();
+        }}
+        className="w-full px-4 py-3 text-left text-[14px] text-red-400 active:bg-white/5 transition-colors"
       >
         삭제
       </button>
-      {/* 카드 본체 */}
-      <div
-        className="relative z-10 bg-[#141414]"
-        style={{
-          transform: `translateX(${translateX}px)`,
-          transition: isDragging.current ? "none" : "transform 0.25s ease-out",
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {children}
-      </div>
     </div>
   );
 }
@@ -125,18 +119,40 @@ function SwipeableCard({
 function DeleteModal({
   onConfirm,
   onCancel,
+  variant,
 }: {
   onConfirm: () => void;
   onCancel: () => void;
+  variant: "normal" | "primary-has-others" | "primary-last" | "battle";
 }) {
+  const texts = {
+    normal: {
+      title: "이 사주 결과를 삭제할까?",
+      desc: "삭제하면 되돌릴 수 없어.",
+    },
+    "primary-has-others": {
+      title: "대표 사주를 삭제할까?",
+      desc: "삭제하면 다른 결과가 대표로 바뀌어.",
+    },
+    "primary-last": {
+      title: "마지막 사주 결과를 삭제할까?",
+      desc: "삭제하면 결과가 전부 사라져.",
+    },
+    battle: {
+      title: "배틀 결과를 삭제할까?",
+      desc: "삭제하면 되돌릴 수 없어.",
+    },
+  };
+  const { title, desc } = texts[variant];
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60">
       <div className="bg-[#1C1C1C] rounded-2xl p-6 mx-6 w-full max-w-[320px] text-center">
         <p className="text-text-primary text-[16px] font-semibold">
-          결과를 삭제할까?
+          {title}
         </p>
         <p className="text-text-secondary text-[13px] mt-2">
-          삭제하면 복구할 수 없어.
+          {desc}
         </p>
         <div className="flex gap-3 mt-6">
           <button
@@ -156,6 +172,24 @@ function DeleteModal({
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── ··· 버튼 ── */
+function DotsButton({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-white/5 active:bg-white/10 transition-colors flex-shrink-0"
+      aria-label="더보기"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <circle cx="8" cy="3" r="1.5" />
+        <circle cx="8" cy="8" r="1.5" />
+        <circle cx="8" cy="13" r="1.5" />
+      </svg>
+    </button>
   );
 }
 
@@ -185,6 +219,9 @@ export default function MyResultsPage() {
     id: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Popover state
+  const [popoverTarget, setPopoverTarget] = useState<string | null>(null);
 
   const fetchResults = async () => {
     setLoading(true);
@@ -247,25 +284,47 @@ export default function MyResultsPage() {
         deleteTarget.type === "saju"
           ? `/api/results/${deleteTarget.id}`
           : `/api/battles/${deleteTarget.id}`;
-      console.log("[삭제 요청]", deleteTarget);
       const res = await fetch(endpoint, { method: "DELETE" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        console.error("[삭제 실패]", res.status, body);
         throw new Error(body?.error || "삭제 실패");
       }
 
       if (deleteTarget.type === "saju") {
-        setResults((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+        setResults((prev) => {
+          const filtered = prev.filter((r) => r.id !== deleteTarget.id);
+          // 대표 삭제 시 서버가 승계 처리 → 다음 fetch에서 반영됨
+          // 로컬에서도 즉시 반영: 삭제된 게 대표였으면 첫 번째 결과를 대표로
+          const deletedWasPrimary = prev.find((r) => r.id === deleteTarget.id)?.is_primary;
+          if (deletedWasPrimary && filtered.length > 0) {
+            return filtered.map((r, i) => ({ ...r, is_primary: i === 0 }));
+          }
+          return filtered;
+        });
       } else {
         setBattles((prev) => prev.filter((b) => b.id !== deleteTarget.id));
       }
     } catch (err: any) {
-      console.error("[삭제 에러]", err);
       alert(err?.message || "삭제에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
+    }
+  };
+
+  const handleSetPrimary = async (resultId: string) => {
+    try {
+      const res = await fetch("/api/results/primary", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resultId }),
+      });
+      if (!res.ok) throw new Error();
+      setResults((prev) =>
+        prev.map((r) => ({ ...r, is_primary: r.id === resultId }))
+      );
+    } catch {
+      alert("대표 사주 설정에 실패했습니다.");
     }
   };
 
@@ -347,63 +406,88 @@ export default function MyResultsPage() {
                     const dateStr = item.unlocked_at || item.created_at;
 
                     return (
-                      <SwipeableCard
+                      <div
                         key={item.id}
-                        onDelete={() => setDeleteTarget({ type: "saju", id: item.id })}
+                        className={`relative rounded-xl bg-[#141414] ${
+                          item.is_primary ? "border-l-2 border-[#FF6B6B]" : ""
+                        }`}
                       >
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/result?resultId=${item.id}`)}
-                          className="w-full flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors"
-                        >
-                          {/* 배지 래퍼 */}
-                          {badgeSrc && gradeColor ? (
-                            <div
-                              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: gradeColor.bg }}
-                            >
-                              <Image
-                                src={badgeSrc}
-                                alt={`${item.grade}등급`}
-                                width={32}
-                                height={32}
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-white/5">
-                              <span className="text-text-tertiary text-[14px]">?</span>
-                            </div>
-                          )}
+                        <div className="flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/result?resultId=${item.id}`)}
+                            className="flex-1 flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors min-w-0"
+                          >
+                            {/* 배지 래퍼 */}
+                            {badgeSrc && gradeColor ? (
+                              <div
+                                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                                style={{ backgroundColor: gradeColor.bg }}
+                              >
+                                <Image
+                                  src={badgeSrc}
+                                  alt={`${item.grade}등급`}
+                                  width={32}
+                                  height={32}
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-white/5">
+                                <span className="text-text-tertiary text-[14px]">?</span>
+                              </div>
+                            )}
 
-                          {/* 텍스트 */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="text-text-primary font-semibold text-[15px] truncate">
-                                {item.name || `사주 #${item.id.slice(0, 6)}`}
-                              </span>
-                              <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-2">
-                                {dateStr ? formatResultDate(dateStr) : ""}
-                              </span>
+                            {/* 텍스트 */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-text-primary font-semibold text-[15px] truncate">
+                                  {item.name || `사주 #${item.id.slice(0, 6)}`}
+                                </span>
+                                {item.is_primary && (
+                                  <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
+                                    style={{ background: "rgba(255,107,107,0.1)", color: "#FF6B6B" }}>
+                                    대표
+                                  </span>
+                                )}
+                                <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-auto">
+                                  {dateStr ? formatResultDate(dateStr) : ""}
+                                </span>
+                              </div>
+                              <div className="flex items-center mt-0.5">
+                                <span className="text-[13px]" style={{ color: gradeColor?.text || "#888" }}>
+                                  {item.grade ? `${item.grade}등급` : ""}
+                                  {item.grade && item.score != null ? " · " : ""}
+                                  {item.score != null ? `${item.score}점` : ""}
+                                </span>
+                              </div>
+                              <div className="text-text-secondary text-[12px] mt-0.5">
+                                {item.birth_date
+                                  ? `${item.birth_date.replace(/-/g, ".")}`
+                                  : ""}
+                                {item.gender ? ` · ${item.gender}` : ""}
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between mt-0.5">
-                              <span className="text-[13px]" style={{ color: gradeColor?.text || "#888" }}>
-                                {item.grade ? `${item.grade}등급` : ""}
-                                {item.grade && item.score != null ? " · " : ""}
-                                {item.score != null ? `${item.score}점` : ""}
-                              </span>
-                              <svg className="w-4 h-4 text-text-tertiary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                            <div className="text-text-secondary text-[12px] mt-0.5">
-                              {item.birth_date
-                                ? `${item.birth_date.replace(/-/g, ".")}`
-                                : ""}
-                              {item.gender ? ` · ${item.gender}` : ""}
-                            </div>
+                          </button>
+
+                          {/* ··· 버튼 */}
+                          <div className="relative pr-2">
+                            <DotsButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPopoverTarget(popoverTarget === item.id ? null : item.id);
+                              }}
+                            />
+                            {popoverTarget === item.id && (
+                              <PopoverMenu
+                                isPrimary={item.is_primary}
+                                onSetPrimary={() => handleSetPrimary(item.id)}
+                                onDelete={() => setDeleteTarget({ type: "saju", id: item.id })}
+                                onClose={() => setPopoverTarget(null)}
+                              />
+                            )}
                           </div>
-                        </button>
-                      </SwipeableCard>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -496,56 +580,62 @@ export default function MyResultsPage() {
                     const dateStr = b.created_at;
 
                     return (
-                      <SwipeableCard
-                        key={b.id}
-                        onDelete={() => setDeleteTarget({ type: "battle", id: b.id })}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/battle/result?id=${b.id}`)}
-                          className="w-full flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors"
-                        >
-                          {/* 승자 배지 */}
-                          <div
-                            className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: winnerColor.bg }}
+                      <div key={b.id} className="relative rounded-xl bg-[#141414]">
+                        <div className="flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/battle/result?id=${b.id}`)}
+                            className="flex-1 flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors min-w-0"
                           >
-                            <Image
-                              src={winnerBadge}
-                              alt={`${winnerGrade}등급`}
-                              width={32}
-                              height={32}
+                            {/* 승자 배지 */}
+                            <div
+                              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: winnerColor.bg }}
+                            >
+                              <Image
+                                src={winnerBadge}
+                                alt={`${winnerGrade}등급`}
+                                width={32}
+                                height={32}
+                              />
+                            </div>
+
+                            {/* 텍스트 */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-text-primary font-semibold text-[15px] truncate">
+                                  {b.player_a_name} vs {b.player_b_name}
+                                </span>
+                                <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-2">
+                                  {dateStr ? formatResultDate(dateStr) : ""}
+                                </span>
+                              </div>
+                              <div className="flex items-center mt-0.5">
+                                <span className="text-[13px] text-text-secondary">
+                                  {b.player_a_grade}등급 vs {b.player_b_grade}등급
+                                </span>
+                              </div>
+                              <div className="text-text-secondary text-[12px] mt-0.5">
+                                {RELATIONSHIP_LABELS[b.relationship_type] || "기타"}
+                                {" · "}
+                                {b.wins_a}:{b.wins_b}
+                                {" "}
+                                {b.overall_intensity}
+                              </div>
+                            </div>
+                          </button>
+
+                          {/* ··· 버튼 (배틀은 삭제만) */}
+                          <div className="relative pr-2">
+                            <DotsButton
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTarget({ type: "battle", id: b.id });
+                              }}
                             />
                           </div>
-
-                          {/* 텍스트 */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="text-text-primary font-semibold text-[15px] truncate">
-                                {b.player_a_name} vs {b.player_b_name}
-                              </span>
-                              <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-2">
-                                {dateStr ? formatResultDate(dateStr) : ""}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between mt-0.5">
-                              <span className="text-[13px] text-text-secondary">
-                                {b.player_a_grade}등급 vs {b.player_b_grade}등급
-                              </span>
-                              <svg className="w-4 h-4 text-text-tertiary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                            <div className="text-text-secondary text-[12px] mt-0.5">
-                              {RELATIONSHIP_LABELS[b.relationship_type] || "기타"}
-                              {" · "}
-                              {b.wins_a}:{b.wins_b}
-                              {" "}
-                              {b.overall_intensity}
-                            </div>
-                          </div>
-                        </button>
-                      </SwipeableCard>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -608,6 +698,15 @@ export default function MyResultsPage() {
         <DeleteModal
           onConfirm={handleDelete}
           onCancel={() => !deleting && setDeleteTarget(null)}
+          variant={
+            deleteTarget.type === "battle"
+              ? "battle"
+              : (() => {
+                  const target = results.find((r) => r.id === deleteTarget.id);
+                  if (!target?.is_primary) return "normal";
+                  return results.length <= 1 ? "primary-last" : "primary-has-others";
+                })()
+          }
         />
       )}
     </div>

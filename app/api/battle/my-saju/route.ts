@@ -12,20 +12,32 @@ export async function GET() {
       return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
     }
 
-    // Get the user's most recent unlocked result
-    const { data: unlock, error: unlockError } = await supabaseAdmin
-      .from("result_unlocks")
-      .select("result_id")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // 대표 사주 우선, 없으면 최근 결과 fallback
+    const { data: userData } = await supabaseAdmin
+      .from("users")
+      .select("primary_result_id")
+      .eq("id", userId)
+      .single();
 
-    if (unlockError) {
-      return NextResponse.json({ error: unlockError.message }, { status: 500 });
+    let targetResultId: string | null = userData?.primary_result_id || null;
+
+    if (!targetResultId) {
+      const { data: unlock, error: unlockError } = await supabaseAdmin
+        .from("result_unlocks")
+        .select("result_id")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (unlockError) {
+        return NextResponse.json({ error: unlockError.message }, { status: 500 });
+      }
+
+      targetResultId = unlock?.result_id || null;
     }
 
-    if (!unlock?.result_id) {
+    if (!targetResultId) {
       return NextResponse.json({ result: null });
     }
 
@@ -34,7 +46,7 @@ export async function GET() {
       .select(
         "id, name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type, core_fear_axis, teaser_json, full_json"
       )
-      .eq("id", unlock.result_id)
+      .eq("id", targetResultId)
       .eq("user_id", userId)
       .maybeSingle();
 

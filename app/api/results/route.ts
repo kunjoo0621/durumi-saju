@@ -37,6 +37,14 @@ export async function GET() {
       return NextResponse.json({ results: [] });
     }
 
+    // 대표 사주 ID 조회
+    const { data: userData } = await supabaseAdmin
+      .from("users")
+      .select("primary_result_id")
+      .eq("id", userId)
+      .single();
+    const primaryId = userData?.primary_result_id ?? null;
+
     const resultIds = unlocks.map((item) => item.result_id);
     const { data: results, error } = await supabaseAdmin
       .from("saju_results")
@@ -63,6 +71,7 @@ export async function GET() {
         score: full_json?.tier?.composite != null
           ? Math.round(full_json.tier.composite)
           : null,
+        is_primary: item.id === primaryId,
       };
     });
 

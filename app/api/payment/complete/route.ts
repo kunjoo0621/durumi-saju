@@ -66,6 +66,34 @@ async function markSessionConsumed(
   }
 }
 
+async function autoSetPrimaryIfNeeded(userId: string, inputHash: string) {
+  try {
+    const { data: u } = await supabaseAdmin
+      .from("users")
+      .select("primary_result_id")
+      .eq("id", userId)
+      .single();
+
+    if (!u?.primary_result_id) {
+      const { data: unlock } = await supabaseAdmin
+        .from("result_unlocks")
+        .select("result_id")
+        .eq("user_id", userId)
+        .eq("input_hash", inputHash)
+        .maybeSingle();
+
+      if (unlock?.result_id) {
+        await supabaseAdmin
+          .from("users")
+          .update({ primary_result_id: unlock.result_id })
+          .eq("id", userId);
+      }
+    }
+  } catch (e) {
+    console.error("[autoSetPrimary] non-fatal error:", e);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as PaymentCompleteBody;
@@ -345,6 +373,7 @@ export async function POST(request: NextRequest) {
         }
 
         await markSessionConsumed(body.sessionId, userId, null);
+        await autoSetPrimaryIfNeeded(userId!, inputHash);
         return NextResponse.json({ ok: true, reused: true });
       }
 
@@ -373,6 +402,7 @@ export async function POST(request: NextRequest) {
       }
 
       await markSessionConsumed(body.sessionId, userId, null);
+      await autoSetPrimaryIfNeeded(userId!, inputHash);
 
       const payload = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
       return NextResponse.json({ ok: true, reused: Boolean(payload?.reused) });
