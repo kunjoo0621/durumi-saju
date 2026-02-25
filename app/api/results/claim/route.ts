@@ -40,6 +40,13 @@ export async function POST() {
     return NextResponse.json({ error: "claim 실패" }, { status: 500 });
   }
 
+  // 4-b. saju_battles도 이전 (RPC가 미처리할 경우 대비)
+  await supabaseAdmin
+    .from("saju_battles")
+    .update({ user_id: userId, guest_token_hash: null, guest_token_expires_at: null })
+    .in("guest_token_hash", hashes)
+    .is("user_id", null);
+
   // 5. 성공 시 쿠키 전체 삭제
   const response = NextResponse.json(data);
   if (data?.success) {

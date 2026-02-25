@@ -41,11 +41,12 @@ export default function BattleResultClient() {
 
   const battleId = searchParams.get("id");
   const claimParam = searchParams.get("claim") === "true";
+  const [claimPending, setClaimPending] = useState(claimParam);
 
   // 로그인 후 돌아왔을 때 자동 claim
   const claimedRef = useRef(false);
   useEffect(() => {
-    if (!claimParam || status !== "authenticated" || claimedRef.current) return;
+    if (!claimPending || status !== "authenticated" || claimedRef.current) return;
     claimedRef.current = true;
     fetch("/api/results/claim", { method: "POST" })
       .then((res) => {
@@ -56,10 +57,13 @@ export default function BattleResultClient() {
           router.replace(url.pathname + url.search);
         }
       })
-      .catch(() => {});
-  }, [claimParam, status, router]);
+      .catch(() => {})
+      .finally(() => setClaimPending(false));
+  }, [claimPending, status, router]);
 
   useEffect(() => {
+    if (claimPending) return;
+
     if (battleId) {
       setDbLoading(true);
       fetch(`/api/battles/${battleId}`)
@@ -89,7 +93,7 @@ export default function BattleResultClient() {
     if (battleResult) {
       setResult(battleResult);
     }
-  }, [battleResult, router, battleId]);
+  }, [battleResult, router, battleId, claimPending]);
 
   const handleShare = useCallback(async () => {
     if (!result) return;

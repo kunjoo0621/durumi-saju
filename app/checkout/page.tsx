@@ -125,6 +125,7 @@ function CheckoutContent() {
           const data = await res.json().catch(() => ({}));
           throw new Error(data?.error || "결제 확인에 실패했습니다.");
         }
+        const completeData = await res.json().catch(() => ({}));
 
         if (typeParam === "battle") {
           // 결제 확인 완료 → 배틀 분석 실행
@@ -152,7 +153,7 @@ function CheckoutContent() {
         } else {
           sessionStorage.setItem("sajuJustPaid", "1");
           sessionStorage.removeItem("sajuOrderId");
-          router.replace("/result");
+          router.replace(completeData.resultId ? `/result?resultId=${completeData.resultId}` : "/result");
         }
       } catch (err: any) {
         setError(err?.message || "결제 확인 중 오류가 발생했습니다.");
@@ -385,9 +386,10 @@ function CheckoutForm({
           const data = await res.json().catch(() => ({}));
           throw new Error(data?.error || "결제 처리에 실패했습니다.");
         }
+        const mockData = await res.json().catch(() => ({}));
         sessionStorage.setItem("sajuJustPaid", "1");
         sessionStorage.removeItem("sajuOrderId");
-        router.push("/result");
+        router.push(mockData.resultId ? `/result?resultId=${mockData.resultId}` : "/result");
         return;
       }
 

@@ -37,7 +37,7 @@ export async function addTokenToCookie(response: NextResponse, newRawToken: stri
   const updated = [newRawToken, ...existing].slice(0, MAX_GUEST_TOKENS)
   response.cookies.set(COOKIE_NAME, JSON.stringify(updated), {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: 'lax',
     path: '/',
     maxAge: COOKIE_MAX_AGE,

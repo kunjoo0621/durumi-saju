@@ -58,6 +58,7 @@ export default function ResultClient() {
   const [resultBirthYear, setResultBirthYear] = useState<number>(0);
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
   const claimParam = useMemo(() => searchParams?.get("claim") === "true", [searchParams]);
+  const [claimPending, setClaimPending] = useState(claimParam);
   const enriched = useMemo(() => {
     if (!sajuData) return null;
     return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime });
@@ -145,6 +146,10 @@ export default function ResultClient() {
         clearTimeout(timeoutId);
 
         if (!res.ok) {
+          if (res.status === 404 && status !== "authenticated") {
+            setError("결과가 만료되었거나 찾을 수 없습니다.\n게스트 결과는 24시간 후 자동 삭제돼요.");
+            return;
+          }
           const data = await res.json().catch(() => ({}));
           throw new Error(data?.error || "결과를 불러오는데 실패했습니다.");
         }
@@ -236,33 +241,35 @@ export default function ResultClient() {
     } finally {
       setLoading(false);
     }
-  }, [inputHash, resultIdParam, allowedByPayment]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [inputHash, resultIdParam, allowedByPayment, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (claimPending) return;
     fetchResult();
-  }, [fetchResult]);
+  }, [fetchResult, claimPending]);
 
 
   // 로그인 후 돌아왔을 때 자동 claim
   const claimedRef = useRef(false);
   useEffect(() => {
-    if (!claimParam || status !== "authenticated" || claimedRef.current) return;
+    if (!claimPending || status !== "authenticated" || claimedRef.current) return;
     claimedRef.current = true;
     fetch("/api/results/claim", { method: "POST" })
       .then((res) => {
         if (res.ok) {
           setIsGuest(false);
-          // claim 후 URL에서 claim 파라미터 제거
           const url = new URL(window.location.href);
           url.searchParams.delete("claim");
           router.replace(url.pathname + url.search);
         }
       })
-      .catch(() => {});
-  }, [claimParam, status, router]);
+      .catch(() => {})
+      .finally(() => setClaimPending(false));
+  }, [claimPending, status, router]);
 
   // 로그인 사용자 + resultId 없음 + 결제 직후 아님 → 내 결과 목록으로
   useEffect(() => {
+    if (claimedRef.current) return;
     if (!resultIdParam && !allowedByPayment && !claimParam && status === "authenticated" && session?.user) {
       router.replace("/my/results");
     }
