@@ -28,7 +28,7 @@ export default function Error({
           </button>
           <button
             onClick={() => router.push("/")}
-            className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10 transition-colors"
+            className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
           >
             홈으로 돌아가기
           </button>

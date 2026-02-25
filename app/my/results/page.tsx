@@ -532,7 +532,7 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
+                      className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       메뉴로
                     </button>
@@ -556,7 +556,7 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
+                      className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       메뉴로
                     </button>
@@ -667,7 +667,7 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
+                      className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       메뉴로
                     </button>
@@ -691,7 +691,7 @@ export default function MyResultsPage() {
                     <button
                       type="button"
                       onClick={() => router.push("/menu")}
-                      className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10"
+                      className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                     >
                       메뉴로
                     </button>

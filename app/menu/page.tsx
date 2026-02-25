@@ -132,7 +132,7 @@ export default function MenuPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/start")}
-                  className="flex-1 h-11 rounded-xl bg-white/10 text-gray-300 text-[14px] font-semibold"
+                  className="btn-secondary flex-1 h-11 rounded-xl text-[14px] font-semibold"
                 >
                   새로 사주 보기
                 </button>

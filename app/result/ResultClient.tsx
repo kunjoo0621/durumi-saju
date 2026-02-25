@@ -340,7 +340,7 @@ export default function ResultClient() {
             <button
               onClick={() => router.push(paidButFailed ? "/menu" : "/start")}
               className={paidButFailed
-                ? "w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10 transition-colors"
+                ? "btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                 : "btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors"
               }
             >
@@ -396,7 +396,7 @@ export default function ResultClient() {
               )}
               <button
                 onClick={() => handleLeave("/menu")}
-                className="w-full h-[54px] rounded-xl text-[15px] font-semibold text-gray-300 bg-white/10 transition-all duration-200"
+                className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
               >
                 다시 보기
               </button>
