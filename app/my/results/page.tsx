@@ -485,7 +485,7 @@ export default function MyResultsPage() {
                         {/* 대표 뱃지 */}
                         {item.is_primary && (
                           <span
-                            className="text-[11px] font-bold px-2.5 py-[3px] rounded-[6px] shrink-0 mr-2"
+                            className="text-[11px] font-bold px-2.5 py-[3px] rounded-[6px] shrink-0 mr-1"
                             style={{ background: "rgba(255,107,107,0.12)", color: "#FF6B6B" }}
                           >
                             대표

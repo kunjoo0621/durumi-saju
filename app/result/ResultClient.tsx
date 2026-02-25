@@ -377,14 +377,14 @@ export default function ResultClient() {
               {shareableId && (
                 <button
                   onClick={handleShare}
-                  className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-400 transition-all duration-200"
+                  className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
                 >
                   {copied ? "링크가 복사됐어요!" : "결과 공유하기"}
                 </button>
               )}
               <button
                 onClick={() => router.push("/start")}
-                className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
+                className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-400 transition-all duration-200"
               >
                 다시 보기
               </button>
