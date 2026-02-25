@@ -5,71 +5,15 @@ import { createPortal } from "react-dom";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import { X } from "@phosphor-icons/react";
 
 export default function MenuDrawer() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { login, signing } = useKakaoLogin();
   const [isOpen, setIsOpen] = useState(false);
-  const [hasResults, setHasResults] = useState(false);
-  const [resultsChecked, setResultsChecked] = useState(false);
-  const [profileStatus, setProfileStatus] = useState<"unknown" | "complete" | "incomplete">("unknown");
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const lastActiveRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!session?.user) {
-      setProfileStatus("unknown");
-      return;
-    }
-
-    let cancelled = false;
-    const checkProfile = async () => {
-      try {
-        const res = await fetch("/api/profile");
-        if (!res.ok) return;
-        const data = await res.json();
-        const profile = data?.profile || {};
-        const requiredFilled = Boolean(
-          profile?.name &&
-          profile?.birth_date &&
-          profile?.gender &&
-          profile?.employment_status
-        );
-        if (!cancelled) {
-          setProfileStatus(requiredFilled ? "complete" : "incomplete");
-        }
-      } catch {
-        if (!cancelled) {
-          setProfileStatus("incomplete");
-        }
-      }
-    };
-
-    checkProfile();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
-
-  useEffect(() => {
-    if (!isOpen || !session?.user || resultsChecked) return;
-
-    const checkResults = async () => {
-      try {
-        const res = await fetch("/api/results");
-        if (res.ok) {
-          const data = await res.json();
-          setHasResults(Array.isArray(data.results) && data.results.length > 0);
-        }
-      } finally {
-        setResultsChecked(true);
-      }
-    };
-
-    checkResults();
-  }, [isOpen, session, resultsChecked]);
 
   useEffect(() => {
     if (isOpen) {
@@ -84,11 +28,11 @@ export default function MenuDrawer() {
     if (!isOpen) return;
 
     lastActiveRef.current = document.activeElement as HTMLElement;
-    const drawer = drawerRef.current;
-    if (!drawer) return;
+    const modal = modalRef.current;
+    if (!modal) return;
 
     const focusables = Array.from(
-      drawer.querySelectorAll<HTMLElement>(
+      modal.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
     );
@@ -96,7 +40,7 @@ export default function MenuDrawer() {
     if (focusables.length > 0) {
       focusables[0].focus();
     } else {
-      drawer.focus();
+      modal.focus();
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -129,22 +73,14 @@ export default function MenuDrawer() {
 
   const closeMenu = () => setIsOpen(false);
 
-  const handleMyResults = () => {
+  const handleLogout = () => {
     closeMenu();
-    if (session?.user) {
-      router.push("/my/results");
-    } else {
-      login("/my/results");
-    }
+    signOut({ callbackUrl: "/" });
   };
 
-  const handleEditInfo = () => {
+  const handleKakaoLogin = () => {
     closeMenu();
-    if (session?.user) {
-      router.push("/edit-profile");
-    } else {
-      login("/edit-profile");
-    }
+    login();
   };
 
   return (
@@ -164,94 +100,112 @@ export default function MenuDrawer() {
 
       {isOpen && createPortal(
         <div className="fixed inset-0 z-[200]">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 animate-fadeIn touch-none"
-            onClick={closeMenu}
-            onTouchMove={(e) => e.preventDefault()}
-            aria-label="메뉴 닫기"
-          />
+          {/* 오버레이 */}
           <div
-            ref={drawerRef}
-            className="absolute right-0 top-0 h-full w-[280px] bg-zinc-900 shadow-xl animate-slideIn flex flex-col"
-            role="dialog"
-            aria-modal="true"
-          >
-            {status === "loading" ? (
-              <div className="px-5 py-6 bg-zinc-800">
-                <div className="h-5 w-24 bg-zinc-700 rounded animate-pulse" />
-              </div>
-            ) : session?.user ? (
-              <div className="px-5 py-6 bg-zinc-800">
-                <div className="text-[18px] font-semibold text-white">
-                  {session.user.name || "사용자"}님
-                </div>
-                {profileStatus === "incomplete" && (
-                  <p className="mt-2 text-[13px] text-zinc-400">
-                    정보 입력이 필요합니다
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="px-5 py-6 bg-zinc-800">
-                <div className="text-[15px] text-zinc-300">
-                  로그인하면 결과를 저장할 수 있어요
-                </div>
-              </div>
-            )}
+            className="absolute inset-0 bg-black/60 backdrop-blur-[4px] animate-fadeIn"
+            onClick={closeMenu}
+          />
 
-            <div className="flex-1 border-t border-white/10">
-              {status !== "loading" && (
-                <div className="flex flex-col h-full">
-                  {!session?.user && (
+          {/* 모달 센터 */}
+          <div className="absolute inset-0 flex items-center justify-center p-6" onClick={closeMenu}>
+            <div
+              ref={modalRef}
+              className="w-full max-w-[320px] bg-[#1A1A1A] rounded-3xl overflow-hidden animate-[modalIn_0.25s_cubic-bezier(0.16,1,0.3,1)]"
+              style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)' }}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              {status === "loading" ? (
+                <div className="px-6 py-8">
+                  <div className="h-5 w-24 bg-zinc-700 rounded animate-pulse" />
+                </div>
+              ) : session?.user ? (
+                <>
+                  {/* 헤더 */}
+                  <div className="flex items-center justify-between px-6 pt-6">
+                    <span className="text-[19px] font-extrabold tracking-tight">메뉴</span>
                     <button
-                      type="button"
-                      onClick={() => login()}
-                      disabled={signing}
-                      className="mx-5 my-4 h-12 w-[calc(100%-40px)] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                      onClick={closeMenu}
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.06)' }}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
-                        <path
-                          d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
-                          fill="currentColor"
-                        />
+                      <X size={15} weight="bold" className="text-gray-500" />
+                    </button>
+                  </div>
+
+                  <div className="h-2" />
+                  <div className="h-px mx-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+
+                  {/* 내 사주 결과 */}
+                  <div className="px-1 py-1">
+                    <button
+                      onClick={() => { closeMenu(); router.push('/my/results'); }}
+                      className="w-full flex items-center gap-3.5 px-5 py-3.5 rounded-[14px] active:bg-white/[0.04] transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: 'rgba(255,107,107,0.1)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                          <line x1="16" y1="13" x2="8" y2="13"/>
+                          <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="text-[15px] font-semibold text-gray-200">내 사주 결과</div>
+                        <div className="text-xs text-gray-600 mt-0.5">이전에 본 결과 다시 보기</div>
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
+                        <path d="M9 6l6 6-6 6"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="h-px mx-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+
+                  {/* 하단: 로그아웃 + 버전 */}
+                  <div className="flex items-center justify-between px-6 py-2 pb-[22px]">
+                    <button
+                      onClick={handleLogout}
+                      className="text-[13px] text-gray-700 py-1.5 active:text-gray-500 transition-colors"
+                    >
+                      로그아웃
+                    </button>
+                    <span className="text-[11px] text-neutral-800">v1.0</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* 비로그인: 헤더 */}
+                  <div className="flex items-center justify-between px-6 pt-6">
+                    <span className="text-[19px] font-extrabold tracking-tight">메뉴</span>
+                    <button
+                      onClick={closeMenu}
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                      style={{ background: 'rgba(255,255,255,0.06)' }}
+                    >
+                      <X size={15} weight="bold" className="text-gray-500" />
+                    </button>
+                  </div>
+
+                  {/* 카카오 로그인 CTA */}
+                  <div className="mx-5 mt-6">
+                    <button
+                      onClick={handleKakaoLogin}
+                      disabled={signing}
+                      className="w-full py-4 rounded-[14px] bg-[#FEE500] text-[#191600] text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] active:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.7 6.73-.16.58-.6 2.1-.69 2.43-.11.4.15.39.31.28.13-.08 2.05-1.36 2.88-1.91.57.09 1.17.14 1.8.14 5.5 0 10-3.58 10-8S17.5 3 12 3z"/>
                       </svg>
                       카카오로 시작하기
                     </button>
-                  )}
-                  <div>
-                    <button
-                      type="button"
-                      onClick={handleMyResults}
-                      disabled={session?.user ? (resultsChecked && !hasResults) : false}
-                      className={`w-full text-left px-5 py-4 text-[16px] transition-colors ${
-                        session?.user && resultsChecked && !hasResults
-                          ? "text-zinc-400/50 cursor-not-allowed"
-                          : "text-white hover:bg-zinc-800"
-                      }`}
-                    >
-                      내 사주 결과
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleEditInfo}
-                      className="w-full text-left px-5 py-4 text-[16px] text-white hover:bg-zinc-800 transition-colors"
-                    >
-                      정보 수정
-                    </button>
                   </div>
-                  {session?.user && (
-                    <div className="mt-auto border-t border-white/10">
-                      <button
-                        type="button"
-                        onClick={() => signOut({ callbackUrl: "/" })}
-                        className="w-full text-left px-5 py-4 text-[16px] text-zinc-400 hover:text-white"
-                      >
-                        로그아웃
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  <p className="text-[13px] text-gray-600 text-center pt-3 pb-6">
+                    로그인하면 결과가 저장돼
+                  </p>
+                </>
               )}
             </div>
           </div>

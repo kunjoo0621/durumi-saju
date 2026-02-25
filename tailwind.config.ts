@@ -50,6 +50,10 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(24px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        modalIn: {
+          from: { opacity: '0', transform: 'scale(0.95)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
       },
       fontSize: {
         // Major Third 1.25 Scale

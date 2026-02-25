@@ -73,7 +73,7 @@ export default function MenuPage() {
 
           {/* 사주 카드 */}
           <div
-            className="group relative bg-[#141414] rounded-2xl py-7 pl-6 pr-5 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-200 animate-[slideUp_0.5s_ease-out_both]"
+            className="group relative bg-[#141414] rounded-2xl py-7 px-8 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-200 animate-[slideUp_0.5s_ease-out_both]"
             style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
             onClick={handleSajuClick}
             role="button"
@@ -145,7 +145,7 @@ export default function MenuPage() {
           {/* 배틀 카드 */}
           <div
             className={[
-              "group relative bg-[#141414] rounded-2xl py-7 pl-6 pr-5 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-200 animate-[slideUp_0.5s_ease-out_0.1s_both]",
+              "group relative bg-[#141414] rounded-2xl py-7 px-8 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-200 animate-[slideUp_0.5s_ease-out_0.1s_both]",
               isBattleDisabled ? "cursor-not-allowed opacity-55" : "",
             ].join(" ")}
             style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
