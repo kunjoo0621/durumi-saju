@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import ResultTable from "@/components/result/ResultTable";
-import SavePromptBanner from "@/components/SavePromptBanner";
 import Header from "@/components/layout/Header";
 import SajuChart, { StrengthPanel } from "@/components/saju/SajuChart";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
@@ -350,8 +349,6 @@ export default function ResultClient() {
       {/* 메인 콘텐츠 */}
       <main className="px-6 py-8">
         <div className="max-w-[640px] mx-auto space-y-6">
-          {isGuest && <SavePromptBanner returnTo="/result" />}
-
           {/* 내 사주 원국 — 최상단 */}
           {sajuData && (
             <div ref={wonguRef} className="bg-background-secondary rounded-3xl p-5 md:p-8">
@@ -434,7 +431,7 @@ export default function ResultClient() {
       </div>
 
       {/* 푸터 */}
-      <footer className="px-6 py-12">
+      <footer className={`px-6 py-12 ${isGuest ? "pb-28" : ""}`}>
         <div className="max-w-[640px] mx-auto text-center">
           <p className="text-caption text-text-tertiary">
             이 분석은 AI를 활용한 참고 자료입니다.
@@ -443,6 +440,30 @@ export default function ResultClient() {
           </p>
         </div>
       </footer>
+
+      {/* 게스트용 하단 스티키 카카오 로그인 CTA */}
+      {isGuest && (
+        <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+          <div className="max-w-[640px] mx-auto">
+            <p className="text-[12px] text-white/78 text-center mb-2">
+              지금 로그인하면 결과가 영구 저장돼요
+            </p>
+            <button
+              type="button"
+              onClick={() => signIn("kakao", { callbackUrl: "/result?claim=true" })}
+              className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
+                <path
+                  d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
+                  fill="currentColor"
+                />
+              </svg>
+              카카오로 저장하기
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
