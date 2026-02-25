@@ -172,7 +172,6 @@ export default function MenuDrawer() {
                     >
                       로그아웃
                     </button>
-                    <span className="text-[11px] text-gray-700">v1.0</span>
                   </div>
                 </>
               ) : (
