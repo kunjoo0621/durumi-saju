@@ -27,6 +27,7 @@ function buildResponse(data: any, access: "user" | "guest") {
 
   return {
     result: parsedResult,
+    resultId: data.id,
     unlockedAt: data.unlocked_at,
     access,
     is_guest: access === "guest",

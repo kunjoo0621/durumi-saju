@@ -3,17 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
-import ResultTable from "@/components/result/ResultTable";
-import Header from "@/components/layout/Header";
-import SajuChart, { StrengthPanel } from "@/components/saju/SajuChart";
+import ResultView from "@/components/result/ResultView";
 import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
-import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
-import ShinsalBadges from "@/components/saju/ShinsalBadges";
-import FortuneTimeline from "@/components/saju/FortuneTimeline";
+import { calculateSaju, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
-import { CaretDown, CaretUp, Warning } from "@phosphor-icons/react";
+import { Warning } from "@phosphor-icons/react";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -50,6 +46,7 @@ export default function ResultClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [paidButFailed, setPaidButFailed] = useState(false);
+  const [resultId, setResultId] = useState<string | null>(null);
 
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
@@ -58,12 +55,6 @@ export default function ResultClient() {
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
   const claimParam = useMemo(() => searchParams?.get("claim") === "true", [searchParams]);
   const [claimPending, setClaimPending] = useState(claimParam);
-  const enriched = useMemo(() => {
-    if (!sajuData) return null;
-    return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime });
-  }, [sajuData, unknownBirthTime]);
-  const [wonguExpanded, setWonguExpanded] = useState(false);
-  const wonguRef = useRef<HTMLDivElement>(null);
   const [allowedByPayment, setAllowedByPayment] = useState(() => {
     if (typeof window === "undefined") return false;
     const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
@@ -155,6 +146,7 @@ export default function ResultClient() {
 
         const data = await res.json();
         setIsGuest(Boolean(data.is_guest));
+        if (data.resultId) setResultId(data.resultId);
         const parsed =
           typeof data.result === "string"
             ? parseJson5Loose<AnalysisResult>(data.result)
@@ -274,6 +266,30 @@ export default function ResultClient() {
     }
   }, [resultIdParam, allowedByPayment, claimParam, session, router, status]);
 
+  const [copied, setCopied] = useState(false);
+  const handleShare = async () => {
+    const id = resultId || resultIdParam;
+    if (!id) return;
+    const shareUrl = `${window.location.origin}/result/share/${id}`;
+    const grade = result?.tier?.grade;
+    const title = grade ? `${grade}등급 | 사주보는 두루미` : "사주보는 두루미";
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: result?.tier?.title || "", url: shareUrl });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") console.error("Share failed:", err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // fallback ignored
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -342,129 +358,75 @@ export default function ResultClient() {
     );
   }
 
+  const shareableId = resultId || resultIdParam;
+
   return (
-    <div className="min-h-screen bg-background-primary animate-fadeIn">
-      <Header showBack sticky />
-
-      {/* 메인 콘텐츠 */}
-      <main className="px-6 py-8">
-        <div className="max-w-[640px] mx-auto space-y-6">
-          {/* 내 사주 원국 — 최상단 */}
-          {sajuData && (
-            <div ref={wonguRef} className="bg-background-secondary rounded-3xl p-5 md:p-8">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-white">내 사주 원국</h3>
-                {displayBirthDate && (
-                  <span className="text-xs text-gray-500">
-                    ({displayCalendarType === "lunar" ? "음력" : "양력"} {displayBirthDate} 기준)
-                  </span>
-                )}
-              </div>
-
-              {/* 항상 보이는 영역: 4주 테이블 */}
-              <SajuChart sajuData={sajuData} enriched={enriched} hideStrengthPanel />
-
-              {/* 펼치기 버튼 (접힌 상태에서만 보임) */}
-              {!wonguExpanded && (
+    <ResultView
+      result={result}
+      sajuData={sajuData}
+      displayBirthDate={displayBirthDate}
+      displayCalendarType={displayCalendarType}
+      unknownBirthTime={unknownBirthTime}
+      resultBirthYear={resultBirthYear}
+      birthYear={birthYear}
+      footer={
+        <>
+          {/* 공유 + 다시 보기 */}
+          <div className="px-6 py-8">
+            <div className="max-w-[640px] mx-auto space-y-3">
+              {shareableId && (
                 <button
-                  onClick={() => setWonguExpanded(true)}
-                  className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-10 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
+                  onClick={handleShare}
+                  className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-400 transition-all duration-200"
                 >
-                  상세 분석 보기
-                  <CaretDown weight="bold" size={16} />
+                  {copied ? "링크가 복사됐어요!" : "결과 공유하기"}
                 </button>
               )}
-
-              {/* 접기/펼치기 영역: 오행 → 신강 → 용신 → 운세 → 신살 */}
-              <div
-                className="grid transition-[grid-template-rows] duration-300 ease-in-out"
-                style={{ gridTemplateRows: wonguExpanded ? "1fr" : "0fr" }}
+              <button
+                onClick={() => router.push("/start")}
+                className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
               >
-                <div className="overflow-hidden">
-                  {enriched && <StrengthPanel enriched={enriched} />}
-                  {result?.fortune && (resultBirthYear || Number(birthYear)) > 0 && (
-                    <>
-                      <div className="h-px bg-[#222222] my-8" />
-                      <FortuneTimeline
-                        fortune={result.fortune}
-                        birthYear={resultBirthYear || Number(birthYear)}
-                      />
-                    </>
-                  )}
-                  {enriched?.shinsal && enriched.shinsal.matches.length > 0 && (
-                    <>
-                      <div className="h-px bg-[#222222] my-8" />
-                      <ShinsalBadges matches={enriched.shinsal.matches} note={enriched.shinsal.meta?.note} />
-                    </>
-                  )}
+                다시 보기
+              </button>
+            </div>
+          </div>
 
-                  {/* 접기 버튼 (펼친 상태에서 컨텐츠 하단) */}
-                  <button
-                    onClick={() => {
-                      setWonguExpanded(false);
-                      wonguRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }}
-                    className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-8 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
-                  >
-                    상세 분석 접기
-                    <CaretUp weight="bold" size={16} />
-                  </button>
-                </div>
+          {/* 푸터 */}
+          <footer className={`px-6 py-12 ${isGuest ? "pb-28" : ""}`}>
+            <div className="max-w-[640px] mx-auto text-center">
+              <p className="text-caption text-text-tertiary">
+                이 분석은 AI를 활용한 참고 자료입니다.
+                <br />
+                실제 운명은 당신의 선택과 노력에 달려있습니다.
+              </p>
+            </div>
+          </footer>
+
+          {/* 게스트용 하단 스티키 카카오 로그인 CTA */}
+          {isGuest && (
+            <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+              <div className="max-w-[640px] mx-auto">
+                <p className="text-[12px] text-white/78 text-center mb-2">
+                  지금 로그인하면 결과가 영구 저장돼요
+                </p>
+                <button
+                  type="button"
+                  onClick={() => signIn("kakao", { callbackUrl: "/result?claim=true" })}
+                  className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
+                    <path
+                      d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                  카카오로 저장하기
+                </button>
               </div>
             </div>
           )}
-
-          <ResultTable result={result} locked={false} initialExpandedCount={2} />
-        </div>
-      </main>
-
-      {/* 다시 보기 버튼 */}
-      <div className="px-6 py-8">
-        <div className="max-w-[640px] mx-auto">
-          <button
-            onClick={() => router.push("/start")}
-            className="btn-primary w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none transition-all duration-200"
-          >
-            다시 보기
-          </button>
-        </div>
-      </div>
-
-      {/* 푸터 */}
-      <footer className={`px-6 py-12 ${isGuest ? "pb-28" : ""}`}>
-        <div className="max-w-[640px] mx-auto text-center">
-          <p className="text-caption text-text-tertiary">
-            이 분석은 AI를 활용한 참고 자료입니다.
-            <br />
-            실제 운명은 당신의 선택과 노력에 달려있습니다.
-          </p>
-        </div>
-      </footer>
-
-      {/* 게스트용 하단 스티키 카카오 로그인 CTA */}
-      {isGuest && (
-        <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
-          <div className="max-w-[640px] mx-auto">
-            <p className="text-[12px] text-white/78 text-center mb-2">
-              지금 로그인하면 결과가 영구 저장돼요
-            </p>
-            <button
-              type="button"
-              onClick={() => signIn("kakao", { callbackUrl: "/result?claim=true" })}
-              className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
-                <path
-                  d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
-                  fill="currentColor"
-                />
-              </svg>
-              카카오로 저장하기
-            </button>
-          </div>
-        </div>
-      )}
-
-    </div>
+        </>
+      }
+    />
   );
 }

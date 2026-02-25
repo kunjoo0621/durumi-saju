@@ -43,7 +43,12 @@ export default function Header({
           <div className="w-10" />
         )}
 
-        <h1 className="text-title-3 text-text-primary font-aggro">{title}</h1>
+        <h1
+          className="text-title-3 text-text-primary font-aggro cursor-pointer"
+          onClick={() => router.push("/")}
+        >
+          {title}
+        </h1>
 
         <MenuDrawer />
       </div>
