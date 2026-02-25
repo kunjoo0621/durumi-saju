@@ -35,6 +35,19 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   other: "기타",
 };
 
+/* ── 카드 등급 색상 ── */
+const CARD_GRADE: Record<string, { text: string; medalBg: string }> = {
+  S: { text: "#A855F7", medalBg: "rgba(168,85,247,0.12)" },
+  A: { text: "#EF4444", medalBg: "rgba(239,68,68,0.12)" },
+  B: { text: "#22C55E", medalBg: "rgba(34,197,94,0.12)" },
+  C: { text: "#EAB308", medalBg: "rgba(234,179,8,0.12)" },
+  D: { text: "#6B7280", medalBg: "rgba(107,114,128,0.12)" },
+};
+function getCardGrade(grade: string | null) {
+  const key = grade?.trim().toUpperCase().charAt(0) || "";
+  return CARD_GRADE[key] || CARD_GRADE.D;
+}
+
 /* ── 날짜 포맷 ── */
 function formatResultDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -50,6 +63,18 @@ function formatResultDate(dateStr: string): string {
     return `${date.getMonth() + 1}.${date.getDate()}`;
   }
   return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+}
+
+/* ── 시간 포맷 (24h → 오전/오후) ── */
+function formatBirthTime(time: string | null): string | null {
+  if (!time) return null;
+  const [hStr, mStr] = time.split(":");
+  const h = parseInt(hStr, 10);
+  const m = mStr || "00";
+  if (isNaN(h)) return null;
+  const period = h < 12 ? "오전" : "오후";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${period} ${h12}:${m}`;
 }
 
 /* ── 팝오버 메뉴 ── */
@@ -181,13 +206,14 @@ function DotsButton({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-white/5 active:bg-white/10 transition-colors flex-shrink-0"
+      className="w-9 h-9 flex items-center justify-center rounded-[10px] shrink-0 active:bg-white/[0.06] transition-colors"
+      style={{ color: "#4B5563" }}
       aria-label="더보기"
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-        <circle cx="8" cy="3" r="1.5" />
-        <circle cx="8" cy="8" r="1.5" />
-        <circle cx="8" cy="13" r="1.5" />
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+        <circle cx="9" cy="3.5" r="1.5" />
+        <circle cx="9" cy="9" r="1.5" />
+        <circle cx="9" cy="14.5" r="1.5" />
       </svg>
     </button>
   );
@@ -401,91 +427,100 @@ export default function MyResultsPage() {
               {results.length > 0 && (
                 <div className="space-y-3">
                   {results.map((item) => {
-                    const gradeColor = item.grade ? getGradeColor(item.grade) : null;
+                    const cg = getCardGrade(item.grade);
                     const badgeSrc = item.grade ? getGradeBadge(item.grade) : null;
-                    const dateStr = item.unlocked_at || item.created_at;
+                    const birthTime = formatBirthTime(item.birth_time);
 
                     return (
                       <div
                         key={item.id}
-                        className={`relative rounded-xl bg-[#141414] ${
-                          item.is_primary ? "border-l-2 border-[#FF6B6B]" : ""
-                        }`}
+                        className="rounded-2xl p-5 flex items-center gap-4 cursor-pointer active:opacity-80 transition-opacity"
+                        style={{ background: item.is_primary ? "rgba(255,107,107,0.04)" : "#141414" }}
+                        onClick={() => router.push(`/result?resultId=${item.id}`)}
+                        role="button"
+                        tabIndex={0}
                       >
-                        <div className="flex items-center">
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/result?resultId=${item.id}`)}
-                            className="flex-1 flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors min-w-0"
+                        {/* 등급 메달 */}
+                        {badgeSrc ? (
+                          <div
+                            className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
+                            style={{ background: cg.medalBg }}
                           >
-                            {/* 배지 래퍼 */}
-                            {badgeSrc && gradeColor ? (
-                              <div
-                                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                                style={{ backgroundColor: gradeColor.bg }}
-                              >
-                                <Image
-                                  src={badgeSrc}
-                                  alt={`${item.grade}등급`}
-                                  width={32}
-                                  height={32}
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-white/5">
-                                <span className="text-text-tertiary text-[14px]">?</span>
-                              </div>
-                            )}
-
-                            {/* 텍스트 */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-text-primary font-semibold text-[15px] truncate">
-                                  {item.name || `사주 #${item.id.slice(0, 6)}`}
-                                </span>
-                                {item.is_primary && (
-                                  <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
-                                    style={{ background: "rgba(255,107,107,0.1)", color: "#FF6B6B" }}>
-                                    대표
-                                  </span>
-                                )}
-                                <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-auto">
-                                  {dateStr ? formatResultDate(dateStr) : ""}
-                                </span>
-                              </div>
-                              <div className="flex items-center mt-0.5">
-                                <span className="text-[13px]" style={{ color: gradeColor?.text || "#888" }}>
-                                  {item.grade ? `${item.grade}등급` : ""}
-                                  {item.grade && item.score != null ? " · " : ""}
-                                  {item.score != null ? `${item.score}점` : ""}
-                                </span>
-                              </div>
-                              <div className="text-text-secondary text-[12px] mt-0.5">
-                                {item.birth_date
-                                  ? `${item.birth_date.replace(/-/g, ".")}`
-                                  : ""}
-                                {item.gender ? ` · ${item.gender}` : ""}
-                              </div>
-                            </div>
-                          </button>
-
-                          {/* ··· 버튼 */}
-                          <div className="relative pr-2">
-                            <DotsButton
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPopoverTarget(popoverTarget === item.id ? null : item.id);
-                              }}
+                            <Image
+                              src={badgeSrc}
+                              alt={`${item.grade}등급`}
+                              width={30}
+                              height={30}
                             />
-                            {popoverTarget === item.id && (
-                              <PopoverMenu
-                                isPrimary={item.is_primary}
-                                onSetPrimary={() => handleSetPrimary(item.id)}
-                                onDelete={() => setDeleteTarget({ type: "saju", id: item.id })}
-                                onClose={() => setPopoverTarget(null)}
-                              />
+                          </div>
+                        ) : (
+                          <div className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0 bg-white/5">
+                            <span className="text-[#4B5563] text-[14px]">?</span>
+                          </div>
+                        )}
+
+                        {/* 정보 영역 */}
+                        <div className="flex-1 min-w-0">
+                          {/* 1줄: 이름 + 등급 */}
+                          <div className="flex items-baseline gap-2 mb-1.5">
+                            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
+                              {item.name || `사주 #${item.id.slice(0, 6)}`}
+                            </span>
+                            {item.grade && (
+                              <span
+                                className="text-[13px] font-semibold whitespace-nowrap shrink-0"
+                                style={{ color: cg.text }}
+                              >
+                                {item.grade}등급{item.score != null ? ` · ${item.score}점` : ""}
+                              </span>
                             )}
                           </div>
+                          {/* 2줄: 메타 */}
+                          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+                            {item.birth_date && (
+                              <span>{item.birth_date.replace(/-/g, ".")}</span>
+                            )}
+                            {item.gender && (
+                              <>
+                                <span style={{ color: "#2A2A2A" }}>·</span>
+                                <span>{item.gender}</span>
+                              </>
+                            )}
+                            {birthTime && (
+                              <>
+                                <span style={{ color: "#2A2A2A" }}>·</span>
+                                <span>{birthTime}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 대표 뱃지 */}
+                        {item.is_primary && (
+                          <span
+                            className="text-[11px] font-bold px-2.5 py-[3px] rounded-[6px] shrink-0 mr-2"
+                            style={{ background: "rgba(255,107,107,0.12)", color: "#FF6B6B" }}
+                          >
+                            대표
+                          </span>
+                        )}
+
+                        {/* ··· 버튼 */}
+                        <div className="relative shrink-0">
+                          <DotsButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPopoverTarget(popoverTarget === item.id ? null : item.id);
+                            }}
+                          />
+                          {popoverTarget === item.id && (
+                            <PopoverMenu
+                              isPrimary={item.is_primary}
+                              onSetPrimary={() => handleSetPrimary(item.id)}
+                              onDelete={() => setDeleteTarget({ type: "saju", id: item.id })}
+                              onClose={() => setPopoverTarget(null)}
+                            />
+                          )}
                         </div>
                       </div>
                     );

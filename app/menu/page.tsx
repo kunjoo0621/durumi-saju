@@ -67,10 +67,6 @@ export default function MenuPage() {
 
       <main className="flex-1 px-5 pb-12">
         <section className="max-w-[640px] mx-auto pt-10 space-y-4">
-          <h2 className="text-2xl font-aggro text-white text-center">
-            {session?.user?.name ? `${session.user.name}아, 뭐 볼 거야?` : '뭐 볼 거야?'}
-          </h2>
-
           {/* 사주 카드 */}
           <div
             className="group relative bg-[#141414] rounded-2xl py-7 px-8 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] transition-transform duration-200 animate-[slideUp_0.5s_ease-out_both]"
