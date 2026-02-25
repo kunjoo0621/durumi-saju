@@ -515,18 +515,6 @@ export default function MyResultsPage() {
                 </div>
               )}
 
-              {results.length > 0 && (
-                <div className="pt-2 space-y-2">
-                  <p className="text-[12px] text-text-secondary">본인 동의가 있는 정보만 입력해 주세요</p>
-                  <button
-                    type="button"
-                    onClick={handleAddAnother}
-                    className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
-                  >
-                    다른 사람 사주 추가하기
-                  </button>
-                </div>
-              )}
 
               {!fetchError && results.length === 0 && (
                 <div className="pt-12 flex flex-col items-center text-center space-y-6">
@@ -714,6 +702,21 @@ export default function MyResultsPage() {
           )}
         </div>
       </main>
+
+      {/* 하단 플로팅 CTA */}
+      {tab === "saju" && results.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+          <div className="max-w-[640px] mx-auto">
+            <button
+              type="button"
+              onClick={handleAddAnother}
+              className="w-full h-[54px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
+            >
+              다른 사람 사주 추가하기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 삭제 확인 모달 */}
       {deleteTarget && (
