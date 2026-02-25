@@ -10,6 +10,7 @@ type Props = {
   sajuData: SajuData | null;
   unknownBirthTime: boolean;
   resultBirthYear: number;
+  userName?: string;
 };
 
 export default function ShareResultClient({
@@ -17,6 +18,7 @@ export default function ShareResultClient({
   sajuData,
   unknownBirthTime,
   resultBirthYear,
+  userName,
 }: Props) {
   return (
     <ResultView
@@ -25,6 +27,7 @@ export default function ShareResultClient({
       unknownBirthTime={unknownBirthTime}
       resultBirthYear={resultBirthYear}
       hidePersonalInfo
+      userName={userName}
       headerBackTo="/"
       footer={<ShareCTA />}
     />

@@ -21,6 +21,7 @@ type ResultViewProps = {
   resultBirthYear?: number;
   birthYear?: string;
   hidePersonalInfo?: boolean;
+  userName?: string;
   footer?: React.ReactNode;
   headerBackTo?: string;
 };
@@ -34,6 +35,7 @@ export default function ResultView({
   resultBirthYear = 0,
   birthYear = "",
   hidePersonalInfo = false,
+  userName,
   footer,
   headerBackTo,
 }: ResultViewProps) {
@@ -61,7 +63,9 @@ export default function ResultView({
             <div ref={wonguRef} className="bg-background-secondary rounded-3xl p-5 md:p-8">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-white">
-                  {hidePersonalInfo ? "사주 원국" : "내 사주 원국"}
+                  {hidePersonalInfo
+                    ? userName ? `${userName}님의 사주 원국` : "사주 원국"
+                    : "내 사주 원국"}
                 </h3>
                 {!hidePersonalInfo && displayBirthDate && (
                   <span className="text-xs text-gray-500">

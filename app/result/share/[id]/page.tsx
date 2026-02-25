@@ -47,14 +47,17 @@ export async function generateMetadata({
   const grade = result.tier?.grade || "?";
   const percent = getTopPercent(grade);
   const headline = result.tier?.title || "";
+  const userName = data.name || "";
 
   const safeHeadline = /\d{4}년/.test(headline)
     ? `사주 ${grade}등급 분석 결과`
     : headline;
 
-  const title = percent
-    ? `${grade}등급 · ${percent} | 사주보는 두루미`
-    : `${grade}등급 | 사주보는 두루미`;
+  const title = userName
+    ? `두루미가 본 ${userName}님의 사주 — ${grade}등급`
+    : percent
+      ? `${grade}등급 · ${percent} | 사주보는 두루미`
+      : `${grade}등급 | 사주보는 두루미`;
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://durumi-saju.vercel.app";
 
@@ -128,6 +131,7 @@ export default async function ShareResultPage({
       sajuData={sajuData}
       unknownBirthTime={!data.birth_time}
       resultBirthYear={birthYear}
+      userName={data.name || undefined}
     />
   );
 }

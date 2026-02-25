@@ -46,7 +46,7 @@ export async function GET(
 
   const { data } = await supabaseAdmin
     .from("saju_results")
-    .select("full_json")
+    .select("full_json, name")
     .eq("id", id)
     .single();
 
@@ -66,6 +66,7 @@ export async function GET(
   }
 
   const fontData = await getFont();
+  const userName = typeof data.name === "string" ? data.name.trim() : "";
 
   const raw = result.tier;
   const compositeBase =
@@ -113,6 +114,20 @@ export async function GET(
           padding: "60px",
         }}
       >
+        {/* 두루미가 본 OOO님의 사주 결과 */}
+        {userName && (
+          <div
+            style={{
+              fontSize: "24px",
+              color: "#9CA3AF",
+              marginBottom: "16px",
+              display: "flex",
+            }}
+          >
+            두루미가 본 {userName}님의 사주 결과
+          </div>
+        )}
+
         {/* 등급 원형 */}
         <div
           style={{
