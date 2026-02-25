@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { normalizeScores } from "@/lib/resultSchema";
@@ -28,7 +30,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 let fontCache: ArrayBuffer | null = null;
-let craneCache: ArrayBuffer | null = null;
+let craneBase64: string | null = null;
 
 async function getFont(): Promise<ArrayBuffer> {
   if (fontCache) return fontCache;
@@ -39,17 +41,12 @@ async function getFont(): Promise<ArrayBuffer> {
   return fontCache;
 }
 
-async function getCraneImage(): Promise<string | null> {
+function getCraneImage(): string | null {
+  if (craneBase64) return craneBase64;
   try {
-    if (!craneCache) {
-      const res = await fetch(
-        new URL("../../../../../public/images/og/crane-og.png", import.meta.url)
-      );
-      if (!res.ok) return null;
-      craneCache = await res.arrayBuffer();
-    }
-    const base64 = Buffer.from(craneCache).toString("base64");
-    return `data:image/png;base64,${base64}`;
+    const buf = readFileSync(join(process.cwd(), "public/images/og/crane-og.png"));
+    craneBase64 = `data:image/png;base64,${buf.toString("base64")}`;
+    return craneBase64;
   } catch {
     return null;
   }
@@ -82,7 +79,8 @@ export async function GET(
     return new Response("Parse Error", { status: 500 });
   }
 
-  const [fontData, craneSrc] = await Promise.all([getFont(), getCraneImage()]);
+  const fontData = await getFont();
+  const craneSrc = getCraneImage();
   const userName = typeof data.name === "string" ? data.name.trim() : "";
 
   const raw = result.tier;
