@@ -139,7 +139,7 @@ export default function BattleResultClient() {
         <p className="text-body-2 text-text-secondary mb-4">배틀 결과가 없습니다.</p>
         <button
           type="button"
-          onClick={() => router.push("/battle")}
+          onClick={() => router.push("/battle/input")}
           className="btn-primary px-6 py-3 rounded-xl text-[14px] font-semibold"
         >
           배틀 시작하기
@@ -408,7 +408,7 @@ export default function BattleResultClient() {
             </button>
             <button
               type="button"
-              onClick={() => router.push("/battle")}
+              onClick={() => router.push("/battle/input")}
               className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none border border-white/10 bg-background-secondary text-text-secondary hover:bg-background-secondary/80 transition-colors"
             >
               다른 상대와 재대결

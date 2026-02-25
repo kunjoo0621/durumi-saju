@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
+import { useBattleStore } from "@/store/useBattleStore";
 
 export default function MenuPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const isBattleDisabled = false;
+  const resetBattle = useBattleStore((s) => s.reset);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
 
@@ -145,7 +147,7 @@ export default function MenuPage() {
               isBattleDisabled ? "cursor-not-allowed opacity-55" : "",
             ].join(" ")}
             style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-            onClick={() => { if (!isBattleDisabled) router.push("/battle"); }}
+            onClick={() => { if (!isBattleDisabled) { resetBattle(); router.push("/battle/input"); } }}
             role="button"
             tabIndex={0}
           >

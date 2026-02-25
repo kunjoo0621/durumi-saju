@@ -659,7 +659,7 @@ export default function MyResultsPage() {
                   <div className="w-full space-y-3">
                     <button
                       type="button"
-                      onClick={() => router.push("/battle")}
+                      onClick={() => router.push("/battle/input")}
                       className="w-full h-[52px] rounded-xl bg-primary text-text-primary text-[15px] font-semibold"
                     >
                       사주 배틀 하러가기

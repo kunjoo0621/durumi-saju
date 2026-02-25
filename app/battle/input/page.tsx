@@ -234,7 +234,7 @@ export default function BattleInputPage() {
 
   const handleBack = () => {
     if (step > 0) setStep(step - 1);
-    else router.push("/battle");
+    else router.push("/menu");
   };
 
   const handleSubmit = () => {
