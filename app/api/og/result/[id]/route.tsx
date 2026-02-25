@@ -28,6 +28,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 let fontCache: ArrayBuffer | null = null;
+let craneCache: ArrayBuffer | null = null;
 
 async function getFont(): Promise<ArrayBuffer> {
   if (fontCache) return fontCache;
@@ -36,6 +37,22 @@ async function getFont(): Promise<ArrayBuffer> {
   );
   fontCache = await res.arrayBuffer();
   return fontCache;
+}
+
+async function getCraneImage(): Promise<string | null> {
+  try {
+    if (!craneCache) {
+      const res = await fetch(
+        new URL("../../../../../public/images/og/crane-og.png", import.meta.url)
+      );
+      if (!res.ok) return null;
+      craneCache = await res.arrayBuffer();
+    }
+    const base64 = Buffer.from(craneCache).toString("base64");
+    return `data:image/png;base64,${base64}`;
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(
@@ -65,7 +82,7 @@ export async function GET(
     return new Response("Parse Error", { status: 500 });
   }
 
-  const fontData = await getFont();
+  const [fontData, craneSrc] = await Promise.all([getFont(), getCraneImage()]);
   const userName = typeof data.name === "string" ? data.name.trim() : "";
 
   const raw = result.tier;
@@ -98,6 +115,10 @@ export async function GET(
     return { label, grade: catGrade };
   });
 
+  const nameText = userName
+    ? `두루미가 본 ${userName}님의 사주 결과`
+    : "사주보는 두루미";
+
   return new ImageResponse(
     (
       <div
@@ -105,115 +126,120 @@ export async function GET(
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          flexDirection: "row",
           backgroundColor: "#0D0D0D",
           color: "white",
           fontFamily: "Pretendard",
           padding: "60px",
         }}
       >
-        {/* 두루미가 본 OOO님의 사주 결과 */}
-        {userName && (
+        {/* 왼쪽: 두루미 일러스트 */}
+        {craneSrc ? (
           <div
             style={{
-              fontSize: "24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "420px",
+              flexShrink: 0,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={craneSrc}
+              width={360}
+              height={240}
+              style={{ objectFit: "contain" }}
+              alt=""
+            />
+          </div>
+        ) : null}
+
+        {/* 오른쪽: 텍스트 영역 */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            flex: 1,
+            ...(craneSrc ? {} : { alignItems: "center" }),
+          }}
+        >
+          {/* 이름 텍스트 */}
+          <div
+            style={{
+              fontSize: "22px",
               color: "#9CA3AF",
+              marginBottom: "20px",
+              display: "flex",
+            }}
+          >
+            {nameText}
+          </div>
+
+          {/* 등급 + 퍼센트 */}
+          <div
+            style={{
+              fontSize: "48px",
+              fontWeight: "bold",
+              color,
               marginBottom: "16px",
               display: "flex",
+              alignItems: "baseline",
+              gap: "12px",
             }}
           >
-            두루미가 본 {userName}님의 사주 결과
+            <span>{grade}등급</span>
+            <span style={{ fontSize: "28px", color: "#9CA3AF" }}>
+              상위 {topPercent}%
+            </span>
           </div>
-        )}
 
-        {/* 등급 원형 */}
-        <div
-          style={{
-            width: "80px",
-            height: "80px",
-            borderRadius: "50%",
-            backgroundColor: color,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: "24px",
-          }}
-        >
-          <span style={{ fontSize: "36px", fontWeight: "bold" }}>{grade}</span>
-        </div>
-
-        {/* 등급 텍스트 */}
-        <div
-          style={{
-            fontSize: "32px",
-            color,
-            marginBottom: "20px",
-            display: "flex",
-          }}
-        >
-          {grade}등급 · 상위 {topPercent}%
-        </div>
-
-        {/* 한줄평 */}
-        {safeHeadline && (
-          <div
-            style={{
-              fontSize: "24px",
-              color: "#E5E7EB",
-              marginBottom: "40px",
-              textAlign: "center",
-              display: "flex",
-              maxWidth: "900px",
-            }}
-          >
-            {safeHeadline}
-          </div>
-        )}
-
-        {/* 카테고리 등급 */}
-        <div
-          style={{
-            display: "flex",
-            gap: "24px",
-            marginBottom: "40px",
-          }}
-        >
-          {categoryItems.map((item) => (
+          {/* 한줄평 */}
+          {safeHeadline && (
             <div
-              key={item.label}
               style={{
+                fontSize: "24px",
+                color: "#E5E7EB",
+                marginBottom: "32px",
                 display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "20px",
-                color: "#9CA3AF",
+                maxWidth: "600px",
               }}
             >
-              <span>{item.label}</span>
-              <span
+              {safeHeadline}
+            </div>
+          )}
+
+          {/* 카테고리 등급 */}
+          <div
+            style={{
+              display: "flex",
+              gap: "20px",
+            }}
+          >
+            {categoryItems.map((item) => (
+              <div
+                key={item.label}
                 style={{
-                  color: GRADE_COLORS[item.grade] || "#6B7280",
-                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "18px",
+                  color: "#6B7280",
                 }}
               >
-                {item.grade}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* 브랜드 */}
-        <div
-          style={{
-            fontSize: "18px",
-            color: "#6B7280",
-            display: "flex",
-            marginTop: "auto",
-          }}
-        >
-          사주보는 두루미
+                <span>{item.label}</span>
+                <span
+                  style={{
+                    color: GRADE_COLORS[item.grade] || "#6B7280",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {item.grade}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     ),
