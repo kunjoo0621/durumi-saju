@@ -24,6 +24,7 @@ type ResultViewProps = {
   userName?: string;
   footer?: React.ReactNode;
   headerBackTo?: string;
+  onBack?: () => void;
 };
 
 export default function ResultView({
@@ -38,6 +39,7 @@ export default function ResultView({
   userName,
   footer,
   headerBackTo,
+  onBack,
 }: ResultViewProps) {
   const router = useRouter();
   const [wonguExpanded, setWonguExpanded] = useState(false);
@@ -53,7 +55,7 @@ export default function ResultView({
       <Header
         showBack
         sticky
-        onBack={headerBackTo ? () => router.push(headerBackTo) : undefined}
+        onBack={onBack || (headerBackTo ? () => router.push(headerBackTo) : undefined)}
       />
 
       <main className="px-6 py-8">

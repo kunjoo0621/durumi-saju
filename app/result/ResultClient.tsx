@@ -267,6 +267,17 @@ export default function ResultClient() {
   }, [resultIdParam, allowedByPayment, claimParam, session, router, status]);
 
   const [copied, setCopied] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [pendingLeaveUrl, setPendingLeaveUrl] = useState<string | null>(null);
+
+  const handleLeave = (url: string) => {
+    if (isGuest) {
+      setPendingLeaveUrl(url);
+      setShowLeaveDialog(true);
+    } else {
+      router.push(url);
+    }
+  };
   const handleShare = async () => {
     const id = resultId || resultIdParam;
     if (!id) return;
@@ -369,6 +380,7 @@ export default function ResultClient() {
       unknownBirthTime={unknownBirthTime}
       resultBirthYear={resultBirthYear}
       birthYear={birthYear}
+      onBack={() => handleLeave("/menu")}
       footer={
         <>
           {/* 공유 + 다시 보기 */}
@@ -383,8 +395,8 @@ export default function ResultClient() {
                 </button>
               )}
               <button
-                onClick={() => router.push("/start")}
-                className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-400 transition-all duration-200"
+                onClick={() => handleLeave("/menu")}
+                className="w-full rounded-xl px-4 py-4 text-[15px] font-semibold leading-none text-gray-300 bg-white/8 transition-all duration-200"
               >
                 다시 보기
               </button>
@@ -401,6 +413,48 @@ export default function ResultClient() {
               </p>
             </div>
           </footer>
+
+          {/* 게스트 이탈 방지 다이얼로그 */}
+          {showLeaveDialog && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
+              <div className="w-full max-w-[340px] bg-[#1A1A1A] rounded-2xl p-6">
+                <h3 className="text-[17px] font-bold text-white text-center mb-2">
+                  지금 나가시면 결과가 저장되지 않아요
+                </h3>
+                <p className="text-[13px] text-gray-400 text-center mb-6">
+                  카카오 로그인하면 결과가 영구 저장돼요
+                </p>
+                <div className="space-y-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLeaveDialog(false);
+                      signIn("kakao", { callbackUrl: "/result?claim=true" });
+                    }}
+                    className="w-full h-[50px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
+                      <path
+                        d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    카카오로 저장하기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLeaveDialog(false);
+                      if (pendingLeaveUrl) router.push(pendingLeaveUrl);
+                    }}
+                    className="w-full h-[50px] rounded-xl text-[14px] text-gray-500 transition-colors"
+                  >
+                    저장하지 않고 나가기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 게스트용 하단 스티키 카카오 로그인 CTA */}
           {isGuest && (
