@@ -35,19 +35,6 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   other: "기타",
 };
 
-/* ── 카드 등급 색상 ── */
-const CARD_GRADE: Record<string, { text: string; medalBg: string }> = {
-  S: { text: "#A855F7", medalBg: "rgba(168,85,247,0.12)" },
-  A: { text: "#EF4444", medalBg: "rgba(239,68,68,0.12)" },
-  B: { text: "#22C55E", medalBg: "rgba(34,197,94,0.12)" },
-  C: { text: "#EAB308", medalBg: "rgba(234,179,8,0.12)" },
-  D: { text: "#6B7280", medalBg: "rgba(107,114,128,0.12)" },
-};
-function getCardGrade(grade: string | null) {
-  const key = grade?.trim().toUpperCase().charAt(0) || "";
-  return CARD_GRADE[key] || CARD_GRADE.D;
-}
-
 /* ── 날짜 포맷 ── */
 function formatResultDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -427,7 +414,7 @@ export default function MyResultsPage() {
               {results.length > 0 && (
                 <div className="space-y-3">
                   {results.map((item) => {
-                    const cg = getCardGrade(item.grade);
+                    const gc = item.grade ? getGradeColor(item.grade) : null;
                     const badgeSrc = item.grade ? getGradeBadge(item.grade) : null;
                     const birthTime = formatBirthTime(item.birth_time);
 
@@ -435,7 +422,7 @@ export default function MyResultsPage() {
                       <div
                         key={item.id}
                         className="rounded-2xl p-5 flex items-center gap-4 cursor-pointer active:opacity-80 transition-opacity"
-                        style={{ background: item.is_primary ? "rgba(255,107,107,0.04)" : "#141414" }}
+                        style={{ background: "#141414" }}
                         onClick={() => router.push(`/result?resultId=${item.id}`)}
                         role="button"
                         tabIndex={0}
@@ -444,7 +431,7 @@ export default function MyResultsPage() {
                         {badgeSrc ? (
                           <div
                             className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
-                            style={{ background: cg.medalBg }}
+                            style={{ background: gc?.bg || "rgba(184,122,64,0.15)" }}
                           >
                             <Image
                               src={badgeSrc}
@@ -469,7 +456,7 @@ export default function MyResultsPage() {
                             {item.grade && (
                               <span
                                 className="text-[13px] font-semibold whitespace-nowrap shrink-0"
-                                style={{ color: cg.text }}
+                                style={{ color: gc?.text || "#D0A070" }}
                               >
                                 {item.grade}등급{item.score != null ? ` · ${item.score}점` : ""}
                               </span>
