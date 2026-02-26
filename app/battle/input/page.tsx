@@ -33,8 +33,26 @@ const RELATIONSHIP_OPTIONS: Array<{ label: string; value: RelationshipType }> = 
   { label: "기타", value: "other" },
 ];
 
-// Steps: 0=내사주선택, 1=관계유형, 2=상대방이름, 3=상대생년월일, 4=상대출생지, 5=상대성별
-const TOTAL_STEPS = 6;
+type StepId =
+  | "selectMode"
+  | "myName"
+  | "myBirth"
+  | "myLocation"
+  | "myGender"
+  | "relationship"
+  | "oppName"
+  | "oppBirth"
+  | "oppLocation"
+  | "oppGender";
+
+const STEPS_NEW: StepId[] = [
+  "selectMode", "myName", "myBirth", "myLocation", "myGender",
+  "relationship", "oppName", "oppBirth", "oppLocation", "oppGender",
+];
+const STEPS_EXISTING: StepId[] = [
+  "selectMode",
+  "relationship", "oppName", "oppBirth", "oppLocation", "oppGender",
+];
 
 export default function BattleInputPage() {
   const router = useRouter();
@@ -57,17 +75,23 @@ export default function BattleInputPage() {
   const [mySajuLoaded, setMySajuLoaded] = useState(false);
   const [mySajuError, setMySajuError] = useState("");
 
-  // Birth date display for step 0 (new input for A)
+  // Birth date display for A (new input)
   const [birthDateDisplayA, setBirthDateDisplayA] = useState("");
   const [birthTimeDisplayA, setBirthTimeDisplayA] = useState("");
   const [birthDateErrorA, setBirthDateErrorA] = useState("");
   const [birthTimeErrorA, setBirthTimeErrorA] = useState("");
 
-  // Birth date display for step 3 (B)
+  // Birth date display for B
   const [birthDateDisplayB, setBirthDateDisplayB] = useState("");
   const [birthTimeDisplayB, setBirthTimeDisplayB] = useState("");
   const [birthDateErrorB, setBirthDateErrorB] = useState("");
   const [birthTimeErrorB, setBirthTimeErrorB] = useState("");
+
+  // Dynamic step array based on playerAMode
+  const steps: StepId[] = playerAMode === "new" ? STEPS_NEW : STEPS_EXISTING;
+  const currentStepId = steps[step] ?? "selectMode";
+  const totalSteps = steps.length;
+  const isLastStep = step === totalSteps - 1;
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const el = e.target;
@@ -124,6 +148,7 @@ export default function BattleInputPage() {
       });
       setPlayerAMode("existing");
       setMySajuLoaded(true);
+      setStep(1); // Go to next step (relationship)
     } catch {
       setMySajuError("내 사주를 불러오지 못했습니다.");
     } finally {
@@ -196,30 +221,35 @@ export default function BattleInputPage() {
   };
 
   const canProceed = (): boolean => {
-    switch (step) {
-      case 0: // 내 사주 선택
+    switch (currentStepId) {
+      case "selectMode":
+        // In selectMode, proceed via button clicks (handleLoadMySaju / "새로 입력하기")
+        // If existing loaded, allow proceeding
         if (playerAMode === "existing" && mySajuLoaded) return true;
-        if (playerAMode === "new") {
-          if (!playerA.name?.trim()) return false;
-          if (!playerA.birthYear || !playerA.birthMonth || !playerA.birthDay) return false;
-          if (birthDateErrorA) return false;
-          if (!playerA.unknownBirthTime && (!playerA.birthHour || !playerA.birthMinute || !!birthTimeErrorA)) return false;
-          if (!playerA.birthLocation || !playerA.gender) return false;
-          return true;
-        }
         return false;
-      case 1: // 관계 유형
+      case "myName":
+        return !!playerA.name?.trim();
+      case "myBirth":
+        if (!playerA.birthYear || !playerA.birthMonth || !playerA.birthDay) return false;
+        if (birthDateErrorA) return false;
+        if (!playerA.unknownBirthTime && (!playerA.birthHour || !playerA.birthMinute || !!birthTimeErrorA)) return false;
+        return true;
+      case "myLocation":
+        return !!playerA.birthLocation?.trim();
+      case "myGender":
+        return !!playerA.gender;
+      case "relationship":
         return !!relationshipType;
-      case 2: // 상대방 이름
+      case "oppName":
         return !!playerB.name?.trim();
-      case 3: // 상대방 생년월일
+      case "oppBirth":
         if (!playerB.birthYear || !playerB.birthMonth || !playerB.birthDay) return false;
         if (birthDateErrorB) return false;
         if (!playerB.unknownBirthTime && (!playerB.birthHour || !playerB.birthMinute || !!birthTimeErrorB)) return false;
         return true;
-      case 4: // 상대방 출생지
+      case "oppLocation":
         return !!playerB.birthLocation?.trim();
-      case 5: // 상대방 성별
+      case "oppGender":
         return !!playerB.gender;
       default:
         return false;
@@ -227,12 +257,21 @@ export default function BattleInputPage() {
   };
 
   const handleNext = () => {
-    if (step < TOTAL_STEPS - 1) setStep(step + 1);
+    if (step < totalSteps - 1) setStep(step + 1);
   };
 
   const handleBack = () => {
-    if (step > 0) setStep(step - 1);
-    else router.push("/menu");
+    if (step > 0) {
+      const prevStepId = steps[step - 1];
+      // When going back to selectMode, reset playerAMode so user can re-choose
+      if (prevStepId === "selectMode") {
+        setPlayerAMode("");
+        setMySajuLoaded(false);
+      }
+      setStep(step - 1);
+    } else {
+      router.push("/menu");
+    }
   };
 
   const handleSubmit = () => {
@@ -240,8 +279,8 @@ export default function BattleInputPage() {
   };
 
   const renderStep = () => {
-    switch (step) {
-      case 0:
+    switch (currentStepId) {
+      case "selectMode":
         return (
           <div className="space-y-4">
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
@@ -260,7 +299,10 @@ export default function BattleInputPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPlayerAMode("new")}
+                  onClick={() => {
+                    setPlayerAMode("new");
+                    setStep(1); // Go to myName step
+                  }}
                   className="btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98]"
                 >
                   새로 입력하기
@@ -289,119 +331,142 @@ export default function BattleInputPage() {
                 </button>
               </div>
             )}
-
-            {playerAMode === "new" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">이름</label>
-                  <input
-                    type="text"
-                    value={playerA.name}
-                    onChange={(e) => setPlayerA({ name: e.target.value })}
-                    placeholder="예: 두루미"
-                    className="w-full text-[15px] h-[52px]"
-                    onFocus={handleInputFocus}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {CALENDAR_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setPlayerA({ calendarType: option.value })}
-                      className={`h-11 rounded-xl text-[15px] font-semibold transition-colors ${
-                        playerA.calendarType === option.value
-                          ? "bg-primary text-white"
-                          : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">생년월일</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={birthDateDisplayA}
-                    onChange={(e) => handleBirthDateChange(e, "A")}
-                    placeholder="예: 1990 / 05 / 15"
-                    maxLength={14}
-                    className="w-full text-[15px] h-[52px]"
-                    onFocus={handleInputFocus}
-                  />
-                  {birthDateErrorA && <p className="mt-2 text-[13px] text-primary">{birthDateErrorA}</p>}
-                </div>
-                {!playerA.unknownBirthTime && (
-                  <div>
-                    <label className="block text-[12px] text-text-secondary mb-2">태어난 시간</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={birthTimeDisplayA}
-                      onChange={(e) => handleBirthTimeChange(e, "A")}
-                      placeholder="예: 09 : 30"
-                      maxLength={7}
-                      className="w-full text-[15px] h-[52px]"
-                      onFocus={handleInputFocus}
-                    />
-                    {birthTimeErrorA && <p className="mt-2 text-[13px] text-primary">{birthTimeErrorA}</p>}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlayerA({ unknownBirthTime: !playerA.unknownBirthTime, birthHour: "", birthMinute: "" });
-                    setBirthTimeDisplayA("");
-                  }}
-                  className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200 ${playerA.unknownBirthTime ? "btn-option--selected" : ""}`}
-                  aria-pressed={playerA.unknownBirthTime}
-                >
-                  {playerA.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
-                </button>
-                <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">출생지</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {LOCATIONS.map((loc) => (
-                      <button
-                        key={loc}
-                        type="button"
-                        onClick={() => setPlayerA({ birthLocation: loc })}
-                        className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-all duration-200 active:scale-[0.98] ${
-                          playerA.birthLocation === loc ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
-                        }`}
-                      >
-                        {playerA.birthLocation === loc && <span className="mr-1">✓</span>}
-                        {loc}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">성별</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {["남성", "여성"].map((g) => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setPlayerA({ gender: g })}
-                        className={`btn-option py-3 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
-                          playerA.gender === g ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
-                        }`}
-                      >
-                        {playerA.gender === g && <span className="mr-1">✓</span>}
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         );
 
-      case 1:
+      case "myName":
+        return (
+          <div>
+            <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
+              이름을 알려주세요
+            </h2>
+            <input
+              type="text"
+              value={playerA.name}
+              onChange={(e) => setPlayerA({ name: e.target.value })}
+              placeholder="예: 두루미"
+              className="w-full text-[15px] h-[52px]"
+              autoFocus
+              onFocus={handleInputFocus}
+            />
+          </div>
+        );
+
+      case "myBirth":
+        return (
+          <div className="space-y-4">
+            <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
+              언제 태어났어요?
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {CALENDAR_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPlayerA({ calendarType: option.value })}
+                  className={`h-11 rounded-xl text-[15px] font-semibold transition-colors ${
+                    playerA.calendarType === option.value
+                      ? "bg-primary text-white"
+                      : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-2">생년월일</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={birthDateDisplayA}
+                onChange={(e) => handleBirthDateChange(e, "A")}
+                placeholder="예: 1990 / 05 / 15"
+                maxLength={14}
+                className="w-full text-[15px] h-[52px]"
+                onFocus={handleInputFocus}
+              />
+              {birthDateErrorA && <p className="mt-2 text-[13px] text-primary">{birthDateErrorA}</p>}
+            </div>
+            {!playerA.unknownBirthTime && (
+              <div>
+                <label className="block text-[12px] text-text-secondary mb-2">태어난 시간</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={birthTimeDisplayA}
+                  onChange={(e) => handleBirthTimeChange(e, "A")}
+                  placeholder="예: 09 : 30"
+                  maxLength={7}
+                  className="w-full text-[15px] h-[52px]"
+                  onFocus={handleInputFocus}
+                />
+                {birthTimeErrorA && <p className="mt-2 text-[13px] text-primary">{birthTimeErrorA}</p>}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setPlayerA({ unknownBirthTime: !playerA.unknownBirthTime, birthHour: "", birthMinute: "" });
+                setBirthTimeDisplayA("");
+              }}
+              className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200 ${playerA.unknownBirthTime ? "btn-option--selected" : ""}`}
+              aria-pressed={playerA.unknownBirthTime}
+            >
+              {playerA.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
+            </button>
+          </div>
+        );
+
+      case "myLocation":
+        return (
+          <div>
+            <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
+              어디서 태어났어요?
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {LOCATIONS.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setPlayerA({ birthLocation: loc })}
+                  className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-all duration-200 active:scale-[0.98] ${
+                    playerA.birthLocation === loc ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
+                  }`}
+                >
+                  {playerA.birthLocation === loc && <span className="mr-1">✓</span>}
+                  {loc}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "myGender":
+        return (
+          <div>
+            <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
+              성별은?
+            </h2>
+            <div className="space-y-3">
+              {["남성", "여성"].map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setPlayerA({ gender: g })}
+                  className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                    playerA.gender === g ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
+                  }`}
+                >
+                  {playerA.gender === g && <span className="mr-2">✓</span>}
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "relationship":
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
@@ -427,7 +492,7 @@ export default function BattleInputPage() {
           </div>
         );
 
-      case 2:
+      case "oppName":
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
@@ -445,7 +510,7 @@ export default function BattleInputPage() {
           </div>
         );
 
-      case 3:
+      case "oppBirth":
         return (
           <div className="space-y-4">
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
@@ -511,7 +576,7 @@ export default function BattleInputPage() {
           </div>
         );
 
-      case 4:
+      case "oppLocation":
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
@@ -535,7 +600,7 @@ export default function BattleInputPage() {
           </div>
         );
 
-      case 5:
+      case "oppGender":
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
@@ -564,7 +629,8 @@ export default function BattleInputPage() {
     }
   };
 
-  const isLastStep = step === TOTAL_STEPS - 1;
+  // Hide footer "다음" button on selectMode (navigation is via inline buttons)
+  const showFooterButton = currentStepId !== "selectMode";
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
@@ -587,22 +653,24 @@ export default function BattleInputPage() {
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
-            <span className="text-[14px] text-text-secondary">{step + 1} / {TOTAL_STEPS}</span>
+            <span className="text-[14px] text-text-secondary">{step + 1} / {totalSteps}</span>
             <div className="ml-3 flex-1 h-1 bg-background-tertiary rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${((step + 1) / TOTAL_STEPS) * 100}%` }}
+                style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
               />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={isLastStep ? handleSubmit : handleNext}
-            disabled={!canProceed()}
-            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
-          >
-            {isLastStep ? "결제하러 가기" : "다음"}
-          </button>
+          {showFooterButton && (
+            <button
+              type="button"
+              onClick={isLastStep ? handleSubmit : handleNext}
+              disabled={!canProceed()}
+              className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
+            >
+              {isLastStep ? "결제하러 가기" : "다음"}
+            </button>
+          )}
         </div>
       </footer>
     </div>
