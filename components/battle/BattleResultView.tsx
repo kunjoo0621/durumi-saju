@@ -77,7 +77,7 @@ export default function BattleResultView({
             gradeA={playerA.tier.grade}
             gradeB={playerB.tier.grade}
             comparison={comparison}
-            heroComment={llmAnalysis.heroComment}
+            heroQuip={llmAnalysis.heroQuip || (llmAnalysis as any).heroComment || ""}
           />
 
           {/* Section 2: Category matchups + Radar chart (grouped like personal ResultTable) */}

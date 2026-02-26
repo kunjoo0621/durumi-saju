@@ -39,7 +39,7 @@ export type BattleComparison = {
 };
 
 export type BattleLlmAnalysis = {
-  heroComment: string;
+  heroQuip: string;
   categoryComments: {
     wealth: string;
     love: string;

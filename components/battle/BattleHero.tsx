@@ -11,7 +11,7 @@ type Props = {
   gradeA: string;
   gradeB: string;
   comparison: BattleComparison;
-  heroComment: string;
+  heroQuip: string;
 };
 
 const INTENSITY_LABELS: Record<BattleIntensity, string> = {
@@ -21,21 +21,40 @@ const INTENSITY_LABELS: Record<BattleIntensity, string> = {
   "무승부": "대등한 대결",
 };
 
-export default function BattleHero({ nameA, nameB, gradeA, gradeB, comparison, heroComment }: Props) {
+function getIntensityComment(winsA: number, winsB: number): string {
+  const loserWins = Math.min(winsA, winsB);
+  if (loserWins === 0) return "완전 압살이야. 할 말이 없다.";
+  if (loserWins === 1) return "한 판 이긴 게 다행이야.";
+  if (loserWins === 2) return "아슬아슬했어. 결과가 뒤집혀도 이상하지 않았어.";
+  return "";
+}
+
+export default function BattleHero({ nameA, nameB, gradeA, gradeB, comparison, heroQuip }: Props) {
   const isDraw = comparison.overallWinner === "draw";
   const winnerIsA = comparison.overallWinner === "A";
   const winnerName = isDraw ? null : winnerIsA ? nameA : nameB;
+  const loserName = isDraw ? null : winnerIsA ? nameB : nameA;
 
   const colorA = getGradeColor(gradeA);
   const colorB = getGradeColor(gradeB);
 
+  // Code-generated fact text (100% accurate)
+  const heroFactText = isDraw
+    ? "둘 다 도긴개긴이야."
+    : `${loserName}, ${getIntensityComment(comparison.winsA, comparison.winsB)}`;
+
   return (
     <div className="rounded-3xl p-6 md:p-8" style={{ backgroundColor: "#141414" }}>
-      {/* Hero comment */}
+      {/* Hero fact (code-generated) + quip (LLM-generated) */}
       <div className="rounded-xl px-4 py-3 mb-8" style={{ backgroundColor: "rgba(255,107,107,0.08)" }}>
         <p className="text-[20px] font-aggro font-bold text-text-primary leading-snug text-center">
-          {heroComment}
+          {heroFactText}
         </p>
+        {heroQuip && (
+          <p className="text-[14px] text-text-secondary leading-relaxed text-center mt-2">
+            {heroQuip}
+          </p>
+        )}
       </div>
 
       {/* Grade badges VS layout */}
