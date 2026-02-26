@@ -4,7 +4,7 @@ import type { CategoryMatchResult } from "@/types/battle";
 import type { BattleLlmAnalysis } from "@/types/battle";
 
 const COLOR_WINNER = "#FF6B6B";
-const COLOR_LOSER = "#4A4A5A";
+const COLOR_LOSER = "#5A5A6A";
 
 type Props = {
   matches: CategoryMatchResult[];
@@ -94,9 +94,13 @@ function HighlightCard({
         </div>
 
         {comment && (
-          <p className="mt-4 text-base text-text-secondary leading-7 pt-3 bg-background-primary/40 rounded-lg -mx-1 px-1">
-            {comment}
-          </p>
+          <div className="mt-4 pt-3 bg-background-primary/40 rounded-lg -mx-1 px-4 pb-3">
+            <div className="space-y-4">
+              {comment.split(/\n\s*\n/).map((para, i) => (
+                <p key={i} className="text-[16px] text-text-primary leading-[1.75]">{para.trim()}</p>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -177,9 +181,13 @@ function CompactCard({
         </div>
 
         {comment && (
-          <p className="mt-3 text-[13px] text-text-secondary leading-relaxed pt-3 bg-background-primary/40 rounded-lg -mx-1 px-1">
-            {comment}
-          </p>
+          <div className="mt-3 pt-3 bg-background-primary/40 rounded-lg -mx-1 px-4 pb-3">
+            <div className="space-y-4">
+              {comment.split(/\n\s*\n/).map((para, i) => (
+                <p key={i} className="text-[15px] text-text-primary leading-[1.7]">{para.trim()}</p>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>

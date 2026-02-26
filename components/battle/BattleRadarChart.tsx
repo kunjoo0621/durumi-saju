@@ -128,8 +128,7 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB }: Props) {
 
   return (
     <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-title-3 text-text-primary font-semibold">카테고리 비교</h3>
+      <div className="mb-4 flex items-center justify-end">
         <div className="flex items-center gap-4 text-[12px]">
           <span className="flex items-center gap-1.5">
             <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_A }} />

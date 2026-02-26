@@ -79,25 +79,26 @@ export default function BattleResultView({
             heroComment={llmAnalysis.heroComment}
           />
 
-          {/* Section 2: Category matchups */}
-          <div>
-            <h3 className="text-title-3 text-text-primary font-semibold mb-4">카테고리별 대결</h3>
-            <BattleVsCard
-              matches={comparison.matches}
+          {/* Section 2: Category matchups + Radar chart (grouped like personal ResultTable) */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-title-3 text-text-primary font-semibold mb-4">카테고리별 대결</h3>
+              <BattleVsCard
+                matches={comparison.matches}
+                nameA={playerA.name}
+                nameB={playerB.name}
+                llmComments={llmAnalysis.categoryComments}
+                highlightCategory={highlightCategory}
+              />
+            </div>
+
+            <BattleRadarChart
+              scoresA={playerA.scores}
+              scoresB={playerB.scores}
               nameA={playerA.name}
               nameB={playerB.name}
-              llmComments={llmAnalysis.categoryComments}
-              highlightCategory={highlightCategory}
             />
           </div>
-
-          {/* Section 3: Radar chart */}
-          <BattleRadarChart
-            scoresA={playerA.scores}
-            scoresB={playerB.scores}
-            nameA={playerA.name}
-            nameB={playerB.name}
-          />
 
           {/* Section 4: Saju compare (placeholder) */}
           <BattleSajuCompare nameA={playerA.name} nameB={playerB.name} />

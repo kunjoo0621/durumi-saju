@@ -84,7 +84,7 @@ export default function BattleCompatibility({ compatibility }: Props) {
                 <BonusIcon weight="duotone" size={20} color="#9CA3AF" aria-hidden="true" />
                 <h4 className="text-[15px] font-semibold text-text-primary">{scenario.label}</h4>
               </div>
-              <p className="text-[14px] text-text-secondary leading-relaxed">{scenario.analysis}</p>
+              <p className="text-[15px] text-text-primary leading-[1.7]">{scenario.analysis}</p>
             </div>
           </div>
         );

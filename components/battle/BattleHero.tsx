@@ -32,15 +32,17 @@ export default function BattleHero({ nameA, nameB, gradeA, gradeB, comparison, h
   return (
     <div className="rounded-3xl p-6 md:p-8" style={{ backgroundColor: "#141414" }}>
       {/* Hero comment */}
-      <p className="text-[20px] font-aggro font-bold text-text-primary leading-snug text-center mb-8">
-        {heroComment}
-      </p>
+      <div className="rounded-xl px-4 py-3 mb-8" style={{ backgroundColor: "rgba(255,107,107,0.08)" }}>
+        <p className="text-[20px] font-aggro font-bold text-text-primary leading-snug text-center">
+          {heroComment}
+        </p>
+      </div>
 
       {/* Grade badges VS layout */}
       <div className="flex justify-center items-end gap-4">
         {/* Player A */}
         <div className="flex flex-col items-center flex-1">
-          <div className={isDraw || winnerIsA ? "" : "opacity-40"}>
+          <div className={isDraw || winnerIsA ? "" : "opacity-50"}>
             <OverallGradeBadgeSlot
               grade={gradeA as OverallGradeLabel}
               size={isDraw || winnerIsA ? 80 : 60}
@@ -62,7 +64,7 @@ export default function BattleHero({ nameA, nameB, gradeA, gradeB, comparison, h
 
         {/* Player B */}
         <div className="flex flex-col items-center flex-1">
-          <div className={isDraw || !winnerIsA ? "" : "opacity-40"}>
+          <div className={isDraw || !winnerIsA ? "" : "opacity-50"}>
             <OverallGradeBadgeSlot
               grade={gradeB as OverallGradeLabel}
               size={isDraw || !winnerIsA ? 80 : 60}
@@ -100,11 +102,11 @@ export default function BattleHero({ nameA, nameB, gradeA, gradeB, comparison, h
         </div>
         <div className="mt-2">
           {winnerName ? (
-            <span className="text-[15px] font-semibold" style={{ color: "#FF6B6B" }}>
+            <span className="text-lg font-semibold" style={{ color: "#FF6B6B" }}>
               {winnerName}의 {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
             </span>
           ) : (
-            <span className="text-[15px] font-semibold text-text-secondary">
+            <span className="text-lg font-semibold text-text-secondary">
               {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
             </span>
           )}
