@@ -111,7 +111,7 @@ function CheckoutContent() {
   // 에러 쿼리 파라미터 처리
   useEffect(() => {
     if (searchParams?.get("error") === "payment") {
-      setError("결제가 완료되지 않았습니다. 다시 시도해 주세요.");
+      setError("결제가 안 됐어. 다시 시도해봐.");
     }
   }, [searchParams]);
 
@@ -139,7 +139,7 @@ function CheckoutContent() {
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error || "결제 확인에 실패했습니다.");
+          throw new Error(data?.error || "결제 확인이 안 되고 있어.");
         }
         const completeData = await res.json().catch(() => ({}));
 
@@ -157,7 +157,7 @@ function CheckoutContent() {
           });
           if (!analyzeRes.ok) {
             const errData = await analyzeRes.json().catch(() => ({}));
-            throw new Error(errData?.error || "배틀 분석에 실패했습니다.");
+            throw new Error(errData?.error || "배틀 분석이 안 됐어. 다시 해볼까?");
           }
           const analyzeData = await analyzeRes.json();
           if (analyzeData?.result) {
@@ -290,11 +290,11 @@ function CheckoutForm({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error || "결제 준비에 실패했습니다.");
+          throw new Error(data?.error || "결제 준비가 안 됐어.");
         }
         const data = await res.json();
         const sid = typeof data?.sessionId === "string" ? data.sessionId : "";
-        if (!sid) throw new Error("결제 세션을 만들지 못했습니다.");
+        if (!sid) throw new Error("결제 연결이 안 됐어.");
         setSessionId(sid);
 
         const stored = sessionStorage.getItem("sajuOrderId");
@@ -332,7 +332,7 @@ function CheckoutForm({
         setWidgets(nextWidgets);
         setWidgetReady(true);
       } catch (err: any) {
-        setError(err?.message || "결제 위젯 초기화에 실패했습니다.");
+        setError(err?.message || "결제 화면을 못 불러왔어.");
       }
     };
     init();
@@ -340,11 +340,11 @@ function CheckoutForm({
 
   const handlePay = async () => {
     if (!sessionId) {
-      setError("결제 세션이 준비되지 않았습니다. 잠시만 기다려주세요.");
+      setError("아직 결제 준비 중이야. 잠깐만.");
       return;
     }
     if (!mockPayment && !widgets) {
-      setError("결제 위젯을 준비 중입니다. 잠시만 기다려주세요.");
+      setError("결제 화면 준비 중. 잠깐만.");
       return;
     }
 
@@ -375,7 +375,7 @@ function CheckoutForm({
           });
           if (!analyzeRes.ok) {
             const data = await analyzeRes.json().catch(() => ({}));
-            throw new Error(data?.error || "배틀 분석에 실패했습니다.");
+            throw new Error(data?.error || "배틀 분석이 안 됐어. 다시 해볼까?");
           }
           const data = await analyzeRes.json();
           if (data?.result) {
@@ -439,7 +439,7 @@ function CheckoutForm({
           src="https://js.tosspayments.com/v2/standard"
           strategy="afterInteractive"
           onLoad={() => setSdkReady(true)}
-          onError={() => setError("결제 모듈을 불러오지 못했어요. 페이지를 새로고침해 주세요.")}
+          onError={() => setError("결제 화면을 못 불러왔어. 새로고침 해봐.")}
         />
       )}
 
@@ -588,7 +588,7 @@ function CheckoutForm({
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
           <p className="text-sm text-gray-400 text-center mb-2">
-            {isAuthenticated ? "결과는 저장되니까 안심해" : isBattle ? "결과는 24시간 뒤 사라져" : "결제 후 바로 결과를 볼 수 있어"}
+            {isAuthenticated ? "결과는 저장되니까 안심해" : isBattle ? "결과는 24시간 뒤 사라져" : "결과는 24시간 뒤 사라져. 로그인하면 계속 저장돼"}
           </p>
           <button
             type="button"

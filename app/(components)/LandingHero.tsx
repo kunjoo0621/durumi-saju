@@ -1,9 +1,9 @@
 "use client";
 
 const VALUE_PROPS = [
-  "전체 등급 + 5개 카테고리(재물/연애/직장/건강/대인)",
-  "8개 섹션 장문 리포트",
-  "결제 후 계정에 저장, 언제든 다시 보기",
+  "전체 등급 + 재물/연애/직장/건강/대인 5개 따로",
+  "8개 섹션으로 길게 풀어줌",
+  "로그인하면 저장돼. 언제든 다시 볼 수 있음",
 ];
 
 export default function LandingHero() {
@@ -13,19 +13,19 @@ export default function LandingHero() {
 
       <div className="space-y-4">
         <h2 className="text-[46px] leading-[1.06] font-aggro text-white tracking-[-0.02em]">
-          좋은 말만 안 해요.
+          좋은 말만 안 해.
         </h2>
         <p className="text-[16px] leading-relaxed text-white/80">
-          등급부터 보여주고, 근거→해석→2주 행동팁까지 한 번에 정리해요.
+          등급부터 보여주고, 근거→해석→2주 행동팁까지 한 번에 정리해줌.
         </p>
       </div>
 
       <div className="space-y-2">
         <p className="text-[14px] text-white/90">
-          달달한 위로 대신, 구조부터 보여줘요.
+          달달한 위로 대신, 구조부터 보여줌.
         </p>
         <p className="text-[14px] text-white/75">
-          결론만 던지고 도망가지 않아요. 근거까지 같이 보여줘요.
+          결론만 던지고 안 도망감. 근거까지 같이 보여줌.
         </p>
       </div>
 

@@ -8,13 +8,13 @@ import Header from "@/components/layout/Header";
 
 // 상수를 모듈 레벨로 이동 (렌더링마다 재생성 방지)
 const QUESTIONS = [
-  { id: "name", title: "이름이 무엇인가요?", type: "text" },
-  { id: "birthDateTime", title: "언제 태어났어요?", type: "datetime" },
-  { id: "birthLocation", title: "어디서 태어나셨어요?", type: "location" },
-  { id: "gender", title: "성별이 어떻게 되세요?", type: "select" },
-  { id: "relationshipStatus", title: "현재 어떤 상태이신가요?", type: "select" },
-  { id: "employmentStatus", title: "현재 어떤 상태로 지내고 계신가요?", type: "select" },
-  { id: "coreFearAxis", title: "요즘 머릿속 1등 이슈는 뭐예요?", type: "select" },
+  { id: "name", title: "이름이 뭐야?", type: "text" },
+  { id: "birthDateTime", title: "언제 태어났어?", type: "datetime" },
+  { id: "birthLocation", title: "어디서 태어났어?", type: "location" },
+  { id: "gender", title: "성별은?", type: "select" },
+  { id: "relationshipStatus", title: "연애는?", type: "select" },
+  { id: "employmentStatus", title: "요즘 뭐 해?", type: "select" },
+  { id: "coreFearAxis", title: "요즘 머릿속 1등 이슈는?", type: "select" },
 ] as const;
 
 const LOCATIONS = [
@@ -78,8 +78,8 @@ export default function Home() {
     const y = Number(year);
     const m = Number(month);
     const d = Number(day);
-    if (y < 1900 || y > new Date().getFullYear()) return "올바른 연도를 입력해 주세요";
-    if (m < 1 || m > 12) return "월은 01~12 사이로 입력해 주세요";
+    if (y < 1900 || y > new Date().getFullYear()) return "올바른 연도를 입력해줘";
+    if (m < 1 || m > 12) return "월은 1~12 사이여야 해";
     const maxDay = new Date(y, m, 0).getDate();
     if (d < 1 || d > maxDay) return `${m}월은 ${maxDay}일까지만 있어요`;
     return "";
@@ -89,8 +89,8 @@ export default function Home() {
     if (!hour || !minute) return "";
     const h = Number(hour);
     const min = Number(minute);
-    if (h < 0 || h > 23) return "시는 00~23 사이로 입력해 주세요";
-    if (min < 0 || min > 59) return "분은 00~59 사이로 입력해 주세요";
+    if (h < 0 || h > 23) return "시는 0~23 사이여야 해";
+    if (min < 0 || min > 59) return "분은 0~59 사이여야 해";
     return "";
   };
 

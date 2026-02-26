@@ -60,6 +60,19 @@ export type BattleLlmAnalysis = {
     }[];
   };
   finalVerdict: string;
+  dangerSignals: {
+    triggers: {
+      situation: string;
+      description: string;
+    }[];
+    summary: string;
+  };
+  futureOutlook: {
+    now: string;
+    midTerm: string;
+    longTerm: string;
+    verdict: string;
+  };
 };
 
 export type BattleListItem = {

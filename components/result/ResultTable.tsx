@@ -159,12 +159,12 @@ export default function ResultTable({
             </p>
             {safeTier.confidence === "low" && (
               <p className="mt-2 text-[13px] text-text-tertiary">
-                만세력 계산에 실패해 추정 결과입니다
+                일부 계산에 오차가 있을 수 있어
               </p>
             )}
             {safeTier.confidence === "medium" && (
               <p className="mt-2 text-[13px] text-text-tertiary">
-                출생 시간 미상으로 정확도가 낮을 수 있어요
+                출생 시간을 몰라서 정확도가 좀 낮을 수 있어
               </p>
             )}
           </div>

@@ -95,7 +95,7 @@ export const BATTLE_SYSTEM_PROMPT = `너는 "두루미"라는 이름의 냉정�
 
 ────────────────────────────────
 [비유 규칙 — 반드시 준수]
-아래 위치에 반드시 비유를 1개씩 넣어라. 최소 9개:
+아래 위치에 반드시 비유를 1개씩 넣어라. 최소 11개:
 
 1. categoryComments.wealth — 비유 1개
 2. categoryComments.love — 비유 1개
@@ -106,9 +106,11 @@ export const BATTLE_SYSTEM_PROMPT = `너는 "두루미"라는 이름의 냉정�
 7. compatibility.mainScenario — 비유 1개
 8. compatibility.bonusScenarios[0] — 비유 1개
 9. compatibility.bonusScenarios[1] — 비유 1개
+10. dangerSignals.triggers 전체에서 — 비유 1개
+11. futureOutlook 전체에서 — 비유 1개
 
 비유 작성 규칙:
-- 9개 비유는 전부 서로 달라야 한다. 같은 비유를 두 번 쓰면 안 된다.
+- 11개 비유는 전부 서로 달라야 한다. 같은 비유를 두 번 쓰면 안 된다.
 - 비유는 두 사람의 오행 관계에서 자연스럽게 나와야 한다.
 - "마치 ~처럼", "~하는 격이야", "~와 같아" 형태로 작성.
 - 진부한 비유("댐에 구멍", "엔진에 연료", "불난 집에 부채질")는 피해라. 오행 특성에서 새로운 비유를 만들어라.
@@ -240,6 +242,31 @@ categoryComments나 compatibility에서 이미 한 말을 반복하지 마. 새�
 절대 금지 단어: "전패", "압승", "일방적", "모든 면에서" — 이건 코드에서 처리하는 영역이다.
 
 ────────────────────────────────
+[섹션별 작성 규칙 — dangerSignals]
+
+### dangerSignals
+이 관계에서 충돌이 터지는 구체적 상황을 분석.
+
+작성 규칙:
+- triggers는 반드시 2~3개.
+- 추상적 경고 금지. "소통이 안 맞아" (X) → "급하게 결정을 내려야 할 때, 너의 화 기운이 상대의 금을 녹여서..." (O)
+- 각 trigger의 description은 반드시 충/형/파, 오행 상극, 용신 충돌 중 하나 이상을 근거로 사용.
+- 비유 1개 이상 필수 (triggers 전체에서).
+- summary는 "결국 이 관계에서 조심해야 할 건 ~야/이야" 패턴 필수.
+- 다른 섹션(categoryComments, compatibility 등)의 내용을 복사하지 마.
+
+### futureOutlook
+대운 기반 시간축 변화 예측.
+
+작성 규칙:
+- 반드시 양쪽의 대운/세운 데이터를 근거로 작성.
+- 희망적 예측 금지. "좋아질 거야" (X) → "이런 조건이 맞으면 유지 가능해" (O)
+- 각 단계(now/midTerm/longTerm)는 구체적 대운 전환을 언급해야 해. "몇 년 후" 같은 모호한 표현 금지.
+- 비유 1개 이상 필수 (futureOutlook 전체에서).
+- verdict는 "결국 시간이 지나면 ~야/이야" 패턴 필수.
+- 다른 섹션의 내용을 복사하지 마.
+
+────────────────────────────────
 [마무리 패턴 — 모든 섹션에 적용]
 아래 섹션들은 반드시 "결국 ~야/이야." 형태의 한줄 마무리로 끝내라:
 
@@ -252,8 +279,10 @@ categoryComments나 compatibility에서 이미 한 말을 반복하지 마. 새�
 7. bonusScenarios[0]: "결국 [관계]였다면 [요약]이야."
 8. bonusScenarios[1]: "결국 [관계]였다면 [요약]이야."
 9. finalVerdict: "결국 이 대결은 [요약]이야."
+10. dangerSignals.summary: "결국 이 관계에서 조심해야 할 건 [요약]이야."
+11. futureOutlook.verdict: "결국 시간이 지나면 [요약]이야."
 
-이 패턴을 빠뜨리면 안 된다. 총 9개 마무리 문장이 있어야 한다.
+이 패턴을 빠뜨리면 안 된다. 총 11개 마무리 문장이 있어야 한다.
 
 ────────────────────────────────
 ## 출력 JSON 스키마
@@ -278,7 +307,22 @@ categoryComments나 compatibility에서 이미 한 말을 반복하지 마. 새�
       { "type": "[관계 유형]", "label": "[한국어]이었다면", "analysis": "4~5문장. 비유 1개. 결국 마무리 필수" }
     ]
   },
-  "finalVerdict": "2문단(승패원인\\n\\n결국 마무리). 카테고리 승패 사실 확인 필수"
+  "finalVerdict": "2문단(승패원인\\n\\n결국 마무리). 카테고리 승패 사실 확인 필수",
+  "dangerSignals": {
+    "triggers": [
+      {
+        "situation": "구체적 트리거 상황 (5~15자). 예: '돈 거래를 하면', '같이 술을 마시면', '중요한 결정 앞에서'",
+        "description": "왜 이 상황에서 충돌이 터지는지 사주 논리로 설명. 충/형/파, 오행 상극, 용신 충돌을 근거로. 2~3문장."
+      }
+    ],
+    "summary": "이 관계에서 가장 조심해야 할 핵심을 한 문장으로. '결국 이 관계에서 조심해야 할 건 ~야' 패턴."
+  },
+  "futureOutlook": {
+    "now": "현재 대운 기준 두 사람의 관계 상태. 대운 데이터를 근거로. 2~3문장.",
+    "midTerm": "3~5년 후 대운 전환기 기준 변화. 어떤 대운이 바뀌면서 관계가 어떻게 변하는지. 2~3문장.",
+    "longTerm": "10년 후 대운 기준 전망. 2~3문장.",
+    "verdict": "시간축 전체를 관통하는 마무리. '결국 시간이 지나면 ~야/이야' 패턴. 1문장."
+  }
 }`;
 
 /* ── LLM 입력 빌더 ── */
@@ -496,11 +540,44 @@ function validateAndNormalize(raw: any, relationshipType: RelationshipType): Bat
     };
   }
 
+  // dangerSignals: 객체 형태 기대
+  const ds = raw.dangerSignals;
+  let dangerSignals: BattleLlmAnalysis["dangerSignals"];
+  if (ds && typeof ds === "object" && !Array.isArray(ds)) {
+    dangerSignals = {
+      triggers: Array.isArray(ds.triggers)
+        ? ds.triggers.map((t: any) => ({
+            situation: typeof t?.situation === "string" ? t.situation : "",
+            description: typeof t?.description === "string" ? t.description : "",
+          }))
+        : [],
+      summary: typeof ds.summary === "string" ? ds.summary : "",
+    };
+  } else {
+    dangerSignals = { triggers: [], summary: "" };
+  }
+
+  // futureOutlook: 객체 형태 기대
+  const fo = raw.futureOutlook;
+  let futureOutlook: BattleLlmAnalysis["futureOutlook"];
+  if (fo && typeof fo === "object" && !Array.isArray(fo)) {
+    futureOutlook = {
+      now: typeof fo.now === "string" ? fo.now : "",
+      midTerm: typeof fo.midTerm === "string" ? fo.midTerm : "",
+      longTerm: typeof fo.longTerm === "string" ? fo.longTerm : "",
+      verdict: typeof fo.verdict === "string" ? fo.verdict : "",
+    };
+  } else {
+    futureOutlook = { now: "", midTerm: "", longTerm: "", verdict: "" };
+  }
+
   return {
     heroQuip: raw.heroQuip || "심판의 말이 필요 없는 결과야.",
     categoryComments,
     compatibility,
     finalVerdict: raw.finalVerdict || "",
+    dangerSignals,
+    futureOutlook,
   };
 }
 
@@ -529,5 +606,7 @@ function buildFallback(opts: {
     finalVerdict: winner
       ? `종합적으로 ${winner}의 사주가 더 강한 기운을 갖고 있어.`
       : "두 사람 다 비슷한 수준의 사주 기운이야.",
+    dangerSignals: { triggers: [], summary: "" },
+    futureOutlook: { now: "", midTerm: "", longTerm: "", verdict: "" },
   };
 }

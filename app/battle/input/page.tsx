@@ -103,8 +103,8 @@ export default function BattleInputPage() {
     const y = Number(year);
     const m = Number(month);
     const d = Number(day);
-    if (y < 1900 || y > new Date().getFullYear()) return "올바른 연도를 입력해 주세요";
-    if (m < 1 || m > 12) return "월은 01~12 사이로 입력해 주세요";
+    if (y < 1900 || y > new Date().getFullYear()) return "올바른 연도를 입력해줘";
+    if (m < 1 || m > 12) return "월은 1~12 사이여야 해";
     const maxDay = new Date(y, m, 0).getDate();
     if (d < 1 || d > maxDay) return `${m}월은 ${maxDay}일까지만 있어요`;
     return "";
@@ -114,8 +114,8 @@ export default function BattleInputPage() {
     if (!hour || !minute) return "";
     const h = Number(hour);
     const min = Number(minute);
-    if (h < 0 || h > 23) return "시는 00~23 사이로 입력해 주세요";
-    if (min < 0 || min > 59) return "분은 00~59 사이로 입력해 주세요";
+    if (h < 0 || h > 23) return "시는 0~23 사이여야 해";
+    if (min < 0 || min > 59) return "분은 0~59 사이여야 해";
     return "";
   };
 
@@ -124,10 +124,10 @@ export default function BattleInputPage() {
     setMySajuError("");
     try {
       const res = await fetch("/api/battle/my-saju");
-      if (!res.ok) throw new Error("불러오기 실패");
+      if (!res.ok) throw new Error("못 불러왔어");
       const data = await res.json();
       if (!data.result) {
-        setMySajuError("저장된 사주가 없습니다. 새로 입력해주세요.");
+        setMySajuError("저장된 사주가 없어. 새로 입력해줘.");
         return;
       }
       const r = data.result;
@@ -150,7 +150,7 @@ export default function BattleInputPage() {
       setMySajuLoaded(true);
       setStep(1); // Go to next step (relationship)
     } catch {
-      setMySajuError("내 사주를 불러오지 못했습니다.");
+      setMySajuError("사주를 못 불러왔어.");
     } finally {
       setLoadingMySaju(false);
     }
@@ -284,7 +284,7 @@ export default function BattleInputPage() {
         return (
           <div className="space-y-4">
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              내 사주를 준비해요
+              네 사주부터 준비할게
             </h2>
 
             {!playerAMode && (
@@ -338,7 +338,7 @@ export default function BattleInputPage() {
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              이름을 알려주세요
+              이름이 뭐야?
             </h2>
             <input
               type="text"
@@ -356,7 +356,7 @@ export default function BattleInputPage() {
         return (
           <div className="space-y-4">
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              언제 태어났어요?
+              언제 태어났어?
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {CALENDAR_OPTIONS.map((option) => (
@@ -422,7 +422,7 @@ export default function BattleInputPage() {
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              어디서 태어났어요?
+              어디서 태어났어?
             </h2>
             <div className="grid grid-cols-3 gap-2">
               {LOCATIONS.map((loc) => (
@@ -514,7 +514,7 @@ export default function BattleInputPage() {
         return (
           <div className="space-y-4">
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              {playerB.name}님은 언제 태어났어요?
+              {playerB.name}은(는) 언제 태어났어?
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {CALENDAR_OPTIONS.map((option) => (
@@ -580,7 +580,7 @@ export default function BattleInputPage() {
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              {playerB.name}님은 어디서 태어났어요?
+              {playerB.name}은(는) 어디서 태어났어?
             </h2>
             <div className="grid grid-cols-3 gap-2">
               {LOCATIONS.map((loc) => (
@@ -604,7 +604,7 @@ export default function BattleInputPage() {
         return (
           <div>
             <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              {playerB.name}님의 성별은?
+              {playerB.name} 성별은?
             </h2>
             <div className="space-y-3">
               {["남성", "여성"].map((g) => (

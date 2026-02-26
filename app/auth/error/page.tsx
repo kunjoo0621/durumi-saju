@@ -11,10 +11,10 @@ export default function AuthErrorPage() {
       <div className="max-w-[640px] w-full text-center">
         <div className="mb-6 text-6xl" aria-hidden="true">🔒</div>
         <h2 className="text-xl font-bold text-white mb-3">
-          로그인에 실패했습니다
+          로그인이 안 됐어
         </h2>
         <p className="text-sm text-gray-400 mb-8">
-          일시적인 오류가 발생했어요. 다시 시도해주세요.
+          잠깐 문제가 생겼어. 다시 해봐.
         </p>
         <button
           onClick={() => login("/menu")}

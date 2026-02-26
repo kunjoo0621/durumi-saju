@@ -105,7 +105,7 @@ export default function EditProfilePage() {
           return;
         }
         if (!res.ok) {
-          throw new Error("정보를 불러올 수 없습니다.");
+          throw new Error("정보를 못 불러왔어.");
         }
         const data = await res.json();
         const profile = data?.profile || {};
@@ -127,7 +127,7 @@ export default function EditProfilePage() {
         }
       } catch (error: any) {
         if (!cancelled) {
-          setErrorToast(error?.message || "정보를 불러오는 중 오류가 발생했습니다.");
+          setErrorToast(error?.message || "정보 불러오다 문제가 생겼어.");
         }
       } finally {
         if (!cancelled) {
@@ -189,10 +189,10 @@ export default function EditProfilePage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "저장에 실패했습니다.");
+        throw new Error(data?.error || "저장이 안 됐어. 다시 해볼까?");
       }
 
-      setToast("저장되었습니다");
+      setToast("저장됐어!");
       setTimeout(() => {
         router.back();
       }, 600);
@@ -216,7 +216,7 @@ export default function EditProfilePage() {
             </div>
           ) : authRequired ? (
             <div className="text-center py-24">
-              <p className="text-[14px] text-text-secondary mb-6">로그인이 필요합니다.</p>
+              <p className="text-[14px] text-text-secondary mb-6">로그인이 필요해</p>
               <button
                 type="button"
                 onClick={() => login("/edit-profile")}

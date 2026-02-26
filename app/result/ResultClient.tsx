@@ -67,9 +67,9 @@ export default function ResultClient() {
 
   // 로딩 단계 표시
   const LOADING_STEPS = [
-    { message: "사주 데이터를 계산하고 있어요", delay: 0 },
-    { message: "해석을 작성하고 있어요", delay: 5000 },
-    { message: "마무리하고 있어요", delay: 12000 },
+    { message: "사주 데이터를 계산하고 있어", delay: 0 },
+    { message: "해석을 작성하고 있어", delay: 5000 },
+    { message: "마무리하고 있어", delay: 12000 },
   ];
   const [loadingStep, setLoadingStep] = useState(0);
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -137,11 +137,11 @@ export default function ResultClient() {
 
         if (!res.ok) {
           if (res.status === 404 && status !== "authenticated") {
-            setError("결과가 만료되었거나 찾을 수 없습니다.\n게스트 결과는 24시간 후 자동 삭제돼요.");
+            setError("결과가 사라졌거나 못 찾겠어.\n게스트 결과는 24시간 뒤에 지워져.");
             return;
           }
           const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error || "결과를 불러오는데 실패했습니다.");
+          throw new Error(data?.error || "결과를 못 불러왔어.");
         }
 
         const data = await res.json();
@@ -207,20 +207,20 @@ export default function ResultClient() {
           const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
           setSajuData(saju);
         } else {
-          setError("입력 정보가 없어 결과를 표시할 수 없습니다.");
+          setError("입력 정보가 없어서 결과를 보여줄 수 없어.");
         }
       } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        setError("분석이 오래 걸리고 있어요. 다시 시도해 주세요.");
+        setError("분석이 오래 걸리고 있어. 다시 시도해봐.");
         const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
         if (justPaid || allowedByPayment) {
           setPaidButFailed(true);
         }
         return;
       }
-      const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
+      const message = err instanceof Error ? err.message : "뭔가 잘못됐어. 다시 시도해봐.";
       if (typeof message === "string" && message.includes("JSON5")) {
-        setError("결과 데이터 형식이 올바르지 않습니다. 잠시 후 다시 시도해 주세요.");
+        setError("결과가 이상하게 왔어. 잠깐 뒤에 다시 해봐.");
       } else {
         setError(message);
       }

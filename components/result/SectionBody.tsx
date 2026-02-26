@@ -78,7 +78,7 @@ export default function SectionBody({ content, locked = false, onUnlock, unlockL
   }
 
   if (!locked) {
-    return <p className="text-body-2 text-text-secondary">내용이 없습니다.</p>;
+    return <p className="text-body-2 text-text-secondary">아직 내용이 없어.</p>;
   }
 
   return (

@@ -10,6 +10,8 @@ import BattleRadarChart from "@/components/battle/BattleRadarChart";
 // TODO: enriched 데이터 추가 후 복원
 // import BattleSajuCompare from "@/components/battle/BattleSajuCompare";
 import BattleCompatibility from "@/components/battle/BattleCompatibility";
+import BattleDangerSignals from "@/components/battle/BattleDangerSignals";
+import BattleFutureOutlook from "@/components/battle/BattleFutureOutlook";
 import BattleFinalVerdict from "@/components/battle/BattleFinalVerdict";
 import BattleUpsellCTA from "@/components/battle/BattleUpsellCTA";
 import type { BattleResult } from "@/types/battle";
@@ -62,7 +64,7 @@ export default function BattleResultView({
 
           {dbError && (
             <div className="rounded-xl bg-[#1A1A1A] px-4 py-3 text-[13px] text-gray-400 text-center">
-              저장된 결과를 불러오지 못했습니다. 캐시된 데이터를 표시합니다.
+              저장된 결과를 못 불러와서 임시 데이터를 보여주고 있어.
             </div>
           )}
 
@@ -107,7 +109,13 @@ export default function BattleResultView({
           {/* Section 5: Compatibility scenarios */}
           <BattleCompatibility compatibility={llmAnalysis.compatibility} />
 
-          {/* Section 6: Final verdict */}
+          {/* Section 6: Danger signals */}
+          <BattleDangerSignals dangerSignals={llmAnalysis.dangerSignals} />
+
+          {/* Section 7: Future outlook */}
+          <BattleFutureOutlook futureOutlook={llmAnalysis.futureOutlook} />
+
+          {/* Section 8: Final verdict */}
           <BattleFinalVerdict finalVerdict={llmAnalysis.finalVerdict} />
 
           {/* Section 7: Upsell */}
