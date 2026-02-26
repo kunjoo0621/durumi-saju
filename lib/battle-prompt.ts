@@ -421,7 +421,7 @@ function validateAndNormalize(raw: any, relationshipType: RelationshipType): Bat
     compatibility = {
       baseAnalysis: compat.baseAnalysis || "",
       mainScenario: {
-        type: compat.mainScenario?.type || relationshipType,
+        type: relationshipType, // Always use server-side value — LLM may return Korean ("가족") instead of English ("family")
         analysis: compat.mainScenario?.analysis || "",
       },
       bonusScenarios: Array.isArray(compat.bonusScenarios)

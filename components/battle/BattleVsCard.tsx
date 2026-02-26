@@ -35,8 +35,13 @@ function HighlightCard({
   const bWins = m.winner === "B";
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
-      <div className="p-5 pb-4">
+    <div className="flex rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
+      {/* Left accent bar — matching personal SectionItem */}
+      <div
+        className="w-1 shrink-0 rounded-full my-2 ml-1.5"
+        style={{ backgroundColor: COLOR_WINNER }}
+      />
+      <div className="flex-1 min-w-0 p-5 pb-4">
         <div className="flex items-center gap-2 mb-1">
           <span
             className="text-[11px] font-medium px-2 py-0.5 rounded-md"
@@ -94,13 +99,14 @@ function HighlightCard({
         </div>
 
         {comment && (
-          <div className="mt-4 pt-4 bg-background-primary/40 rounded-lg px-4 pb-4">
+          <>
+            <div className="mt-5 mb-4 h-px bg-white/[0.06]" />
             <div className="space-y-6">
               {comment.split(/\n\s*\n/).map((para, i) => (
                 <p key={i} className="text-[16px] text-text-primary leading-[1.75]">{para.trim()}</p>
               ))}
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -181,13 +187,14 @@ function CompactCard({
         </div>
 
         {comment && (
-          <div className="mt-3 pt-4 bg-background-primary/40 rounded-lg px-4 pb-4">
+          <>
+            <div className="mt-4 mb-4 h-px bg-white/[0.06]" />
             <div className="space-y-6">
               {comment.split(/\n\s*\n/).map((para, i) => (
                 <p key={i} className="text-[16px] text-text-primary leading-[1.75]">{para.trim()}</p>
               ))}
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -218,7 +225,7 @@ export default function BattleVsCard({ matches, nameA, nameB, llmComments, highl
     : matches;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {highlightMatch && (
         <HighlightCard
           m={highlightMatch}

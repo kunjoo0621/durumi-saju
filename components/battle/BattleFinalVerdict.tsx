@@ -8,7 +8,7 @@ type Props = {
 };
 
 export default function BattleFinalVerdict({ finalVerdict }: Props) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   if (!finalVerdict) return null;
 

@@ -118,11 +118,11 @@ function SectionCard({
 export default function BattleCompatibility({ compatibility }: Props) {
   const { baseAnalysis, mainScenario, bonusScenarios } = compatibility;
   const MainIcon = SCENARIO_ICONS[mainScenario.type] || Handshake;
-  const mainDisplay = MAIN_SCENARIO_DISPLAY[mainScenario.type as RelationshipType] || `${mainScenario.type}로 만났다면`;
+  const mainDisplay = MAIN_SCENARIO_DISPLAY[mainScenario.type as RelationshipType] || "상성 분석";
 
   return (
     <div className="space-y-5">
-      {/* Base analysis — collapsible, default expanded */}
+      {/* Base analysis — collapsible, collapsed by default */}
       {baseAnalysis && (
         <SectionCard
           icon={Handshake}
@@ -134,11 +134,11 @@ export default function BattleCompatibility({ compatibility }: Props) {
           badgeBg="rgba(168,85,247,0.15)"
           content={baseAnalysis}
           collapsible
-          defaultExpanded
+          defaultExpanded={false}
         />
       )}
 
-      {/* Main scenario — collapsible, default expanded */}
+      {/* Main scenario — collapsible, collapsed by default */}
       {mainScenario.analysis && (
         <SectionCard
           icon={MainIcon}
@@ -150,7 +150,7 @@ export default function BattleCompatibility({ compatibility }: Props) {
           badgeBg="rgba(255,107,107,0.15)"
           content={mainScenario.analysis}
           collapsible
-          defaultExpanded
+          defaultExpanded={false}
         />
       )}
 
