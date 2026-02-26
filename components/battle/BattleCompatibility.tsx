@@ -122,7 +122,7 @@ export default function BattleCompatibility({ compatibility }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Base analysis — always expanded */}
+      {/* Base analysis — collapsible, default expanded */}
       {baseAnalysis && (
         <SectionCard
           icon={Handshake}
@@ -133,10 +133,12 @@ export default function BattleCompatibility({ compatibility }: Props) {
           badgeColor="#A855F7"
           badgeBg="rgba(168,85,247,0.15)"
           content={baseAnalysis}
+          collapsible
+          defaultExpanded
         />
       )}
 
-      {/* Main scenario — always expanded */}
+      {/* Main scenario — collapsible, default expanded */}
       {mainScenario.analysis && (
         <SectionCard
           icon={MainIcon}
@@ -147,6 +149,8 @@ export default function BattleCompatibility({ compatibility }: Props) {
           badgeColor="#FF6B6B"
           badgeBg="rgba(255,107,107,0.15)"
           content={mainScenario.analysis}
+          collapsible
+          defaultExpanded
         />
       )}
 
