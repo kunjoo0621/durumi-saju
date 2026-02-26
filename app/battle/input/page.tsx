@@ -33,8 +33,8 @@ const RELATIONSHIP_OPTIONS: Array<{ label: string; value: RelationshipType }> = 
   { label: "기타", value: "other" },
 ];
 
-// Steps: 0=내사주선택, 1=관계유형, 2=상대방이름, 3=상대생년월일, 4=상대출생지, 5=상대성별, 6=확인
-const TOTAL_STEPS = 7;
+// Steps: 0=내사주선택, 1=관계유형, 2=상대방이름, 3=상대생년월일, 4=상대출생지, 5=상대성별
+const TOTAL_STEPS = 6;
 
 export default function BattleInputPage() {
   const router = useRouter();
@@ -221,8 +221,6 @@ export default function BattleInputPage() {
         return !!playerB.birthLocation?.trim();
       case 5: // 상대방 성별
         return !!playerB.gender;
-      case 6: // 확인
-        return true;
       default:
         return false;
     }
@@ -561,44 +559,6 @@ export default function BattleInputPage() {
           </div>
         );
 
-      case 6:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-title-2 text-text-primary text-center font-aggro mb-6">
-              대결 정보를 확인해주세요
-            </h2>
-            <div className="flex gap-3">
-              <div className="flex-1 rounded-2xl bg-background-secondary p-4 border border-[#FF6B6B]/20">
-                <div className="text-[12px] text-[#FF6B6B] font-semibold mb-2">甲 (나)</div>
-                <div className="text-[15px] font-semibold text-text-primary">{playerA.name}</div>
-                <div className="text-[13px] text-text-secondary mt-1">
-                  {playerA.calendarType === "lunar" ? "음력 " : ""}
-                  {playerA.birthYear}.{playerA.birthMonth}.{playerA.birthDay}
-                </div>
-                <div className="text-[13px] text-text-tertiary">{playerA.gender} / {playerA.birthLocation}</div>
-              </div>
-              <div className="flex items-center">
-                <span className="text-[16px] font-bold text-primary">VS</span>
-              </div>
-              <div className="flex-1 rounded-2xl bg-background-secondary p-4 border border-[#A855F7]/20">
-                <div className="text-[12px] text-[#A855F7] font-semibold mb-2">乙 (상대)</div>
-                <div className="text-[15px] font-semibold text-text-primary">{playerB.name}</div>
-                <div className="text-[13px] text-text-secondary mt-1">
-                  {playerB.calendarType === "lunar" ? "음력 " : ""}
-                  {playerB.birthYear}.{playerB.birthMonth}.{playerB.birthDay}
-                </div>
-                <div className="text-[13px] text-text-tertiary">{playerB.gender} / {playerB.birthLocation}</div>
-              </div>
-            </div>
-            <div className="rounded-2xl bg-background-secondary p-4">
-              <div className="text-[13px] text-text-secondary">관계</div>
-              <div className="text-[15px] text-text-primary font-medium mt-1">
-                {RELATIONSHIP_OPTIONS.find((o) => o.value === relationshipType)?.label || "기타"}
-              </div>
-            </div>
-          </div>
-        );
-
       default:
         return null;
     }
@@ -641,7 +601,7 @@ export default function BattleInputPage() {
             disabled={!canProceed()}
             className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
           >
-            {isLastStep ? "2,000원 결제하고 대결하기" : "다음"}
+            {isLastStep ? "결제하러 가기" : "다음"}
           </button>
         </div>
       </footer>

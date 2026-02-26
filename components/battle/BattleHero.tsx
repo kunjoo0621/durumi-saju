@@ -2,6 +2,7 @@
 
 import OverallGradeBadgeSlot from "@/components/result/OverallGradeBadgeSlot";
 import type { OverallGradeLabel } from "@/components/result/OverallGradeBadgeSlot";
+import { getGradeColor } from "@/lib/utils/grade-colors";
 import type { BattleComparison, BattleIntensity } from "@/types/battle";
 
 type Props = {
@@ -23,58 +24,91 @@ const INTENSITY_LABELS: Record<BattleIntensity, string> = {
 export default function BattleHero({ nameA, nameB, gradeA, gradeB, comparison, heroComment }: Props) {
   const isDraw = comparison.overallWinner === "draw";
   const winnerIsA = comparison.overallWinner === "A";
+  const winnerName = isDraw ? null : winnerIsA ? nameA : nameB;
+
+  const colorA = getGradeColor(gradeA);
+  const colorB = getGradeColor(gradeB);
 
   return (
-    <div className="rounded-3xl bg-background-secondary p-6 text-center">
-      {/* heroComment */}
-      <p className="text-[18px] font-aggro font-bold text-text-primary leading-tight mb-6">
+    <div className="rounded-3xl p-6 md:p-8" style={{ backgroundColor: "#141414" }}>
+      {/* Hero comment */}
+      <p className="text-[20px] font-aggro font-bold text-text-primary leading-snug text-center mb-8">
         {heroComment}
       </p>
 
-      {/* Grade badges */}
-      <div className="flex justify-center items-center gap-6">
+      {/* Grade badges VS layout */}
+      <div className="flex justify-center items-end gap-4">
         {/* Player A */}
-        <div className="flex flex-col items-center">
-          <OverallGradeBadgeSlot
-            grade={gradeA as OverallGradeLabel}
-            size={isDraw || winnerIsA ? 80 : 64}
-            className={isDraw || winnerIsA ? "" : "opacity-50"}
-          />
-          <span className="text-[13px] text-text-secondary mt-3">{nameA}</span>
+        <div className="flex flex-col items-center flex-1">
+          <div className={isDraw || winnerIsA ? "" : "opacity-40"}>
+            <OverallGradeBadgeSlot
+              grade={gradeA as OverallGradeLabel}
+              size={isDraw || winnerIsA ? 80 : 60}
+            />
+          </div>
+          <span
+            className="text-[13px] font-semibold mt-3"
+            style={{ color: colorA.text }}
+          >
+            {gradeA}
+          </span>
+          <span className="text-[14px] text-text-secondary mt-1 truncate max-w-[100px]">{nameA}</span>
         </div>
 
-        <span className="text-sm text-gray-500 font-medium">VS</span>
+        {/* VS */}
+        <div className="flex flex-col items-center pb-4">
+          <span className="text-[13px] text-text-tertiary font-medium tracking-wider">VS</span>
+        </div>
 
         {/* Player B */}
-        <div className="flex flex-col items-center">
-          <OverallGradeBadgeSlot
-            grade={gradeB as OverallGradeLabel}
-            size={isDraw || !winnerIsA ? 80 : 64}
-            className={isDraw || !winnerIsA ? "" : "opacity-50"}
-          />
-          <span className="text-[13px] text-text-secondary mt-3">{nameB}</span>
+        <div className="flex flex-col items-center flex-1">
+          <div className={isDraw || !winnerIsA ? "" : "opacity-40"}>
+            <OverallGradeBadgeSlot
+              grade={gradeB as OverallGradeLabel}
+              size={isDraw || !winnerIsA ? 80 : 60}
+            />
+          </div>
+          <span
+            className="text-[13px] font-semibold mt-3"
+            style={{ color: colorB.text }}
+          >
+            {gradeB}
+          </span>
+          <span className="text-[14px] text-text-secondary mt-1 truncate max-w-[100px]">{nameB}</span>
         </div>
       </div>
 
-      {/* Win score */}
-      <div className="mt-5 flex justify-center items-center gap-2">
-        <span className={`text-xl font-bold ${isDraw || winnerIsA ? "text-white" : "text-gray-500"}`}>
-          {comparison.winsA}
-        </span>
-        <span className="text-text-tertiary">:</span>
-        <span className={`text-xl font-bold ${isDraw || !winnerIsA ? "text-white" : "text-gray-500"}`}>
-          {comparison.winsB}
-        </span>
-        {comparison.draws > 0 && (
-          <span className="text-text-tertiary text-sm ml-1">(무 {comparison.draws})</span>
-        )}
-      </div>
-
-      {/* Intensity */}
-      <div className="mt-2">
-        <span className="text-2xl font-bold" style={{ color: "#FF6B6B" }}>
-          {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
-        </span>
+      {/* Score + intensity */}
+      <div className="mt-6 text-center">
+        <div className="flex justify-center items-baseline gap-3">
+          <span
+            className="text-[28px] font-aggro font-bold"
+            style={{ color: isDraw || winnerIsA ? "#FFFFFF" : "rgba(255,255,255,0.3)" }}
+          >
+            {comparison.winsA}
+          </span>
+          <span className="text-text-tertiary text-lg">:</span>
+          <span
+            className="text-[28px] font-aggro font-bold"
+            style={{ color: isDraw || !winnerIsA ? "#FFFFFF" : "rgba(255,255,255,0.3)" }}
+          >
+            {comparison.winsB}
+          </span>
+          {comparison.draws > 0 && (
+            <span className="text-text-tertiary text-[13px] ml-1">(무 {comparison.draws})</span>
+          )}
+        </div>
+        <div className="mt-2">
+          {winnerName ? (
+            <span className="text-[15px] font-semibold" style={{ color: "#FF6B6B" }}>
+              {winnerName}의 {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
+            </span>
+          ) : (
+            <span className="text-[15px] font-semibold text-text-secondary">
+              {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

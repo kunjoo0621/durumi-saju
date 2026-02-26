@@ -35,19 +35,22 @@ function HighlightCard({
   const bWins = m.winner === "B";
 
   return (
-    <div className="rounded-2xl bg-background-secondary overflow-hidden border border-[#FF6B6B]/20">
+    <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
       <div className="p-5 pb-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[11px] font-semibold tracking-wide" style={{ color: "#FF6B6B" }}>
-            이번 배틀의 결정적 항목
+          <span
+            className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+            style={{ color: "#FF6B6B", backgroundColor: "rgba(255,107,107,0.15)" }}
+          >
+            결정적 항목
           </span>
         </div>
         <div className="flex items-center justify-between mb-4">
           <span className="text-[17px] font-bold text-text-primary">{m.category}</span>
           {m.winner !== "draw" && (
             <span
-              className="text-[12px] font-semibold px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: "#FF6B6B20", color: "#FF6B6B" }}
+              className="text-[12px] font-semibold px-2.5 py-1 rounded-md"
+              style={{ backgroundColor: "rgba(255,107,107,0.15)", color: "#FF6B6B" }}
             >
               +{m.diff}점 차이
             </span>
@@ -91,7 +94,7 @@ function HighlightCard({
         </div>
 
         {comment && (
-          <p className="mt-4 text-base text-text-secondary leading-7 pt-3 border-t border-white/5">
+          <p className="mt-4 text-base text-text-secondary leading-7 pt-3 bg-background-primary/40 rounded-lg -mx-1 px-1">
             {comment}
           </p>
         )}
@@ -174,7 +177,7 @@ function CompactCard({
         </div>
 
         {comment && (
-          <p className="mt-3 text-[13px] text-text-secondary leading-relaxed pt-3 border-t border-white/5">
+          <p className="mt-3 text-[13px] text-text-secondary leading-relaxed pt-3 bg-background-primary/40 rounded-lg -mx-1 px-1">
             {comment}
           </p>
         )}

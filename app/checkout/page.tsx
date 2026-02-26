@@ -10,6 +10,22 @@ import { useBattleStore } from "@/store/useBattleStore";
 
 type CheckoutType = "analysis" | "battle";
 
+const BATTLE_RELATIONSHIP_EMOJI: Record<string, string> = {
+  lover: "\u2764\uFE0F",
+  friend: "\uD83C\uDF7A",
+  colleague: "\uD83C\uDFE2",
+  family: "\uD83C\uDFE0",
+  other: "\uD83E\uDD1D",
+};
+
+const BATTLE_RELATIONSHIP_LABELS: Record<string, string> = {
+  lover: "연인",
+  friend: "친구",
+  colleague: "직장동료",
+  family: "가족",
+  other: "기타",
+};
+
 function CheckoutLoading() {
   return (
     <div className="min-h-screen bg-background-primary flex items-center justify-center px-5">
@@ -446,10 +462,10 @@ function CheckoutForm({
       <main className="flex-1 px-5 pb-48">
         <div className="max-w-[640px] mx-auto pt-10 space-y-4">
           {isBattle ? (
-            <>
-              <p className="text-[18px] font-semibold">1:1 사주 배틀 결과가 열려요</p>
-              <p className="text-[15px] text-text-secondary">5개 카테고리 비교 + 심판 판정</p>
-            </>
+            <div className="text-center">
+              <h2 className="text-[22px] font-bold font-aggro text-text-primary">두루미의 냉정한 심판이 시작된다</h2>
+              <p className="text-[14px] text-text-secondary mt-2">5개 카테고리, 누가 더 강한지 판가름해줄게</p>
+            </div>
           ) : (
             <>
               <h2 className="text-2xl font-bold font-aggro text-white text-center">결제하면 바로 네 사주 까발려줌</h2>
@@ -457,18 +473,35 @@ function CheckoutForm({
           )}
 
           {isBattle ? (
-            <div className="rounded-2xl bg-background-secondary p-5 space-y-3">
-              <div className="text-[14px] text-text-secondary">대결 정보 확인</div>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 rounded-xl bg-background-primary p-3 text-center">
-                  <div className="text-[13px] text-text-tertiary">甲</div>
-                  <div className="text-[15px] font-semibold text-text-primary mt-1">{battleStore.playerA.name}</div>
+            <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: "#141414" }}>
+              <div className="flex gap-3">
+                <div className="flex-1 rounded-xl bg-background-primary p-4 border border-[#FF6B6B]/20">
+                  <div className="text-[12px] font-semibold mb-2" style={{ color: "#FF6B6B" }}>甲 (나)</div>
+                  <div className="text-[15px] font-semibold text-text-primary">{battleStore.playerA.name}</div>
+                  <div className="text-[13px] text-text-secondary mt-1">
+                    {battleStore.playerA.calendarType === "lunar" ? "음력 " : ""}
+                    {battleStore.playerA.birthYear}.{battleStore.playerA.birthMonth}.{battleStore.playerA.birthDay}
+                  </div>
+                  <div className="text-[13px] text-text-tertiary">{battleStore.playerA.gender} / {battleStore.playerA.birthLocation}</div>
                 </div>
-                <div className="text-[16px] font-bold text-primary">VS</div>
-                <div className="flex-1 rounded-xl bg-background-primary p-3 text-center">
-                  <div className="text-[13px] text-text-tertiary">乙</div>
-                  <div className="text-[15px] font-semibold text-text-primary mt-1">{battleStore.playerB.name}</div>
+                <div className="flex items-center">
+                  <span className="text-[18px] font-bold text-primary">VS</span>
                 </div>
+                <div className="flex-1 rounded-xl bg-background-primary p-4 border border-[#3B82F6]/20">
+                  <div className="text-[12px] font-semibold mb-2" style={{ color: "#3B82F6" }}>乙 (상대)</div>
+                  <div className="text-[15px] font-semibold text-text-primary">{battleStore.playerB.name}</div>
+                  <div className="text-[13px] text-text-secondary mt-1">
+                    {battleStore.playerB.calendarType === "lunar" ? "음력 " : ""}
+                    {battleStore.playerB.birthYear}.{battleStore.playerB.birthMonth}.{battleStore.playerB.birthDay}
+                  </div>
+                  <div className="text-[13px] text-text-tertiary">{battleStore.playerB.gender} / {battleStore.playerB.birthLocation}</div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-background-primary px-4 py-3 text-center">
+                <span className="text-[14px] text-text-secondary">관계</span>
+                <span className="text-[14px] text-text-primary font-medium ml-2">
+                  {BATTLE_RELATIONSHIP_EMOJI[battleStore.relationshipType] || "\uD83E\uDD1D"} {BATTLE_RELATIONSHIP_LABELS[battleStore.relationshipType] || "기타"}
+                </span>
               </div>
             </div>
           ) : (
@@ -555,7 +588,7 @@ function CheckoutForm({
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
           <p className="text-sm text-gray-400 text-center mb-2">
-            {isAuthenticated ? "결과는 저장되니까 안심해" : "결제 후 바로 결과를 볼 수 있어"}
+            {isAuthenticated ? "결과는 저장되니까 안심해" : isBattle ? "결과는 24시간 뒤 사라져" : "결제 후 바로 결과를 볼 수 있어"}
           </p>
           <button
             type="button"
@@ -579,7 +612,7 @@ function CheckoutForm({
                 </svg>
                 결제 준비 중...
               </span>
-            ) : `${amount.toLocaleString()}원 결제하기`}
+            ) : isBattle ? `${amount.toLocaleString()}원 결제하고 대결하기` : `${amount.toLocaleString()}원 결제하기`}
           </button>
 
           {/* 비로그인 시 선택적 카카오 로그인 */}
