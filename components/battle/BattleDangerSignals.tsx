@@ -47,15 +47,6 @@ export default function BattleDangerSignals({ dangerSignals }: Props) {
           </div>
         </button>
 
-        {/* Collapsed preview: summary */}
-        {!expanded && dangerSignals.summary && (
-          <div className="px-6 pb-5 -mt-1">
-            <p className="text-[14px] text-text-secondary leading-relaxed line-clamp-2">
-              {dangerSignals.summary}
-            </p>
-          </div>
-        )}
-
         {/* Content — grid animation */}
         <div
           className={`grid transition-[grid-template-rows] duration-300 ease-out ${

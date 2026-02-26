@@ -54,15 +54,6 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
           </div>
         </button>
 
-        {/* Collapsed preview: verdict */}
-        {!expanded && futureOutlook.verdict && (
-          <div className="px-6 pb-5 -mt-1">
-            <p className="text-[14px] text-text-secondary leading-relaxed line-clamp-2">
-              {futureOutlook.verdict}
-            </p>
-          </div>
-        )}
-
         {/* Content — grid animation */}
         <div
           className={`grid transition-[grid-template-rows] duration-300 ease-out ${
