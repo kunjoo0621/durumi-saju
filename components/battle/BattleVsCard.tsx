@@ -94,8 +94,8 @@ function HighlightCard({
         </div>
 
         {comment && (
-          <div className="mt-4 pt-3 bg-background-primary/40 rounded-lg -mx-1 px-4 pb-3">
-            <div className="space-y-4">
+          <div className="mt-4 pt-4 bg-background-primary/40 rounded-lg px-4 pb-4">
+            <div className="space-y-6">
               {comment.split(/\n\s*\n/).map((para, i) => (
                 <p key={i} className="text-[16px] text-text-primary leading-[1.75]">{para.trim()}</p>
               ))}
@@ -181,10 +181,10 @@ function CompactCard({
         </div>
 
         {comment && (
-          <div className="mt-3 pt-3 bg-background-primary/40 rounded-lg -mx-1 px-4 pb-3">
-            <div className="space-y-4">
+          <div className="mt-3 pt-4 bg-background-primary/40 rounded-lg px-4 pb-4">
+            <div className="space-y-6">
               {comment.split(/\n\s*\n/).map((para, i) => (
-                <p key={i} className="text-[15px] text-text-primary leading-[1.7]">{para.trim()}</p>
+                <p key={i} className="text-[16px] text-text-primary leading-[1.75]">{para.trim()}</p>
               ))}
             </div>
           </div>

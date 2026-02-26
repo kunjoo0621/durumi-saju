@@ -7,7 +7,8 @@ import SavePromptBanner from "@/components/SavePromptBanner";
 import BattleHero from "@/components/battle/BattleHero";
 import BattleVsCard from "@/components/battle/BattleVsCard";
 import BattleRadarChart from "@/components/battle/BattleRadarChart";
-import BattleSajuCompare from "@/components/battle/BattleSajuCompare";
+// TODO: enriched 데이터 추가 후 복원
+// import BattleSajuCompare from "@/components/battle/BattleSajuCompare";
 import BattleCompatibility from "@/components/battle/BattleCompatibility";
 import BattleFinalVerdict from "@/components/battle/BattleFinalVerdict";
 import BattleUpsellCTA from "@/components/battle/BattleUpsellCTA";
@@ -100,8 +101,8 @@ export default function BattleResultView({
             />
           </div>
 
-          {/* Section 4: Saju compare (placeholder) */}
-          <BattleSajuCompare nameA={playerA.name} nameB={playerB.name} />
+          {/* TODO: enriched 데이터 추가 후 복원 */}
+          {/* <BattleSajuCompare nameA={playerA.name} nameB={playerB.name} /> */}
 
           {/* Section 5: Compatibility scenarios */}
           <BattleCompatibility compatibility={llmAnalysis.compatibility} />
