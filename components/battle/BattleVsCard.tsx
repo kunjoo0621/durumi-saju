@@ -183,8 +183,20 @@ function CompactCard({
   );
 }
 
+const CATEGORY_KEY_MAP: Record<string, keyof BattleLlmAnalysis["categoryComments"]> = {
+  "재물운": "wealth",
+  "연애운": "love",
+  "직장운": "career",
+  "건강운": "health",
+  "대인운": "social",
+};
+
+function getComment(llmComments: BattleLlmAnalysis["categoryComments"], category: string): string | undefined {
+  const key = CATEGORY_KEY_MAP[category];
+  return key ? llmComments[key] || undefined : undefined;
+}
+
 export default function BattleVsCard({ matches, nameA, nameB, llmComments, highlightCategory }: Props) {
-  const commentMap = new Map(llmComments.map((c) => [c.category, c.comment]));
 
   const highlightMatch = highlightCategory
     ? matches.find((m) => m.category === highlightCategory)
@@ -201,7 +213,7 @@ export default function BattleVsCard({ matches, nameA, nameB, llmComments, highl
           m={highlightMatch}
           nameA={nameA}
           nameB={nameB}
-          comment={commentMap.get(highlightMatch.category)}
+          comment={getComment(llmComments, highlightMatch.category)}
         />
       )}
       {compactMatches.map((m) => (
@@ -210,7 +222,7 @@ export default function BattleVsCard({ matches, nameA, nameB, llmComments, highl
           m={m}
           nameA={nameA}
           nameB={nameB}
-          comment={commentMap.get(m.category)}
+          comment={getComment(llmComments, m.category)}
         />
       ))}
     </div>

@@ -39,15 +39,27 @@ export type BattleComparison = {
 };
 
 export type BattleLlmAnalysis = {
-  headVerdict: string;
-  categoryComments: Array<{
-    category: string;
-    comment: string;
-  }>;
-  overallComment: string;
-  playerASummary: string;
-  playerBSummary: string;
-  compatibilityAnalysis?: string;
+  heroComment: string;
+  categoryComments: {
+    wealth: string;
+    love: string;
+    career: string;
+    health: string;
+    social: string;
+  };
+  compatibility: {
+    baseAnalysis: string;
+    mainScenario: {
+      type: RelationshipType;
+      analysis: string;
+    };
+    bonusScenarios: {
+      type: string;
+      label: string;
+      analysis: string;
+    }[];
+  };
+  finalVerdict: string;
 };
 
 export type BattleListItem = {
