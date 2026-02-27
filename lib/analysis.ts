@@ -2186,7 +2186,7 @@ export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
         birthDay: calcDay,
         birthHour: hour,
         birthMinute: minute,
-        gender: input.gender === "남" || input.gender === "male" ? "male" : "female",
+        gender: input.gender === "남" || input.gender === "남성" || input.gender === "male" ? "male" : "female",
         birthLocation: input.birthLocation,
         yearPillar,
         monthPillar,
