@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import SavePromptBanner from "@/components/SavePromptBanner";
 import BattleHero from "@/components/battle/BattleHero";
-import BattleVsCard from "@/components/battle/BattleVsCard";
 import BattleRadarChart from "@/components/battle/BattleRadarChart";
-// TODO: enriched 데이터 추가 후 복원
-// import BattleSajuCompare from "@/components/battle/BattleSajuCompare";
+import BattleCategorySwiper from "@/components/battle/BattleCategorySwiper";
 import BattleCompatibility from "@/components/battle/BattleCompatibility";
-import BattleDangerSignals from "@/components/battle/BattleDangerSignals";
 import BattleFutureOutlook from "@/components/battle/BattleFutureOutlook";
 import BattleFinalVerdict from "@/components/battle/BattleFinalVerdict";
 import BattleUpsellCTA from "@/components/battle/BattleUpsellCTA";
@@ -78,44 +75,39 @@ export default function BattleResultView({
             nameB={playerB.name}
             gradeA={playerA.tier.grade}
             gradeB={playerB.tier.grade}
+            compositeA={playerA.tier.composite}
+            compositeB={playerB.tier.composite}
             comparison={comparison}
             heroQuip={llmAnalysis.heroQuip || (llmAnalysis as any).heroComment || ""}
           />
 
-          {/* Section 2: Category matchups + Radar chart (grouped like personal ResultTable) */}
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-title-3 text-text-primary font-semibold mb-4">카테고리별 대결</h3>
-              <BattleVsCard
-                matches={comparison.matches}
-                nameA={playerA.name}
-                nameB={playerB.name}
-                llmComments={llmAnalysis.categoryComments}
-                highlightCategory={highlightCategory}
-              />
-            </div>
+          {/* Section 2: Radar chart */}
+          <BattleRadarChart
+            scoresA={playerA.scores}
+            scoresB={playerB.scores}
+            nameA={playerA.name}
+            nameB={playerB.name}
+          />
 
-            <BattleRadarChart
-              scoresA={playerA.scores}
-              scoresB={playerB.scores}
+          {/* Section 3: Category matchups (swiper) */}
+          <div>
+            <h3 className="text-title-3 text-text-primary font-semibold mb-4">카테고리별 대결</h3>
+            <BattleCategorySwiper
+              matches={comparison.matches}
               nameA={playerA.name}
               nameB={playerB.name}
+              llmComments={llmAnalysis.categoryComments}
+              highlightCategory={highlightCategory}
             />
           </div>
 
-          {/* TODO: enriched 데이터 추가 후 복원 */}
-          {/* <BattleSajuCompare nameA={playerA.name} nameB={playerB.name} /> */}
-
-          {/* Section 5: Compatibility scenarios */}
+          {/* Section 4: Compatibility */}
           <BattleCompatibility compatibility={llmAnalysis.compatibility} />
 
-          {/* Section 6: Danger signals */}
-          <BattleDangerSignals dangerSignals={llmAnalysis.dangerSignals} />
-
-          {/* Section 7: Future outlook */}
+          {/* Section 5: Future outlook */}
           <BattleFutureOutlook futureOutlook={llmAnalysis.futureOutlook} />
 
-          {/* Section 8: Final verdict */}
+          {/* Section 6: Final verdict */}
           <BattleFinalVerdict finalVerdict={llmAnalysis.finalVerdict} />
 
           {/* Section 7: Upsell */}

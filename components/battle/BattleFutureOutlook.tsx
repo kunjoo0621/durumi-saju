@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HourglassHigh, CaretDown } from "@phosphor-icons/react";
+import { Binoculars, CaretDown } from "@phosphor-icons/react";
 import type { BattleLlmAnalysis } from "@/types/battle";
 
 type Props = {
@@ -35,8 +35,8 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
           aria-expanded={expanded}
         >
           <div className="flex items-center gap-2">
-            <HourglassHigh weight="bold" size={28} color="#6366F1" aria-hidden="true" />
-            <span className="text-title-3 text-text-primary">10년 뒤 이 관계</span>
+            <Binoculars weight="bold" size={28} color="#6366F1" aria-hidden="true" />
+            <span className="text-title-3 text-text-primary">미래 예측</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span

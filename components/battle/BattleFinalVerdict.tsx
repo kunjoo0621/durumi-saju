@@ -35,7 +35,7 @@ export default function BattleFinalVerdict({ finalVerdict }: Props) {
               className="text-[11px] font-medium px-2 py-0.5 rounded-md"
               style={{ color: "#FF6B6B", backgroundColor: "rgba(255,107,107,0.15)" }}
             >
-              심판
+              판정
             </span>
             <CaretDown
               weight="bold"

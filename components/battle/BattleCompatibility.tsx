@@ -18,22 +18,19 @@ const SCENARIO_ICONS: Record<string, Icon> = {
 };
 
 const MAIN_SCENARIO_DISPLAY: Record<RelationshipType, string> = {
-  lover: "연인으로 만났다면",
-  friend: "친구로 만났다면",
-  colleague: "직장동료로 만났다면",
-  family: "가족으로 만났다면",
-  other: "지인으로 만났다면",
+  lover: "연인으로서",
+  friend: "친구로서",
+  colleague: "직장동료로서",
+  family: "가족으로서",
+  other: "지인으로서",
 };
 
-/* ── Reusable section card matching personal SectionItem style ── */
+/* ── Reusable collapsible card for bonus scenarios ── */
 
 function SectionCard({
   icon: IconComp,
   iconColor,
   title,
-  badge,
-  badgeColor,
-  badgeBg,
   accentColor,
   content,
   collapsible = false,
@@ -42,9 +39,6 @@ function SectionCard({
   icon: Icon;
   iconColor: string;
   title: string;
-  badge?: string;
-  badgeColor?: string;
-  badgeBg?: string;
   accentColor: string;
   content: string;
   collapsible?: boolean;
@@ -59,7 +53,6 @@ function SectionCard({
         style={{ backgroundColor: accentColor }}
       />
       <div className="flex-1 min-w-0">
-        {/* Header — matches personal SectionHeader layout */}
         <button
           type="button"
           onClick={collapsible ? () => setExpanded((p) => !p) : undefined}
@@ -72,27 +65,16 @@ function SectionCard({
             <IconComp weight="duotone" size={28} color={iconColor} aria-hidden="true" />
             <span className="text-title-3 text-text-primary">{title}</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {badge && (
-              <span
-                className="text-[11px] font-medium px-2 py-0.5 rounded-md"
-                style={{ color: badgeColor, backgroundColor: badgeBg }}
-              >
-                {badge}
-              </span>
-            )}
-            {collapsible && (
-              <CaretDown
-                weight="bold"
-                size={20}
-                className={`text-text-secondary transition-transform ${expanded ? "rotate-180" : ""}`}
-                aria-hidden="true"
-              />
-            )}
-          </div>
+          {collapsible && (
+            <CaretDown
+              weight="bold"
+              size={20}
+              className={`text-text-secondary transition-transform ${expanded ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          )}
         </button>
 
-        {/* Content — grid animation matching personal SectionList */}
         <div
           className={`grid transition-[grid-template-rows] duration-300 ease-out ${
             expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
@@ -122,39 +104,65 @@ export default function BattleCompatibility({ compatibility }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Base analysis — collapsible, collapsed by default */}
-      {baseAnalysis && (
-        <SectionCard
-          icon={Handshake}
-          iconColor="#A855F7"
-          title="기본 상성"
-          accentColor="#A855F7"
-          badge="상성"
-          badgeColor="#A855F7"
-          badgeBg="rgba(168,85,247,0.15)"
-          content={baseAnalysis}
-          collapsible
-          defaultExpanded={false}
-        />
+      {/* Combined card: baseAnalysis + mainScenario — always visible (not accordion) */}
+      {(baseAnalysis || mainScenario.analysis) && (
+        <div className="flex bg-background-secondary rounded-2xl overflow-hidden">
+          <div
+            className="w-1 shrink-0 rounded-full my-2 ml-1.5"
+            style={{ backgroundColor: "#A855F7" }}
+          />
+          <div className="flex-1 min-w-0">
+            {/* Header */}
+            <div className="px-6 py-5 flex items-center gap-2">
+              <Handshake weight="duotone" size={28} color="#A855F7" aria-hidden="true" />
+              <span className="text-title-3 text-text-primary">상성 진단</span>
+              <span
+                className="text-[11px] font-medium px-2 py-0.5 rounded-md ml-auto"
+                style={{ color: "#A855F7", backgroundColor: "rgba(168,85,247,0.15)" }}
+              >
+                상성
+              </span>
+            </div>
+
+            {/* baseAnalysis body */}
+            {baseAnalysis && (
+              <div className="px-6 pb-5">
+                <div className="space-y-6">
+                  {baseAnalysis.split(/\n\s*\n/).map((para, i) => (
+                    <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                      {para.trim()}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            {baseAnalysis && mainScenario.analysis && (
+              <div className="h-px bg-white/[0.06] mx-6" />
+            )}
+
+            {/* mainScenario sub-header + body */}
+            {mainScenario.analysis && (
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <MainIcon weight="duotone" size={22} color="#FF6B6B" aria-hidden="true" />
+                  <span className="text-[14px] font-semibold text-text-primary">{mainDisplay}</span>
+                </div>
+                <div className="space-y-6">
+                  {mainScenario.analysis.split(/\n\s*\n/).map((para, i) => (
+                    <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                      {para.trim()}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Main scenario — collapsible, collapsed by default */}
-      {mainScenario.analysis && (
-        <SectionCard
-          icon={MainIcon}
-          iconColor="#FF6B6B"
-          title={mainDisplay}
-          accentColor="#FF6B6B"
-          badge="선택한 관계"
-          badgeColor="#FF6B6B"
-          badgeBg="rgba(255,107,107,0.15)"
-          content={mainScenario.analysis}
-          collapsible
-          defaultExpanded={false}
-        />
-      )}
-
-      {/* Bonus scenarios — collapsed by default */}
+      {/* Bonus scenarios — individual accordions, collapsed by default */}
       {bonusScenarios.map((scenario, i) => {
         if (!scenario.analysis) return null;
         const BonusIcon = SCENARIO_ICONS[scenario.type] || Handshake;

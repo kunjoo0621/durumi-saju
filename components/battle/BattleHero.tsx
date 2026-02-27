@@ -1,8 +1,5 @@
 "use client";
 
-import OverallGradeBadgeSlot from "@/components/result/OverallGradeBadgeSlot";
-import type { OverallGradeLabel } from "@/components/result/OverallGradeBadgeSlot";
-import { getGradeColor } from "@/lib/utils/grade-colors";
 import type { BattleComparison, BattleIntensity } from "@/types/battle";
 
 type Props = {
@@ -10,6 +7,8 @@ type Props = {
   nameB: string;
   gradeA: string;
   gradeB: string;
+  compositeA: number;
+  compositeB: number;
   comparison: BattleComparison;
   heroQuip: string;
 };
@@ -21,115 +20,106 @@ const INTENSITY_LABELS: Record<BattleIntensity, string> = {
   "무승부": "대등한 대결",
 };
 
-function getIntensityComment(winsA: number, winsB: number): string {
-  const loserWins = Math.min(winsA, winsB);
-  if (loserWins === 0) return "완전 압살이야. 할 말이 없다.";
-  if (loserWins === 1) return "한 판 이긴 게 다행이야.";
-  if (loserWins === 2) return "아슬아슬했어. 결과가 뒤집혀도 이상하지 않았어.";
-  return "";
-}
+const COLOR_A = "#FF6B6B";
+const COLOR_B = "#A855F7";
 
-export default function BattleHero({ nameA, nameB, gradeA, gradeB, comparison, heroQuip }: Props) {
+export default function BattleHero({
+  nameA,
+  nameB,
+  gradeA,
+  gradeB,
+  compositeA,
+  compositeB,
+  comparison,
+  heroQuip,
+}: Props) {
   const isDraw = comparison.overallWinner === "draw";
   const winnerIsA = comparison.overallWinner === "A";
   const winnerName = isDraw ? null : winnerIsA ? nameA : nameB;
-  const loserName = isDraw ? null : winnerIsA ? nameB : nameA;
-
-  const colorA = getGradeColor(gradeA);
-  const colorB = getGradeColor(gradeB);
-
-  // Code-generated fact text (100% accurate)
-  const heroFactText = isDraw
-    ? "둘 다 도긴개긴이야."
-    : `${loserName}, ${getIntensityComment(comparison.winsA, comparison.winsB)}`;
 
   return (
-    <div className="rounded-3xl p-6 md:p-8" style={{ backgroundColor: "#141414" }}>
-      {/* Hero fact (code-generated) + quip (LLM-generated) */}
-      <div className="rounded-xl px-4 py-3 mb-8" style={{ backgroundColor: "rgba(255,107,107,0.08)" }}>
-        <p className="text-[20px] font-aggro font-bold text-text-primary leading-snug text-center">
-          {heroFactText}
-        </p>
-        {heroQuip && (
-          <p className="text-[14px] text-text-secondary leading-relaxed text-center mt-2">
-            {heroQuip}
-          </p>
-        )}
-      </div>
-
-      {/* Grade badges VS layout */}
-      <div className="flex justify-center items-end gap-4">
+    <div className="rounded-3xl p-6 relative overflow-hidden" style={{ backgroundColor: "#141414" }}>
+      {/* Top: Player names + grades (composite) */}
+      <div className="flex justify-between items-start mb-6">
         {/* Player A */}
         <div className="flex flex-col items-center flex-1">
-          <div className={isDraw || winnerIsA ? "" : "opacity-50"}>
-            <OverallGradeBadgeSlot
-              grade={gradeA as OverallGradeLabel}
-              size={isDraw || winnerIsA ? 80 : 60}
-            />
-          </div>
           <span
-            className="text-[13px] font-semibold mt-3"
-            style={{ color: colorA.text }}
+            className="text-[16px] font-semibold truncate max-w-[120px]"
+            style={{ color: COLOR_A }}
           >
-            {gradeA}
+            {nameA}
           </span>
-          <span className="text-[14px] text-text-secondary mt-1 truncate max-w-[100px]">{nameA}</span>
+          <span className="text-[13px] mt-1" style={{ color: COLOR_A, opacity: 0.7 }}>
+            {gradeA} ({compositeA}점)
+          </span>
         </div>
 
-        {/* VS */}
-        <div className="flex flex-col items-center pb-4">
-          <span className="text-[13px] text-text-tertiary font-medium tracking-wider">VS</span>
-        </div>
+        <span className="text-[13px] text-text-tertiary font-medium tracking-wider mt-1">VS</span>
 
         {/* Player B */}
         <div className="flex flex-col items-center flex-1">
-          <div className={isDraw || !winnerIsA ? "" : "opacity-50"}>
-            <OverallGradeBadgeSlot
-              grade={gradeB as OverallGradeLabel}
-              size={isDraw || !winnerIsA ? 80 : 60}
-            />
-          </div>
           <span
-            className="text-[13px] font-semibold mt-3"
-            style={{ color: colorB.text }}
+            className="text-[16px] font-semibold truncate max-w-[120px]"
+            style={{ color: COLOR_B }}
           >
-            {gradeB}
+            {nameB}
           </span>
-          <span className="text-[14px] text-text-secondary mt-1 truncate max-w-[100px]">{nameB}</span>
+          <span className="text-[13px] mt-1" style={{ color: COLOR_B, opacity: 0.7 }}>
+            {gradeB} ({compositeB}점)
+          </span>
         </div>
       </div>
 
-      {/* Score + intensity */}
-      <div className="mt-6 text-center">
+      {/* Center: Large score */}
+      <div className="text-center mb-4">
         <div className="flex justify-center items-baseline gap-3">
           <span
-            className="text-[28px] font-aggro font-bold"
-            style={{ color: isDraw || winnerIsA ? "#FFFFFF" : "rgba(255,255,255,0.3)" }}
+            className="text-6xl font-aggro font-bold"
+            style={{
+              color: isDraw || winnerIsA
+                ? COLOR_A
+                : `${COLOR_A}4D`, // 30% opacity
+            }}
           >
             {comparison.winsA}
           </span>
-          <span className="text-text-tertiary text-lg">:</span>
+          <span className="text-text-tertiary text-2xl font-light">:</span>
           <span
-            className="text-[28px] font-aggro font-bold"
-            style={{ color: isDraw || !winnerIsA ? "#FFFFFF" : "rgba(255,255,255,0.3)" }}
+            className="text-6xl font-aggro font-bold"
+            style={{
+              color: isDraw || !winnerIsA
+                ? COLOR_B
+                : `${COLOR_B}4D`, // 30% opacity
+            }}
           >
             {comparison.winsB}
           </span>
-          {comparison.draws > 0 && (
-            <span className="text-text-tertiary text-[13px] ml-1">(무 {comparison.draws})</span>
-          )}
         </div>
-        <div className="mt-2">
-          {winnerName ? (
-            <span className="text-lg font-semibold" style={{ color: "#FF6B6B" }}>
-              {winnerName}의 {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
-            </span>
-          ) : (
-            <span className="text-lg font-semibold text-text-secondary">
-              {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
-            </span>
-          )}
-        </div>
+
+        {comparison.draws > 0 && (
+          <span className="text-text-tertiary text-[13px] mt-1 inline-block">
+            (무승부 {comparison.draws})
+          </span>
+        )}
+      </div>
+
+      {/* Bottom: Winner intensity + heroQuip */}
+      <div className="text-center">
+        {winnerName ? (
+          <p className="text-lg font-semibold" style={{ color: winnerIsA ? COLOR_A : COLOR_B }}>
+            {winnerName}의 {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
+          </p>
+        ) : (
+          <p className="text-lg font-semibold text-text-secondary">
+            {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
+          </p>
+        )}
+
+        {heroQuip && (
+          <p className="text-[14px] text-text-secondary leading-relaxed mt-2">
+            {heroQuip}
+          </p>
+        )}
       </div>
     </div>
   );
