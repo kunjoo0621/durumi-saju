@@ -9,6 +9,7 @@ import { runBattleAnalysis } from "@/lib/battle-prompt";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { calculateBattleInteraction } from "@/lib/utils/battle-interaction";
+import { normalizeGender } from "@/lib/utils/gender";
 import { hashToken, getTokensFromCookie, getDbExpiresAt } from "@/lib/guest-token";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
         birthDay: Number(body.playerA.birthDay),
         birthHour: body.playerA.unknownBirthTime ? undefined : Number(body.playerA.birthHour),
         birthMinute: body.playerA.unknownBirthTime ? undefined : Number(body.playerA.birthMinute),
-        gender: body.playerA.gender as "male" | "female",
+        gender: normalizeGender(body.playerA.gender),
         birthLocation: body.playerA.birthLocation,
         yearPillar: enrichedA.pillars.year,
         monthPillar: enrichedA.pillars.month,
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
         birthDay: Number(body.playerB.birthDay),
         birthHour: body.playerB.unknownBirthTime ? undefined : Number(body.playerB.birthHour),
         birthMinute: body.playerB.unknownBirthTime ? undefined : Number(body.playerB.birthMinute),
-        gender: body.playerB.gender as "male" | "female",
+        gender: normalizeGender(body.playerB.gender),
         birthLocation: body.playerB.birthLocation,
         yearPillar: enrichedB.pillars.year,
         monthPillar: enrichedB.pillars.month,
