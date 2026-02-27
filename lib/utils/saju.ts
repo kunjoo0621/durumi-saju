@@ -445,15 +445,15 @@ export function getTenGod(dayStem: string, targetStem: string): string | null {
   }
 
   if (ELEMENT_GENERATES[targetElement] === dayElement) {
-    return samePolarity ? "정인" : "편인";
+    return samePolarity ? "편인" : "정인";
   }
 
   if (ELEMENT_CONTROLS[dayElement] === targetElement) {
-    return samePolarity ? "정재" : "편재";
+    return samePolarity ? "편재" : "정재";
   }
 
   if (ELEMENT_CONTROLS[targetElement] === dayElement) {
-    return samePolarity ? "정관" : "편관";
+    return samePolarity ? "편관" : "정관";
   }
 
   return null;
