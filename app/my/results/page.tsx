@@ -102,7 +102,8 @@ function PopoverMenu({
         <>
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               onSetPrimary();
               onClose();
             }}
@@ -115,7 +116,8 @@ function PopoverMenu({
       )}
       <button
         type="button"
-        onClick={() => {
+        onClick={(e) => {
+          e.stopPropagation();
           onDelete();
           onClose();
         }}
@@ -158,8 +160,8 @@ function DeleteModal({
   const { title, desc } = texts[variant];
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60">
-      <div className="bg-[#1C1C1C] rounded-2xl p-6 mx-6 w-full max-w-[320px] text-center">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="bg-[#1C1C1C] rounded-2xl p-6 mx-6 w-full max-w-[320px] text-center" onClick={(e) => e.stopPropagation()}>
         <p className="text-text-primary text-[16px] font-semibold">
           {title}
         </p>
