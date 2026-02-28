@@ -96,13 +96,13 @@ export default function BattleResultView({
               matches={comparison.matches}
               nameA={playerA.name}
               nameB={playerB.name}
-              llmComments={llmAnalysis.categoryComments}
+              llmComments={llmAnalysis.categoryResults}
               highlightCategory={highlightCategory}
             />
           </div>
 
           {/* Section 4: Compatibility */}
-          <BattleCompatibility compatibility={llmAnalysis.compatibility} />
+          <BattleCompatibility chemistry={llmAnalysis.chemistry} />
 
           {/* Section 5: Future outlook */}
           <BattleFutureOutlook futureOutlook={llmAnalysis.futureOutlook} />

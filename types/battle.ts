@@ -38,19 +38,29 @@ export type BattleComparison = {
   overallIntensity: BattleIntensity;
 };
 
+export type CategoryResult = {
+  killingLine: string;
+  detail: string;
+};
+
 export type BattleLlmAnalysis = {
   heroQuip: string;
-  categoryComments: {
-    wealth: string;
-    love: string;
-    career: string;
-    health: string;
-    social: string;
+  categoryResults: {
+    wealth: CategoryResult;
+    love: CategoryResult;
+    career: CategoryResult;
+    health: CategoryResult;
+    social: CategoryResult;
   };
-  compatibility: {
-    baseAnalysis: string;
+  chemistry: {
+    label: {
+      emoji: string;
+      title: string;
+      description: string;
+    };
+    analysis: string;
     mainScenario: {
-      type: RelationshipType;
+      type: string;
       analysis: string;
     };
     bonusScenarios: {
@@ -59,20 +69,16 @@ export type BattleLlmAnalysis = {
       analysis: string;
     }[];
   };
-  finalVerdict: string;
-  dangerSignals: {
-    triggers: {
-      situation: string;
-      description: string;
-    }[];
-    summary: string;
-  };
+  simulations: {
+    question: string;
+    answer: string;
+    basis: string;
+  }[];
   futureOutlook: {
-    now: string;
-    midTerm: string;
-    longTerm: string;
-    verdict: string;
+    nextYear: string;
+    threeYears: string;
   };
+  finalVerdict: string;
 };
 
 export type BattleListItem = {
@@ -90,6 +96,12 @@ export type BattleListItem = {
   created_at: string;
 };
 
+export type ChemistryLabel = {
+  emoji: string;
+  title: string;
+  description: string;
+};
+
 export type BattleResult = {
   playerA: {
     name: string;
@@ -104,4 +116,6 @@ export type BattleResult = {
   comparison: BattleComparison;
   llmAnalysis: BattleLlmAnalysis;
   relationshipType: RelationshipType;
+  chemistryLabel?: ChemistryLabel;
+  simulationQuestions?: { icon: string; question: string }[];
 };

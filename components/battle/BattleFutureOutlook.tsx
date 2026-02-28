@@ -9,15 +9,14 @@ type Props = {
 };
 
 const TIMELINE_BLOCKS = [
-  { key: "now" as const, label: "지금" },
-  { key: "midTerm" as const, label: "3~5년 후" },
-  { key: "longTerm" as const, label: "10년 후" },
+  { key: "nextYear" as const, label: "1년 후" },
+  { key: "threeYears" as const, label: "3년 후" },
 ];
 
 export default function BattleFutureOutlook({ futureOutlook }: Props) {
   const [expanded, setExpanded] = useState(false);
 
-  const hasContent = futureOutlook.now || futureOutlook.midTerm || futureOutlook.longTerm;
+  const hasContent = futureOutlook.nextYear || futureOutlook.threeYears;
   if (!hasContent) return null;
 
   return (
@@ -77,11 +76,7 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
                 );
               })}
 
-              {futureOutlook.verdict && (
-                <p className="text-[15px] text-text-primary leading-[1.7] pt-2">
-                  {futureOutlook.verdict}
-                </p>
-              )}
+              {/* verdict removed in new schema */}
             </div>
           </div>
         </div>

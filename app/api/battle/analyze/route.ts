@@ -6,6 +6,8 @@ import { resolveSajuEnrichedData, type InputPayload, buildFortunePromptBlock } f
 import { calculateServerScoring } from "@/lib/utils/saju-scoring";
 import { compareBattle } from "@/lib/utils/battle-compare";
 import { runBattleAnalysis } from "@/lib/battle-prompt";
+import { selectChemistryLabel } from "@/lib/battle-chemistry";
+import { selectSimulations } from "@/lib/battle-simulations";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { calculateBattleInteraction } from "@/lib/utils/battle-interaction";
@@ -173,6 +175,22 @@ export async function POST(request: NextRequest) {
       body.playerB.name,
     );
 
+    // Chemistry label (deterministic, server-side)
+    const chemistryLabel = selectChemistryLabel(
+      interaction.dayStemRelation.type,
+      comparison.winsA,
+      comparison.winsB,
+      body.relationshipType,
+    );
+
+    // Simulation questions (trigger-based, server-side)
+    const simulationQuestions = selectSimulations(
+      enrichedA,
+      enrichedB,
+      body.relationshipType,
+      5,
+    );
+
     // LLM analysis
     const llmAnalysis = await runBattleAnalysis({
       nameA: body.playerA.name,
@@ -188,6 +206,8 @@ export async function POST(request: NextRequest) {
       interaction,
       fortuneBlockA,
       fortuneBlockB,
+      chemistryLabel,
+      simulationQuestions,
     });
 
     const result = {
@@ -204,6 +224,8 @@ export async function POST(request: NextRequest) {
       comparison,
       llmAnalysis,
       relationshipType: body.relationshipType,
+      chemistryLabel,
+      simulationQuestions,
     };
 
     // DB 저장 (동기 + 1회 재시도)

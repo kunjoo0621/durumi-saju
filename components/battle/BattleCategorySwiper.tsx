@@ -16,11 +16,11 @@ type Props = {
   matches: CategoryMatchResult[];
   nameA: string;
   nameB: string;
-  llmComments: BattleLlmAnalysis["categoryComments"];
+  llmComments: BattleLlmAnalysis["categoryResults"];
   highlightCategory?: string;
 };
 
-const CATEGORY_KEY_MAP: Record<string, keyof BattleLlmAnalysis["categoryComments"]> = {
+const CATEGORY_KEY_MAP: Record<string, keyof BattleLlmAnalysis["categoryResults"]> = {
   "재물운": "wealth",
   "연애운": "love",
   "직장운": "career",
@@ -37,9 +37,9 @@ const CATEGORY_ICONS: Record<string, Icon> = {
 };
 
 function getComment(
-  llmComments: BattleLlmAnalysis["categoryComments"],
+  llmComments: BattleLlmAnalysis["categoryResults"],
   category: string,
-): string | undefined {
+): { killingLine: string; detail: string } | undefined {
   const key = CATEGORY_KEY_MAP[category];
   return key ? llmComments[key] || undefined : undefined;
 }
@@ -183,20 +183,27 @@ export default function BattleCategorySwiper({
                     </span>
                   </div>
 
-                  {/* Divider + comment */}
+                  {/* Divider + killingLine + detail */}
                   {comment && (
                     <>
                       <div className="mt-4 mb-4 h-px bg-white/[0.06]" />
-                      <div className="space-y-6">
-                        {comment.split(/\n\s*\n/).map((para, i) => (
-                          <p
-                            key={i}
-                            className="text-[16px] text-text-primary leading-[1.75]"
-                          >
-                            {para.trim()}
-                          </p>
-                        ))}
-                      </div>
+                      {comment.killingLine && (
+                        <p className="text-[15px] font-bold text-text-primary mb-2">
+                          {comment.killingLine}
+                        </p>
+                      )}
+                      {comment.detail && (
+                        <div className="space-y-6">
+                          {comment.detail.split(/\n\s*\n/).map((para: string, i: number) => (
+                            <p
+                              key={i}
+                              className="text-[16px] text-text-primary leading-[1.75]"
+                            >
+                              {para.trim()}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

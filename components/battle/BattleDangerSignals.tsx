@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { Warning, CaretDown } from "@phosphor-icons/react";
-import type { BattleLlmAnalysis } from "@/types/battle";
+type DangerSignals = {
+  triggers: { situation: string; description: string }[];
+  summary?: string;
+};
 
 type Props = {
-  dangerSignals: BattleLlmAnalysis["dangerSignals"];
+  dangerSignals: DangerSignals;
 };
 
 export default function BattleDangerSignals({ dangerSignals }: Props) {
@@ -55,7 +58,7 @@ export default function BattleDangerSignals({ dangerSignals }: Props) {
         >
           <div className="overflow-hidden">
             <div className="px-6 pb-6 pt-2 space-y-4">
-              {dangerSignals.triggers.map((trigger, i) => (
+              {dangerSignals.triggers.map((trigger: { situation: string; description: string }, i: number) => (
                 <div
                   key={i}
                   className="rounded-xl p-4"

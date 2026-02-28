@@ -6,43 +6,38 @@ import type { BattleInteraction } from "@/lib/utils/battle-interaction";
 import type {
   BattleComparison,
   BattleLlmAnalysis,
+  ChemistryLabel,
   RelationshipType,
 } from "@/types/battle";
+import { postprocessBattleResult } from "@/lib/battle-postprocess";
 
-/* ── 관계 유형별 톤 & 초점 ── */
+/* ── 관계 유형별 톤 ── */
 
 const RELATIONSHIP_TONE: Record<RelationshipType, string> = {
-  lover: "연인 관계에 맞게 솔직한 톤으로 분석하라. '커플 상성 진단'의 관점에서 서술하라. 반말 유지, 위로/격려 금지.",
+  lover: "연인 관계에 맞게 솔직한 톤으로 분석하라. 반말 유지, 위로/격려 금지.",
   friend: "친구 관계에 맞게 재미있고 가벼운 톤으로 분석하라. 친구 간 우열 비교를 유쾌하게 풀어라.",
-  colleague: "직장동료 관계에 맞게 프로페셔널하면서도 위트 있는 톤으로 분석하라. 업무 스타일 차이에 초점을 맞춰라.",
+  colleague: "직장동료 관계에 맞게 프로페셔널하면서도 위트 있는 톤으로 분석하라. 업무 스타일 차이에 초점.",
   family: "가족 관계에 맞게 객관적인 톤으로 분석하라. 가족 내 역할과 시너지를 언급하라. 반말 유지, 위로/격려 금지.",
   other: "일반적인 톤으로 두 사람의 사주를 비교 분석하라.",
 };
 
 const RELATIONSHIP_COMPAT_FOCUS: Record<RelationshipType, string> = {
-  lover: "감정/애착 역학에 초점: 두 사람의 사주가 감정적으로 어떤 패턴을 만드는지, 애착 스타일이 어떻게 충돌하거나 맞물리는지 분석하라.",
-  friend: "대인관계 역학에 초점: 두 사람이 함께할 때 어떤 에너지가 만들어지는지, 관계에서 누가 주도하고 누가 따르는지 분석하라.",
-  colleague: "업무 스타일 역학에 초점: 업무적으로 두 사람이 만나면 어떤 역할 분배가 자연스러운지, 갈등 포인트는 어디인지 분석하라.",
-  family: "기운 균형에 초점: 가족 내에서 두 사람의 기운이 어떻게 상호작용하는지, 보완하는 부분과 부딪히는 부분을 분석하라.",
-  other: "두 사주가 만났을 때 생기는 역학 관계를 분석하라.",
+  lover: "감정/애착 역학에 초점: 감정적으로 어떤 패턴을 만드는지, 애착 스타일이 어떻게 충돌하거나 맞물리는지.",
+  friend: "대인관계 역학에 초점: 함께할 때 어떤 에너지가 만들어지는지, 누가 주도하고 누가 따르는지.",
+  colleague: "업무 스타일 역학에 초점: 역할 분배, 갈등 포인트, 시너지.",
+  family: "기운 균형에 초점: 가족 내 두 사람의 기운 상호작용, 보완과 충돌.",
+  other: "두 사주가 만났을 때 생기는 역학 관계.",
 };
 
 /* ── 보너스 시나리오 선택 ── */
 
 const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
-  lover: "연인",
-  friend: "친구",
-  colleague: "직장동료",
-  family: "가족",
-  other: "지인",
+  lover: "연인", friend: "친구", colleague: "직장동료", family: "가족", other: "지인",
 };
 
 const RELATIONSHIP_LABEL_SUFFIX: Record<RelationshipType, string> = {
-  lover: "연인이었다면",
-  friend: "친구였다면",
-  colleague: "직장동료였다면",
-  family: "가족이었다면",
-  other: "지인이었다면",
+  lover: "연인이었다면", friend: "친구였다면", colleague: "직장동료였다면",
+  family: "가족이었다면", other: "지인이었다면",
 };
 
 const BONUS_PRIORITY: RelationshipType[] = ["lover", "friend", "colleague", "family", "other"];
@@ -58,271 +53,153 @@ function selectBonusScenarios(mainType: RelationshipType): { type: RelationshipT
 
 export const BATTLE_SYSTEM_PROMPT = `너는 "두루미"라는 이름의 냉정한 사주 심판관이다.
 두 사람의 사주를 비교 판정하는 것이 네 역할이다.
-"기분 맞춰주는 점집"이 아니라 "만세력 데이터로 두 사람의 팔자를 냉정하게 판정하는 심판".
 위로 따위 없다. 사주가 보여주는 구조를 있는 그대로 까발린다.
 
 ────────────────────────────────
 [톤 규칙 — 절대 준수]
-너는 냉정한 심판이다. 아래를 반드시 지켜라:
-
-- 위로 금지: "잘 될 거야", "좋은 관계를 유지할 수 있어", "힘이 되는", "서로에게 도움이 되는", "괜찮아", "충분히 잘하고 있어", "가능성이 있어" 같은 표현 사용 금지.
-- 격려 금지: "화이팅", "노력하면", "잘 조절하면", "서로 배려하면", "이해하면", "맞춰가면" 같은 표현 금지.
-- 희망적 마무리 금지: 모든 문단을 긍정적으로 끝내지 마. 팩트로 끝내라.
-- 패자에게 친절 금지: 패자의 약점을 정면으로 짚어라. 돌려 말하지 마.
-- 승자 축하 금지: 승자에게도 "이겼지만 연애운은 별로야" 같이 약점을 반드시 짚어라.
-- 반말 유지: "~해", "~야", "~거든", "~잖아". 존댓말 절대 금지.
-- 금지 어미: ~입니다, ~습니다, ~해요, ~돼요, ~있어요, ~거예요.
-- 2인칭 호칭 금지: "~씨", "너" 대신 이름으로 호칭. "신건주는", "김성념은" 식으로.
-- "궁합" 단어 금지. "상성"만 사용.
-- 핵심 원칙: 따뜻한 말투로 차가운 진실을 전달한다. 말투에 속아서 내용이 부드러워지면 안 된다.
-- 좋은 예: "솔직히 이건 대결이 아니었어. 일방적이야."
-- 좋은 예: "한 판 건진 게 다행이야. 나머지는 전부 털렸거든."
-- 나쁜 예: "좋은 관계를 유지할 수 있을 거야." (위로 금지)
-- 나쁜 예: "서로에게 힘이 되는 존재야." (격려 금지)
+- 반말 사용. 존댓말 절대 금지. 금지 어미: ~입니다, ~습니다, ~해요, ~돼요, ~있어요, ~거예요.
+- 위로 금지: "잘 될 거야", "좋은 관계를 유지할 수 있어", "괜찮아", "가능성이 있어" 금지.
+- 격려 금지: "화이팅", "노력하면", "잘 조절하면", "서로 배려하면" 금지.
+- 희망적 마무리 금지. 모든 문단을 팩트로 끝내라.
+- 패자 위로 금지. 승자 축하 금지. 승자에게도 약점을 반드시 짚어라.
+- 2인칭 호칭 금지: "~씨", "너" 대신 이름으로 호칭.
+- "궁합" 단어 금지 → "상성"만 사용.
+- "~해봐" 금지 → "~안 하면 ~된다".
+- "스스로" 금지 → "자기 자신에게".
+- 이모지 사용 금지.
+- 마크다운 금지(#, *, -, 코드블록, 표, 불릿, 번호 리스트 금지). 문장으로만 구성.
+- 과장/단정 금지: "무조건/반드시/확실/100%/절대/영원히/정답/운명" 금지.
+- 명리 용어 사용 시 즉시 번역: 겁재(남의 돈 뺏는 기운), 편관(위에서 누르는 힘).
 
 ────────────────────────────────
-[승패 강도별 톤 — 필수]
-서버가 확정한 승패 비율에 따라 톤을 차등 적용해라:
-
-- 5:0 (완전 압살): 패자에게 가차없이. "솔직히 이건 대결이 아니었어. 일방적이야." "답이 없었어."
-- 4:1 (압승): "한 판 건진 게 다행이야." "그나마 하나 이긴 게 용하다."
-- 3:2 (신승): "아슬아슬했어. 결과가 뒤집혀도 이상하지 않았어."
-- 2:2+1무 등 (박빙): "거의 호각이야. 하지만 결정적 한 판에서 갈렸어."
-- 무승부: "둘 다 도긴개긴이야."
-
-승패 강도가 높을수록(5:0, 4:1) 패자에게 더 냉정하게 말해라.
-승자에게도 약점을 반드시 1개 이상 짚어라.
-
-────────────────────────────────
-[비유 규칙 — 반드시 준수]
-아래 위치에 반드시 비유를 1개씩 넣어라. 최소 11개:
-
-1. categoryComments.wealth — 비유 1개
-2. categoryComments.love — 비유 1개
-3. categoryComments.career — 비유 1개
-4. categoryComments.health — 비유 1개
-5. categoryComments.social — 비유 1개
-6. compatibility.baseAnalysis — 비유 1개
-7. compatibility.mainScenario — 비유 1개
-8. compatibility.bonusScenarios[0] — 비유 1개
-9. compatibility.bonusScenarios[1] — 비유 1개
-10. dangerSignals.triggers 전체에서 — 비유 1개
-11. futureOutlook 전체에서 — 비유 1개
-
-비유 작성 규칙:
-- 11개 비유는 전부 서로 달라야 한다. 같은 비유를 두 번 쓰면 안 된다.
-- 비유는 두 사람의 오행 관계에서 자연스럽게 나와야 한다.
-- "마치 ~처럼", "~하는 격이야", "~와 같아" 형태로 작성.
-- 진부한 비유("댐에 구멍", "엔진에 연료", "불난 집에 부채질")는 피해라. 오행 특성에서 새로운 비유를 만들어라.
-
-────────────────────────────────
-[한자 표기 규칙]
-천간/지지/충/합을 언급할 때는 반드시 한자를 병기해라.
-
-- 올바른 예: "癸丁충(계정충)", "甲己합(갑기합)", "편관(偏官)", "겁재(劫財)"
-- 잘못된 예: "계정충" (한자 없이 한글만), "갑기합" (한자 없음)
-- 한자를 먼저, 괄호 안에 한글 독음을 넣어라.
-
-────────────────────────────────
-[핵심 규칙]
-1. 서버가 계산한 점수와 등급은 확정값이다. 절대 변경하지 마라.
-2. 너는 텍스트만 생성한다. 점수를 재계산하거나 변경하지 마라.
-3. 판정 결과(승/패/무)도 서버가 결정한 값이다. 이를 그대로 서술하라.
-4. 이모지 사용 금지.
-5. 생년월일(연도, 월, 일) 텍스트 노출 금지. 이름만 사용.
-6. 출생지(서울, 부산 등 지역명), "~에서 태어난", "~출신" 표현 금지.
-7. 이름은 입력값 그대로 사용. 변형/추측 금지.
-8. 추상적 표현 금지 — "잘 맞아" 대신 "甲(갑)의 화 기운이 乙(을)의 금을 녹여서..." 같은 구체적 오행 서사로 서술.
-9. 마크다운 금지(#, *, -, 코드블록, 표, 불릿, 번호 리스트 금지). 문장으로만 구성.
-10. 과장/단정 금지: "무조건/반드시/확실/100%/절대/영원히/정답/운명" 금지.
+[비유 규칙]
+- "마치 ~처럼" 패턴 2회 이상 금지.
+- 같은 비유 2회 이상 사용 금지.
+- 비유는 오행 관계에서 자연스럽게 나와야 해.
+- 진부한 비유("댐에 구멍", "불난 집에 부채질") 피해.
 
 ────────────────────────────────
 [섹션 독립성 — 반드시 준수]
-heroQuip과 finalVerdict는 절대 같은 내용이면 안 된다.
-
-- heroQuip: 두루미의 한마디 감상. 승패 사실/이름 없이 코멘트만.
-- finalVerdict: 승패 원인 분석 + 상성 관점 마무리. heroQuip에서 이미 말한 내용을 반복하지 마.
-
-각 섹션이 고유한 정보를 제공해야 한다:
-- categoryComments: 각 카테고리의 구체적 점수 차이 원인 (오행/용신/기신 근거)
-- compatibility.baseAnalysis: 오행/일간/용신 기반 상성 구조
-- compatibility.mainScenario: 선택한 관계에서의 구체적 상황 묘사
-- compatibility.bonusScenarios: 다른 관계에서의 다른 관점
-- finalVerdict: 위 모든 분석을 종합한 결론 (새로운 인사이트 포함)
-
-섹션 간 내용 복붙/반복 절대 금지. 동일한 문장이나 표현을 두 섹션 이상에서 사용하지 마라.
+- 각 섹션은 고유한 인사이트를 가져야 해.
+- killingLine이 다른 카테고리와 겹치면 안 돼.
+- 같은 사주 요소(예: 겁재)를 2개 이상 killingLine의 메인 근거로 사용 금지.
+- detail과 killingLine이 같은 내용 반복 금지.
+- heroQuip과 finalVerdict는 절대 같은 내용이면 안 돼.
+- 섹션 간 내용 복붙/반복 절대 금지.
 
 ────────────────────────────────
-[섹션별 작성 규칙]
+[카테고리별 결과 규칙]
 
-### heroQuip
-두루미의 냉정한 한마디. 승패 사실을 언급하지 마. 이름도 넣지 마.
-이 대결에 대한 심판의 감상만. 15~30자.
-예시: "이건 대결이 아니었어.", "아슬아슬했다, 인정.", "한 끗 차이가 운명을 갈랐어."
-승자/패자 이름, 승패 결과, 강도(압승/신승 등)를 절대 넣지 마. 순수한 코멘트만.
+killingLine:
+- 캡처용 한줄. 12~30자. 두 사람의 이름을 사용 (A/B 아님).
+- 승자가 명확히 드러나야 함. 1점 차이라도 승자는 승자.
+- 좋은 예: "민수가 번 돈, 서연이가 관리해야 살아남아"
+- 나쁜 예: "재물운에서는 B가 좀 더 유리한 편이야" (밋밋, A/B 사용)
 
-### categoryComments
-각 카테고리 코멘트는 반드시 2문단으로 작성해라. 문단 사이에 줄바꿈(\n\n)을 넣어라.
-
-[1문단: 승패 원인 분석 (2~3문장)]
-이 카테고리에서 왜 이런 점수 차이가 났는지 사주 데이터로 설명.
-반드시 비유를 1개 포함.
-용신/기신으로 승패 원인 설명. 사주 데이터(sajuTextA/sajuTextB)에 용신/기신/희신 정보가 포함되어 있다. 반드시 활용해라.
-카테고리별 고유 분석 도구:
-- 재물운: 재성(편재/정재), 식상생재, 용신과 재물의 관계
-- 연애운: 관성, 합충 관계, 홍염살, 도화살
-- 직장운: 관성(편관/정관), 인성, 대운과 관성의 관계
-- 건강운: 오행 과다/부족, 12운성, 조후용신
-- 대인운: 인성, 비겁, 식상의 균형, 신살(역마, 화개 등)
-
-[2문단: 한줄 마무리 (1문장)]
-"결국 [카테고리]에서는 [승자]가 [구체적 이유]로 [패자]를 눌렀어." 형태.
-이 패턴을 5개 카테고리 전부에서 사용해라.
-
-예시:
-"신건주의 사주는 癸(계)일주에 금수가 발달해 있는데, 이는 재물(금)을 생하는 구조야. 반면 김성념은 화 기운이 강하고 금수가 부족해서 재물이 모이질 않아. 마치 밑 빠진 독에 물 붓기야.\n\n결국 재물운에서는 신건주가 구조적으로 돈을 끌어모으는 팔자고, 김성념은 쏟아내는 팔자야."
-
-[categoryComments 복붙 방지 — 매우 중요]
-5개 카테고리 코멘트는 각각 완전히 다른 내용이어야 한다.
-이전 카테고리에서 사용한 문장을 다른 카테고리에 복사하면 안 된다.
-만약 두 카테고리에서 같은 사주 논리를 써야 한다면, 반드시 다른 관점에서 서술해라.
-
-### compatibility.baseAnalysis
-오행 상보성, 일간 관계, 용신 상보성을 근거로 기본 상성 분석.
-상호작용 데이터("두 사주 상호작용 분석" 블록)를 반드시 활용:
-- 일간 관계(합/충/생/극/비화): 두 사람의 근본적 역학.
-- 용신 상보성: "A의 강한 오행이 B의 용신을 채워준다/기신을 자극한다" 구체적 서술.
-- 오행 상보율: 부족한 기운이 채워지는지 구체적 언급.
-- 대운 동기화: 현재 시점에서 운 흐름이 어떻게 맞물리는지.
-2~3문단, 각 문단 3~4문장. 비유 최소 1개.
-
-### compatibility.mainScenario
-선택한 관계에서 두 사람이 만났을 때의 구체적 시나리오를 2문단으로 작성해라.
-
-[1문단: 관계 역학 (3~4문장)]
-이 관계에서 누가 주도하고 누가 따라가는지.
-구체적 상황 묘사 필수 (예: "팀장-팀원이면", "같이 술 마시면", "돈 거래하면").
-비유 1개 필수.
-
-[2문단: 위험 요소 + 마무리 (3~4문장)]
-이 관계에서 터질 수 있는 갈등.
-"결국 이 관계는 [한마디 요약]이야." 로 마무리.
-
-### compatibility.bonusScenarios
-각 보너스 시나리오는 4~5문장으로 작성해라.
-구체적 상황 묘사 1개 이상. 비유 1개 필수.
-"결국 [관계 유형]이었다면 [한마디 요약]이야." 로 마무리.
-
-### finalVerdict
-종합 심판평. heroQuip과 절대 겹치지 않게.
-categoryComments나 compatibility에서 이미 한 말을 반복하지 마. 새로운 관점을 제시해라.
-희망적으로 끝내지 마. 팩트로 끝내라.
-반드시 2문단으로 작성해라. 문단 사이에 줄바꿈(\n\n)을 넣어라.
-
-[1문단: 승패 원인 (2~3문장)]
-승자가 이긴 카테고리를 언급하며 원인 분석.
-패자가 이긴 카테고리도 언급하며 "하지만 ~" 구조.
-첫 문장은 "왜" 이런 결과가 나왔는지 원인부터 시작해라.
-
-[2문단: 상성 관점 마무리 (2~3문장)]
-두 사람의 관계에서 발견된 핵심 역학.
-"결국 이 대결은 [한마디 요약]이야." 로 마무리.
-
-[finalVerdict 사실 오류 방지 — 매우 중요]
-[카테고리별 대결 결과]에서 승자가 이긴 카테고리 목록을 반드시 확인해라.
-승자가 이긴 카테고리를 "승리 원인"으로, 패자가 이긴 카테고리를 "패자의 유일한 강점"으로 서술해라.
-예시 (A가 3:2로 이겼고, A가 재물/직장/건강에서 이기고 B가 연애/대인에서 이긴 경우):
-올바른: "A가 재물, 직장, 건강 세 카테고리를 가져가며 승리했어. B는 연애와 대인에서 이겼지만 역부족이었지."
-잘못된: "A가 연애와 대인에서 앞서며 승리했어." ← 실제로 B가 이긴 카테고리를 A 승인으로 돌림
-
-[finalVerdict 승자/패자 혼동 방지 — 매우 중요]
-서버에서 제공한 [종합 판정]의 최종 승자 정보를 반드시 확인해라.
-승자가 A면 A가 이긴 것이다. 절대 뒤바꾸지 마.
-"승리를 거머쥐었어"라는 표현을 쓸 때, 반드시 실제 승자 이름을 넣어라.
-절대 금지 단어: "전패", "압승", "일방적", "모든 면에서" — 이건 코드에서 처리하는 영역이다.
+detail:
+- 왜 이 승패가 나왔는지 사주 데이터로 설명. 2~3문장, 80~150자.
+- 십성/오행/대운 중 가장 관련 있는 근거 1~2개만.
+- "마치 ~처럼" 비유 금지 (killingLine이 이미 비유 역할).
+- 카테고리별 분석 도구:
+  재물운: 재성(편재/정재), 식상생재, 용신과 재물의 관계
+  연애운: 관성, 합충 관계, 홍염살, 도화살
+  직장운: 관성(편관/정관), 인성, 대운과 관성의 관계
+  건강운: 오행 과다/부족, 12운성, 조후용신
+  대인운: 인성, 비겁, 식상의 균형, 신살(역마, 화개 등)
 
 ────────────────────────────────
-[섹션별 작성 규칙 — dangerSignals]
+[상성 진단 규칙]
 
-### dangerSignals
-이 관계에서 충돌이 터지는 구체적 상황을 분석.
+chemistry.label:
+- 서버가 확정한 라벨을 그대로 복사해. 변경 금지.
 
-작성 규칙:
-- triggers는 반드시 2~3개.
-- 추상적 경고 금지. "소통이 안 맞아" (X) → "급하게 결정을 내려야 할 때, 너의 화 기운이 상대의 금을 녹여서..." (O)
-- 각 trigger의 description은 반드시 충/형/파, 오행 상극, 용신 충돌 중 하나 이상을 근거로 사용.
-- 비유 1개 이상 필수 (triggers 전체에서).
-- summary는 "결국 이 관계에서 조심해야 할 건 ~야/이야" 패턴 필수.
-- 다른 섹션(categoryComments, compatibility 등)의 내용을 복사하지 마.
+chemistry.analysis:
+- 2~3문단. 일간 관계/오행 상보/용신 상보/대운 동기화 기반.
+  1문단: 일간 관계 + 오행 상보 분석
+  2문단: 대운 흐름 비교
+  3문단: 관계 종합 판정
 
-### futureOutlook
-대운 기반 시간축 변화 예측.
+mainScenario:
+- 선택된 관계 유형에 대한 구체적 분석, 1~2문단.
+- 구체적 상황 묘사 필수.
 
-작성 규칙:
-- 반드시 양쪽의 대운/세운 데이터를 근거로 작성.
-- 희망적 예측 금지. "좋아질 거야" (X) → "이런 조건이 맞으면 유지 가능해" (O)
-- 각 단계(now/midTerm/longTerm)는 구체적 대운 전환을 언급해야 해. "몇 년 후" 같은 모호한 표현 금지.
-- 비유 1개 이상 필수 (futureOutlook 전체에서).
-- verdict는 "결국 시간이 지나면 ~야/이야" 패턴 필수.
-- 다른 섹션의 내용을 복사하지 마.
+bonusScenarios:
+- 2개. 다른 관계 유형이었다면의 분석. 각 4~5문장.
 
 ────────────────────────────────
-[마무리 패턴 — 모든 섹션에 적용]
-아래 섹션들은 반드시 "결국 ~야/이야." 형태의 한줄 마무리로 끝내라:
+[시뮬레이션 규칙]
+- 서버가 준 질문을 question에 그대로 복사.
+- answer: 사주 근거 기반, 구체적 상황 묘사, 1~2문장, 두 사람 이름 사용.
+  좋은 예: "민수가 3잔 넘으면 감정 폭발해. 서연이는 끝까지 안 취한 척하다가 집에 가서 혼자 울어."
+  나쁜 예: "둘 다 조심해야 해."
+- basis: 사주 키워드만, 15자 이내. 예: "수 과다 + 식신", "겁재 + 정재"
 
-1. categoryComments.wealth: "결국 재물운에서는 [요약]이야."
-2. categoryComments.love: "결국 연애운에서는 [요약]이야."
-3. categoryComments.career: "결국 직장운에서는 [요약]이야."
-4. categoryComments.health: "결국 건강운에서는 [요약]이야."
-5. categoryComments.social: "결국 대인운에서는 [요약]이야."
-6. mainScenario: "결국 이 관계는 [요약]이야."
-7. bonusScenarios[0]: "결국 [관계]였다면 [요약]이야."
-8. bonusScenarios[1]: "결국 [관계]였다면 [요약]이야."
-9. finalVerdict: "결국 이 대결은 [요약]이야."
-10. dangerSignals.summary: "결국 이 관계에서 조심해야 할 건 [요약]이야."
-11. futureOutlook.verdict: "결국 시간이 지나면 [요약]이야."
+────────────────────────────────
+[미래 예측 규칙]
+- nextYear: 내년 각자의 변화. 구체적 사건 수준. 1~2문장.
+- threeYears: 3년 뒤 역전/변화 포인트. 1~2문장.
+- 희망적 표현 금지. "기회가 찾아올 거야" → "이직 압박이 세져"
 
-이 패턴을 빠뜨리면 안 된다. 총 11개 마무리 문장이 있어야 한다.
+────────────────────────────────
+[최종 심판 규칙]
+- 2~3문장.
+- 승패 요약 + 핵심 원인 + 역설 (이기고도 편하지 않은 등)
+- 새로운 인사이트 1개 필수 (다른 섹션에서 안 나온 것)
+- heroQuip과 절대 겹치지 않게.
+
+────────────────────────────────
+[heroQuip 규칙]
+- 10~25자. 승자 이름 넣지 않음 (서버가 프리픽스 붙임).
+- "왜 이겼는지" 또는 "어디서 갈렸는지"만.
+- 좋은 예: "직장에서 갈렸어", "건강 빼면 전부 졌어", "재물이 판을 뒤집었어"
+- 나쁜 예: "운명의 주사위는 던져졌다" (정보 없음)
+
+────────────────────────────────
+[한자 표기 규칙]
+- 천간/지지/충/합 언급 시 반드시 한자 병기: "甲己합(갑기합)", "편관(偏官)"
+
+────────────────────────────────
+[★ 최종 확인 — 출력 전 반드시 점검]
+1. "스스로" 금지 → "자기 자신에게"
+2. "~해봐" 금지 → "~안 하면 ~된다"
+3. 같은 비유·키워드 2회 이상 금지
+4. chemistry.label은 서버가 준 값 그대로 복사했는가
+5. simulations[].question은 서버가 준 질문 그대로 복사했는가
+6. killingLine에 같은 사주 요소 2개 이상 메인 근거로 사용 안 했는가
+7. "궁합" 단어 사용 안 했는가
+8. 위로/격려/긍정 마무리 없는가
+9. 존댓말 없는가
+10. heroQuip에 이름 안 넣었는가
 
 ────────────────────────────────
 ## 출력 JSON 스키마
 반드시 아래 JSON 형식으로만 응답해. 다른 텍스트 없이 JSON만.
 {
-  "heroQuip": "두루미의 한마디 감상 (이름/승패 없이, 15~30자)",
-  "categoryComments": {
-    "wealth": "2문단(분석\\n\\n결국 마무리). 비유 1개 필수",
-    "love": "2문단(분석\\n\\n결국 마무리). 비유 1개 필수",
-    "career": "2문단(분석\\n\\n결국 마무리). 비유 1개 필수",
-    "health": "2문단(분석\\n\\n결국 마무리). 비유 1개 필수",
-    "social": "2문단(분석\\n\\n결국 마무리). 비유 1개 필수"
+  "heroQuip": "10~25자, 이름/승패 없이",
+  "categoryResults": {
+    "wealth": { "killingLine": "12~30자, 이름 사용", "detail": "80~150자, 사주 근거" },
+    "love": { "killingLine": "...", "detail": "..." },
+    "career": { "killingLine": "...", "detail": "..." },
+    "health": { "killingLine": "...", "detail": "..." },
+    "social": { "killingLine": "...", "detail": "..." }
   },
-  "compatibility": {
-    "baseAnalysis": "기본 상성 분석 2~3문단. 비유 1개 필수",
-    "mainScenario": {
-      "type": "[선택된 관계 유형]",
-      "analysis": "2문단 6~8문장. 비유 1개. 결국 마무리 필수"
-    },
+  "chemistry": {
+    "label": { "emoji": "서버값 복사", "title": "서버값 복사", "description": "서버값 복사" },
+    "analysis": "2~3문단",
+    "mainScenario": { "type": "서버가 지정한 관계", "analysis": "1~2문단" },
     "bonusScenarios": [
-      { "type": "[관계 유형]", "label": "[한국어]이었다면", "analysis": "4~5문장. 비유 1개. 결국 마무리 필수" },
-      { "type": "[관계 유형]", "label": "[한국어]이었다면", "analysis": "4~5문장. 비유 1개. 결국 마무리 필수" }
+      { "type": "관계유형", "label": "한국어이었다면", "analysis": "4~5문장" },
+      { "type": "관계유형", "label": "한국어이었다면", "analysis": "4~5문장" }
     ]
   },
-  "finalVerdict": "2문단(승패원인\\n\\n결국 마무리). 카테고리 승패 사실 확인 필수",
-  "dangerSignals": {
-    "triggers": [
-      {
-        "situation": "구체적 트리거 상황 (5~15자). 예: '돈 거래를 하면', '같이 술을 마시면', '중요한 결정 앞에서'",
-        "description": "왜 이 상황에서 충돌이 터지는지 사주 논리로 설명. 충/형/파, 오행 상극, 용신 충돌을 근거로. 2~3문장."
-      }
-    ],
-    "summary": "이 관계에서 가장 조심해야 할 핵심을 한 문장으로. '결국 이 관계에서 조심해야 할 건 ~야' 패턴."
-  },
+  "simulations": [
+    { "question": "서버가 준 질문 그대로", "answer": "1~2문장", "basis": "15자 이내 키워드" }
+  ],
   "futureOutlook": {
-    "now": "현재 대운 기준 두 사람의 관계 상태. 대운 데이터를 근거로. 2~3문장.",
-    "midTerm": "3~5년 후 대운 전환기 기준 변화. 어떤 대운이 바뀌면서 관계가 어떻게 변하는지. 2~3문장.",
-    "longTerm": "10년 후 대운 기준 전망. 2~3문장.",
-    "verdict": "시간축 전체를 관통하는 마무리. '결국 시간이 지나면 ~야/이야' 패턴. 1문장."
-  }
+    "nextYear": "1~2문장",
+    "threeYears": "1~2문장"
+  },
+  "finalVerdict": "2~3문장"
 }`;
 
 /* ── LLM 입력 빌더 ── */
@@ -341,6 +218,8 @@ export function buildBattleUserInfo(opts: {
   interaction?: BattleInteraction;
   fortuneBlockA?: string;
   fortuneBlockB?: string;
+  chemistryLabel?: ChemistryLabel;
+  simulationQuestions?: { icon: string; question: string }[];
 }): string {
   const {
     nameA, nameB,
@@ -351,6 +230,8 @@ export function buildBattleUserInfo(opts: {
     sajuTextA, sajuTextB,
     interaction,
     fortuneBlockA, fortuneBlockB,
+    chemistryLabel,
+    simulationQuestions,
   } = opts;
 
   const fmtScores = (scores: ServerScores) =>
@@ -369,13 +250,12 @@ export function buildBattleUserInfo(opts: {
   const compatFocus = RELATIONSHIP_COMPAT_FOCUS[relationshipType];
   const bonusScenarios = selectBonusScenarios(relationshipType);
 
-  // Identify highlight category (max score diff)
   const highlight = [...comparison.matches].sort((a, b) => b.diff - a.diff)[0];
   const highlightInstruction = highlight
-    ? `\n[하이라이트 카테고리]\n"${highlight.category}"가 점수차(${highlight.diff}점)가 가장 큰 결정적 항목이다. categoryComments에서 이 카테고리는 반드시 2~3문장으로 상세히 분석하라.`
+    ? `\n[결정타 카테고리]\n"${highlight.category}"가 점수차(${highlight.diff}점)가 가장 큰 결정적 항목이다. killingLine에서 이 카테고리를 특히 날카롭게 작성하라.`
     : "";
 
-  // Build interaction block
+  // Interaction block
   let interactionBlock = "";
   if (interaction) {
     const lines: string[] = ["\n[두 사주 상호작용 분석]"];
@@ -401,9 +281,32 @@ export function buildBattleUserInfo(opts: {
     interactionBlock = lines.join("\n");
   }
 
-  // Build bonus scenario instruction
+  // Chemistry label block
+  let chemistryBlock = "";
+  if (chemistryLabel) {
+    chemistryBlock = `
+[상성 유형 라벨 — 서버 확정]
+emoji: ${chemistryLabel.emoji}
+title: ${chemistryLabel.title}
+description: ${chemistryLabel.description}
+→ 이 라벨을 chemistry.label에 그대로 복사해. 변경 금지.`;
+  }
+
+  // Simulation questions block
+  let simulationBlock = "";
+  if (simulationQuestions && simulationQuestions.length > 0) {
+    const simLines = simulationQuestions.map((sq, i) =>
+      `${i + 1}. ${sq.icon} ${sq.question}`
+    );
+    simulationBlock = `
+[시뮬레이션 질문 — 서버 선택]
+${simLines.join("\n")}
+→ 각 질문에 대해 사주 근거 기반으로 1~2문장 답변 생성. question 필드에 질문 그대로 복사.`;
+  }
+
+  // Bonus scenario instruction
   const bonusInstruction = bonusScenarios.map((b, i) =>
-    `${i + 1}. type: "${b.type}", label: "${b.label}" — 4~5문장, 비유 1개, "결국 ~이야." 마무리`
+    `${i + 1}. type: "${b.type}", label: "${b.label}" — 4~5문장`
   ).join("\n");
 
   return `
@@ -427,6 +330,8 @@ ${matchLines.join("\n")}
 ${nameA} ${comparison.winsA}승 / ${nameB} ${comparison.winsB}승 / 무승부 ${comparison.draws}
 최종 승자: ${overallLabel} (${comparison.overallIntensity})
 ${highlightInstruction}
+${chemistryBlock}
+${simulationBlock}
 
 [메인 관계 유형: ${RELATIONSHIP_LABELS[relationshipType]}]
 ${tone}
@@ -458,6 +363,8 @@ export async function runBattleAnalysis(opts: {
   interaction?: BattleInteraction;
   fortuneBlockA?: string;
   fortuneBlockB?: string;
+  chemistryLabel?: ChemistryLabel;
+  simulationQuestions?: { icon: string; question: string }[];
 }): Promise<BattleLlmAnalysis> {
   const userInfo = buildBattleUserInfo(opts);
   const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
@@ -469,7 +376,9 @@ export async function runBattleAnalysis(opts: {
     if (res.ok) {
       try {
         const raw = parseJson5Loose<any>(res.text);
-        return validateAndNormalize(raw, opts.relationshipType);
+        const validated = validateAndNormalize(raw, opts.relationshipType, opts.chemistryLabel, opts.simulationQuestions);
+        const { result: postprocessed } = postprocessBattleResult(validated);
+        return postprocessed;
       } catch (parseErr) {
         console.warn("[BATTLE_LLM] 응답 파싱 실패:", model, parseErr);
         lastError = { message: "LLM 응답 파싱 실패" };
@@ -480,104 +389,104 @@ export async function runBattleAnalysis(opts: {
     if (!shouldFallback(res.status, res.apiStatus)) break;
   }
 
-  // Fallback
   return buildFallback(opts);
 }
 
 /* ── 파싱 검증 & 정규화 ── */
 
-function validateAndNormalize(raw: any, relationshipType: RelationshipType): BattleLlmAnalysis {
-  // categoryComments: 객체 형태 기대, 배열이면 변환 시도
-  const cc = raw.categoryComments;
-  let categoryComments: BattleLlmAnalysis["categoryComments"];
+function validateAndNormalize(
+  raw: any,
+  relationshipType: RelationshipType,
+  chemistryLabel?: ChemistryLabel,
+  simulationQuestions?: { icon: string; question: string }[],
+): BattleLlmAnalysis {
+  // categoryResults
+  const cr = raw.categoryResults;
+  const categoryResults: BattleLlmAnalysis["categoryResults"] = {
+    wealth: { killingLine: "", detail: "" },
+    love: { killingLine: "", detail: "" },
+    career: { killingLine: "", detail: "" },
+    health: { killingLine: "", detail: "" },
+    social: { killingLine: "", detail: "" },
+  };
 
-  if (cc && typeof cc === "object" && !Array.isArray(cc)) {
-    categoryComments = {
-      wealth: cc.wealth || "",
-      love: cc.love || "",
-      career: cc.career || "",
-      health: cc.health || "",
-      social: cc.social || "",
-    };
-  } else if (Array.isArray(cc)) {
-    // Legacy array format → convert
-    const CATEGORY_MAP: Record<string, keyof BattleLlmAnalysis["categoryComments"]> = {
-      "재물운": "wealth", "연애운": "love", "직장운": "career", "건강운": "health", "대인운": "social",
-    };
-    categoryComments = { wealth: "", love: "", career: "", health: "", social: "" };
-    for (const item of cc) {
-      const key = CATEGORY_MAP[item?.category];
-      if (key) categoryComments[key] = item.comment || "";
+  if (cr && typeof cr === "object" && !Array.isArray(cr)) {
+    for (const key of ["wealth", "love", "career", "health", "social"] as const) {
+      if (cr[key]) {
+        categoryResults[key] = {
+          killingLine: cr[key].killingLine || "",
+          detail: cr[key].detail || "",
+        };
+      }
     }
-  } else {
-    categoryComments = { wealth: "", love: "", career: "", health: "", social: "" };
   }
 
-  // compatibility: 객체 형태 기대
-  const compat = raw.compatibility;
-  let compatibility: BattleLlmAnalysis["compatibility"];
+  // chemistry — force server label
+  const chem = raw.chemistry;
+  const chemistry: BattleLlmAnalysis["chemistry"] = {
+    label: chemistryLabel || { emoji: "", title: "", description: "" },
+    analysis: "",
+    mainScenario: { type: relationshipType, analysis: "" },
+    bonusScenarios: [],
+  };
 
-  if (compat && typeof compat === "object") {
-    compatibility = {
-      baseAnalysis: compat.baseAnalysis || "",
-      mainScenario: {
-        type: relationshipType, // Always use server-side value — LLM may return Korean ("가족") instead of English ("family")
-        analysis: compat.mainScenario?.analysis || "",
-      },
-      bonusScenarios: Array.isArray(compat.bonusScenarios)
-        ? compat.bonusScenarios.map((s: any) => ({
-            type: s?.type || "",
-            label: s?.label || "",
-            analysis: s?.analysis || "",
-          }))
-        : [],
-    };
-  } else {
-    compatibility = {
-      baseAnalysis: "",
-      mainScenario: { type: relationshipType, analysis: "" },
-      bonusScenarios: [],
-    };
+  if (chem && typeof chem === "object") {
+    chemistry.analysis = chem.analysis || "";
+    if (chem.mainScenario) {
+      chemistry.mainScenario = {
+        type: relationshipType,
+        analysis: chem.mainScenario.analysis || "",
+      };
+    }
+    if (Array.isArray(chem.bonusScenarios)) {
+      chemistry.bonusScenarios = chem.bonusScenarios.map((s: any) => ({
+        type: s?.type || "",
+        label: s?.label || "",
+        analysis: s?.analysis || "",
+      }));
+    }
   }
 
-  // dangerSignals: 객체 형태 기대
-  const ds = raw.dangerSignals;
-  let dangerSignals: BattleLlmAnalysis["dangerSignals"];
-  if (ds && typeof ds === "object" && !Array.isArray(ds)) {
-    dangerSignals = {
-      triggers: Array.isArray(ds.triggers)
-        ? ds.triggers.map((t: any) => ({
-            situation: typeof t?.situation === "string" ? t.situation : "",
-            description: typeof t?.description === "string" ? t.description : "",
-          }))
-        : [],
-      summary: typeof ds.summary === "string" ? ds.summary : "",
-    };
-  } else {
-    dangerSignals = { triggers: [], summary: "" };
+  // simulations — force server questions
+  let simulations: BattleLlmAnalysis["simulations"] = [];
+  if (Array.isArray(raw.simulations)) {
+    simulations = raw.simulations.map((s: any, i: number) => ({
+      question: simulationQuestions?.[i]?.question || s?.question || "",
+      answer: s?.answer || "",
+      basis: s?.basis || "",
+    }));
   }
 
-  // futureOutlook: 객체 형태 기대
+  // Fill missing simulations with server questions
+  if (simulationQuestions) {
+    while (simulations.length < simulationQuestions.length) {
+      const idx = simulations.length;
+      simulations.push({
+        question: simulationQuestions[idx].question,
+        answer: "",
+        basis: "",
+      });
+    }
+  }
+
+  // futureOutlook
   const fo = raw.futureOutlook;
-  let futureOutlook: BattleLlmAnalysis["futureOutlook"];
-  if (fo && typeof fo === "object" && !Array.isArray(fo)) {
-    futureOutlook = {
-      now: typeof fo.now === "string" ? fo.now : "",
-      midTerm: typeof fo.midTerm === "string" ? fo.midTerm : "",
-      longTerm: typeof fo.longTerm === "string" ? fo.longTerm : "",
-      verdict: typeof fo.verdict === "string" ? fo.verdict : "",
-    };
-  } else {
-    futureOutlook = { now: "", midTerm: "", longTerm: "", verdict: "" };
+  const futureOutlook: BattleLlmAnalysis["futureOutlook"] = {
+    nextYear: "",
+    threeYears: "",
+  };
+  if (fo && typeof fo === "object") {
+    futureOutlook.nextYear = fo.nextYear || "";
+    futureOutlook.threeYears = fo.threeYears || "";
   }
 
   return {
     heroQuip: raw.heroQuip || "심판의 말이 필요 없는 결과야.",
-    categoryComments,
-    compatibility,
-    finalVerdict: raw.finalVerdict || "",
-    dangerSignals,
+    categoryResults,
+    chemistry,
+    simulations,
     futureOutlook,
+    finalVerdict: raw.finalVerdict || "",
   };
 }
 
@@ -588,25 +497,34 @@ function buildFallback(opts: {
   nameB: string;
   comparison: BattleComparison;
   relationshipType: RelationshipType;
+  chemistryLabel?: ChemistryLabel;
+  simulationQuestions?: { icon: string; question: string }[];
 }): BattleLlmAnalysis {
   const winner = opts.comparison.overallWinner === "A" ? opts.nameA
     : opts.comparison.overallWinner === "B" ? opts.nameB
     : null;
 
+  const emptyCat = { killingLine: "", detail: "" };
+
   return {
     heroQuip: "심판의 말이 필요 없는 결과야.",
-    categoryComments: {
-      wealth: "", love: "", career: "", health: "", social: "",
+    categoryResults: {
+      wealth: emptyCat, love: emptyCat, career: emptyCat, health: emptyCat, social: emptyCat,
     },
-    compatibility: {
-      baseAnalysis: "",
+    chemistry: {
+      label: opts.chemistryLabel || { emoji: "", title: "", description: "" },
+      analysis: "",
       mainScenario: { type: opts.relationshipType, analysis: "" },
       bonusScenarios: [],
     },
+    simulations: (opts.simulationQuestions || []).map((sq) => ({
+      question: sq.question,
+      answer: "",
+      basis: "",
+    })),
+    futureOutlook: { nextYear: "", threeYears: "" },
     finalVerdict: winner
       ? `종합적으로 ${winner}의 사주가 더 강한 기운을 갖고 있어.`
       : "두 사람 다 비슷한 수준의 사주 기운이야.",
-    dangerSignals: { triggers: [], summary: "" },
-    futureOutlook: { now: "", midTerm: "", longTerm: "", verdict: "" },
   };
 }

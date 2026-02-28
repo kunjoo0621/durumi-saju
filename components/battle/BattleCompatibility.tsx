@@ -6,7 +6,7 @@ import type { Icon } from "@phosphor-icons/react";
 import type { BattleLlmAnalysis, RelationshipType } from "@/types/battle";
 
 type Props = {
-  compatibility: BattleLlmAnalysis["compatibility"];
+  chemistry: BattleLlmAnalysis["chemistry"];
 };
 
 const SCENARIO_ICONS: Record<string, Icon> = {
@@ -97,8 +97,8 @@ function SectionCard({
   );
 }
 
-export default function BattleCompatibility({ compatibility }: Props) {
-  const { baseAnalysis, mainScenario, bonusScenarios } = compatibility;
+export default function BattleCompatibility({ chemistry }: Props) {
+  const { analysis: baseAnalysis, mainScenario, bonusScenarios } = chemistry;
   const MainIcon = SCENARIO_ICONS[mainScenario.type] || Handshake;
   const mainDisplay = MAIN_SCENARIO_DISPLAY[mainScenario.type as RelationshipType] || "상성 분석";
 
@@ -128,7 +128,7 @@ export default function BattleCompatibility({ compatibility }: Props) {
             {baseAnalysis && (
               <div className="px-6 pb-5">
                 <div className="space-y-6">
-                  {baseAnalysis.split(/\n\s*\n/).map((para, i) => (
+                  {baseAnalysis.split(/\n\s*\n/).map((para: string, i: number) => (
                     <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
                       {para.trim()}
                     </p>
@@ -150,7 +150,7 @@ export default function BattleCompatibility({ compatibility }: Props) {
                   <span className="text-[14px] font-semibold text-text-primary">{mainDisplay}</span>
                 </div>
                 <div className="space-y-6">
-                  {mainScenario.analysis.split(/\n\s*\n/).map((para, i) => (
+                  {mainScenario.analysis.split(/\n\s*\n/).map((para: string, i: number) => (
                     <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
                       {para.trim()}
                     </p>
@@ -163,7 +163,7 @@ export default function BattleCompatibility({ compatibility }: Props) {
       )}
 
       {/* Bonus scenarios — individual accordions, collapsed by default */}
-      {bonusScenarios.map((scenario, i) => {
+      {bonusScenarios.map((scenario: { type: string; label: string; analysis: string }, i: number) => {
         if (!scenario.analysis) return null;
         const BonusIcon = SCENARIO_ICONS[scenario.type] || Handshake;
         return (

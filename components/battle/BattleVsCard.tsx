@@ -10,7 +10,7 @@ type Props = {
   matches: CategoryMatchResult[];
   nameA: string;
   nameB: string;
-  llmComments: BattleLlmAnalysis["categoryComments"];
+  llmComments: BattleLlmAnalysis["categoryResults"];
   highlightCategory?: string;
 };
 
@@ -115,7 +115,7 @@ function CategoryCard({
   );
 }
 
-const CATEGORY_KEY_MAP: Record<string, keyof BattleLlmAnalysis["categoryComments"]> = {
+const CATEGORY_KEY_MAP: Record<string, keyof BattleLlmAnalysis["categoryResults"]> = {
   "재물운": "wealth",
   "연애운": "love",
   "직장운": "career",
@@ -123,9 +123,11 @@ const CATEGORY_KEY_MAP: Record<string, keyof BattleLlmAnalysis["categoryComments
   "대인운": "social",
 };
 
-function getComment(llmComments: BattleLlmAnalysis["categoryComments"], category: string): string | undefined {
+function getComment(llmComments: BattleLlmAnalysis["categoryResults"], category: string): string | undefined {
   const key = CATEGORY_KEY_MAP[category];
-  return key ? llmComments[key] || undefined : undefined;
+  if (!key) return undefined;
+  const cr = llmComments[key];
+  return cr ? [cr.killingLine, cr.detail].filter(Boolean).join("\n\n") || undefined : undefined;
 }
 
 export default function BattleVsCard({ matches, nameA, nameB, llmComments, highlightCategory }: Props) {
