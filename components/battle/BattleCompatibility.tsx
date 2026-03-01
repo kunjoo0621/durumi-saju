@@ -101,10 +101,11 @@ export default function BattleCompatibility({ chemistry }: Props) {
   const { label, analysis: baseAnalysis, mainScenario, bonusScenarios } = chemistry;
   const MainIcon = SCENARIO_ICONS[mainScenario.type] || Handshake;
   const mainDisplay = MAIN_SCENARIO_DISPLAY[mainScenario.type as RelationshipType] || "상성 분석";
+  const [mainExpanded, setMainExpanded] = useState(false);
 
   return (
     <div className="space-y-5">
-      {/* Combined card: baseAnalysis + mainScenario — always visible (not accordion) */}
+      {/* Combined card: baseAnalysis + mainScenario — accordion */}
       {(baseAnalysis || mainScenario.analysis) && (
         <div className="flex bg-background-secondary rounded-2xl overflow-hidden">
           <div
@@ -113,67 +114,91 @@ export default function BattleCompatibility({ chemistry }: Props) {
           />
           <div className="flex-1 min-w-0">
             {/* Header */}
-            <div className="px-6 py-5 flex items-center gap-2">
-              <Handshake weight="duotone" size={28} color="#A855F7" aria-hidden="true" />
-              <span className="text-title-3 text-text-primary">상성 진단</span>
-              <span
-                className="text-[11px] font-medium px-2 py-0.5 rounded-md ml-auto"
-                style={{ color: "#A855F7", backgroundColor: "rgba(168,85,247,0.15)" }}
-              >
-                상성
-              </span>
-            </div>
-
-            {/* Chemistry label */}
-            {label.title && (
-              <div className="px-6 pb-4">
-                <div
-                  className="rounded-xl px-4 py-3 flex items-center gap-3"
-                  style={{ backgroundColor: "rgba(168,85,247,0.08)" }}
+            <button
+              type="button"
+              onClick={() => setMainExpanded((p) => !p)}
+              className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
+              aria-expanded={mainExpanded}
+            >
+              <div className="flex items-center gap-2">
+                <Handshake weight="duotone" size={28} color="#A855F7" aria-hidden="true" />
+                <span className="text-title-3 text-text-primary">상성 진단</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span
+                  className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+                  style={{ color: "#A855F7", backgroundColor: "rgba(168,85,247,0.15)" }}
                 >
-                  <span className="text-[28px] leading-none shrink-0">{label.emoji}</span>
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-bold text-text-primary">{label.title}</p>
-                    <p className="text-[13px] text-text-secondary mt-0.5">{label.description}</p>
-                  </div>
+                  상성
+                </span>
+                <CaretDown
+                  weight="bold"
+                  size={20}
+                  className={`text-text-secondary transition-transform ${mainExpanded ? "rotate-180" : ""}`}
+                  aria-hidden="true"
+                />
+              </div>
+            </button>
+
+            {/* Content — grid animation */}
+            <div
+              className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                mainExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="px-6 pb-6 pt-4">
+                  {/* Chemistry label */}
+                  {label.title && (
+                    <div className="mb-5">
+                      <div
+                        className="rounded-xl px-4 py-3 flex items-center gap-3"
+                        style={{ backgroundColor: "rgba(168,85,247,0.08)" }}
+                      >
+                        <span className="text-[28px] leading-none shrink-0">{label.emoji}</span>
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-bold text-text-primary">{label.title}</p>
+                          <p className="text-[13px] text-text-secondary mt-0.5">{label.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* baseAnalysis body */}
+                  {baseAnalysis && (
+                    <div className="space-y-6">
+                      {baseAnalysis.split(/\n\s*\n/).map((para: string, i: number) => (
+                        <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                          {para.trim()}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  {baseAnalysis && mainScenario.analysis && (
+                    <div className="h-px bg-white/[0.06] my-5" />
+                  )}
+
+                  {/* mainScenario sub-header + body */}
+                  {mainScenario.analysis && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <MainIcon weight="duotone" size={22} color="#FF6B6B" aria-hidden="true" />
+                        <span className="text-[14px] font-semibold text-text-primary">{mainDisplay}</span>
+                      </div>
+                      <div className="space-y-6">
+                        {mainScenario.analysis.split(/\n\s*\n/).map((para: string, i: number) => (
+                          <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                            {para.trim()}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-
-            {/* baseAnalysis body */}
-            {baseAnalysis && (
-              <div className="px-6 pb-5">
-                <div className="space-y-6">
-                  {baseAnalysis.split(/\n\s*\n/).map((para: string, i: number) => (
-                    <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
-                      {para.trim()}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Divider */}
-            {baseAnalysis && mainScenario.analysis && (
-              <div className="h-px bg-white/[0.06] mx-6" />
-            )}
-
-            {/* mainScenario sub-header + body */}
-            {mainScenario.analysis && (
-              <div className="px-6 py-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <MainIcon weight="duotone" size={22} color="#FF6B6B" aria-hidden="true" />
-                  <span className="text-[14px] font-semibold text-text-primary">{mainDisplay}</span>
-                </div>
-                <div className="space-y-6">
-                  {mainScenario.analysis.split(/\n\s*\n/).map((para: string, i: number) => (
-                    <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
-                      {para.trim()}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}
