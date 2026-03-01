@@ -133,7 +133,7 @@ export default function BattleSimulations({ simulations, icons }: Props) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {filtered.map((sim, i) => {
         const expanded = expandedSet.has(i);
         const emoji = icons?.[i] || "";
@@ -155,9 +155,9 @@ export default function BattleSimulations({ simulations, icons }: Props) {
                 className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
                 aria-expanded={expanded}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <IconComp weight="duotone" size={24} color="#F59E0B" className="shrink-0" aria-hidden="true" />
-                  <span className="text-[16px] font-medium text-text-primary truncate">
+                <div className="flex items-center gap-2 min-w-0">
+                  <IconComp weight="duotone" size={28} color="#F59E0B" className="shrink-0" aria-hidden="true" />
+                  <span className="text-title-3 text-text-primary truncate">
                     {sim.question}
                   </span>
                 </div>
@@ -177,8 +177,8 @@ export default function BattleSimulations({ simulations, icons }: Props) {
                 }`}
               >
                 <div className="overflow-hidden">
-                  <div className="px-6 pb-6 pt-1">
-                    <p className="text-[14px] text-gray-300 leading-[1.75]">
+                  <div className="px-6 pb-6 pt-4">
+                    <p className="text-[16px] text-text-primary leading-[1.75]">
                       {sim.answer}
                     </p>
                     {sim.basis && (

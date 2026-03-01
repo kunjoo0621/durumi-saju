@@ -34,7 +34,7 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
           aria-expanded={expanded}
         >
           <div className="flex items-center gap-2">
-            <Binoculars weight="bold" size={28} color="#6366F1" aria-hidden="true" />
+            <Binoculars weight="duotone" size={28} color="#6366F1" aria-hidden="true" />
             <span className="text-title-3 text-text-primary">미래 예측</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -60,7 +60,7 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
           }`}
         >
           <div className="overflow-hidden">
-            <div className="px-6 pb-6 pt-2 space-y-5">
+            <div className="px-6 pb-6 pt-4 space-y-5">
               {TIMELINE_BLOCKS.map(({ key, label }) => {
                 const text = futureOutlook[key];
                 if (!text) return null;
@@ -69,7 +69,7 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
                     <p className="text-[13px] font-bold text-gray-500 mb-1.5">
                       {label}
                     </p>
-                    <p className="text-[15px] text-gray-300 leading-[1.7]">
+                    <p className="text-[16px] text-text-primary leading-[1.75]">
                       {text}
                     </p>
                   </div>
