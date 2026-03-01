@@ -61,6 +61,9 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
         >
           <div className="overflow-hidden">
             <div className="px-6 pb-6 pt-4 space-y-5">
+              {futureOutlook.punchline && (
+                <p className="text-[16px] font-semibold text-white leading-[1.6]">{futureOutlook.punchline}</p>
+              )}
               {TIMELINE_BLOCKS.map(({ key, label }) => {
                 const text = futureOutlook[key];
                 if (!text) return null;

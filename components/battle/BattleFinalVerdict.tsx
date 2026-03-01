@@ -2,15 +2,20 @@
 
 import { useState } from "react";
 import { Scales, CaretDown } from "@phosphor-icons/react";
+import type { BattleLlmAnalysis } from "@/types/battle";
 
 type Props = {
-  finalVerdict: string;
+  finalVerdict: BattleLlmAnalysis["finalVerdict"] | string;
 };
 
 export default function BattleFinalVerdict({ finalVerdict }: Props) {
   const [expanded, setExpanded] = useState(false);
 
-  if (!finalVerdict) return null;
+  // Support both old (string) and new ({ punchline, verdict }) formats
+  const punchline = typeof finalVerdict === "object" ? finalVerdict.punchline : "";
+  const verdict = typeof finalVerdict === "object" ? finalVerdict.verdict : finalVerdict;
+
+  if (!verdict && !punchline) return null;
 
   return (
     <div className="flex bg-background-secondary rounded-2xl overflow-hidden">
@@ -54,13 +59,18 @@ export default function BattleFinalVerdict({ finalVerdict }: Props) {
         >
           <div className="overflow-hidden">
             <div className="px-6 pb-6 pt-4">
-              <div className="space-y-6">
-                {finalVerdict.split(/\n\s*\n/).map((para, i) => (
-                  <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
-                    {para.trim()}
-                  </p>
-                ))}
-              </div>
+              {punchline && (
+                <p className="text-[16px] font-semibold text-white leading-[1.6] mb-4">{punchline}</p>
+              )}
+              {verdict && (
+                <div className="space-y-6">
+                  {verdict.split(/\n\s*\n/).map((para, i) => (
+                    <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                      {para.trim()}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

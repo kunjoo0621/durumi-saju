@@ -267,6 +267,9 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
   }
 
   // chemistry
+  result.chemistry.punchline = applyTextFixes(result.chemistry.punchline, warnings, "chemistry.punchline");
+  detectIssues(result.chemistry.punchline, "chemistry.punchline", warnings);
+
   result.chemistry.analysis = applyTextFixes(result.chemistry.analysis, warnings, "chemistry.analysis");
   detectIssues(result.chemistry.analysis, "chemistry.analysis", warnings);
 
@@ -276,9 +279,13 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
   detectIssues(result.chemistry.mainScenario.analysis, "chemistry.mainScenario", warnings);
 
   for (let i = 0; i < result.chemistry.bonusScenarios.length; i++) {
+    result.chemistry.bonusScenarios[i].punchline = applyTextFixes(
+      result.chemistry.bonusScenarios[i].punchline, warnings, `bonusScenario[${i}].punchline`,
+    );
     result.chemistry.bonusScenarios[i].analysis = applyTextFixes(
       result.chemistry.bonusScenarios[i].analysis, warnings, `bonusScenario[${i}]`,
     );
+    detectIssues(result.chemistry.bonusScenarios[i].punchline, `bonusScenario[${i}].punchline`, warnings);
     detectIssues(result.chemistry.bonusScenarios[i].analysis, `bonusScenario[${i}]`, warnings);
   }
 
@@ -295,14 +302,18 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
   }
 
   // futureOutlook
+  result.futureOutlook.punchline = applyTextFixes(result.futureOutlook.punchline, warnings, "futureOutlook.punchline");
+  detectIssues(result.futureOutlook.punchline, "futureOutlook.punchline", warnings);
   result.futureOutlook.nextYear = applyTextFixes(result.futureOutlook.nextYear, warnings, "futureOutlook.nextYear");
   result.futureOutlook.threeYears = applyTextFixes(result.futureOutlook.threeYears, warnings, "futureOutlook.threeYears");
   detectIssues(result.futureOutlook.nextYear, "futureOutlook.nextYear", warnings);
   detectIssues(result.futureOutlook.threeYears, "futureOutlook.threeYears", warnings);
 
   // finalVerdict
-  result.finalVerdict = applyTextFixes(result.finalVerdict, warnings, "finalVerdict");
-  detectIssues(result.finalVerdict, "finalVerdict", warnings);
+  result.finalVerdict.punchline = applyTextFixes(result.finalVerdict.punchline, warnings, "finalVerdict.punchline");
+  detectIssues(result.finalVerdict.punchline, "finalVerdict.punchline", warnings);
+  result.finalVerdict.verdict = applyTextFixes(result.finalVerdict.verdict, warnings, "finalVerdict.verdict");
+  detectIssues(result.finalVerdict.verdict, "finalVerdict.verdict", warnings);
 
   // Length checks
   detectLengthIssues(result, warnings);

@@ -58,6 +58,7 @@ export type BattleLlmAnalysis = {
       title: string;
       description: string;
     };
+    punchline: string;
     analysis: string;
     mainScenario: {
       type: string;
@@ -66,6 +67,7 @@ export type BattleLlmAnalysis = {
     bonusScenarios: {
       type: string;
       label: string;
+      punchline: string;
       analysis: string;
     }[];
   };
@@ -76,10 +78,14 @@ export type BattleLlmAnalysis = {
     basis: string;
   }[];
   futureOutlook: {
+    punchline: string;
     nextYear: string;
     threeYears: string;
   };
-  finalVerdict: string;
+  finalVerdict: {
+    punchline: string;
+    verdict: string;
+  };
 };
 
 export type BattleListItem = {

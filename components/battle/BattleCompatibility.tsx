@@ -32,6 +32,7 @@ function SectionCard({
   iconColor,
   title,
   accentColor,
+  punchline,
   content,
   collapsible = false,
   defaultExpanded = true,
@@ -40,6 +41,7 @@ function SectionCard({
   iconColor: string;
   title: string;
   accentColor: string;
+  punchline?: string;
   content: string;
   collapsible?: boolean;
   defaultExpanded?: boolean;
@@ -56,22 +58,27 @@ function SectionCard({
         <button
           type="button"
           onClick={collapsible ? () => setExpanded((p) => !p) : undefined}
-          className={`w-full px-6 py-5 flex items-center justify-between text-left transition-colors ${
+          className={`w-full px-6 py-5 text-left transition-colors ${
             collapsible ? "hover:bg-white/[0.03] active:bg-white/[0.06]" : ""
           }`}
           aria-expanded={expanded}
         >
-          <div className="flex items-center gap-2">
-            <IconComp weight="duotone" size={28} color={iconColor} aria-hidden="true" />
-            <span className="text-title-3 text-text-primary">{title}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <IconComp weight="duotone" size={28} color={iconColor} aria-hidden="true" />
+              <span className="text-title-3 text-text-primary">{title}</span>
+            </div>
+            {collapsible && (
+              <CaretDown
+                weight="bold"
+                size={20}
+                className={`text-text-secondary transition-transform shrink-0 ml-2 ${expanded ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            )}
           </div>
-          {collapsible && (
-            <CaretDown
-              weight="bold"
-              size={20}
-              className={`text-text-secondary transition-transform ${expanded ? "rotate-180" : ""}`}
-              aria-hidden="true"
-            />
+          {collapsible && !expanded && punchline && (
+            <p className="text-[14px] text-gray-400 mt-1 line-clamp-1">{punchline}</p>
           )}
         </button>
 
@@ -82,6 +89,9 @@ function SectionCard({
         >
           <div className="overflow-hidden">
             <div className="px-6 pb-6 pt-4">
+              {punchline && (
+                <p className="text-[16px] font-semibold text-white leading-[1.6] mb-3">{punchline}</p>
+              )}
               <div className="space-y-6">
                 {content.split(/\n\s*\n/).map((para, i) => (
                   <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
@@ -98,7 +108,7 @@ function SectionCard({
 }
 
 export default function BattleCompatibility({ chemistry }: Props) {
-  const { label, analysis: baseAnalysis, mainScenario, bonusScenarios } = chemistry;
+  const { label, punchline: chemPunchline, analysis: baseAnalysis, mainScenario, bonusScenarios } = chemistry;
   const MainIcon = SCENARIO_ICONS[mainScenario.type] || Handshake;
   const mainDisplay = MAIN_SCENARIO_DISPLAY[mainScenario.type as RelationshipType] || "상성 분석";
   const [mainExpanded, setMainExpanded] = useState(false);
@@ -164,6 +174,11 @@ export default function BattleCompatibility({ chemistry }: Props) {
                     </div>
                   )}
 
+                  {/* Chemistry punchline */}
+                  {chemPunchline && (
+                    <p className="text-[16px] font-semibold text-white leading-[1.6] mt-4 mb-2">{chemPunchline}</p>
+                  )}
+
                   {/* baseAnalysis body */}
                   {baseAnalysis && (
                     <div className="space-y-6">
@@ -204,7 +219,7 @@ export default function BattleCompatibility({ chemistry }: Props) {
       )}
 
       {/* Bonus scenarios — individual accordions, collapsed by default */}
-      {bonusScenarios.map((scenario: { type: string; label: string; analysis: string }, i: number) => {
+      {bonusScenarios.map((scenario, i: number) => {
         if (!scenario.analysis?.trim()) return null;
         const BonusIcon = SCENARIO_ICONS[scenario.type] || Handshake;
         return (
@@ -214,6 +229,7 @@ export default function BattleCompatibility({ chemistry }: Props) {
             iconColor="#9CA3AF"
             title={scenario.label}
             accentColor="#D1D5DB"
+            punchline={scenario.punchline}
             content={scenario.analysis}
             collapsible
             defaultExpanded={false}

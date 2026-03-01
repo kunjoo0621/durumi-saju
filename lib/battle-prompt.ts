@@ -118,6 +118,11 @@ detail:
 chemistry.label:
 - 서버가 확정한 라벨을 그대로 복사해. 변경 금지.
 
+chemistry.punchline:
+- 두 사람의 관계 본질을 일상 장면 한 줄로.
+- label.title("거울 보는 느낌" 등)과 내용이 겹치면 안 돼.
+- label은 유형 분류, punchline은 구체적 장면.
+
 chemistry.analysis:
 - 2~3문단. 일간 관계/오행 상보/용신 상보/대운 동기화 기반.
   1문단: 일간 관계 + 오행 상보 분석
@@ -131,6 +136,7 @@ mainScenario:
 bonusScenarios:
 - 반드시 2개 생성 (비워두지 마). 다른 관계 유형이었다면의 분석. 각 4~5문장.
 - label: "~였다면?" 형태, 5~10자. 예: "친구였다면?", "직장동료였다면?"
+- punchline: 접힌 아코디언 상태에서 보이는 hook. 열어보고 싶게 만드는 한 줄. label과 내용이 겹치면 안 돼.
 
 ────────────────────────────────
 [사주 용어 → 일상 행동 매핑 사전]
@@ -165,6 +171,53 @@ bonusScenarios:
 합: 끌림, 의존, 익숙함, 풀기 어려운 관계
 충: 정면충돌, 갈등, 긴장감, 변화의 계기
 형: 스트레스 누적, 내면 갈등, 돌발 상황, 배신감
+
+────────────────────────────────
+[punchline(대표한줄) 공통 톤 규칙]
+
+모든 섹션의 punchline에 적용되는 규칙.
+
+너의 정체:
+너는 분석가가 아니라 "직설적인 친한 형"이야.
+팩트를 말하되, 장난스럽게. 찔리지만 웃기게. 독설이 아니라 장난.
+
+필수:
+- 25~50자
+- 구체적 일상 장면 or 구체적 시간/행동이 보이는 판정
+- 두 사람 이름 최소 1명 포함
+- 반말 + 단정형 ("~해", "~야", "~지", "~거야")
+- 한자, 대운 정보, 사주 용어 금지. 100% 일상 언어로만.
+
+톤 밸런스 — "찔리지만 웃기는" 선:
+✅ 장난스러운 팩폭: 사실인데 표현이 재밌어서 웃김
+✅ 구체적 장면: 읽으면 머릿속에 그림이 그려짐
+✅ 의외의 반전: "이겼는데 축하할 건 아니야" 식
+❌ 인신공격/모욕: "넌 답이 없어" 같은 건 절대 금지
+❌ 비관적 단정: "평생 안 돼" "절대 못 해" 같은 극단 금지
+❌ 한쪽만 깎아내리기: 양쪽 다 한 대씩 맞아야 함
+
+좋은 예시:
+"처음 3개월은 찐친인 줄 알다가, 6개월 뒤에 서로 읽씹해."
+"김채현이 가계부 앱 깔아놓고 신건주 편의점 결제까지 추적해."
+"같은 팀 걸리면 신건주가 야근하고 김채현이 발표해."
+"지금은 김채현이 웃고 있는데, 2029년엔 신건주 차례야."
+"김채현이 이기긴 했는데, 트로피 들고 좋아할 사주는 아니야."
+"새벽에 서로 고민 털어놓다가 둘 다 더 우울해져서 돌아가."
+
+나쁜 예시:
+"이 관계의 유통기한은 짧아." (분석가 톤, 장면 없음)
+"서로 보완적인 관계가 될 수 있어." (추상적, 재미 없음)
+"갈등의 소지가 있는 구조야." (보고서 톤)
+"신건주는 답이 없어." (인신공격)
+"평생 돈 못 모아." (비관적 극단)
+"~하는 경향이 있어." (분석 용어)
+"~할 가능성이 높아." (추측)
+
+금지 표현:
+"~하는 구조야", "~경향이 있어", "~패턴이야" (분석 용어)
+"~할 가능성이 있어/높아/크지만" (추측)
+"~할 수 있어" (가능성)
+"유통기한", "역학", "메커니즘", "시너지" (딱딱한 단어)
 
 ────────────────────────────────
 [시뮬레이션 규칙]
@@ -206,14 +259,15 @@ basis:
 
 ────────────────────────────────
 [미래 예측 규칙]
+- punchline: 1년 후와 3년 후를 관통하는 한 줄. 시간 흐름에 따른 반전이 느껴져야 해. 구체적 연도나 나이를 포함하면 더 좋음.
 - nextYear: 내년 각자의 변화. 구체적 사건 수준. 1~2문장.
 - threeYears: 3년 뒤 역전/변화 포인트. 1~2문장.
 - 희망적 표현 금지. "기회가 찾아올 거야" → "이직 압박이 세져"
 
 ────────────────────────────────
 [최종 심판 규칙]
-- 2~3문장.
-- 승패 요약 + 핵심 원인 + 역설 (이기고도 편하지 않은 등)
+- punchline: 전체 배틀의 최종 한 줄 판정. 승자를 축하하지 말고, 승패의 의미를 비틀어. "이겼는데 ~" 반전 구조 권장.
+- verdict: 2~3문장. 승패 요약 + 핵심 원인 + 역설 (이기고도 편하지 않은 등)
 - 새로운 인사이트 1개 필수 (다른 섹션에서 안 나온 것)
 - heroQuip과 절대 겹치지 않게.
 - 조언/격려 금지. "~노력이 필요해", "~하면 좋겠어", "~해야 해" 금지. 판정만. 냉정하게 끝내.
@@ -244,6 +298,10 @@ basis:
 11. simulations[].punchline에 구체적 일상 장면이 있는지 (추상적 서술이면 다시 써)
 12. simulations[].reasoning에 사전에 없는 임의 매핑이 있으면 사전 기반으로 수정
 13. 같은 사주 요소(예: 癸未 묘)를 2개 이상 시뮬레이션에서 메인 근거로 반복 사용 금지
+14. 모든 punchline이 구체적 장면/행동인지 (추상적이면 다시 써)
+15. punchline에 분석 용어("구조", "경향", "패턴", "가능성")가 있으면 다시 써
+16. punchline에 한자/사주 용어가 있으면 다시 써 (사주 근거는 본문에서만)
+17. punchline이 한쪽만 깎아내리지 않는지 확인
 
 ────────────────────────────────
 ## 출력 JSON 스키마
@@ -259,21 +317,26 @@ basis:
   },
   "chemistry": {
     "label": { "emoji": "서버값 복사", "title": "서버값 복사", "description": "서버값 복사" },
+    "punchline": "25~50자, 관계 본질 장면",
     "analysis": "2~3문단",
     "mainScenario": { "type": "서버가 지정한 관계", "analysis": "1~2문단" },
     "bonusScenarios": [
-      { "type": "관계유형", "label": "~였다면?", "analysis": "4~5문장" },
-      { "type": "관계유형", "label": "~였다면?", "analysis": "4~5문장" }
+      { "type": "관계유형", "label": "~였다면?", "punchline": "25~50자 hook", "analysis": "4~5문장" },
+      { "type": "관계유형", "label": "~였다면?", "punchline": "25~50자 hook", "analysis": "4~5문장" }
     ]
   },
   "simulations": [
     { "question": "서버가 준 질문 그대로", "punchline": "25~50자 구체적 장면", "reasoning": "150~250자 근거 3~4문장", "basis": "20자 이내 키워드" }
   ],
   "futureOutlook": {
+    "punchline": "25~50자, 시간 반전 한 줄",
     "nextYear": "1~2문장",
     "threeYears": "1~2문장"
   },
-  "finalVerdict": "2~3문장"
+  "finalVerdict": {
+    "punchline": "25~50자, 최종 판정 한 줄",
+    "verdict": "2~3문장"
+  }
 }`;
 
 /* ── LLM 입력 빌더 ── */
@@ -504,12 +567,15 @@ function validateAndNormalize(
   const chem = raw.chemistry;
   const chemistry: BattleLlmAnalysis["chemistry"] = {
     label: chemistryLabel || { emoji: "", title: "", description: "" },
+    punchline: "",
     analysis: "",
     mainScenario: { type: relationshipType, analysis: "" },
     bonusScenarios: [],
   };
 
   if (chem && typeof chem === "object") {
+    // punchline fallback: label.description
+    chemistry.punchline = chem.punchline || chemistryLabel?.description || "";
     chemistry.analysis = chem.analysis || "";
     if (chem.mainScenario) {
       chemistry.mainScenario = {
@@ -518,11 +584,20 @@ function validateAndNormalize(
       };
     }
     if (Array.isArray(chem.bonusScenarios)) {
-      chemistry.bonusScenarios = chem.bonusScenarios.map((s: any) => ({
-        type: s?.type || "",
-        label: s?.label || "",
-        analysis: s?.analysis || "",
-      }));
+      chemistry.bonusScenarios = chem.bonusScenarios.map((s: any) => {
+        // punchline fallback: analysis 첫 문장
+        let punchline = s?.punchline || "";
+        if (!punchline && s?.analysis) {
+          const dotIdx = s.analysis.indexOf(".");
+          if (dotIdx > 0) punchline = s.analysis.slice(0, dotIdx + 1).trim();
+        }
+        return {
+          type: s?.type || "",
+          label: s?.label || "",
+          punchline,
+          analysis: s?.analysis || "",
+        };
+      });
     }
 
     console.info("[BATTLE_BONUS_SCENARIOS]", {
@@ -579,12 +654,28 @@ function validateAndNormalize(
   // futureOutlook
   const fo = raw.futureOutlook;
   const futureOutlook: BattleLlmAnalysis["futureOutlook"] = {
+    punchline: "",
     nextYear: "",
     threeYears: "",
   };
   if (fo && typeof fo === "object") {
+    futureOutlook.punchline = fo.punchline || "";
     futureOutlook.nextYear = fo.nextYear || "";
     futureOutlook.threeYears = fo.threeYears || "";
+  }
+
+  // finalVerdict — string fallback for old data
+  let finalVerdict: BattleLlmAnalysis["finalVerdict"];
+  if (raw.finalVerdict && typeof raw.finalVerdict === "object") {
+    finalVerdict = {
+      punchline: raw.finalVerdict.punchline || "",
+      verdict: raw.finalVerdict.verdict || "",
+    };
+  } else {
+    finalVerdict = {
+      punchline: "",
+      verdict: typeof raw.finalVerdict === "string" ? raw.finalVerdict : "",
+    };
   }
 
   return {
@@ -593,7 +684,7 @@ function validateAndNormalize(
     chemistry,
     simulations,
     futureOutlook,
-    finalVerdict: raw.finalVerdict || "",
+    finalVerdict,
   };
 }
 
@@ -620,6 +711,7 @@ function buildFallback(opts: {
     },
     chemistry: {
       label: opts.chemistryLabel || { emoji: "", title: "", description: "" },
+      punchline: "",
       analysis: "",
       mainScenario: { type: opts.relationshipType, analysis: "" },
       bonusScenarios: [],
@@ -630,9 +722,12 @@ function buildFallback(opts: {
       reasoning: "",
       basis: "",
     })),
-    futureOutlook: { nextYear: "", threeYears: "" },
-    finalVerdict: winner
-      ? `종합적으로 ${winner}의 사주가 더 강한 기운을 갖고 있어.`
-      : "두 사람 다 비슷한 수준의 사주 기운이야.",
+    futureOutlook: { punchline: "", nextYear: "", threeYears: "" },
+    finalVerdict: {
+      punchline: "",
+      verdict: winner
+        ? `종합적으로 ${winner}의 사주가 더 강한 기운을 갖고 있어.`
+        : "두 사람 다 비슷한 수준의 사주 기운이야.",
+    },
   };
 }
