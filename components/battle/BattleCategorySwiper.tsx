@@ -314,13 +314,13 @@ export default function BattleCategorySwiper({
         </div>
       </div>
 
-      {/* Navigation: arrows + dots */}
+      {/* Navigation: arrows (desktop only) + dots */}
       <div className="flex justify-center items-center gap-3">
         <button
           type="button"
           onClick={() => setActiveIndex((p) => Math.max(0, p - 1))}
           disabled={activeIndex === 0}
-          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
+          className="hidden md:flex w-8 h-8 rounded-full items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
           aria-label="이전 카테고리"
         >
           <CaretLeft weight="bold" size={16} className="text-text-secondary" />
@@ -344,7 +344,7 @@ export default function BattleCategorySwiper({
           type="button"
           onClick={() => setActiveIndex((p) => Math.min(sorted.length - 1, p + 1))}
           disabled={activeIndex === sorted.length - 1}
-          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
+          className="hidden md:flex w-8 h-8 rounded-full items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
           aria-label="다음 카테고리"
         >
           <CaretRight weight="bold" size={16} className="text-text-secondary" />
