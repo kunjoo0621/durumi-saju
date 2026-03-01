@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import BattleRadarChart from "@/components/battle/BattleRadarChart";
 import type { BattleComparison, BattleIntensity } from "@/types/battle";
 import type { ServerScores } from "@/lib/utils/saju-scoring";
@@ -133,33 +133,26 @@ export default function BattleHero({
         </div>
       </div>
 
-      {/* Toggle: 상세 비교 보기 */}
-      <button
-        type="button"
-        onClick={() => setChartExpanded((p) => !p)}
-        className="w-full py-4 px-6 flex items-center justify-center gap-1.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
-        style={{ backgroundColor: "#252525" }}
-        aria-expanded={chartExpanded}
-      >
-        <span className="text-[15px] text-text-secondary font-medium">
-          상세 비교 보기
-        </span>
-        <CaretDown
-          weight="bold"
-          size={18}
-          className={`text-text-secondary transition-transform ${chartExpanded ? "rotate-180" : ""}`}
-          aria-hidden="true"
-        />
-      </button>
+      {/* Toggle: 상세 비교 보기 (접힌 상태에서만) */}
+      <div className="px-5 pb-5">
+        {!chartExpanded && (
+          <button
+            type="button"
+            onClick={() => setChartExpanded(true)}
+            className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-4 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
+          >
+            상세 비교 보기
+            <CaretDown weight="bold" size={16} />
+          </button>
+        )}
 
-      {/* Radar chart accordion */}
-      <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-          chartExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="px-4 pb-4">
+        {/* Radar chart accordion */}
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+            chartExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+        >
+          <div className="overflow-hidden">
             <BattleRadarChart
               scoresA={scoresA}
               scoresB={scoresB}
@@ -167,6 +160,15 @@ export default function BattleHero({
               nameB={nameB}
               bare
             />
+
+            <button
+              type="button"
+              onClick={() => setChartExpanded(false)}
+              className="w-full bg-[#252525] text-sm font-medium text-gray-200 py-3 rounded-lg mt-4 transition-colors hover:bg-[#2A2A2A] active:bg-[#2A2A2A] flex items-center justify-center gap-1.5"
+            >
+              상세 비교 접기
+              <CaretUp weight="bold" size={16} />
+            </button>
           </div>
         </div>
       </div>
