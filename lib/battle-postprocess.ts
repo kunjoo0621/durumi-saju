@@ -175,6 +175,8 @@ function fixFormalEndings(text: string): { text: string; count: number } {
 const SPECULATION_PATTERNS: [RegExp, string][] = [
   [/가능성이 매우 높아/g, "거야"],
   [/가능성이 높아/g, "거야"],
+  [/가능성이 더 높아/g, "거야"],
+  [/가능성이 커/g, "거야"],
   [/가능성이 크지만/g, "크지만"],
   [/것이야/g, "거야"],
 ];
@@ -238,6 +240,13 @@ function detectIssues(text: string, label: string, warnings: string[]): void {
     warnings.push(`[WARN] '수 있는' ${suItneunCount}회: ${label}`);
   }
 
+  // 조언/격려 표현
+  const advicePatterns = /맞춰주고|인정해야|노력해야|배려하면|이해하면|존중하면|조절하면/g;
+  let adviceMatch: RegExpExecArray | null;
+  while ((adviceMatch = advicePatterns.exec(text)) !== null) {
+    warnings.push(`[WARN] 조언/격려 표현: ${label} - '${adviceMatch[0]}'`);
+  }
+
   // 미치환 격식체 탐지 (치환 후에도 남은 "X다." 패턴)
   const remaining = text.match(/[가-힣]다\./g);
   if (remaining && remaining.length > 0) {
@@ -299,6 +308,8 @@ function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
     [/감정을? (속으로 )?삭이/g, "감정 삭임"],
     [/통제하려/g, "통제하려"],
     [/눈치를? 보/g, "눈치"],
+    [/편관[과\(]?[과偏]?[官官]?\)?\s*(과|와)?\s*정관[과\(]?[正]?[官]?\)?\s*(이|가)?\s*혼잡/g, "편관/정관 혼잡"],
+    [/가능성이\s*(더\s*)?(높|커|크)/g, "가능성 추측"],
   ];
 
   for (const [regex, label] of patterns) {
