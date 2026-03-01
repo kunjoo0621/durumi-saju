@@ -8,6 +8,7 @@ import BattleHero from "@/components/battle/BattleHero";
 import BattleRadarChart from "@/components/battle/BattleRadarChart";
 import BattleCategorySwiper from "@/components/battle/BattleCategorySwiper";
 import BattleCompatibility from "@/components/battle/BattleCompatibility";
+import BattleSimulations from "@/components/battle/BattleSimulations";
 import BattleFutureOutlook from "@/components/battle/BattleFutureOutlook";
 import BattleFinalVerdict from "@/components/battle/BattleFinalVerdict";
 import BattleUpsellCTA from "@/components/battle/BattleUpsellCTA";
@@ -104,7 +105,15 @@ export default function BattleResultView({
           {/* Section 4: Compatibility */}
           <BattleCompatibility chemistry={llmAnalysis.chemistry} />
 
-          {/* Section 5: Future outlook */}
+          {/* Section 5: Simulations */}
+          {llmAnalysis.simulations && llmAnalysis.simulations.length > 0 && (
+            <BattleSimulations
+              simulations={llmAnalysis.simulations}
+              icons={result.simulationQuestions?.map((sq) => sq.icon)}
+            />
+          )}
+
+          {/* Section 6: Future outlook */}
           <BattleFutureOutlook futureOutlook={llmAnalysis.futureOutlook} />
 
           {/* Section 6: Final verdict */}

@@ -98,7 +98,7 @@ function SectionCard({
 }
 
 export default function BattleCompatibility({ chemistry }: Props) {
-  const { analysis: baseAnalysis, mainScenario, bonusScenarios } = chemistry;
+  const { label, analysis: baseAnalysis, mainScenario, bonusScenarios } = chemistry;
   const MainIcon = SCENARIO_ICONS[mainScenario.type] || Handshake;
   const mainDisplay = MAIN_SCENARIO_DISPLAY[mainScenario.type as RelationshipType] || "상성 분석";
 
@@ -123,6 +123,22 @@ export default function BattleCompatibility({ chemistry }: Props) {
                 상성
               </span>
             </div>
+
+            {/* Chemistry label */}
+            {label.title && (
+              <div className="px-6 pb-4">
+                <div
+                  className="rounded-xl px-4 py-3 flex items-center gap-3"
+                  style={{ backgroundColor: "rgba(168,85,247,0.08)" }}
+                >
+                  <span className="text-[28px] leading-none shrink-0">{label.emoji}</span>
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-bold text-text-primary">{label.title}</p>
+                    <p className="text-[13px] text-text-secondary mt-0.5">{label.description}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* baseAnalysis body */}
             {baseAnalysis && (

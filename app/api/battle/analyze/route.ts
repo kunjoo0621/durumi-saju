@@ -183,6 +183,14 @@ export async function POST(request: NextRequest) {
       body.relationshipType,
     );
 
+    console.info("[BATTLE_CHEMISTRY]", {
+      dayStemRelation: interaction.dayStemRelation.type,
+      winsA: comparison.winsA,
+      winsB: comparison.winsB,
+      relationshipType: body.relationshipType,
+      label: chemistryLabel,
+    });
+
     // Simulation questions (trigger-based, server-side)
     const simulationQuestions = selectSimulations(
       enrichedA,
@@ -190,6 +198,11 @@ export async function POST(request: NextRequest) {
       body.relationshipType,
       5,
     );
+
+    console.info("[BATTLE_SIMULATIONS]", {
+      count: simulationQuestions.length,
+      questions: simulationQuestions.map((sq) => `${sq.icon} ${sq.question}`),
+    });
 
     // LLM analysis
     const llmAnalysis = await runBattleAnalysis({
