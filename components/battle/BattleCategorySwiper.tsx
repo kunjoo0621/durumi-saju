@@ -83,16 +83,39 @@ export default function BattleCategorySwiper({
 
   return (
     <div className="space-y-4">
-      {/* Swiper container */}
-      <div
-        className="overflow-hidden"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div
-          className="flex transition-transform duration-300 ease-out"
-          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+      {/* Swiper container with side arrows */}
+      <div className="relative">
+        {/* Left arrow — desktop only, card side */}
+        <button
+          type="button"
+          onClick={() => setActiveIndex((p) => Math.max(0, p - 1))}
+          disabled={activeIndex === 0}
+          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-[calc(100%+8px)] z-10 w-8 h-8 rounded-full items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
+          aria-label="이전 카테고리"
         >
+          <CaretLeft weight="bold" size={16} className="text-text-secondary" />
+        </button>
+
+        {/* Right arrow — desktop only, card side */}
+        <button
+          type="button"
+          onClick={() => setActiveIndex((p) => Math.min(sorted.length - 1, p + 1))}
+          disabled={activeIndex === sorted.length - 1}
+          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-[calc(100%+8px)] z-10 w-8 h-8 rounded-full items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
+          aria-label="다음 카테고리"
+        >
+          <CaretRight weight="bold" size={16} className="text-text-secondary" />
+        </button>
+
+        <div
+          className="overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div
+            className="flex transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+          >
           {sorted.map((m) => {
             const IconComp = CATEGORY_ICONS[m.category];
             const comment = getComment(llmComments, m.category);
@@ -312,43 +335,22 @@ export default function BattleCategorySwiper({
             );
           })}
         </div>
+        </div>
       </div>
 
-      {/* Navigation: arrows (desktop only) + dots */}
-      <div className="flex justify-center items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setActiveIndex((p) => Math.max(0, p - 1))}
-          disabled={activeIndex === 0}
-          className="hidden md:flex w-8 h-8 rounded-full items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
-          aria-label="이전 카테고리"
-        >
-          <CaretLeft weight="bold" size={16} className="text-text-secondary" />
-        </button>
-
-        <div className="flex items-center gap-2">
-          {sorted.map((m, i) => (
-            <button
-              key={m.category}
-              type="button"
-              onClick={() => setActiveIndex(i)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === activeIndex ? "w-6 bg-white" : "w-2 bg-white/30"
-              }`}
-              aria-label={`${m.category} 카드로 이동`}
-            />
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setActiveIndex((p) => Math.min(sorted.length - 1, p + 1))}
-          disabled={activeIndex === sorted.length - 1}
-          className="hidden md:flex w-8 h-8 rounded-full items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
-          aria-label="다음 카테고리"
-        >
-          <CaretRight weight="bold" size={16} className="text-text-secondary" />
-        </button>
+      {/* Dot indicators */}
+      <div className="flex justify-center items-center gap-2">
+        {sorted.map((m, i) => (
+          <button
+            key={m.category}
+            type="button"
+            onClick={() => setActiveIndex(i)}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              i === activeIndex ? "w-6 bg-white" : "w-2 bg-white/30"
+            }`}
+            aria-label={`${m.category} 카드로 이동`}
+          />
+        ))}
       </div>
     </div>
   );
