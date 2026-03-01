@@ -38,12 +38,13 @@ function composeKorean(cho: number, jung: number, jong: number = 0): string {
   return String.fromCharCode(0xAC00 + cho * 21 * 28 + jung * 28 + jong);
 }
 
-// ─── 격식체 → 반말 치환 (4단계) ────────────────────
+// ─── 격식체 → 반말 치환 (5단계) ────────────────────
 //
 // Stage 1: Compound (수 있다, 기 쉽다, ...)
-// Stage 2: Specific safe patterns (한다→해, 된다→돼, 만든다→만들어, ...)
+// Stage 2: Specific safe patterns (한다→해, 된다→돼, 관계다→관계야, ...)
 // Stage 3: Generic 는다 (consonant stems: 먹는다→먹어, 잡는다→잡아)
-// Stage 4: Generic ㄴ다 + ㅂ다 (Unicode: 긴다→겨, 진다→져, 어렵다→어려워)
+// Stage 4: Generic ㄴ다 + ㅂ다 + catch-all (Unicode: 긴다→겨, 높다→높아)
+// Stage 5: Post-conversion cleanup (하.→해., 쓰어→써)
 
 const COMPOUND_FORMAL: [RegExp, string][] = [
   [/수 있다\./g, "수 있어."],
@@ -62,6 +63,8 @@ const SPECIFIC_FORMAL: [RegExp, string][] = [
   [/있다\./g, "있어."],
   [/없다\./g, "없어."],
   [/크다\./g, "커."],
+  // copula (이다 축약)
+  [/관계다\./g, "관계야."],
   // ㄹ탈락 불규칙
   [/만든다\./g, "만들어."],
   // 르 불규칙
@@ -109,7 +112,7 @@ function fixFormalEndings(text: string): { text: string; count: number } {
     const d = decomposeKorean(char);
     if (!d) return match;
 
-    // ㄴ batchim (jong=4): 긴다→겨, 진다→져, 본다→봐
+    // ㄴ batchim (jong=4): 긴다→겨, 진다→져, 본다→봐, 쓴다→써
     if (d.jong === 4) {
       count++;
       switch (d.jung) {
@@ -117,6 +120,7 @@ function fixFormalEndings(text: string): { text: string; count: number } {
         case 4: return composeKorean(d.cho, 4, 0) + ".";    // ㅓ: 건→거
         case 8: return composeKorean(d.cho, 9, 0) + ".";    // ㅗ: 본→봐
         case 13: return composeKorean(d.cho, 14, 0) + ".";  // ㅜ: 준→줘
+        case 18: return composeKorean(d.cho, 4, 0) + ".";   // ㅡ: 쓴→써, 끈→꺼 (ㅡ탈락)
         case 20: return composeKorean(d.cho, 6, 0) + ".";   // ㅣ: 긴→겨, 진→져
         default: return composeKorean(d.cho, d.jung, 0) + "어.";
       }
@@ -128,8 +132,26 @@ function fixFormalEndings(text: string): { text: string; count: number } {
       return composeKorean(d.cho, d.jung, 0) + "워.";
     }
 
+    // Catch-all: other batchim — vowel harmony (높다→높아, 많다→많아, 좋다→좋아, 작다→작아)
+    if (d.jong !== 0) {
+      count++;
+      const suffix = (d.jung === 0 || d.jung === 8) ? "아" : "어"; // ㅏ/ㅗ→아, else→어
+      return char + suffix + ".";
+    }
+
     return match;
   });
+
+  // Stage 5: Post-conversion cleanup (orphan endings + contractions)
+  const CLEANUP: [RegExp, string][] = [
+    [/ 하\./g, " 해."],       // "잡으려 하." → "잡으려 해."
+    [/쓰어\./g, "써."],        // ㅡ탈락 contraction
+    [/쓰어 /g, "써 "],
+    [/쓰어,/g, "써,"],
+  ];
+  for (const [pattern, replacement] of CLEANUP) {
+    result = result.replace(pattern, () => { count++; return replacement; });
+  }
 
   return { text: result, count };
 }
