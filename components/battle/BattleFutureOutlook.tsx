@@ -72,7 +72,7 @@ export default function BattleFutureOutlook({ futureOutlook }: Props) {
                     <p className="text-[13px] font-bold text-gray-500 mb-1.5">
                       {label}
                     </p>
-                    <p className="text-[16px] text-text-primary leading-[1.75]">
+                    <p className="text-[15px] text-gray-400 leading-[1.75]">
                       {text}
                     </p>
                   </div>

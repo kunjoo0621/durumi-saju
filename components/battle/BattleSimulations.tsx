@@ -192,7 +192,7 @@ export default function BattleSimulations({ simulations, icons }: Props) {
                         )}
                       </>
                     ) : (
-                      <p className="text-[16px] text-text-primary leading-[1.75]">
+                      <p className="text-[15px] text-gray-400 leading-[1.75]">
                         {sim.answer}
                       </p>
                     )}

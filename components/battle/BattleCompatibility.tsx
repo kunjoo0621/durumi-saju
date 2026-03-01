@@ -94,7 +94,7 @@ function SectionCard({
               )}
               <div className="space-y-6">
                 {content.split(/\n\s*\n/).map((para, i) => (
-                  <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                  <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
                     {para.trim()}
                   </p>
                 ))}
@@ -183,7 +183,7 @@ export default function BattleCompatibility({ chemistry }: Props) {
                   {baseAnalysis && (
                     <div className="space-y-6">
                       {baseAnalysis.split(/\n\s*\n/).map((para: string, i: number) => (
-                        <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                        <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
                           {para.trim()}
                         </p>
                       ))}
@@ -204,7 +204,7 @@ export default function BattleCompatibility({ chemistry }: Props) {
                       </div>
                       <div className="space-y-6">
                         {mainScenario.analysis.split(/\n\s*\n/).map((para: string, i: number) => (
-                          <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                          <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
                             {para.trim()}
                           </p>
                         ))}

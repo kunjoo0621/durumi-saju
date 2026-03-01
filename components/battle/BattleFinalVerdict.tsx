@@ -65,7 +65,7 @@ export default function BattleFinalVerdict({ finalVerdict }: Props) {
               {verdict && (
                 <div className="space-y-6">
                   {verdict.split(/\n\s*\n/).map((para, i) => (
-                    <p key={i} className="text-[16px] text-text-primary leading-[1.75]">
+                    <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
                       {para.trim()}
                     </p>
                   ))}
