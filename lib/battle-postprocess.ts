@@ -176,10 +176,7 @@ const SPECULATION_PATTERNS: [RegExp, string][] = [
   [/가능성이 매우 높아/g, "거야"],
   [/가능성이 높아/g, "거야"],
   [/가능성이 크지만/g, "크지만"],
-  [/할 것이야/g, "할 거야"],
-  [/될 것이야/g, "될 거야"],
-  [/을 것이야/g, "을 거야"],
-  [/ㄹ 것이야/g, "ㄹ 거야"],
+  [/것이야/g, "거야"],
 ];
 
 function fixSpeculation(text: string): { text: string; count: number } {
@@ -188,6 +185,11 @@ function fixSpeculation(text: string): { text: string; count: number } {
   for (const [pattern, replacement] of SPECULATION_PATTERNS) {
     result = result.replace(pattern, () => { count++; return replacement; });
   }
+  // '수 있어' → '거야' (verb stem preserved, '수 있지'/'수 있는' 제외)
+  result = result.replace(/([가-힣]+)\s*수 있어(?=[.,\s]|$)/g, (_, stem) => {
+    count++;
+    return `${stem} 거야`;
+  });
   return { text: result, count };
 }
 
