@@ -71,7 +71,8 @@ export type BattleLlmAnalysis = {
   };
   simulations: {
     question: string;
-    answer: string;
+    punchline: string;
+    reasoning: string;
     basis: string;
   }[];
   futureOutlook: {

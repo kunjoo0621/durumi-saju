@@ -108,7 +108,9 @@ const EMOJI_TO_ICON: Record<string, Icon> = {
 
 type Simulation = {
   question: string;
-  answer: string;
+  punchline?: string;
+  reasoning?: string;
+  answer?: string;  // legacy fallback
   basis: string;
 };
 
@@ -120,7 +122,7 @@ type Props = {
 export default function BattleSimulations({ simulations, icons }: Props) {
   const [expandedSet, setExpandedSet] = useState<Set<number>>(new Set());
 
-  const filtered = simulations.filter((s) => s.answer);
+  const filtered = simulations.filter((s) => s.punchline || s.answer);
   if (filtered.length === 0) return null;
 
   const toggle = (i: number) => {
@@ -178,9 +180,22 @@ export default function BattleSimulations({ simulations, icons }: Props) {
               >
                 <div className="overflow-hidden">
                   <div className="px-6 pb-6 pt-4">
-                    <p className="text-[16px] text-text-primary leading-[1.75]">
-                      {sim.answer}
-                    </p>
+                    {sim.punchline ? (
+                      <>
+                        <p className="text-[16px] font-semibold text-white leading-[1.6] mb-3">
+                          {sim.punchline}
+                        </p>
+                        {sim.reasoning && (
+                          <p className="text-[15px] text-gray-400 leading-[1.75]">
+                            {sim.reasoning}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[16px] text-text-primary leading-[1.75]">
+                        {sim.answer}
+                      </p>
+                    )}
                     {sim.basis && (
                       <span className="inline-block text-[11px] text-gray-400 bg-white/[0.06] px-2 py-0.5 rounded-full mt-3">
                         {sim.basis}

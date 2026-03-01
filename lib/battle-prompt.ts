@@ -133,12 +133,70 @@ bonusScenarios:
 - label: "~였다면?" 형태, 5~10자. 예: "친구였다면?", "직장동료였다면?"
 
 ────────────────────────────────
+[사주 용어 → 일상 행동 매핑 사전]
+
+시뮬레이션 답변 작성 시 반드시 이 사전을 참고하여 사주 용어를 일상 행동으로 연결할 것.
+사전에 없는 임의 매핑 금지.
+
+십성 → 행동 패턴:
+비견(比肩): 자존심 강함, 양보 안 함, 동등한 관계 추구, 본인 방식 고수
+겁재(劫財): 경쟁 본능, 뺏기기 싫어함, 소유욕, 승부욕, 과감한 행동
+식신(食神): 자유 추구, 느긋함, 먹는 것/즐기는 것 좋아함, 정리정돈 귀찮아함
+상관(傷官): 직설적 표현, 잔소리, 불만 표출, 틀 깨려는 성향, 반항
+정재(正財): 알뜰, 관리욕, 계획적, 절약, 안정 추구
+편재(偏財): 큰 돈에 관심, 투자/도박 성향, 통 큰 씀씀이, 유흥
+정관(正官): 규율 준수, 책임감, 간섭, 체면 중시, 안정적 직장 선호
+편관(偏官): 통제, 압박감, 스트레스, 권위적, 승진욕, 조직 내 긴장
+정인(正印): 보호 본능, 걱정 많음, 학습욕, 의존적 경향, 어머니 같은 면
+편인(偏印): 독창성, 외로움, 편식, 변덕, 깊은 사고, 비주류 관심사
+
+오행 과다 → 행동 경향:
+목(木) 과다: 고집, 독선, 추진력 과잉, "내가 맞아" 고수, 유연성 부족
+화(火) 과다: 감정 기복, 충동, 열정 과잉, 화 잘 냄, 금방 후회
+토(土) 과다: 고민 과다, 우유부단, 남 걱정, 간섭, 속으로 삭힘
+금(金) 과다: 결단력, 차가움, 판단 명확, 감정 표현 부족, 칼같은 성격
+수(水) 과다: 감정 억압, 불안, 눈치 많음, 속마음 안 보임, 생각 과다
+
+신강/신약 → 관계 역학:
+신강: 주도적, 본인 중심, 양보 어려움, 밀어붙이는 힘
+신약: 수동적, 눈치 많음, 맞춰주다 폭발, 스트레스 누적
+
+합/충/형 → 관계 패턴:
+합: 끌림, 의존, 익숙함, 풀기 어려운 관계
+충: 정면충돌, 갈등, 긴장감, 변화의 계기
+형: 스트레스 누적, 내면 갈등, 돌발 상황, 배신감
+
+────────────────────────────────
 [시뮬레이션 규칙]
-- 서버가 준 질문을 question에 그대로 복사.
-- answer: 사주 근거 기반, 구체적 상황 묘사, 1~2문장, 두 사람 이름 사용.
-  좋은 예: "민수가 3잔 넘으면 감정 폭발해. 서연이는 끝까지 안 취한 척하다가 집에 가서 혼자 울어."
-  나쁜 예: "둘 다 조심해야 해."
-- basis: 사주 키워드만, 15자 이내. 예: "수 과다 + 식신", "겁재 + 정재"
+
+서버가 선택한 question을 그대로 복사하고, punchline과 reasoning을 작성.
+
+punchline (결론 한 줄):
+- 25~50자
+- 구체적 일상 장면으로 결론을 보여줘. 추상적 서술 금지.
+- "~할 가능성이 있어" 같은 추측 표현 금지 → "~해" 단정
+- 두 사람 이름을 반드시 사용
+- 좋은 예:
+  "김채현이 3일 참다가 4일째 대청소 시작하면서 전쟁 선포해."
+  "신건주가 술 세 잔째에 그동안 참았던 말 전부 쏟아내."
+  "김채현이 통장 앱 깔아서 매일 확인하는 동안, 신건주는 용돈제 당해."
+- 나쁜 예:
+  "김채현이 주도권을 잡는 구조가 되어." (추상적, 장면 없음)
+  "둘 다 본심을 터뜨릴 수 있어." (추측, 구체성 없음)
+
+reasoning (근거 3~4문장):
+- 150~250자
+- 반드시 위 '사주 용어 → 일상 행동 매핑 사전'을 참고하여 연결
+- 구조:
+  1문장: A의 사주 근거 → 행동 패턴 (사전 매핑 활용)
+  2문장: B의 사주 근거 → 행동 패턴 (사전 매핑 활용)
+  3문장: 둘이 부딪히면 벌어지는 구체적 상황
+  4문장: (선택) 시간이 지나면 / 반전 / 의외의 결과
+- 사전에 없는 임의 매핑 금지 (예: "토 과다 → 깔끔함" 금지)
+- "~해 보이지만" "~할 수 있어" 추측 표현 금지 → 단정형 사용
+
+basis:
+- 사주 키워드만, 20자 이내. 예: "수 과다 + 식신", "겁재 + 정재"
 
 ────────────────────────────────
 [미래 예측 규칙]
@@ -177,6 +235,8 @@ bonusScenarios:
 8. 위로/격려/긍정 마무리 없는가
 9. 존댓말 없는가
 10. heroQuip에 이름 안 넣었는가
+11. simulations[].punchline에 구체적 일상 장면이 있는지 (추상적 서술이면 다시 써)
+12. simulations[].reasoning에 사전에 없는 임의 매핑이 있으면 사전 기반으로 수정
 
 ────────────────────────────────
 ## 출력 JSON 스키마
@@ -200,7 +260,7 @@ bonusScenarios:
     ]
   },
   "simulations": [
-    { "question": "서버가 준 질문 그대로", "answer": "1~2문장", "basis": "15자 이내 키워드" }
+    { "question": "서버가 준 질문 그대로", "punchline": "25~50자 구체적 장면", "reasoning": "150~250자 근거 3~4문장", "basis": "20자 이내 키워드" }
   ],
   "futureOutlook": {
     "nextYear": "1~2문장",
@@ -308,7 +368,7 @@ description: ${chemistryLabel.description}
     simulationBlock = `
 [시뮬레이션 질문 — 서버 선택]
 ${simLines.join("\n")}
-→ 각 질문에 대해 사주 근거 기반으로 1~2문장 답변 생성. question 필드에 질문 그대로 복사.`;
+→ 각 질문에 대해 punchline(결론 장면 1줄)과 reasoning(근거 3~4문장)을 생성. question 필드에 질문 그대로 복사.`;
   }
 
   // Bonus scenario instruction
@@ -464,14 +524,31 @@ function validateAndNormalize(
     });
   }
 
-  // simulations — force server questions
+  // simulations — force server questions, punchline/reasoning with answer fallback
   let simulations: BattleLlmAnalysis["simulations"] = [];
   if (Array.isArray(raw.simulations)) {
-    simulations = raw.simulations.map((s: any, i: number) => ({
-      question: simulationQuestions?.[i]?.question || s?.question || "",
-      answer: s?.answer || "",
-      basis: s?.basis || "",
-    }));
+    simulations = raw.simulations.map((s: any, i: number) => {
+      let punchline = s?.punchline || "";
+      let reasoning = s?.reasoning || "";
+
+      // Fallback: answer 필드만 있으면 첫 문장을 punchline, 나머지를 reasoning으로 분리
+      if (!punchline && !reasoning && s?.answer) {
+        const dotIdx = s.answer.indexOf(".");
+        if (dotIdx > 0 && dotIdx < s.answer.length - 1) {
+          punchline = s.answer.slice(0, dotIdx + 1).trim();
+          reasoning = s.answer.slice(dotIdx + 1).trim();
+        } else {
+          punchline = s.answer;
+        }
+      }
+
+      return {
+        question: simulationQuestions?.[i]?.question || s?.question || "",
+        punchline,
+        reasoning,
+        basis: s?.basis || "",
+      };
+    });
   }
 
   // Fill missing simulations with server questions
@@ -480,7 +557,8 @@ function validateAndNormalize(
       const idx = simulations.length;
       simulations.push({
         question: simulationQuestions[idx].question,
-        answer: "",
+        punchline: "",
+        reasoning: "",
         basis: "",
       });
     }
@@ -536,7 +614,8 @@ function buildFallback(opts: {
     },
     simulations: (opts.simulationQuestions || []).map((sq) => ({
       question: sq.question,
-      answer: "",
+      punchline: "",
+      reasoning: "",
       basis: "",
     })),
     futureOutlook: { nextYear: "", threeYears: "" },

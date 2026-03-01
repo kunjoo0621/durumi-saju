@@ -246,10 +246,14 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
 
   // simulations
   for (let i = 0; i < result.simulations.length; i++) {
-    result.simulations[i].answer = applyTextFixes(
-      result.simulations[i].answer, warnings, `simulation[${i}]`,
+    result.simulations[i].punchline = applyTextFixes(
+      result.simulations[i].punchline, warnings, `simulation[${i}].punchline`,
     );
-    detectIssues(result.simulations[i].answer, `simulation[${i}]`, warnings);
+    result.simulations[i].reasoning = applyTextFixes(
+      result.simulations[i].reasoning, warnings, `simulation[${i}].reasoning`,
+    );
+    detectIssues(result.simulations[i].punchline, `simulation[${i}].punchline`, warnings);
+    detectIssues(result.simulations[i].reasoning, `simulation[${i}].reasoning`, warnings);
   }
 
   // futureOutlook
