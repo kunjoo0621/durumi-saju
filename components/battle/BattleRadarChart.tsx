@@ -122,28 +122,17 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB, bare = false }:
       const p = polarToCartesian(labelRadius, angle);
       const anchor = p.x > 10 ? "start" : p.x < -10 ? "end" : "middle";
       const dy = p.y > 10 ? 16 : p.y < -10 ? -8 : 4;
-      return { key, x: p.x, y: p.y, anchor, dy };
+      const scoreA = clampScore(scoresA[key]);
+      const scoreB = clampScore(scoresB[key]);
+      return { key, x: p.x, y: p.y, anchor, dy, scoreA, scoreB };
     }),
-    [axisAngles]
+    [axisAngles, scoresA, scoresB]
   );
 
   return (
     <div className={bare ? "pt-2" : "bg-background-secondary rounded-3xl p-6 md:p-8"}>
-      <div className="mb-4 flex items-center justify-end">
-        <div className="flex items-center gap-4 text-[12px]">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_A }} />
-            <span className="text-gray-300">{nameA}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_B }} />
-            <span className="text-gray-300">{nameB}</span>
-          </span>
-        </div>
-      </div>
-
       <div className="mx-auto w-full">
-        <svg viewBox="-180 -180 360 360" className="h-auto w-full" aria-label="배틀 레이더 차트">
+        <svg viewBox="-180 -180 360 380" className="h-auto w-full" aria-label="배틀 레이더 차트">
           <defs>
             <radialGradient id="battleFillA" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor={COLOR_A} stopOpacity="0.30" />
@@ -258,23 +247,46 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB, bare = false }:
             ))}
           </g>
 
-          {/* Labels */}
+          {/* Labels + scores */}
           <g>
             {labelPoints.map((label) => (
-              <text
-                key={label.key}
-                x={label.x.toFixed(2)}
-                y={label.y.toFixed(2)}
-                dy={label.dy}
-                textAnchor={label.anchor as any}
-                fill="rgba(209,213,219,1)"
-                style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
-              >
-                {label.key}
-              </text>
+              <g key={label.key}>
+                <text
+                  x={label.x.toFixed(2)}
+                  y={label.y.toFixed(2)}
+                  dy={label.dy}
+                  textAnchor={label.anchor as any}
+                  fill="rgba(209,213,219,1)"
+                  style={{ fontSize: 12, fontWeight: 500, letterSpacing: "-0.01em" }}
+                >
+                  {label.key}
+                </text>
+                <text
+                  x={label.x.toFixed(2)}
+                  y={label.y.toFixed(2)}
+                  dy={label.dy + 16}
+                  textAnchor={label.anchor as any}
+                  style={{ fontSize: 11, fontWeight: 500 }}
+                >
+                  <tspan fill={COLOR_A}>{label.scoreA}점</tspan>
+                  <tspan fill="rgba(255,255,255,0.2)"> · </tspan>
+                  <tspan fill={COLOR_B}>{label.scoreB}점</tspan>
+                </text>
+              </g>
             ))}
           </g>
         </svg>
+      </div>
+
+      <div className="flex items-center justify-center gap-6 mt-4 text-[12px]">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_A }} />
+          <span className="text-gray-300">{nameA}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLOR_B }} />
+          <span className="text-gray-300">{nameB}</span>
+        </span>
       </div>
     </div>
   );
