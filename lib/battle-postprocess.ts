@@ -70,6 +70,8 @@ const SPECIFIC_FORMAL: [RegExp, string][] = [
   // 르 불규칙
   [/따른다\./g, "따라."],
   [/모른다\./g, "몰라."],
+  // 아니다 (불규칙)
+  [/아니다\./g, "아니야."],
 ];
 
 function fixHonorifics(text: string): { text: string; count: number } {
@@ -139,6 +141,20 @@ function fixFormalEndings(text: string): { text: string; count: number } {
       return char + suffix + ".";
     }
 
+    // Vowel-stem (no batchim): 뛰어나다→뛰어나, 보다→봐, 주다→줘
+    if (d.jong === 0) {
+      count++;
+      switch (d.jung) {
+        case 0: return char + ".";   // ㅏ: 나다→나, 가다→가
+        case 4: return char + ".";   // ㅓ: 서다→서
+        case 8: return composeKorean(d.cho, 9, 0) + ".";   // ㅗ: 보다→봐
+        case 13: return composeKorean(d.cho, 14, 0) + ".";  // ㅜ: 주다→줘
+        case 18: return composeKorean(d.cho, 4, 0) + ".";   // ㅡ: 쓰다→써
+        case 20: return composeKorean(d.cho, 6, 0) + ".";   // ㅣ: 지다→져
+        default: return char + ".";
+      }
+    }
+
     return match;
   });
 
@@ -157,8 +173,13 @@ function fixFormalEndings(text: string): { text: string; count: number } {
 }
 
 const SPECULATION_PATTERNS: [RegExp, string][] = [
+  [/가능성이 매우 높아/g, "거야"],
   [/가능성이 높아/g, "거야"],
   [/가능성이 크지만/g, "크지만"],
+  [/할 것이야/g, "할 거야"],
+  [/될 것이야/g, "될 거야"],
+  [/을 것이야/g, "을 거야"],
+  [/ㄹ 것이야/g, "ㄹ 거야"],
 ];
 
 function fixSpeculation(text: string): { text: string; count: number } {
