@@ -257,8 +257,8 @@ function detectIssues(text: string, label: string, warnings: string[]): void {
 function detectLengthIssues(result: BattleLlmAnalysis, warnings: string[]): void {
   const cats = result.categoryResults;
   for (const [key, cat] of Object.entries(cats)) {
-    if (cat.killingLine && cat.killingLine.length > 30) {
-      warnings.push(`[WARN] killingLine 30자 초과: ${key} (${cat.killingLine.length}자)`);
+    if (cat.killingLine && cat.killingLine.length > 40) {
+      warnings.push(`[WARN] killingLine 40자 초과: ${key} (${cat.killingLine.length}자)`);
     }
     if (cat.detail && cat.detail.length > 300) {
       warnings.push(`[WARN] detail 300자 초과: ${key} (${cat.detail.length}자)`);
@@ -294,8 +294,8 @@ function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
 
   const combined = allTexts.join(" ");
 
-  // 묘(墓) 모든 변형: 묘(墓), 12운성 묘, 일주 묘, 묘지에, 묘(墓)지
-  const myoCount = (combined.match(/묘\s*\(墓\)|12운성\s*묘|일주\s*묘|묘\s*\(墓\)\s*지|묘지에\s*앉/g) || []).length;
+  // 묘(墓) 모든 변형 포괄 — '묘' 글자가 사주 맥락에서 쓰이는 모든 경우
+  const myoCount = (combined.match(/묘\s*\(墓\)|12운성\s*묘|일주\s*묘|묘\s*지에?\s*앉|대운\s*\(?\s*묘|묘\s*\(墓\)\s*지|운성\s*묘\s*\(|묘지\s*성향/g) || []).length;
   if (myoCount > 3) {
     warnings.push(`[WARN] 묘(墓) 전역 ${myoCount}회 반복 (상한 3회) — 변형 포함`);
   }
@@ -444,9 +444,9 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
   allTexts.push(result.finalVerdict.verdict);
 
   const combined = allTexts.join(" ");
-  const myoCount = (combined.match(/묘\s*\(墓\)|12운성\s*묘|일주\s*묘|묘\s*\(墓\)\s*지|묘지에\s*앉/g) || []).length;
+  const myoCount = (combined.match(/묘\s*\(墓\)|12운성\s*묘|일주\s*묘|묘\s*지에?\s*앉|대운\s*\(?\s*묘|묘\s*\(墓\)\s*지|운성\s*묘\s*\(|묘지\s*성향/g) || []).length;
 
-  if (myoCount > 5) {
+  if (myoCount > 4) {
     console.warn(`[BATTLE_RETRY] 묘(墓) ${myoCount}회 — 재시도 트리거`);
     return true;
   }
