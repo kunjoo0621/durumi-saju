@@ -37,7 +37,12 @@ export default function BattleResultView({
 
   const { playerA, playerB, comparison, llmAnalysis } = result;
 
-  const highlightCategory = [...comparison.matches].sort((a, b) => b.diff - a.diff)[0]?.category;
+  // 결정타: 전체 승자가 이긴 카테고리 중 점수차 최대
+  const highlightCategory = comparison.overallWinner === "draw"
+    ? undefined
+    : [...comparison.matches]
+        .filter((m) => m.winner === comparison.overallWinner)
+        .sort((a, b) => b.diff - a.diff)[0]?.category;
 
   const handleShare = useCallback(async () => {
     if (!shareableId) return;

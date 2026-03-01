@@ -132,7 +132,7 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB, bare = false }:
   return (
     <div className={bare ? "pt-2" : "bg-background-secondary rounded-3xl p-6 md:p-8"}>
       <div className="mx-auto w-full">
-        <svg viewBox="-180 -180 360 380" className="h-auto w-full" aria-label="배틀 레이더 차트">
+        <svg viewBox="-210 -190 420 400" className="h-auto w-full" aria-label="배틀 레이더 차트">
           <defs>
             <radialGradient id="battleFillA" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor={COLOR_A} stopOpacity="0.30" />

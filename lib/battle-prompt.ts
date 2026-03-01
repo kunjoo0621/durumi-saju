@@ -322,7 +322,12 @@ export function buildBattleUserInfo(opts: {
   const compatFocus = RELATIONSHIP_COMPAT_FOCUS[relationshipType];
   const bonusScenarios = selectBonusScenarios(relationshipType);
 
-  const highlight = [...comparison.matches].sort((a, b) => b.diff - a.diff)[0];
+  // 결정타: 전체 승자가 이긴 카테고리 중 점수차 최대
+  const highlight = comparison.overallWinner === "draw"
+    ? undefined
+    : [...comparison.matches]
+        .filter((m) => m.winner === comparison.overallWinner)
+        .sort((a, b) => b.diff - a.diff)[0];
   const highlightInstruction = highlight
     ? `\n[결정타 카테고리]\n"${highlight.category}"가 점수차(${highlight.diff}점)가 가장 큰 결정적 항목이다. killingLine에서 이 카테고리를 특히 날카롭게 작성하라.`
     : "";
