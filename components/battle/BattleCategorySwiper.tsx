@@ -7,6 +7,8 @@ import {
   Briefcase,
   Heartbeat,
   UsersThree,
+  CaretLeft,
+  CaretRight,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import type { CategoryMatchResult } from "@/types/battle";
@@ -221,19 +223,41 @@ export default function BattleCategorySwiper({
         </div>
       </div>
 
-      {/* Dot indicators */}
-      <div className="flex justify-center items-center gap-2">
-        {sorted.map((m, i) => (
-          <button
-            key={m.category}
-            type="button"
-            onClick={() => setActiveIndex(i)}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              i === activeIndex ? "w-6 bg-white" : "w-2 bg-white/30"
-            }`}
-            aria-label={`${m.category} 카드로 이동`}
-          />
-        ))}
+      {/* Navigation: arrows + dots */}
+      <div className="flex justify-center items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setActiveIndex((p) => Math.max(0, p - 1))}
+          disabled={activeIndex === 0}
+          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
+          aria-label="이전 카테고리"
+        >
+          <CaretLeft weight="bold" size={16} className="text-text-secondary" />
+        </button>
+
+        <div className="flex items-center gap-2">
+          {sorted.map((m, i) => (
+            <button
+              key={m.category}
+              type="button"
+              onClick={() => setActiveIndex(i)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === activeIndex ? "w-6 bg-white" : "w-2 bg-white/30"
+              }`}
+              aria-label={`${m.category} 카드로 이동`}
+            />
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setActiveIndex((p) => Math.min(sorted.length - 1, p + 1))}
+          disabled={activeIndex === sorted.length - 1}
+          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] disabled:opacity-20 disabled:pointer-events-none"
+          aria-label="다음 카테고리"
+        >
+          <CaretRight weight="bold" size={16} className="text-text-secondary" />
+        </button>
       </div>
     </div>
   );
