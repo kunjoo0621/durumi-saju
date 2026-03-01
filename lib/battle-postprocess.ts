@@ -21,20 +21,52 @@ const HONORIFIC_PATTERNS: [RegExp, string][] = [
   [/있어요(?=[.,\s]|$)/g, "있어"],
 ];
 
-// 격식체 → 반말 치환 (문장 끝 마침표 앞에서만 적용)
-// 주의: "좋다."→"좋야."처럼 형용사에 오작동하는 generic 패턴은 제외.
-// 안전한 동사/서술어 패턴만 포함.
-const FORMAL_PATTERNS: [RegExp, string][] = [
+// ─── Korean Unicode helpers ────────────────────────
+
+function decomposeKorean(ch: string): { cho: number; jung: number; jong: number } | null {
+  const code = ch.charCodeAt(0);
+  if (code < 0xAC00 || code > 0xD7A3) return null;
+  const offset = code - 0xAC00;
+  return {
+    cho: Math.floor(offset / (21 * 28)),
+    jung: Math.floor((offset % (21 * 28)) / 28),
+    jong: offset % 28,
+  };
+}
+
+function composeKorean(cho: number, jung: number, jong: number = 0): string {
+  return String.fromCharCode(0xAC00 + cho * 21 * 28 + jung * 28 + jong);
+}
+
+// ─── 격식체 → 반말 치환 (4단계) ────────────────────
+//
+// Stage 1: Compound (수 있다, 기 쉽다, ...)
+// Stage 2: Specific safe patterns (한다→해, 된다→돼, 만든다→만들어, ...)
+// Stage 3: Generic 는다 (consonant stems: 먹는다→먹어, 잡는다→잡아)
+// Stage 4: Generic ㄴ다 + ㅂ다 (Unicode: 긴다→겨, 진다→져, 어렵다→어려워)
+
+const COMPOUND_FORMAL: [RegExp, string][] = [
+  [/수 있다\./g, "수 있어."],
+  [/수 없다\./g, "수 없어."],
+  [/기 쉽다\./g, "기 쉬워."],
+  [/기 어렵다\./g, "기 어려워."],
+  [/기 힘들다\./g, "기 힘들어."],
+  [/기 마련이다\./g, "기 마련이야."],
+];
+
+const SPECIFIC_FORMAL: [RegExp, string][] = [
   [/([가-힣])한다\./g, "$1해."],
   [/([가-힣])된다\./g, "$1돼."],
-  [/([가-힣])있다\./g, "$1있어."],
-  [/([가-힣])없다\./g, "$1없어."],
   [/([가-힣])이다\./g, "$1이야."],
-  [/([가-힣])온다\./g, "$1와."],
-  [/([가-힣])간다\./g, "$1가."],
-  [/([가-힣])본다\./g, "$1봐."],
-  [/([가-힣])준다\./g, "$1줘."],
-  [/([가-힣])낸다\./g, "$1내."],
+  [/하다\./g, "해."],
+  [/있다\./g, "있어."],
+  [/없다\./g, "없어."],
+  [/크다\./g, "커."],
+  // ㄹ탈락 불규칙
+  [/만든다\./g, "만들어."],
+  // 르 불규칙
+  [/따른다\./g, "따라."],
+  [/모른다\./g, "몰라."],
 ];
 
 function fixHonorifics(text: string): { text: string; count: number } {
@@ -49,13 +81,56 @@ function fixHonorifics(text: string): { text: string; count: number } {
 function fixFormalEndings(text: string): { text: string; count: number } {
   let count = 0;
   let result = text;
-  for (const [pattern, replacement] of FORMAL_PATTERNS) {
+
+  // Stage 1: Compound patterns (highest priority)
+  for (const [pattern, replacement] of COMPOUND_FORMAL) {
+    result = result.replace(pattern, () => { count++; return replacement; });
+  }
+
+  // Stage 2: Specific patterns
+  for (const [pattern, replacement] of SPECIFIC_FORMAL) {
     result = result.replace(pattern, (...args) => {
       count++;
-      // $1 replacement for captured group
       return replacement.replace("$1", args[1] || "");
     });
   }
+
+  // Stage 3: Generic 는다 (consonant-stem verbs: 먹는다→먹어, 잡는다→잡아)
+  result = result.replace(/([가-힣])는다\./g, (match, stemChar) => {
+    const d = decomposeKorean(stemChar);
+    if (!d || d.jong === 0) return match; // must have batchim (consonant stem)
+    count++;
+    const suffix = (d.jung === 0 || d.jung === 8) ? "아" : "어"; // ㅏ/ㅗ→아, else→어
+    return stemChar + suffix + ".";
+  });
+
+  // Stage 4: Generic ㄴ다 (vowel-stem verbs) + ㅂ다 (ㅂ-irregular adjectives)
+  result = result.replace(/([가-힣])다\./g, (match, char) => {
+    const d = decomposeKorean(char);
+    if (!d) return match;
+
+    // ㄴ batchim (jong=4): 긴다→겨, 진다→져, 본다→봐
+    if (d.jong === 4) {
+      count++;
+      switch (d.jung) {
+        case 0: return composeKorean(d.cho, 0, 0) + ".";    // ㅏ: 간→가
+        case 4: return composeKorean(d.cho, 4, 0) + ".";    // ㅓ: 건→거
+        case 8: return composeKorean(d.cho, 9, 0) + ".";    // ㅗ: 본→봐
+        case 13: return composeKorean(d.cho, 14, 0) + ".";  // ㅜ: 준→줘
+        case 20: return composeKorean(d.cho, 6, 0) + ".";   // ㅣ: 긴→겨, 진→져
+        default: return composeKorean(d.cho, d.jung, 0) + "어.";
+      }
+    }
+
+    // ㅂ batchim (jong=17): 어렵다→어려워, 쉽다→쉬워
+    if (d.jong === 17) {
+      count++;
+      return composeKorean(d.cho, d.jung, 0) + "워.";
+    }
+
+    return match;
+  });
+
   return { text: result, count };
 }
 
@@ -89,6 +164,12 @@ function detectIssues(text: string, label: string, warnings: string[]): void {
   // "궁합" 단어
   if (text.includes("궁합")) {
     warnings.push(`[WARN] '궁합' 사용: ${label}`);
+  }
+
+  // 미치환 격식체 탐지 (치환 후에도 남은 "X다." 패턴)
+  const remaining = text.match(/[가-힣]다\./g);
+  if (remaining && remaining.length > 0) {
+    warnings.push(`[WARN] 미치환 격식체: ${label} — ${remaining.join(", ")}`);
   }
 }
 

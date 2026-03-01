@@ -446,6 +446,16 @@ function validateAndNormalize(
         analysis: s?.analysis || "",
       }));
     }
+
+    console.info("[BATTLE_BONUS_SCENARIOS]", {
+      rawType: chem.bonusScenarios === undefined ? "undefined"
+        : chem.bonusScenarios === null ? "null"
+        : Array.isArray(chem.bonusScenarios) ? `array[${chem.bonusScenarios.length}]`
+        : typeof chem.bonusScenarios,
+      rawData: JSON.stringify(chem.bonusScenarios)?.slice(0, 500),
+      parsedCount: chemistry.bonusScenarios.length,
+      parsedAnalysisLengths: chemistry.bonusScenarios.map((s: { analysis: string }) => s.analysis.length),
+    });
   }
 
   // simulations — force server questions
