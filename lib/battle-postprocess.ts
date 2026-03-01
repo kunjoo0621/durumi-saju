@@ -195,6 +195,40 @@ function fixSpeculation(text: string): { text: string; count: number } {
   return { text: result, count };
 }
 
+// ─── futureOutlook 전용: 사주 용어 강제 제거 ─────
+
+const SAJU_STRIP_PATTERNS: [RegExp, string][] = [
+  // 1. 한자 괄호 병기 모두 제거: (偏財), (建祿), (傷官), （乙卯）등
+  [/[（(][^\x00-\x7Fa-zA-Z0-9\uAC00-\uD7AF]+[)）]/g, ""],
+  // 2. 십성 용어 (한자 제거 후 남은 것 + 원래 한글만인 것): 편재운, 정인운, 상관운 등
+  [/(편재|정재|정인|편인|식신|상관|정관|편관|비견|겁재)(운)?\s*(으로|을|이|에|의|과|와|도|은|는|타고|만나면서)?\s*/g, ""],
+  // 3. 12운성 관련: "12운성 건록", "12운성 양(養)지에서" 등
+  [/12운성\s*[가-힣]+\s*/g, ""],
+  // 4. 대운/세운 표현: "대운 X", "세운 X"
+  [/(대운|세운)\s+[가-힣]{1,4}\s*/g, ""],
+  // 5. 오행+과다/부족: "토 과다", "수 부족"
+  [/(목|화|토|금|수)\s*(과다|부족|과잉)\s*/g, ""],
+  // 6. 남은 간지 한자 직접 표기: 甲乙...壬癸 + 子丑...戌亥
+  [/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g, ""],
+  // 7. 기질/성향과 결합된 십성: "상관 기질", "겁재 성향" 등
+  [/(편재|정재|정인|편인|식신|상관|정관|편관|비견|겁재)\s*(기질|성향|기운|체질)/g, ""],
+];
+
+function stripSajuTermsFromFuture(text: string): { text: string; count: number } {
+  let count = 0;
+  let result = text;
+  for (const [pattern] of SAJU_STRIP_PATTERNS) {
+    result = result.replace(pattern, () => { count++; return ""; });
+  }
+  // 정리: 연속 공백, 문두 조사/쉼표, 빈 괄호
+  result = result
+    .replace(/\s{2,}/g, " ")
+    .replace(/^\s*[,，]\s*/, "")
+    .replace(/\(\s*\)/g, "")
+    .trim();
+  return { text: result, count };
+}
+
 function applyTextFixes(text: string, warnings: string[], label: string): string {
   if (!text) return text;
 
@@ -287,8 +321,11 @@ function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
     allTexts.push(sim.reasoning);
   }
   // futureOutlook
-  allTexts.push(result.futureOutlook.nextYear);
-  allTexts.push(result.futureOutlook.threeYears);
+  for (const entry of result.futureOutlook.timeline) {
+    allTexts.push(entry.eventA);
+    allTexts.push(entry.eventB);
+    allTexts.push(entry.relationship);
+  }
   // finalVerdict
   allTexts.push(result.finalVerdict.verdict);
 
@@ -423,6 +460,47 @@ function detectEndingRepetition(result: BattleLlmAnalysis, warnings: string[]): 
   }
 }
 
+// ─── 시뮬레이션 주어 불일치 탐지 ────────────────────
+
+export type SubjectVerification = {
+  nameA: string;
+  nameB: string;
+  expectedSubjects: ("A" | "B")[];
+};
+
+function detectSubjectMismatch(
+  result: BattleLlmAnalysis,
+  sv: SubjectVerification,
+  warnings: string[],
+): void {
+  const { nameA, nameB, expectedSubjects } = sv;
+
+  for (let i = 0; i < result.simulations.length; i++) {
+    const punchline = result.simulations[i].punchline;
+    if (!punchline || i >= expectedSubjects.length) continue;
+
+    const expected = expectedSubjects[i];
+    const expectedName = expected === "A" ? nameA : nameB;
+    const otherName = expected === "A" ? nameB : nameA;
+
+    // punchline에서 각 이름의 첫 등장 위치
+    const posExpected = punchline.indexOf(expectedName);
+    const posOther = punchline.indexOf(otherName);
+
+    // 서버 판정 이름이 아예 없고, 상대 이름만 먼저 등장하면 경고
+    if (posExpected === -1 && posOther >= 0) {
+      warnings.push(
+        `[WARN] 시뮬레이션[${i}] 주어 불일치: 서버 판정=${expectedName} but punchline에 ${expectedName} 없음, ${otherName}만 등장`,
+      );
+    } else if (posExpected >= 0 && posOther >= 0 && posOther < posExpected) {
+      // 상대 이름이 먼저 등장 → 주어가 뒤집혔을 가능성
+      warnings.push(
+        `[WARN] 시뮬레이션[${i}] 주어 의심: 서버 판정=${expectedName} but punchline에서 ${otherName}가 먼저 등장`,
+      );
+    }
+  }
+}
+
 // ─── 재시도 판정 ────────────────────────────────────
 
 function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolean {
@@ -439,8 +517,11 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
   for (const sim of result.simulations) {
     allTexts.push(sim.reasoning);
   }
-  allTexts.push(result.futureOutlook.nextYear);
-  allTexts.push(result.futureOutlook.threeYears);
+  for (const entry of result.futureOutlook.timeline) {
+    allTexts.push(entry.eventA);
+    allTexts.push(entry.eventB);
+    allTexts.push(entry.relationship);
+  }
   allTexts.push(result.finalVerdict.verdict);
 
   const combined = allTexts.join(" ");
@@ -467,7 +548,10 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
 
 // ─── 메인 후처리 ────────────────────────────────────
 
-export function postprocessBattleResult(result: BattleLlmAnalysis): {
+export function postprocessBattleResult(
+  result: BattleLlmAnalysis,
+  subjectVerification?: SubjectVerification,
+): {
   result: BattleLlmAnalysis;
   warnings: string[];
   shouldRetry: boolean;
@@ -525,10 +609,27 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
   // futureOutlook
   result.futureOutlook.punchline = applyTextFixes(result.futureOutlook.punchline, warnings, "futureOutlook.punchline");
   detectIssues(result.futureOutlook.punchline, "futureOutlook.punchline", warnings);
-  result.futureOutlook.nextYear = applyTextFixes(result.futureOutlook.nextYear, warnings, "futureOutlook.nextYear");
-  result.futureOutlook.threeYears = applyTextFixes(result.futureOutlook.threeYears, warnings, "futureOutlook.threeYears");
-  detectIssues(result.futureOutlook.nextYear, "futureOutlook.nextYear", warnings);
-  detectIssues(result.futureOutlook.threeYears, "futureOutlook.threeYears", warnings);
+
+  for (let i = 0; i < result.futureOutlook.timeline.length; i++) {
+    const entry = result.futureOutlook.timeline[i];
+    const prefix = `futureOutlook.timeline[${i}]`;
+
+    // 사주 용어 강제 제거 (futureOutlook 전용)
+    for (const field of ["eventA", "eventB", "relationship"] as const) {
+      const stripped = stripSajuTermsFromFuture(entry[field]);
+      if (stripped.count > 0) {
+        warnings.push(`[FIX] 사주 용어 ${stripped.count}회 제거: ${prefix}.${field}`);
+        entry[field] = stripped.text;
+      }
+    }
+
+    entry.eventA = applyTextFixes(entry.eventA, warnings, `${prefix}.eventA`);
+    entry.eventB = applyTextFixes(entry.eventB, warnings, `${prefix}.eventB`);
+    entry.relationship = applyTextFixes(entry.relationship, warnings, `${prefix}.relationship`);
+    detectIssues(entry.eventA, `${prefix}.eventA`, warnings);
+    detectIssues(entry.eventB, `${prefix}.eventB`, warnings);
+    detectIssues(entry.relationship, `${prefix}.relationship`, warnings);
+  }
 
   // finalVerdict
   result.finalVerdict.punchline = applyTextFixes(result.finalVerdict.punchline, warnings, "finalVerdict.punchline");
@@ -543,6 +644,18 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
   detectRepetition(result, warnings);
   detectPunchlineDuplicates(result, warnings);
   detectEndingRepetition(result, warnings);
+
+  // Subject verification (탐지만, 자동 수정 안 함)
+  if (subjectVerification) {
+    detectSubjectMismatch(result, subjectVerification, warnings);
+  }
+
+  // mood 다양성 체크 — 전부 같은 방향이면 경고
+  const moods = result.futureOutlook.timeline.map(e => e.mood);
+  const uniqueMoods = new Set(moods);
+  if (uniqueMoods.size === 1 && moods.length >= 3) {
+    warnings.push(`[WARN] futureOutlook mood 전부 "${moods[0]}" — 다양성 부족`);
+  }
 
   // 재시도 판정
   const shouldRetry = checkShouldRetry(result, warnings);

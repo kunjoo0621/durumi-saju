@@ -191,17 +191,18 @@ export async function POST(request: NextRequest) {
       label: chemistryLabel,
     });
 
-    // Simulation questions (trigger-based, server-side)
+    // Simulation questions (trigger-based, server-side) + subject determination
     const simulationQuestions = selectSimulations(
       enrichedA,
       enrichedB,
       body.relationshipType,
       5,
+      { A: scoringA.scores, B: scoringB.scores },
     );
 
     console.info("[BATTLE_SIMULATIONS]", {
       count: simulationQuestions.length,
-      questions: simulationQuestions.map((sq) => `${sq.icon} ${sq.question}`),
+      questions: simulationQuestions.map((sq) => `${sq.icon} ${sq.question} → ${sq.subject}(${sq.subjectLabel})`),
     });
 
     // LLM analysis

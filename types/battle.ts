@@ -43,6 +43,15 @@ export type CategoryResult = {
   detail: string;
 };
 
+export interface FutureTimelineEntry {
+  year: number;
+  label: string;
+  eventA: string;
+  eventB: string;
+  relationship: string;
+  mood: "up" | "down" | "neutral";
+}
+
 export type BattleLlmAnalysis = {
   heroQuip: string;
   categoryResults: {
@@ -79,8 +88,7 @@ export type BattleLlmAnalysis = {
   }[];
   futureOutlook: {
     punchline: string;
-    nextYear: string;
-    threeYears: string;
+    timeline: FutureTimelineEntry[];
   };
   finalVerdict: {
     punchline: string;

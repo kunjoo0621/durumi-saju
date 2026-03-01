@@ -7,9 +7,11 @@ import type {
   BattleComparison,
   BattleLlmAnalysis,
   ChemistryLabel,
+  FutureTimelineEntry,
   RelationshipType,
 } from "@/types/battle";
-import { postprocessBattleResult } from "@/lib/battle-postprocess";
+import { postprocessBattleResult, type SubjectVerification } from "@/lib/battle-postprocess";
+import type { SelectedSimulation } from "@/lib/battle-simulations";
 
 /* ── 관계 유형별 톤 ── */
 
@@ -236,6 +238,7 @@ bonusScenarios:
 [시뮬레이션 규칙]
 
 서버가 선택한 question을 그대로 복사하고, punchline과 reasoning을 작성.
+- 각 질문의 "판정"은 서버가 결정한 결과야. 너는 "왜 그런지"만 설명해. 판정을 뒤집거나 무시하면 안 돼.
 
 punchline (결론 한 줄):
 - 25~50자
@@ -273,10 +276,33 @@ basis:
 
 ────────────────────────────────
 [미래 예측 규칙]
-- punchline: 1년 후와 3년 후를 관통하는 한 줄. 시간 흐름에 따른 반전이 느껴져야 해. 구체적 연도나 나이를 포함하면 더 좋음.
-- nextYear: 내년 각자의 변화. 구체적 사건 수준. 1~2문장.
-- threeYears: 3년 뒤 역전/변화 포인트. 1~2문장.
-- 희망적 표현 금지. "기회가 찾아올 거야" → "이직 압박이 세져"
+배틀의 미래 예측은 "각자 운세"가 아니야. 두 사람의 이벤트가 관계에 어떤 영향을 주는지가 핵심이야.
+
+- punchline: 1년→3년→5년을 관통하는 시간 반전 한 줄. 구체적 연도 포함. 25~50자.
+  ✅ 좋은 예: "2026년 김채현이 앞서가지만, 2030년엔 신건주가 뒤집어"
+  ❌ 나쁜 예: "시간이 지나면 상황이 바뀔 거야"
+
+- timeline: 3개 시점 (1년 후 / 3년 후 / 5년 후). 각 시점마다:
+  - eventA: A에게 일어날 구체적 생활 이벤트 1문장.
+    ✅ "이직 성공해서 연봉 점프"
+    ❌ "재물운이 상승해" (추상적)
+  - eventB: B에게 일어날 구체적 생활 이벤트 1문장.
+  - relationship: 이 두 이벤트가 관계에 미치는 영향. 1~2문장.
+    ✅ "김채현의 이직이 신건주에게 위기감을 줘서 갈등이 심화돼"
+    ❌ "두 사람의 관계가 변화할 거야"
+  - mood: 관계가 좋아지면 "up", 나빠지면 "down", 큰 변화 없으면 "neutral"
+
+- 생활 이벤트 예시: 이직, 승진, 이사, 결혼 압박, 건강 악화, 재테크 성공, 번아웃, 독립, 해외 기회
+- 대운/세운 데이터를 근거로 하되, "편관운" 같은 용어 대신 "직장에서 압박이 커져" 같은 일상 언어로.
+- 3개 시점이 하나의 서사 흐름을 만들어야 해. 1년 후의 사건이 3년 후에 영향을 주고, 5년 후에 결론이 나는 구조.
+- 희망/위로 금지. 냉정하게.
+- 최소 1개 시점은 mood: "up", 최소 1개는 mood: "down"이어야 해 (전부 같은 방향 금지).
+- eventA/eventB/relationship에서 간지(甲乙丙丁戊己庚辛壬癸/子丑寅卯辰巳午未申酉戌亥), 한자 병기, "~운(X)" 표현 금지. 일상 언어만.
+  ❌ "정인운(乙卯)으로 심리적 안정 찾아"
+  ✅ "멘토를 만나면서 커리어 방향이 잡혀"
+  ❌ "편재운(己酉)으로 투자 성공"
+  ✅ "부동산 투자로 목돈 만들어"
+- 동사는 구체적 행동/사건: 이직, 승진, 이사, 투자, 휴직, 결혼 압박, 번아웃, 전직, 해외 파견, 독립, 창업
 
 ────────────────────────────────
 [최종 심판 규칙]
@@ -346,8 +372,11 @@ basis:
   ],
   "futureOutlook": {
     "punchline": "25~50자, 시간 반전 한 줄",
-    "nextYear": "1~2문장",
-    "threeYears": "1~2문장"
+    "timeline": [
+      { "year": 2026, "label": "1년 후", "eventA": "A 생활 이벤트 1문장", "eventB": "B 생활 이벤트 1문장", "relationship": "관계 영향 1~2문장", "mood": "up | down | neutral" },
+      { "year": 2028, "label": "3년 후", "eventA": "...", "eventB": "...", "relationship": "...", "mood": "..." },
+      { "year": 2030, "label": "5년 후", "eventA": "...", "eventB": "...", "relationship": "...", "mood": "..." }
+    ]
   },
   "finalVerdict": {
     "punchline": "25~50자, 최종 판정 한 줄",
@@ -372,7 +401,7 @@ export function buildBattleUserInfo(opts: {
   fortuneBlockA?: string;
   fortuneBlockB?: string;
   chemistryLabel?: ChemistryLabel;
-  simulationQuestions?: { icon: string; question: string }[];
+  simulationQuestions?: SelectedSimulation[];
 }): string {
   const {
     nameA, nameB,
@@ -450,15 +479,17 @@ description: ${chemistryLabel.description}
 → 이 라벨을 chemistry.label에 그대로 복사해. 변경 금지.`;
   }
 
-  // Simulation questions block
+  // Simulation questions block — subject 판정 포함
   let simulationBlock = "";
   if (simulationQuestions && simulationQuestions.length > 0) {
-    const simLines = simulationQuestions.map((sq, i) =>
-      `${i + 1}. ${sq.icon} ${sq.question}`
-    );
+    const simLines = simulationQuestions.map((sq, i) => {
+      const subjectName = sq.subject === "A" ? nameA : nameB;
+      return `${i + 1}. ${sq.icon} ${sq.question} → 판정: ${subjectName}가 ${sq.subjectLabel}`;
+    });
     simulationBlock = `
-[시뮬레이션 질문 — 서버 선택]
+[시뮬레이션 질문 — 서버 선택 + 주어 판정]
 ${simLines.join("\n")}
+★ 위 판정은 서버의 사주 분석 결과야. 절대 뒤집지 마. punchline과 reasoning 모두 이 판정을 전제로 작성해.
 → 각 질문에 대해 punchline(결론 장면 1줄)과 reasoning(근거 3~4문장)을 생성. question 필드에 질문 그대로 복사.`;
   }
 
@@ -491,6 +522,12 @@ ${highlightInstruction}
 ${chemistryBlock}
 ${simulationBlock}
 
+[미래 예측 연도 기준]
+현재: ${new Date().getFullYear()}년
+1년 후: ${new Date().getFullYear() + 1}년
+3년 후: ${new Date().getFullYear() + 3}년
+5년 후: ${new Date().getFullYear() + 5}년
+
 [메인 관계 유형: ${RELATIONSHIP_LABELS[relationshipType]}]
 ${tone}
 
@@ -522,7 +559,7 @@ type BattleAnalysisOpts = {
   fortuneBlockA?: string;
   fortuneBlockB?: string;
   chemistryLabel?: ChemistryLabel;
-  simulationQuestions?: { icon: string; question: string }[];
+  simulationQuestions?: SelectedSimulation[];
 };
 
 export async function runBattleAnalysis(opts: BattleAnalysisOpts): Promise<BattleLlmAnalysis> {
@@ -546,8 +583,25 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
     if (res.ok) {
       try {
         const raw = parseJson5Loose<any>(res.text);
+        // DEBUG: Gemini raw futureOutlook 형식 확인
+        if (raw?.futureOutlook) {
+          const fo = raw.futureOutlook;
+          const format = Array.isArray(fo.timeline) ? `timeline[${fo.timeline.length}]` : fo.nextYear ? "legacy(nextYear/threeYears)" : "unknown";
+          console.info("[BATTLE_LLM_RAW] futureOutlook format:", format, JSON.stringify(fo).slice(0, 500));
+        }
         const validated = validateAndNormalize(raw, opts.relationshipType, opts.chemistryLabel, opts.simulationQuestions);
-        const { result: postprocessed, warnings, shouldRetry } = postprocessBattleResult(validated);
+
+        // Subject verification 파라미터 구성
+        const subjectVerification: SubjectVerification | undefined =
+          opts.simulationQuestions && opts.simulationQuestions.length > 0
+            ? {
+                nameA: opts.nameA,
+                nameB: opts.nameB,
+                expectedSubjects: opts.simulationQuestions.map((sq) => sq.subject),
+              }
+            : undefined;
+
+        const { result: postprocessed, warnings, shouldRetry } = postprocessBattleResult(validated, subjectVerification);
 
         if (shouldRetry && !isRetry) {
           console.warn("[BATTLE_LLM] 품질 기준 미달 — 1회 재시도");
@@ -580,7 +634,7 @@ function validateAndNormalize(
   raw: any,
   relationshipType: RelationshipType,
   chemistryLabel?: ChemistryLabel,
-  simulationQuestions?: { icon: string; question: string }[],
+  simulationQuestions?: SelectedSimulation[],
 ): BattleLlmAnalysis {
   // categoryResults
   const cr = raw.categoryResults;
@@ -697,15 +751,40 @@ function validateAndNormalize(
 
   // futureOutlook
   const fo = raw.futureOutlook;
+  const currentYear = new Date().getFullYear();
+  const defaultTimeline: FutureTimelineEntry[] = [
+    { year: currentYear + 1, label: "1년 후", eventA: "", eventB: "", relationship: "", mood: "neutral" as const },
+    { year: currentYear + 3, label: "3년 후", eventA: "", eventB: "", relationship: "", mood: "neutral" as const },
+    { year: currentYear + 5, label: "5년 후", eventA: "", eventB: "", relationship: "", mood: "neutral" as const },
+  ];
+
   const futureOutlook: BattleLlmAnalysis["futureOutlook"] = {
     punchline: "",
-    nextYear: "",
-    threeYears: "",
+    timeline: defaultTimeline,
   };
+
   if (fo && typeof fo === "object") {
     futureOutlook.punchline = fo.punchline || "";
-    futureOutlook.nextYear = fo.nextYear || "";
-    futureOutlook.threeYears = fo.threeYears || "";
+
+    // 새 스키마 (timeline 배열)
+    if (Array.isArray(fo.timeline) && fo.timeline.length > 0) {
+      futureOutlook.timeline = fo.timeline.map((entry: any, i: number) => ({
+        year: entry.year || defaultTimeline[i]?.year || currentYear + (i + 1) * 2,
+        label: entry.label || defaultTimeline[i]?.label || `${(i + 1) * 2}년 후`,
+        eventA: entry.eventA || "",
+        eventB: entry.eventB || "",
+        relationship: entry.relationship || "",
+        mood: (["up", "down", "neutral"].includes(entry.mood) ? entry.mood : "neutral") as "up" | "down" | "neutral",
+      })).slice(0, 3);
+    }
+    // 레거시 호환 (nextYear/threeYears가 있으면 변환)
+    else if (fo.nextYear || fo.threeYears) {
+      futureOutlook.timeline = [
+        { year: currentYear + 1, label: "1년 후", eventA: fo.nextYear || "", eventB: "", relationship: "", mood: "neutral" as const },
+        { year: currentYear + 3, label: "3년 후", eventA: fo.threeYears || "", eventB: "", relationship: "", mood: "neutral" as const },
+        { year: currentYear + 5, label: "5년 후", eventA: "", eventB: "", relationship: "", mood: "neutral" as const },
+      ];
+    }
   }
 
   // finalVerdict — string fallback for old data
@@ -740,7 +819,7 @@ function buildFallback(opts: {
   comparison: BattleComparison;
   relationshipType: RelationshipType;
   chemistryLabel?: ChemistryLabel;
-  simulationQuestions?: { icon: string; question: string }[];
+  simulationQuestions?: SelectedSimulation[];
 }): BattleLlmAnalysis {
   const winner = opts.comparison.overallWinner === "A" ? opts.nameA
     : opts.comparison.overallWinner === "B" ? opts.nameB
@@ -766,7 +845,14 @@ function buildFallback(opts: {
       reasoning: "",
       basis: "",
     })),
-    futureOutlook: { punchline: "", nextYear: "", threeYears: "" },
+    futureOutlook: {
+      punchline: "",
+      timeline: [
+        { year: new Date().getFullYear() + 1, label: "1년 후", eventA: "", eventB: "", relationship: "", mood: "neutral" as const },
+        { year: new Date().getFullYear() + 3, label: "3년 후", eventA: "", eventB: "", relationship: "", mood: "neutral" as const },
+        { year: new Date().getFullYear() + 5, label: "5년 후", eventA: "", eventB: "", relationship: "", mood: "neutral" as const },
+      ],
+    },
     finalVerdict: {
       punchline: "",
       verdict: winner

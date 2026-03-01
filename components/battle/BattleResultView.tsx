@@ -112,7 +112,11 @@ export default function BattleResultView({
           )}
 
           {/* Section 6: Future outlook */}
-          <BattleFutureOutlook futureOutlook={llmAnalysis.futureOutlook} />
+          <BattleFutureOutlook
+            futureOutlook={llmAnalysis.futureOutlook}
+            nameA={playerA.name}
+            nameB={playerB.name}
+          />
 
           {/* Section 6: Final verdict */}
           <BattleFinalVerdict finalVerdict={llmAnalysis.finalVerdict} />
