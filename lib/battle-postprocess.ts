@@ -212,6 +212,8 @@ const SAJU_STRIP_PATTERNS: [RegExp, string][] = [
   [/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g, ""],
   // 7. 기질/성향과 결합된 십성: "상관 기질", "겁재 성향" 등
   [/(편재|정재|정인|편인|식신|상관|정관|편관|비견|겁재)\s*(기질|성향|기운|체질)/g, ""],
+  // 8. 한글 간지: (경술), 기유년, (갑진)년 등
+  [/\s*[（(]?(?:갑|을|병|정|무|기|경|신|임|계)(?:자|축|인|묘|진|사|오|미|신|유|술|해)[)）]?\s*(?:년)?\s*/g, " "],
 ];
 
 function stripSajuTermsFromFuture(text: string): { text: string; count: number } {
@@ -551,6 +553,7 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
 export function postprocessBattleResult(
   result: BattleLlmAnalysis,
   subjectVerification?: SubjectVerification,
+  names?: { nameA: string; nameB: string },
 ): {
   result: BattleLlmAnalysis;
   warnings: string[];
@@ -609,6 +612,20 @@ export function postprocessBattleResult(
   // futureOutlook
   result.futureOutlook.punchline = applyTextFixes(result.futureOutlook.punchline, warnings, "futureOutlook.punchline");
   detectIssues(result.futureOutlook.punchline, "futureOutlook.punchline", warnings);
+
+  // futureOutlook eventA/B 이름 교차 자동 교정 (swap)
+  if (names) {
+    for (const entry of result.futureOutlook.timeline) {
+      const aStartsWithB = entry.eventA.startsWith(names.nameB);
+      const bStartsWithA = entry.eventB.startsWith(names.nameA);
+      if (aStartsWithB && bStartsWithA) {
+        warnings.push(`[FIX] futureOutlook ${entry.year}년: eventA/B 이름 교차 → swap`);
+        const temp = entry.eventA;
+        entry.eventA = entry.eventB;
+        entry.eventB = temp;
+      }
+    }
+  }
 
   for (let i = 0; i < result.futureOutlook.timeline.length; i++) {
     const entry = result.futureOutlook.timeline[i];

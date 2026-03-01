@@ -601,7 +601,11 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
               }
             : undefined;
 
-        const { result: postprocessed, warnings, shouldRetry } = postprocessBattleResult(validated, subjectVerification);
+        const { result: postprocessed, warnings, shouldRetry } = postprocessBattleResult(
+          validated,
+          subjectVerification,
+          { nameA: opts.nameA, nameB: opts.nameB },
+        );
 
         if (shouldRetry && !isRetry) {
           console.warn("[BATTLE_LLM] 품질 기준 미달 — 1회 재시도");
