@@ -240,11 +240,11 @@ function detectIssues(text: string, label: string, warnings: string[]): void {
     warnings.push(`[WARN] '수 있는' ${suItneunCount}회: ${label}`);
   }
 
-  // 조언/격려 표현
-  const advicePatterns = /맞춰주고|인정해야|노력해야|배려하면|이해하면|존중하면|조절하면/g;
+  // 조언/격려/처방 표현
+  const advicePatterns = /맞춰주고|인정해야|노력해야|배려하면|이해하면|존중하면|조절하면|존중해주고|연습을 해야|연습이 필요|지속되려면|유지하려면|챙겨주지 않으면/g;
   let adviceMatch: RegExpExecArray | null;
   while ((adviceMatch = advicePatterns.exec(text)) !== null) {
-    warnings.push(`[WARN] 조언/격려 표현: ${label} - '${adviceMatch[0]}'`);
+    warnings.push(`[WARN] 조언/처방 표현: ${label} - '${adviceMatch[0]}'`);
   }
 
   // 미치환 격식체 탐지 (치환 후에도 남은 "X다." 패턴)
@@ -294,10 +294,10 @@ function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
 
   const combined = allTexts.join(" ");
 
-  // 묘(墓) 반복 체크
-  const myoCount = (combined.match(/묘\(墓\)|묘\(묘\)|일주 묘/g) || []).length;
+  // 묘(墓) 모든 변형: 묘(墓), 12운성 묘, 일주 묘, 묘지에, 묘(墓)지
+  const myoCount = (combined.match(/묘\s*\(墓\)|12운성\s*묘|일주\s*묘|묘\s*\(墓\)\s*지|묘지에\s*앉/g) || []).length;
   if (myoCount > 3) {
-    warnings.push(`[WARN] 묘(墓) 전역 ${myoCount}회 반복 (상한 3회)`);
+    warnings.push(`[WARN] 묘(墓) 전역 ${myoCount}회 반복 (상한 3회) — 변형 포함`);
   }
 
   // 특정 패턴 반복 체크
@@ -310,6 +310,7 @@ function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
     [/눈치를? 보/g, "눈치"],
     [/편관[과\(]?[과偏]?[官官]?\)?\s*(과|와)?\s*정관[과\(]?[正]?[官]?\)?\s*(이|가)?\s*혼잡/g, "편관/정관 혼잡"],
     [/가능성이\s*(더\s*)?(높|커|크)/g, "가능성 추측"],
+    [/12운성\s*[가-힣]+\s*\([가-힣]+\)\s*지?에\s*앉아/g, "12운성 X에 앉아 템플릿"],
   ];
 
   for (const [regex, label] of patterns) {
@@ -370,6 +371,15 @@ function detectPunchlineDuplicates(result: BattleLlmAnalysis, warnings: string[]
           warnings.push(`[WARN] punchline 포함 중복: ${allPunchlines[i].label} ⊂ ${allPunchlines[j].label}`);
         }
       }
+    }
+  }
+  // killingLine에 점수/숫자 차이 언급 탐지
+  for (const [key, cat] of Object.entries(result.categoryResults)) {
+    if (cat.killingLine && /\d+점\s*차이/.test(cat.killingLine)) {
+      warnings.push(`[WARN] killingLine에 점수 차이 언급: ${key} — "${cat.killingLine}"`);
+    }
+    if (cat.killingLine && /이겼지만|졌지만|이긴|진/.test(cat.killingLine)) {
+      warnings.push(`[WARN] killingLine에 승패 서술: ${key} — 장면이 아닌 결과 보고`);
     }
   }
 }
