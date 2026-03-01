@@ -507,7 +507,7 @@ ${bonusInstruction}
 
 /* ── LLM 분석 실행 ── */
 
-export async function runBattleAnalysis(opts: {
+type BattleAnalysisOpts = {
   nameA: string;
   nameB: string;
   scoresA: ServerScores;
@@ -523,19 +523,43 @@ export async function runBattleAnalysis(opts: {
   fortuneBlockB?: string;
   chemistryLabel?: ChemistryLabel;
   simulationQuestions?: { icon: string; question: string }[];
-}): Promise<BattleLlmAnalysis> {
+};
+
+export async function runBattleAnalysis(opts: BattleAnalysisOpts): Promise<BattleLlmAnalysis> {
+  return runBattleAnalysisInner(opts, false);
+}
+
+async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean): Promise<BattleLlmAnalysis> {
   const userInfo = buildBattleUserInfo(opts);
+
+  // 재시도 시 경고 문구 추가
+  const finalUserInfo = isRetry
+    ? userInfo + "\n\n[⚠️ 재생성 주의] 이전 응답이 품질 기준 미달이었어. 특히: 묘(墓) 관련 표현을 전체 응답에서 2회 이내로 제한해. 시뮬레이션에서 한쪽만 당하지 않게 균형 맞춰. 이 규칙을 어기면 또 재생성해야 하니까 반드시 지켜."
+    : userInfo;
+
   const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
 
   let lastError: { status?: number; apiStatus?: string; message?: string } | null = null;
 
   for (const model of models) {
-    const res = await callGemini(model, userInfo, BATTLE_SYSTEM_PROMPT);
+    const res = await callGemini(model, finalUserInfo, BATTLE_SYSTEM_PROMPT);
     if (res.ok) {
       try {
         const raw = parseJson5Loose<any>(res.text);
         const validated = validateAndNormalize(raw, opts.relationshipType, opts.chemistryLabel, opts.simulationQuestions);
-        const { result: postprocessed } = postprocessBattleResult(validated);
+        const { result: postprocessed, warnings, shouldRetry } = postprocessBattleResult(validated);
+
+        if (shouldRetry && !isRetry) {
+          console.warn("[BATTLE_LLM] 품질 기준 미달 — 1회 재시도");
+          return runBattleAnalysisInner(opts, true);
+        }
+
+        if (warnings.length > 0) {
+          for (const w of warnings) {
+            console.warn(`[배틀 후처리] ${w}`);
+          }
+        }
+
         return postprocessed;
       } catch (parseErr) {
         console.warn("[BATTLE_LLM] 응답 파싱 실패:", model, parseErr);

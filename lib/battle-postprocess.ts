@@ -423,11 +423,54 @@ function detectEndingRepetition(result: BattleLlmAnalysis, warnings: string[]): 
   }
 }
 
+// ─── 재시도 판정 ────────────────────────────────────
+
+function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolean {
+  // 조건 1: 묘(墓) 5회 초과
+  const allTexts: string[] = [];
+  for (const cat of Object.values(result.categoryResults)) {
+    allTexts.push(cat.detail);
+  }
+  allTexts.push(result.chemistry.analysis);
+  allTexts.push(result.chemistry.mainScenario.analysis);
+  for (const bs of result.chemistry.bonusScenarios) {
+    allTexts.push(bs.analysis);
+  }
+  for (const sim of result.simulations) {
+    allTexts.push(sim.reasoning);
+  }
+  allTexts.push(result.futureOutlook.nextYear);
+  allTexts.push(result.futureOutlook.threeYears);
+  allTexts.push(result.finalVerdict.verdict);
+
+  const combined = allTexts.join(" ");
+  const myoCount = (combined.match(/묘\s*\(墓\)|12운성\s*묘|일주\s*묘|묘\s*\(墓\)\s*지|묘지에\s*앉/g) || []).length;
+
+  if (myoCount > 5) {
+    console.warn(`[BATTLE_RETRY] 묘(墓) ${myoCount}회 — 재시도 트리거`);
+    return true;
+  }
+
+  // 조건 2: 시뮬레이션 편향 (부정 패턴이 5개 이상 집중)
+  if (result.simulations.length >= 5) {
+    const punchlines = result.simulations.map(s => s.punchline).join(" ");
+    const negativePatterns = /폭발|당해|뺏|잡아|차이고|그리워|참다|삐져|눈치|용돈제/g;
+    const matches = punchlines.match(negativePatterns) || [];
+    if (matches.length >= 5) {
+      console.warn(`[BATTLE_RETRY] 시뮬레이션 편향 의심 (부정 패턴 ${matches.length}개) — 재시도 트리거`);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // ─── 메인 후처리 ────────────────────────────────────
 
 export function postprocessBattleResult(result: BattleLlmAnalysis): {
   result: BattleLlmAnalysis;
   warnings: string[];
+  shouldRetry: boolean;
 } {
   const warnings: string[] = [];
 
@@ -501,11 +544,8 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
   detectPunchlineDuplicates(result, warnings);
   detectEndingRepetition(result, warnings);
 
-  if (warnings.length > 0) {
-    for (const w of warnings) {
-      console.warn(`[배틀 후처리] ${w}`);
-    }
-  }
+  // 재시도 판정
+  const shouldRetry = checkShouldRetry(result, warnings);
 
-  return { result, warnings };
+  return { result, warnings, shouldRetry };
 }
