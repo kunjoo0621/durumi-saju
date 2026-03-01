@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import SavePromptBanner from "@/components/SavePromptBanner";
 import BattleHero from "@/components/battle/BattleHero";
-import BattleRadarChart from "@/components/battle/BattleRadarChart";
 import BattleCategorySwiper from "@/components/battle/BattleCategorySwiper";
 import BattleCompatibility from "@/components/battle/BattleCompatibility";
 import BattleSimulations from "@/components/battle/BattleSimulations";
@@ -70,7 +69,7 @@ export default function BattleResultView({
             <SavePromptBanner returnTo={saveBannerReturnTo} />
           )}
 
-          {/* Section 1: Hero */}
+          {/* Section 1: Hero + Radar chart */}
           <BattleHero
             nameA={playerA.name}
             nameB={playerB.name}
@@ -80,14 +79,8 @@ export default function BattleResultView({
             compositeB={playerB.tier.composite}
             comparison={comparison}
             heroQuip={llmAnalysis.heroQuip || (llmAnalysis as any).heroComment || ""}
-          />
-
-          {/* Section 2: Radar chart */}
-          <BattleRadarChart
             scoresA={playerA.scores}
             scoresB={playerB.scores}
-            nameA={playerA.name}
-            nameB={playerB.name}
           />
 
           {/* Section 3: Category matchups (swiper) */}

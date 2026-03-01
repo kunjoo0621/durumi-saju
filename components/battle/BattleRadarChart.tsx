@@ -45,9 +45,10 @@ type Props = {
   scoresB: ServerScores;
   nameA: string;
   nameB: string;
+  bare?: boolean;
 };
 
-function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB }: Props) {
+function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB, bare = false }: Props) {
   const [progress, setProgress] = useState(0);
   const hasAnimatedRef = useRef(false);
 
@@ -127,7 +128,7 @@ function BattleRadarChartInner({ scoresA, scoresB, nameA, nameB }: Props) {
   );
 
   return (
-    <div className="bg-background-secondary rounded-3xl p-6 md:p-8">
+    <div className={bare ? "pt-2" : "bg-background-secondary rounded-3xl p-6 md:p-8"}>
       <div className="mb-4 flex items-center justify-end">
         <div className="flex items-center gap-4 text-[12px]">
           <span className="flex items-center gap-1.5">
