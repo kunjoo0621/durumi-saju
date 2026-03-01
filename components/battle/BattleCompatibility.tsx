@@ -180,7 +180,7 @@ export default function BattleCompatibility({ chemistry }: Props) {
 
       {/* Bonus scenarios — individual accordions, collapsed by default */}
       {bonusScenarios.map((scenario: { type: string; label: string; analysis: string }, i: number) => {
-        if (!scenario.analysis) return null;
+        if (!scenario.analysis?.trim()) return null;
         const BonusIcon = SCENARIO_ICONS[scenario.type] || Handshake;
         return (
           <SectionCard

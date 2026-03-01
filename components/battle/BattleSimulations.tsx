@@ -31,7 +31,6 @@ export default function BattleSimulations({ simulations, icons }: Props) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-title-3 text-text-primary font-semibold">시뮬레이션</h3>
       {filtered.map((sim, i) => {
         const expanded = expandedSet.has(i);
         const icon = icons?.[i] || "🎯";

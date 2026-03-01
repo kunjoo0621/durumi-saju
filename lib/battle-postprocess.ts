@@ -4,7 +4,11 @@ import type { BattleLlmAnalysis } from "@/types/battle";
 
 function fixSseusro(text: string): { text: string; count: number } {
   let count = 0;
-  const fixed = text.replace(/스스로/g, () => { count++; return "자기 자신에게"; });
+  const fixed = text
+    .replace(/스스로를/g, () => { count++; return "본인을"; })
+    .replace(/스스로의/g, () => { count++; return "본인의"; })
+    .replace(/스스로가/g, () => { count++; return "본인이"; })
+    .replace(/스스로/g, () => { count++; return "혼자서"; });
   return { text: fixed, count };
 }
 
@@ -17,11 +21,40 @@ const HONORIFIC_PATTERNS: [RegExp, string][] = [
   [/있어요(?=[.,\s]|$)/g, "있어"],
 ];
 
+// 격식체 → 반말 치환 (문장 끝 마침표 앞에서만 적용)
+// 주의: "좋다."→"좋야."처럼 형용사에 오작동하는 generic 패턴은 제외.
+// 안전한 동사/서술어 패턴만 포함.
+const FORMAL_PATTERNS: [RegExp, string][] = [
+  [/([가-힣])한다\./g, "$1해."],
+  [/([가-힣])된다\./g, "$1돼."],
+  [/([가-힣])있다\./g, "$1있어."],
+  [/([가-힣])없다\./g, "$1없어."],
+  [/([가-힣])이다\./g, "$1이야."],
+  [/([가-힣])온다\./g, "$1와."],
+  [/([가-힣])간다\./g, "$1가."],
+  [/([가-힣])본다\./g, "$1봐."],
+  [/([가-힣])준다\./g, "$1줘."],
+  [/([가-힣])낸다\./g, "$1내."],
+];
+
 function fixHonorifics(text: string): { text: string; count: number } {
   let count = 0;
   let result = text;
   for (const [pattern, replacement] of HONORIFIC_PATTERNS) {
     result = result.replace(pattern, () => { count++; return replacement; });
+  }
+  return { text: result, count };
+}
+
+function fixFormalEndings(text: string): { text: string; count: number } {
+  let count = 0;
+  let result = text;
+  for (const [pattern, replacement] of FORMAL_PATTERNS) {
+    result = result.replace(pattern, (...args) => {
+      count++;
+      // $1 replacement for captured group
+      return replacement.replace("$1", args[1] || "");
+    });
   }
   return { text: result, count };
 }
@@ -35,7 +68,10 @@ function applyTextFixes(text: string, warnings: string[], label: string): string
   const h = fixHonorifics(s.text);
   if (h.count > 0) warnings.push(`[FIX] 존댓말 ${h.count}회 치환: ${label}`);
 
-  return h.text;
+  const f = fixFormalEndings(h.text);
+  if (f.count > 0) warnings.push(`[FIX] 격식체 ${f.count}회 치환: ${label}`);
+
+  return f.text;
 }
 
 // ─── 탐지 (경고만) ──────────────────────────────────
