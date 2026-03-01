@@ -228,6 +228,16 @@ function detectIssues(text: string, label: string, warnings: string[]): void {
     warnings.push(`[WARN] '궁합' 사용: ${label}`);
   }
 
+  // "수 있지만" / "수 있는" 추측 표현 탐지
+  const suItjimanCount = (text.match(/수 있지만/g) || []).length;
+  if (suItjimanCount > 0) {
+    warnings.push(`[WARN] '수 있지만' ${suItjimanCount}회: ${label}`);
+  }
+  const suItneunCount = (text.match(/수 있는/g) || []).length;
+  if (suItneunCount > 0) {
+    warnings.push(`[WARN] '수 있는' ${suItneunCount}회: ${label}`);
+  }
+
   // 미치환 격식체 탐지 (치환 후에도 남은 "X다." 패턴)
   const remaining = text.match(/[가-힣]다\./g);
   if (remaining && remaining.length > 0) {
@@ -244,6 +254,151 @@ function detectLengthIssues(result: BattleLlmAnalysis, warnings: string[]): void
     if (cat.detail && cat.detail.length > 300) {
       warnings.push(`[WARN] detail 300자 초과: ${key} (${cat.detail.length}자)`);
     }
+  }
+}
+
+// ─── 전역 반복 탐지 ─────────────────────────────────
+
+function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
+  // 모든 텍스트 필드를 합쳐서 검사
+  const allTexts: string[] = [];
+
+  // categoryResults
+  for (const [, cat] of Object.entries(result.categoryResults)) {
+    allTexts.push(cat.detail);
+  }
+  // chemistry
+  allTexts.push(result.chemistry.analysis);
+  allTexts.push(result.chemistry.mainScenario.analysis);
+  for (const bs of result.chemistry.bonusScenarios) {
+    allTexts.push(bs.analysis);
+  }
+  // simulations
+  for (const sim of result.simulations) {
+    allTexts.push(sim.reasoning);
+  }
+  // futureOutlook
+  allTexts.push(result.futureOutlook.nextYear);
+  allTexts.push(result.futureOutlook.threeYears);
+  // finalVerdict
+  allTexts.push(result.finalVerdict.verdict);
+
+  const combined = allTexts.join(" ");
+
+  // 묘(墓) 반복 체크
+  const myoCount = (combined.match(/묘\(墓\)|묘\(묘\)|일주 묘/g) || []).length;
+  if (myoCount > 3) {
+    warnings.push(`[WARN] 묘(墓) 전역 ${myoCount}회 반복 (상한 3회)`);
+  }
+
+  // 특정 패턴 반복 체크
+  const patterns: [RegExp, string][] = [
+    [/편관 대운|편관운/g, "편관 대운"],
+    [/토 과다/g, "토 과다"],
+    [/수 과다/g, "수 과다"],
+    [/감정을? (속으로 )?삭이/g, "감정 삭임"],
+    [/통제하려/g, "통제하려"],
+    [/눈치를? 보/g, "눈치"],
+  ];
+
+  for (const [regex, label] of patterns) {
+    const count = (combined.match(regex) || []).length;
+    if (count > 3) {
+      warnings.push(`[WARN] '${label}' 전역 ${count}회 반복 (상한 3회)`);
+    }
+  }
+}
+
+// ─── punchline/killingLine 중복 탐지 ────────────────
+
+function detectPunchlineDuplicates(result: BattleLlmAnalysis, warnings: string[]): void {
+  const allPunchlines: { label: string; text: string }[] = [];
+
+  // killingLines
+  for (const [key, cat] of Object.entries(result.categoryResults)) {
+    if (cat.killingLine) allPunchlines.push({ label: `${key}.killingLine`, text: cat.killingLine });
+  }
+  // chemistry punchline
+  if (result.chemistry.punchline) {
+    allPunchlines.push({ label: "chemistry.punchline", text: result.chemistry.punchline });
+  }
+  // bonusScenarios punchlines
+  for (let i = 0; i < result.chemistry.bonusScenarios.length; i++) {
+    const p = result.chemistry.bonusScenarios[i].punchline;
+    if (p) allPunchlines.push({ label: `bonusScenario[${i}].punchline`, text: p });
+  }
+  // simulation punchlines
+  for (let i = 0; i < result.simulations.length; i++) {
+    const p = result.simulations[i].punchline;
+    if (p) allPunchlines.push({ label: `simulation[${i}].punchline`, text: p });
+  }
+  // futureOutlook, finalVerdict
+  if (result.futureOutlook.punchline) {
+    allPunchlines.push({ label: "futureOutlook.punchline", text: result.futureOutlook.punchline });
+  }
+  if (result.finalVerdict.punchline) {
+    allPunchlines.push({ label: "finalVerdict.punchline", text: result.finalVerdict.punchline });
+  }
+  // heroQuip
+  if (result.heroQuip) {
+    allPunchlines.push({ label: "heroQuip", text: result.heroQuip });
+  }
+
+  // 완전 일치 또는 80%+ 포함 관계 탐지
+  for (let i = 0; i < allPunchlines.length; i++) {
+    for (let j = i + 1; j < allPunchlines.length; j++) {
+      const a = allPunchlines[i].text;
+      const b = allPunchlines[j].text;
+      if (a === b) {
+        warnings.push(`[WARN] punchline 완전 중복: ${allPunchlines[i].label} === ${allPunchlines[j].label}`);
+      } else if (a.length > 10 && b.length > 10) {
+        // 짧은 쪽이 긴 쪽에 포함되는지
+        const shorter = a.length <= b.length ? a : b;
+        const longer = a.length > b.length ? a : b;
+        if (longer.includes(shorter)) {
+          warnings.push(`[WARN] punchline 포함 중복: ${allPunchlines[i].label} ⊂ ${allPunchlines[j].label}`);
+        }
+      }
+    }
+  }
+}
+
+// ─── 어미 연속 탐지 ─────────────────────────────────
+
+function detectEndingRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
+  // simulation reasoning 마지막 어미 수집
+  const endings: string[] = [];
+  for (const sim of result.simulations) {
+    if (!sim.reasoning) continue;
+    const sentences = sim.reasoning.split(/[.!]\s*/).filter(s => s.trim().length > 0);
+    const last = sentences[sentences.length - 1]?.trim();
+    if (last) {
+      // 마지막 2~3글자 추출
+      const ending = last.slice(-3);
+      endings.push(ending);
+    }
+  }
+
+  if (endings.length >= 3) {
+    const unique = new Set(endings);
+    if (unique.size === 1) {
+      warnings.push(`[WARN] simulation reasoning 어미 전부 동일: "${endings[0]}" (${endings.length}개)`);
+    } else if (unique.size < 3 && endings.length >= 4) {
+      warnings.push(`[WARN] simulation reasoning 어미 다양성 부족: ${unique.size}종류 / ${endings.length}개`);
+    }
+  }
+
+  // bonusScenarios analysis 마지막 어미도 체크
+  const bonusEndings: string[] = [];
+  for (const bs of result.chemistry.bonusScenarios) {
+    if (!bs.analysis) continue;
+    const sentences = bs.analysis.split(/[.!]\s*/).filter(s => s.trim().length > 0);
+    const last = sentences[sentences.length - 1]?.trim();
+    if (last) bonusEndings.push(last.slice(-3));
+  }
+
+  if (bonusEndings.length >= 2 && new Set(bonusEndings).size === 1) {
+    warnings.push(`[WARN] bonusScenarios 어미 전부 동일: "${bonusEndings[0]}"`);
   }
 }
 
@@ -319,6 +474,11 @@ export function postprocessBattleResult(result: BattleLlmAnalysis): {
 
   // Length checks
   detectLengthIssues(result, warnings);
+
+  // Global pattern detection
+  detectRepetition(result, warnings);
+  detectPunchlineDuplicates(result, warnings);
+  detectEndingRepetition(result, warnings);
 
   if (warnings.length > 0) {
     for (const w of warnings) {
