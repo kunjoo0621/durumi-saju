@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import {
   CurrencyCircleDollar,
-  HeartHalf,
+  Heart,
   Briefcase,
   Heartbeat,
   UsersThree,
@@ -32,11 +32,14 @@ const CATEGORY_KEY_MAP: Record<string, keyof BattleLlmAnalysis["categoryResults"
 
 const CATEGORY_ICONS: Record<string, Icon> = {
   "재물운": CurrencyCircleDollar,
-  "연애운": HeartHalf,
+  "연애운": Heart,
   "직장운": Briefcase,
   "건강운": Heartbeat,
   "대인운": UsersThree,
 };
+
+const COLOR_A = "#FF6B6B";
+const COLOR_B = "#A855F7";
 
 function getComment(
   llmComments: BattleLlmAnalysis["categoryResults"],
@@ -57,7 +60,6 @@ export default function BattleCategorySwiper({
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
-  // 고정 순서 유지: wealth → love → career → health → social
   const sorted = matches;
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -69,10 +71,7 @@ export default function BattleCategorySwiper({
     (e: React.TouchEvent) => {
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       const dy = e.changedTouches[0].clientY - touchStartY.current;
-
-      // Only swipe if horizontal movement > vertical (prevent scroll interference)
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
-
       if (dx < 0 && activeIndex < sorted.length - 1) {
         setActiveIndex((prev) => prev + 1);
       } else if (dx > 0 && activeIndex > 0) {
@@ -102,118 +101,210 @@ export default function BattleCategorySwiper({
             const bWins = m.winner === "B";
             const isDraw = m.winner === "draw";
 
-            // 0~100 절대 기준, 최소 10%
-            const barA = Math.max(m.scoreA, 10);
-            const barB = Math.max(m.scoreB, 10);
+            // Tug-of-war ratio
+            const total = m.scoreA + m.scoreB || 1;
+            const ratioA = (m.scoreA / total) * 100;
+
+            // Header gradient
+            const headerBg = aWins
+              ? "linear-gradient(180deg, rgba(255,107,107,0.04) 0%, transparent 100%)"
+              : bWins
+                ? "linear-gradient(180deg, rgba(168,85,247,0.04) 0%, transparent 100%)"
+                : "transparent";
+
+            // Winner stripe pattern
+            const stripeA = aWins
+              ? "repeating-linear-gradient(-55deg, transparent, transparent 4px, rgba(255,255,255,0.05) 4px, rgba(255,255,255,0.05) 5px)"
+              : "none";
+            const stripeB = bWins
+              ? "repeating-linear-gradient(55deg, transparent, transparent 4px, rgba(255,255,255,0.05) 4px, rgba(255,255,255,0.05) 5px)"
+              : "none";
+
+            // Bar colors
+            const barColorA = aWins ? COLOR_A : isDraw ? "rgba(255,107,107,0.8)" : "#2A2A2A";
+            const barColorB = bWins ? COLOR_B : isDraw ? "rgba(168,85,247,0.8)" : "#2A2A2A";
+
+            // Winner badge
+            const winnerLabel = isDraw
+              ? "무승부"
+              : `${aWins ? nameA : nameB} 승`;
+            const badgeColor = isDraw ? "#9CA3AF" : aWins ? COLOR_A : COLOR_B;
 
             return (
-              <div
-                key={m.category}
-                className="w-full shrink-0 px-0.5"
-              >
-                <div className="bg-background-secondary rounded-2xl p-5 relative">
-                  {/* 결정타 배지 */}
-                  {isHighlight && (
-                    <span
-                      className="absolute top-3 right-4 text-[11px] font-medium px-2 py-0.5 rounded-md"
-                      style={{
-                        color: "#FF6B6B",
-                        backgroundColor: "rgba(255,107,107,0.12)",
-                      }}
-                    >
-                      결정타
-                    </span>
-                  )}
-
-                  {/* Category icon + name + winner */}
-                  <div className="flex items-center gap-2 mb-4">
-                    {IconComp && (
-                      <IconComp weight="duotone" size={28} color="#9CA3AF" aria-hidden="true" />
-                    )}
-                    <span className="text-[15px] font-semibold text-text-primary">
-                      {m.category}
-                    </span>
-                    <span className="ml-auto text-[13px] font-medium" style={{
-                      color: isDraw ? "#9CA3AF" : (aWins ? "#FF6B6B" : "#A855F7"),
-                    }}>
-                      {isDraw ? "무승부" : `${m.winner === "A" ? nameA : nameB} 승`}
-                    </span>
-                  </div>
-
-                  {/* Score comparison bars */}
-                  <div className="flex items-center gap-3">
-                    {/* A score */}
-                    <span
-                      className="text-[20px] font-aggro font-bold w-9 text-left shrink-0"
-                      style={{ color: aWins || isDraw ? "#FF6B6B" : "#666" }}
-                    >
-                      {m.scoreA}
-                    </span>
-
-                    {/* Double bar */}
-                    <div className="flex-1 flex flex-col gap-[6px]">
-                      <div className="h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${barA}%`,
-                            background: aWins
-                              ? "linear-gradient(90deg, #FF6B6B, #FF8E8E)"
-                              : isDraw ? "linear-gradient(90deg, #FF6B6B80, #FF8E8E80)" : "#333333",
-                          }}
-                        />
+              <div key={m.category} className="w-full shrink-0 px-0.5">
+                <div className="rounded-[20px] overflow-hidden" style={{ backgroundColor: "#141414" }}>
+                  {/* Header area */}
+                  <div style={{ background: headerBg, padding: "22px 22px 18px" }}>
+                    {/* Top row: icon+label ↔ badges */}
+                    <div className="flex items-center justify-between mb-[18px]">
+                      <div className="flex items-center gap-2.5">
+                        {/* Icon container */}
+                        {IconComp && (
+                          <div
+                            className="flex items-center justify-center shrink-0"
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 10,
+                              backgroundColor: "rgba(255,255,255,0.06)",
+                            }}
+                          >
+                            <IconComp
+                              weight="duotone"
+                              size={20}
+                              color="rgba(255,255,255,0.7)"
+                              aria-hidden="true"
+                            />
+                          </div>
+                        )}
+                        <span style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>
+                          {m.category}
+                        </span>
                       </div>
-                      <div className="h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
+
+                      <div className="flex items-center gap-1.5">
+                        {isHighlight && (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: "#FCD34D",
+                              backgroundColor: "rgba(252,211,77,0.1)",
+                              padding: "4px 8px",
+                              borderRadius: 6,
+                            }}
+                          >
+                            결정타
+                          </span>
+                        )}
+                        <span
                           style={{
-                            width: `${barB}%`,
-                            background: bWins
-                              ? "linear-gradient(90deg, #8B5CF6, #A855F7)"
-                              : isDraw ? "linear-gradient(90deg, #8B5CF680, #A855F780)" : "#333333",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: badgeColor,
+                            backgroundColor: `${badgeColor}12`,
+                            padding: "4px 10px",
+                            borderRadius: 8,
                           }}
-                        />
+                        >
+                          {winnerLabel}
+                        </span>
                       </div>
                     </div>
 
-                    {/* B score */}
-                    <span
-                      className="text-[20px] font-aggro font-bold w-9 text-right shrink-0"
-                      style={{ color: bWins || isDraw ? "#A855F7" : "#666" }}
+                    {/* Player names above bar */}
+                    <div className="flex justify-between" style={{ marginBottom: 6 }}>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: aWins || isDraw ? COLOR_A : "rgba(255,255,255,0.25)",
+                        }}
+                      >
+                        {nameA}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: bWins || isDraw ? COLOR_B : "rgba(255,255,255,0.25)",
+                        }}
+                      >
+                        {nameB}
+                      </span>
+                    </div>
+
+                    {/* Tug-of-war bar */}
+                    <div
+                      className="flex overflow-hidden"
+                      style={{ height: 44, borderRadius: 14, gap: 2 }}
                     >
-                      {m.scoreB}
-                    </span>
+                      {/* A side */}
+                      <div
+                        className="relative flex items-center justify-center transition-all duration-500"
+                        style={{ width: `${ratioA}%`, backgroundColor: barColorA }}
+                      >
+                        {stripeA !== "none" && (
+                          <div
+                            className="absolute inset-0"
+                            style={{ backgroundImage: stripeA, opacity: 0.1 }}
+                          />
+                        )}
+                        <span
+                          className="relative z-[1] font-aggro"
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: aWins || isDraw ? "white" : "rgba(255,255,255,0.35)",
+                          }}
+                        >
+                          {m.scoreA}
+                        </span>
+                      </div>
+
+                      {/* B side */}
+                      <div
+                        className="relative flex items-center justify-center transition-all duration-500"
+                        style={{ width: `${100 - ratioA}%`, backgroundColor: barColorB }}
+                      >
+                        {stripeB !== "none" && (
+                          <div
+                            className="absolute inset-0"
+                            style={{ backgroundImage: stripeB, opacity: 0.1 }}
+                          />
+                        )}
+                        <span
+                          className="relative z-[1] font-aggro"
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: bWins || isDraw ? "white" : "rgba(255,255,255,0.35)",
+                          }}
+                        >
+                          {m.scoreB}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Divider + killingLine + detail */}
+                  {/* Divider + Content */}
                   {comment && (
                     <>
-                      <div className="mt-4 mb-4 h-px bg-white/[0.06]" />
-                      {comment.killingLine && (
-                        <div className="flex gap-2.5 mb-4">
-                          <div
-                            className="w-1 shrink-0 rounded-full"
+                      <div style={{ height: 1, backgroundColor: "rgba(255,255,255,0.06)", margin: "0 22px" }} />
+
+                      <div style={{ padding: "20px 22px 24px" }}>
+                        {comment.killingLine && (
+                          <p
                             style={{
-                              backgroundColor: aWins ? "#FF6B6B" : bWins ? "#A855F7" : "#9CA3AF",
+                              fontSize: 16,
+                              fontWeight: 600,
+                              color: "rgba(255,255,255,0.92)",
+                              lineHeight: 1.5,
+                              marginBottom: 10,
                             }}
-                          />
-                          <p className="text-[18px] font-semibold text-white leading-[1.5]">
+                          >
                             {comment.killingLine}
                           </p>
-                        </div>
-                      )}
-                      {comment.detail && (
-                        <div className="space-y-4">
-                          {comment.detail.split(/\n\s*\n/).map((para: string, i: number) => (
-                            <p
-                              key={i}
-                              className="text-[14px] text-gray-400 leading-[1.6]"
-                            >
-                              {para.trim()}
-                            </p>
-                          ))}
-                        </div>
-                      )}
+                        )}
+                        {comment.detail && (
+                          <div>
+                            {comment.detail.split(/\n\s*\n/).map((para: string, i: number) => (
+                              <p
+                                key={i}
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: 400,
+                                  color: "rgba(255,255,255,0.4)",
+                                  lineHeight: 1.75,
+                                  margin: 0,
+                                }}
+                              >
+                                {para.trim()}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
