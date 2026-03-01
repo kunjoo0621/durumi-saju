@@ -201,8 +201,8 @@ function detectLengthIssues(result: BattleLlmAnalysis, warnings: string[]): void
     if (cat.killingLine && cat.killingLine.length > 30) {
       warnings.push(`[WARN] killingLine 30자 초과: ${key} (${cat.killingLine.length}자)`);
     }
-    if (cat.detail && cat.detail.length > 150) {
-      warnings.push(`[WARN] detail 150자 초과: ${key} (${cat.detail.length}자)`);
+    if (cat.detail && cat.detail.length > 300) {
+      warnings.push(`[WARN] detail 300자 초과: ${key} (${cat.detail.length}자)`);
     }
   }
 }

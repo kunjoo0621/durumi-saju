@@ -48,18 +48,18 @@ export default function BattleSimulations({ simulations, icons }: Props) {
               <button
                 type="button"
                 onClick={() => toggle(i)}
-                className="w-full px-5 py-4 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
+                className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
                 aria-expanded={expanded}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="text-[20px] leading-none shrink-0">{icon}</span>
-                  <span className="text-[14px] font-semibold text-text-primary truncate">
+                  <span className="text-[15px] font-medium text-text-primary truncate">
                     {sim.question}
                   </span>
                 </div>
                 <CaretDown
                   weight="bold"
-                  size={18}
+                  size={20}
                   className={`text-text-secondary transition-transform shrink-0 ml-2 ${
                     expanded ? "rotate-180" : ""
                   }`}
@@ -73,14 +73,14 @@ export default function BattleSimulations({ simulations, icons }: Props) {
                 }`}
               >
                 <div className="overflow-hidden">
-                  <div className="px-5 pb-4 pt-1">
-                    <p className="text-[15px] text-text-primary leading-[1.75]">
+                  <div className="px-6 pb-6 pt-1">
+                    <p className="text-[15px] text-gray-300 leading-[1.75]">
                       {sim.answer}
                     </p>
                     {sim.basis && (
-                      <p className="text-[12px] text-text-tertiary mt-2">
+                      <span className="inline-block text-[11px] text-gray-400 bg-white/[0.06] px-2 py-0.5 rounded-full mt-3">
                         {sim.basis}
-                      </p>
+                      </span>
                     )}
                   </div>
                 </div>

@@ -116,7 +116,7 @@ export default function BattleHero({
         )}
 
         {heroQuip && (
-          <p className="text-[14px] text-text-secondary leading-relaxed mt-2">
+          <p className="text-[16px] font-medium text-white/80 leading-relaxed mt-1">
             {heroQuip}
           </p>
         )}

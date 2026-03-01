@@ -100,9 +100,9 @@ export default function BattleCategorySwiper({
             const bWins = m.winner === "B";
             const isDraw = m.winner === "draw";
 
-            const maxScore = Math.max(m.scoreA, m.scoreB, 1);
-            const barA = (m.scoreA / maxScore) * 100;
-            const barB = (m.scoreB / maxScore) * 100;
+            // 0~100 절대 기준, 최소 10%
+            const barA = Math.max(m.scoreA, 10);
+            const barB = Math.max(m.scoreB, 10);
 
             return (
               <div
@@ -150,25 +150,25 @@ export default function BattleCategorySwiper({
 
                     {/* Double bar */}
                     <div className="flex-1 flex flex-col gap-1.5">
-                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#282828" }}>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${barA}%`,
                             background: aWins
-                              ? "linear-gradient(90deg, #FF6B6B, #FF8A8A)"
-                              : isDraw ? "linear-gradient(90deg, #FF6B6B80, #FF8A8A80)" : "#282828",
+                              ? "linear-gradient(90deg, #FF6B6B, #FF8E8E)"
+                              : isDraw ? "linear-gradient(90deg, #FF6B6B80, #FF8E8E80)" : "#333333",
                           }}
                         />
                       </div>
-                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#282828" }}>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${barB}%`,
                             background: bWins
-                              ? "linear-gradient(90deg, #A855F7, #C084FC)"
-                              : isDraw ? "linear-gradient(90deg, #A855F780, #C084FC80)" : "#282828",
+                              ? "linear-gradient(90deg, #8B5CF6, #A855F7)"
+                              : isDraw ? "linear-gradient(90deg, #8B5CF680, #A855F780)" : "#333333",
                           }}
                         />
                       </div>
@@ -188,16 +188,24 @@ export default function BattleCategorySwiper({
                     <>
                       <div className="mt-4 mb-4 h-px bg-white/[0.06]" />
                       {comment.killingLine && (
-                        <p className="text-[15px] font-bold text-text-primary mb-2">
-                          {comment.killingLine}
-                        </p>
+                        <div className="flex gap-2.5 mb-4">
+                          <div
+                            className="w-1 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor: aWins ? "#FF6B6B" : bWins ? "#A855F7" : "#9CA3AF",
+                            }}
+                          />
+                          <p className="text-[18px] font-semibold text-white leading-[1.5]">
+                            {comment.killingLine}
+                          </p>
+                        </div>
                       )}
                       {comment.detail && (
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                           {comment.detail.split(/\n\s*\n/).map((para: string, i: number) => (
                             <p
                               key={i}
-                              className="text-[16px] text-text-primary leading-[1.75]"
+                              className="text-[14px] text-gray-400 leading-[1.6]"
                             >
                               {para.trim()}
                             </p>
