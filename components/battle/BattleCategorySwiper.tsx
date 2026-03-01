@@ -131,8 +131,8 @@ export default function BattleCategorySwiper({
                     <span className="text-[15px] font-semibold text-text-primary">
                       {m.category}
                     </span>
-                    <span className="ml-auto text-[12px] font-semibold" style={{
-                      color: isDraw ? "#9CA3AF" : "#FF6B6B",
+                    <span className="ml-auto text-[13px] font-medium" style={{
+                      color: isDraw ? "#9CA3AF" : (aWins ? "#FF6B6B" : "#A855F7"),
                     }}>
                       {isDraw ? "무승부" : `${m.winner === "A" ? nameA : nameB} 승`}
                     </span>
@@ -142,15 +142,15 @@ export default function BattleCategorySwiper({
                   <div className="flex items-center gap-3">
                     {/* A score */}
                     <span
-                      className="text-[18px] font-aggro font-bold w-8 text-left shrink-0"
+                      className="text-[20px] font-aggro font-bold w-9 text-left shrink-0"
                       style={{ color: aWins || isDraw ? "#FF6B6B" : "#666" }}
                     >
                       {m.scoreA}
                     </span>
 
                     {/* Double bar */}
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
+                    <div className="flex-1 flex flex-col gap-[6px]">
+                      <div className="h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
@@ -161,7 +161,7 @@ export default function BattleCategorySwiper({
                           }}
                         />
                       </div>
-                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
+                      <div className="h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: "#1F1F1F" }}>
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
@@ -176,7 +176,7 @@ export default function BattleCategorySwiper({
 
                     {/* B score */}
                     <span
-                      className="text-[18px] font-aggro font-bold w-8 text-right shrink-0"
+                      className="text-[20px] font-aggro font-bold w-9 text-right shrink-0"
                       style={{ color: bWins || isDraw ? "#A855F7" : "#666" }}
                     >
                       {m.scoreB}

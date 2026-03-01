@@ -1,7 +1,110 @@
 "use client";
 
 import { useState } from "react";
-import { CaretDown } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  House,
+  BeerBottle,
+  UsersThree,
+  HeartBreak,
+  Suitcase,
+  CurrencyCircleDollar,
+  SmileyAngry,
+  SmileySad,
+  Cake,
+  AirplaneTilt,
+  Megaphone,
+  ChatCircle,
+  Confetti,
+  EyeSlash,
+  Heart,
+  PersonSimpleRun,
+  Phone,
+  Drop,
+  Sword,
+  ChartBar,
+  TrendUp,
+  Rocket,
+  Moon,
+  EnvelopeSimple,
+  Trophy,
+  Scissors,
+  Shuffle,
+  ShirtFolded,
+  Sparkle,
+  Coins,
+  Crown,
+  Smiley,
+  ClipboardText,
+  Lightning,
+  Diamond,
+  HandWaving,
+  Buildings,
+  HouseLine,
+  FolderOpen,
+  Hourglass,
+  Handshake,
+  GameController,
+  HeartStraight,
+  Star,
+  ChatCircleDots,
+  ArrowsClockwise,
+  Question,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+
+const EMOJI_TO_ICON: Record<string, Icon> = {
+  "🏠": House,
+  "🍺": BeerBottle,
+  "👫": UsersThree,
+  "💔": HeartBreak,
+  "🧳": Suitcase,
+  "💸": CurrencyCircleDollar,
+  "😤": SmileyAngry,
+  "😑": SmileySad,
+  "🎂": Cake,
+  "💍": HeartStraight,
+  "✈️": AirplaneTilt,
+  "🗣️": Megaphone,
+  "📱": ChatCircle,
+  "🎉": Confetti,
+  "🤫": EyeSlash,
+  "❤️": Heart,
+  "🏃": PersonSimpleRun,
+  "📞": Phone,
+  "😢": Drop,
+  "⚔️": Sword,
+  "📊": ChartBar,
+  "📈": TrendUp,
+  "🚀": Rocket,
+  "🌙": Moon,
+  "📩": EnvelopeSimple,
+  "🏆": Trophy,
+  "🍻": BeerBottle,
+  "✂️": Scissors,
+  "🔀": Shuffle,
+  "👔": ShirtFolded,
+  "🎆": Sparkle,
+  "💰": Coins,
+  "🗳️": Megaphone,
+  "👑": Crown,
+  "😇": Smiley,
+  "📋": ClipboardText,
+  "💥": Lightning,
+  "💎": Diamond,
+  "🤗": HandWaving,
+  "🏙️": Buildings,
+  "🏡": HouseLine,
+  "🏘️": Buildings,
+  "📂": FolderOpen,
+  "⏳": Hourglass,
+  "🤝": Handshake,
+  "🎮": GameController,
+  "💘": HeartStraight,
+  "⭐": Star,
+  "💬": ChatCircleDots,
+  "🔁": ArrowsClockwise,
+};
 
 type Simulation = {
   question: string;
@@ -33,7 +136,8 @@ export default function BattleSimulations({ simulations, icons }: Props) {
     <div className="space-y-3">
       {filtered.map((sim, i) => {
         const expanded = expandedSet.has(i);
-        const icon = icons?.[i] || "🎯";
+        const emoji = icons?.[i] || "";
+        const IconComp = EMOJI_TO_ICON[emoji] || Question;
 
         return (
           <div
@@ -52,8 +156,8 @@ export default function BattleSimulations({ simulations, icons }: Props) {
                 aria-expanded={expanded}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-[20px] leading-none shrink-0">{icon}</span>
-                  <span className="text-[15px] font-medium text-text-primary truncate">
+                  <IconComp weight="duotone" size={24} color="#F59E0B" className="shrink-0" aria-hidden="true" />
+                  <span className="text-[16px] font-medium text-text-primary truncate">
                     {sim.question}
                   </span>
                 </div>
@@ -74,7 +178,7 @@ export default function BattleSimulations({ simulations, icons }: Props) {
               >
                 <div className="overflow-hidden">
                   <div className="px-6 pb-6 pt-1">
-                    <p className="text-[15px] text-gray-300 leading-[1.75]">
+                    <p className="text-[14px] text-gray-300 leading-[1.75]">
                       {sim.answer}
                     </p>
                     {sim.basis && (
