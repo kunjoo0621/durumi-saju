@@ -156,13 +156,30 @@ function fixFormalEndings(text: string): { text: string; count: number } {
   return { text: result, count };
 }
 
+const SPECULATION_PATTERNS: [RegExp, string][] = [
+  [/가능성이 높아/g, "거야"],
+  [/가능성이 크지만/g, "크지만"],
+];
+
+function fixSpeculation(text: string): { text: string; count: number } {
+  let count = 0;
+  let result = text;
+  for (const [pattern, replacement] of SPECULATION_PATTERNS) {
+    result = result.replace(pattern, () => { count++; return replacement; });
+  }
+  return { text: result, count };
+}
+
 function applyTextFixes(text: string, warnings: string[], label: string): string {
   if (!text) return text;
 
   const s = fixSseusro(text);
   if (s.count > 0) warnings.push(`[FIX] '스스로' ${s.count}회 치환: ${label}`);
 
-  const h = fixHonorifics(s.text);
+  const sp = fixSpeculation(s.text);
+  if (sp.count > 0) warnings.push(`[FIX] 추측 표현 ${sp.count}회 치환: ${label}`);
+
+  const h = fixHonorifics(sp.text);
   if (h.count > 0) warnings.push(`[FIX] 존댓말 ${h.count}회 치환: ${label}`);
 
   const f = fixFormalEndings(h.text);
