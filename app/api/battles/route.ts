@@ -17,7 +17,24 @@ const LIST_COLUMNS = [
   "draws",
   "relationship_type",
   "created_at",
+  "full_result",
 ].join(", ");
+
+type BattleRow = {
+  id: string;
+  player_a_name: string;
+  player_b_name: string;
+  player_a_grade: string;
+  player_b_grade: string;
+  overall_winner: string;
+  overall_intensity: string;
+  wins_a: number;
+  wins_b: number;
+  draws: number;
+  relationship_type: string;
+  created_at: string;
+  full_result?: { playerA?: { tier?: { composite?: number } }; playerB?: { tier?: { composite?: number } } };
+};
 
 export async function GET() {
   try {
@@ -37,7 +54,13 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ battles: battles ?? [] });
+    const slim = ((battles ?? []) as unknown as BattleRow[]).map(({ full_result, ...rest }) => ({
+      ...rest,
+      player_a_composite: full_result?.playerA?.tier?.composite ?? null,
+      player_b_composite: full_result?.playerB?.tier?.composite ?? null,
+    }));
+
+    return NextResponse.json({ battles: slim });
   } catch (error: any) {
     return NextResponse.json(
       { error: "배틀 목록 조회 중 오류가 발생했습니다.", details: error?.message },

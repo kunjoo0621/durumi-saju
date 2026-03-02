@@ -582,70 +582,98 @@ export default function MyResultsPage() {
                   {battles.map((b) => {
                     const isWinnerA = b.overall_winner === "A";
                     const isDraw = b.overall_winner === "draw";
-                    const winnerGrade = isDraw
-                      ? b.player_a_grade
-                      : isWinnerA
-                        ? b.player_a_grade
-                        : b.player_b_grade;
-                    const winnerColor = getGradeColor(winnerGrade);
-                    const winnerBadge = getGradeBadge(winnerGrade);
-                    const dateStr = b.created_at;
+                    const gcA = getGradeColor(b.player_a_grade);
+                    const gcB = getGradeColor(b.player_b_grade);
+                    const badgeA = getGradeBadge(b.player_a_grade);
+                    const badgeB = getGradeBadge(b.player_b_grade);
+                    const winnerName = isDraw ? null : isWinnerA ? b.player_a_name : b.player_b_name;
+
+                    const intensityLabel =
+                      b.overall_intensity === "무승부" ? "무승부"
+                        : `${winnerName}의 ${b.overall_intensity}`;
 
                     return (
-                      <div key={b.id} className="relative rounded-xl bg-[#141414]">
-                        <div className="flex items-center">
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/battle/result?id=${b.id}`)}
-                            className="flex-1 flex items-center gap-3 p-4 text-left active:bg-white/5 transition-colors min-w-0"
+                      <div
+                        key={b.id}
+                        className="rounded-2xl p-5 flex items-center gap-4 cursor-pointer active:opacity-80 transition-opacity"
+                        style={{ background: "#141414" }}
+                        onClick={() => router.push(`/battle/result?id=${b.id}`)}
+                        role="button"
+                        tabIndex={0}
+                      >
+                        {/* 배지 2개 겹침 */}
+                        <div className="flex items-center shrink-0" style={{ width: 56, height: 56 }}>
+                          <div
+                            className="w-11 h-11 rounded-xl flex items-center justify-center relative z-10"
+                            style={{ background: gcA.bg }}
                           >
-                            {/* 승자 배지 */}
-                            <div
-                              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                              style={{ backgroundColor: winnerColor.bg }}
-                            >
-                              <Image
-                                src={winnerBadge}
-                                alt={`${winnerGrade}등급`}
-                                width={32}
-                                height={32}
-                              />
-                            </div>
-
-                            {/* 텍스트 */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-text-primary font-semibold text-[15px] truncate">
-                                  {b.player_a_name} vs {b.player_b_name}
-                                </span>
-                                <span className="text-text-tertiary text-[12px] flex-shrink-0 ml-2">
-                                  {dateStr ? formatResultDate(dateStr) : ""}
-                                </span>
-                              </div>
-                              <div className="flex items-center mt-0.5">
-                                <span className="text-[13px] text-text-secondary">
-                                  {b.player_a_grade}등급 vs {b.player_b_grade}등급
-                                </span>
-                              </div>
-                              <div className="text-text-secondary text-[12px] mt-0.5">
-                                {RELATIONSHIP_LABELS[b.relationship_type] || "기타"}
-                                {" · "}
-                                {b.wins_a}:{b.wins_b}
-                                {" "}
-                                {b.overall_intensity}
-                              </div>
-                            </div>
-                          </button>
-
-                          {/* ··· 버튼 (배틀은 삭제만) */}
-                          <div className="relative pr-2">
-                            <DotsButton
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteTarget({ type: "battle", id: b.id });
-                              }}
-                            />
+                            <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={28} height={28} />
                           </div>
+                          <div
+                            className="w-11 h-11 rounded-xl flex items-center justify-center relative z-0 -ml-3"
+                            style={{ background: gcB.bg }}
+                          >
+                            <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={28} height={28} />
+                          </div>
+                        </div>
+
+                        {/* 텍스트 3줄 */}
+                        <div className="flex-1 min-w-0">
+                          {/* 1줄: 이름 */}
+                          <div className="flex items-baseline gap-0 mb-0.5">
+                            <span className="text-[16px] font-bold text-white truncate">{b.player_a_name}</span>
+                            <span className="text-[14px] font-normal text-gray-500 mx-1.5">vs</span>
+                            <span className="text-[16px] font-bold text-white truncate">{b.player_b_name}</span>
+                          </div>
+                          {/* 2줄: 등급 · 점수 */}
+                          <div className="flex items-center mb-0.5">
+                            <span className="text-[13px] font-semibold" style={{ color: gcA.text }}>
+                              {b.player_a_grade}등급
+                            </span>
+                            {b.player_a_composite != null && (
+                              <span className="text-[13px] text-gray-400 ml-1">{b.player_a_composite}점</span>
+                            )}
+                            <span className="text-[13px] font-normal text-gray-600 mx-1.5">vs</span>
+                            <span className="text-[13px] font-semibold" style={{ color: gcB.text }}>
+                              {b.player_b_grade}등급
+                            </span>
+                            {b.player_b_composite != null && (
+                              <span className="text-[13px] text-gray-400 ml-1">{b.player_b_composite}점</span>
+                            )}
+                          </div>
+                          {/* 3줄: 관계 · 승패 */}
+                          <div className="text-[13px] text-gray-500">
+                            {RELATIONSHIP_LABELS[b.relationship_type] || "기타"}
+                            <span className="text-gray-600 mx-1">·</span>
+                            <span className={isDraw ? "" : "text-gray-400"}>{intensityLabel}</span>
+                          </div>
+                        </div>
+
+                        {/* 스코어 */}
+                        <div className="flex items-center shrink-0 mr-1">
+                          <span
+                            className="text-[15px] font-bold font-aggro"
+                            style={{ color: isDraw ? "#9CA3AF" : isWinnerA ? "#FF6B6B" : "#374151" }}
+                          >
+                            {b.wins_a}
+                          </span>
+                          <span className="text-[15px] text-gray-600 mx-0.5">:</span>
+                          <span
+                            className="text-[15px] font-bold font-aggro"
+                            style={{ color: isDraw ? "#9CA3AF" : !isWinnerA ? "#A855F7" : "#374151" }}
+                          >
+                            {b.wins_b}
+                          </span>
+                        </div>
+
+                        {/* ··· 버튼 */}
+                        <div className="relative shrink-0">
+                          <DotsButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget({ type: "battle", id: b.id });
+                            }}
+                          />
                         </div>
                       </div>
                     );

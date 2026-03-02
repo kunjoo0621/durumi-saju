@@ -102,6 +102,8 @@ export type BattleListItem = {
   player_b_name: string;
   player_a_grade: string;
   player_b_grade: string;
+  player_a_composite: number | null;
+  player_b_composite: number | null;
   overall_winner: "A" | "B" | "draw";
   overall_intensity: BattleIntensity;
   wins_a: number;
