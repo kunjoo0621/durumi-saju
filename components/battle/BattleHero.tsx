@@ -55,23 +55,29 @@ export default function BattleHero({
 
   return (
     <div className="rounded-2xl relative overflow-hidden bg-[#141414]">
-      {/* Winner glow */}
+      {/* Winner gradient wash */}
       {!isDraw && (
         <div
-          className="absolute top-0 inset-x-0 h-[100px] pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
           style={{
-            background: `radial-gradient(ellipse at ${winnerIsA ? "30%" : "70%"} 0%, ${winnerColor}0A, transparent 70%)`,
+            background: `linear-gradient(180deg, ${winnerColor}0A 0%, ${winnerColor}05 40%, transparent 70%)`,
           }}
         />
       )}
 
       <div className="relative pt-7 px-5 pb-5">
-        {/* Player row */}
-        <div className="flex items-start justify-center gap-2">
+        {/* heroQuip — 최상단 */}
+        {heroQuip && (
+          <p className="text-[18px] font-bold text-white text-center leading-[1.5] tracking-[-0.02em] mb-6">
+            {heroQuip}
+          </p>
+        )}
+
+        {/* 3-column layout: Player A — Score — Player B */}
+        <div className="flex items-start justify-center gap-1.5">
           {/* Player A */}
-          <div className="flex flex-col items-center flex-1 min-w-0">
-            {/* Badge */}
-            <div className="relative mb-2.5">
+          <div className="flex flex-col items-center flex-1 min-w-0 gap-1.5">
+            <div className="relative mb-1">
               <div
                 className="absolute -inset-1 rounded-full"
                 style={{ background: `radial-gradient(circle, ${gradeColorA.main}25, transparent 70%)` }}
@@ -84,14 +90,10 @@ export default function BattleHero({
                 className="relative"
               />
             </div>
-            {/* Name */}
-            <span
-              className="text-lg font-bold truncate max-w-[120px] text-white"
-            >
+            <span className="text-[17px] font-bold truncate max-w-[120px] text-white">
               {nameA}
             </span>
-            {/* Grade + Score */}
-            <div className="flex items-center mt-0.5">
+            <div className="flex items-center">
               <span className="text-[13px] font-semibold" style={{ color: gradeColorA.text }}>
                 {gradeA}등급
               </span>
@@ -102,38 +104,58 @@ export default function BattleHero({
             </div>
           </div>
 
-          {/* Center Score */}
-          <div className="flex flex-col items-center pt-4 shrink-0">
-            <span className="text-[11px] font-medium text-gray-600 tracking-[0.1em] mb-1">
-              VS
-            </span>
+          {/* Center: Score + Result tag */}
+          <div className="flex flex-col items-center shrink-0 pt-3 gap-1.5">
             <div className="flex items-baseline gap-1">
               <span
                 className="font-aggro font-bold"
                 style={{
-                  fontSize: isDraw || winnerIsA ? 48 : 36,
-                  color: isDraw || winnerIsA ? COLOR_A : LOSER_COLOR,
+                  fontSize: isDraw ? 34 : winnerIsA ? 44 : 34,
+                  color: isDraw ? COLOR_A : winnerIsA ? COLOR_A : LOSER_COLOR,
                 }}
               >
                 {comparison.winsA}
               </span>
-              <span className="text-gray-600 text-xl font-light">:</span>
+              <span className="text-gray-600 text-[18px] font-light">:</span>
               <span
                 className="font-aggro font-bold"
                 style={{
-                  fontSize: isDraw || !winnerIsA ? 48 : 36,
-                  color: isDraw || !winnerIsA ? COLOR_B : LOSER_COLOR,
+                  fontSize: isDraw ? 34 : !winnerIsA ? 44 : 34,
+                  color: isDraw ? COLOR_B : !winnerIsA ? COLOR_B : LOSER_COLOR,
                 }}
               >
                 {comparison.winsB}
               </span>
             </div>
+
+            {/* Result pill tag */}
+            {winnerName ? (
+              <span
+                className="text-[12px] font-bold rounded-2xl"
+                style={{
+                  padding: "5px 14px",
+                  color: winnerIsA ? COLOR_A : COLOR_B,
+                  backgroundColor: `${winnerIsA ? COLOR_A : COLOR_B}14`,
+                }}
+              >
+                {winnerName}의 {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
+              </span>
+            ) : (
+              <span
+                className="text-[12px] font-bold text-gray-400 rounded-2xl"
+                style={{
+                  padding: "5px 14px",
+                  backgroundColor: "rgba(107,114,128,0.08)",
+                }}
+              >
+                {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
+              </span>
+            )}
           </div>
 
           {/* Player B */}
-          <div className="flex flex-col items-center flex-1 min-w-0">
-            {/* Badge */}
-            <div className="relative mb-2.5">
+          <div className="flex flex-col items-center flex-1 min-w-0 gap-1.5">
+            <div className="relative mb-1">
               <div
                 className="absolute -inset-1 rounded-full"
                 style={{ background: `radial-gradient(circle, ${gradeColorB.main}25, transparent 70%)` }}
@@ -146,14 +168,10 @@ export default function BattleHero({
                 className="relative"
               />
             </div>
-            {/* Name */}
-            <span
-              className="text-lg font-bold truncate max-w-[120px] text-white"
-            >
+            <span className="text-[17px] font-bold truncate max-w-[120px] text-white">
               {nameB}
             </span>
-            {/* Grade + Score */}
-            <div className="flex items-center mt-0.5">
+            <div className="flex items-center">
               <span className="text-[13px] font-semibold" style={{ color: gradeColorB.text }}>
                 {gradeB}등급
               </span>
@@ -163,43 +181,6 @@ export default function BattleHero({
               </span>
             </div>
           </div>
-        </div>
-
-        {/* Result tag + heroQuip */}
-        <div className="flex flex-col items-center gap-2.5 mt-5">
-          {/* Result pill tag */}
-          {winnerName ? (
-            <span
-              className="text-[13px] font-bold rounded-full"
-              style={{
-                padding: "7px 16px",
-                color: winnerIsA ? COLOR_A : COLOR_B,
-                backgroundColor: `${winnerIsA ? COLOR_A : COLOR_B}14`,
-              }}
-            >
-              {winnerName}의 {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
-            </span>
-          ) : (
-            <span
-              className="text-[13px] font-bold text-gray-400 rounded-full"
-              style={{
-                padding: "7px 16px",
-                backgroundColor: "rgba(107,114,128,0.08)",
-              }}
-            >
-              {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
-            </span>
-          )}
-
-          {/* Divider */}
-          {heroQuip && <div className="h-px bg-white/[0.04] mx-8 w-full" />}
-
-          {/* heroQuip */}
-          {heroQuip && (
-            <p className="text-sm text-gray-400 text-center max-w-[280px] leading-[1.5]">
-              {heroQuip}
-            </p>
-          )}
         </div>
       </div>
 
