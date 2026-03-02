@@ -187,32 +187,24 @@ export default function BattleCompatibility({ chemistry }: Props) {
                     </div>
                   )}
 
-                  {/* Divider */}
-                  {baseAnalysis && mainScenario.analysis && (
-                    <div className="h-px bg-white/[0.06] my-5" />
-                  )}
-
-                  {/* mainScenario sub-header + body */}
-                  {mainScenario.analysis && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <MainIcon weight="duotone" size={22} color="#FF6B6B" aria-hidden="true" />
-                        <span className="text-[14px] font-semibold text-text-primary">{mainDisplay}</span>
-                      </div>
-                      <div className="space-y-6">
-                        {mainScenario.analysis.split(/\n\s*\n/).map((para: string, i: number) => (
-                          <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
-                            {para.trim()}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Main scenario — separate accordion */}
+      {mainScenario.analysis?.trim() && (
+        <SectionCard
+          icon={MainIcon}
+          iconColor="#FF6B6B"
+          title={mainDisplay}
+          accentColor="#FF6B6B"
+          content={mainScenario.analysis}
+          collapsible
+          defaultExpanded={false}
+        />
       )}
 
       {/* Bonus scenarios — individual accordions, collapsed by default */}
