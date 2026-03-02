@@ -86,8 +86,7 @@ export default function BattleHero({
             </div>
             {/* Name */}
             <span
-              className="text-lg font-bold truncate max-w-[120px]"
-              style={{ color: COLOR_A }}
+              className="text-lg font-bold truncate max-w-[120px] text-white"
             >
               {nameA}
             </span>
@@ -149,8 +148,7 @@ export default function BattleHero({
             </div>
             {/* Name */}
             <span
-              className="text-lg font-bold truncate max-w-[120px]"
-              style={{ color: COLOR_B }}
+              className="text-lg font-bold truncate max-w-[120px] text-white"
             >
               {nameB}
             </span>
@@ -192,6 +190,9 @@ export default function BattleHero({
               {INTENSITY_LABELS[comparison.overallIntensity] || comparison.overallIntensity}
             </span>
           )}
+
+          {/* Divider */}
+          {heroQuip && <div className="h-px bg-white/[0.04] mx-8 w-full" />}
 
           {/* heroQuip */}
           {heroQuip && (
