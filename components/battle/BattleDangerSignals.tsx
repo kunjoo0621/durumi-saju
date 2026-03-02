@@ -27,7 +27,7 @@ export default function BattleDangerSignals({ dangerSignals }: Props) {
         <button
           type="button"
           onClick={() => setExpanded((p) => !p)}
-          className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
+          className="w-full pl-4 pr-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
           aria-expanded={expanded}
         >
           <div className="flex items-center gap-2">

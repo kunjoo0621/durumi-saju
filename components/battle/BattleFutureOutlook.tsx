@@ -55,7 +55,7 @@ export default function BattleFutureOutlook({ futureOutlook, nameA, nameB }: Pro
         <button
           type="button"
           onClick={() => setExpanded((p) => !p)}
-          className="w-full px-6 py-5 flex items-center justify-between text-left"
+          className="w-full pl-4 pr-6 py-5 flex items-center justify-between text-left"
         >
           <div className="flex items-center gap-2">
             <Binoculars weight="duotone" size={28} color="#6366F1" />

@@ -154,7 +154,7 @@ export default function BattleSimulations({ simulations, icons }: Props) {
               <button
                 type="button"
                 onClick={() => toggle(i)}
-                className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
+                className="w-full pl-4 pr-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
                 aria-expanded={expanded}
               >
                 <div className="flex items-center gap-2 min-w-0">
