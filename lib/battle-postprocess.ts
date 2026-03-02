@@ -231,6 +231,94 @@ function stripSajuTermsFromFuture(text: string): { text: string; count: number }
   return { text: result, count };
 }
 
+// ─── 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지) ──
+
+// 지지 卯(묘) 보호: 간지 조합 + 卯 한자 병기
+const MYO_MAO_PROTECT = /(?:을묘|정묘|기묘|신묘|계묘|묘\s*\(卯\)|卯\s*\(묘\)|지지\s*묘)/g;
+
+// 12운성 묘(墓) 마스터 패턴 — specificity 순 (가장 긴 것 우선)
+// 앉아/앉은 + 있어서/있으니/있으면 등 활용형 포괄, trailing 조사 소비
+const MYO_MB_MASTER = new RegExp(
+  [
+    // "일주 X(이/가/의) 묘(墓)에 앉아 있어서" (with 한자 + subject)
+    "일주\\s+[^\\s,.]+(?:이|가|의)\\s*묘\\s*\\(墓\\)\\s*(?:에\\s*)?앉[아은]\\s*(?:있[어으](?:니|서|면|며)?\\s*)?",
+    // "일주 X(이/가/의) 묘에 앉아" (한자 없이 + subject)
+    "일주\\s+[^\\s,.]+(?:이|가|의)\\s*묘\\s*(?:에\\s*)?앉[아은]\\s*(?:있[어으](?:니|서|면|며)?\\s*)?",
+    // "일주 묘(墓)에 앉아" / "일주 묘에 앉아" (subject 없이, 앉아 context)
+    "일주\\s*묘\\s*(?:\\(墓\\))?\\s*(?:에\\s*)?앉[아은]\\s*(?:있[어으](?:니|서|면|며)?\\s*)?",
+    // "묘(墓) 속 X" → 치환 대상
+    "묘\\s*\\(墓\\)\\s*속\\s*[가-힣]+",
+    // "묘(墓)에 앉아 있어서"
+    "묘\\s*\\(墓\\)\\s*(?:에\\s*)?앉[아은]\\s*(?:있[어으](?:니|서|면|며)?\\s*)?",
+    // "묘지에/묘에 앉아" (한자 없이, 앉아 context)
+    "묘(?:지에?|에)\\s*앉[아은]\\s*(?:있[어으](?:니|서|면|며)?\\s*)?",
+    // "墓(묘)지에 앉아"
+    "墓\\s*\\(묘\\)\\s*지에?\\s*앉[아은]?\\s*",
+    // "묘지 성향"
+    "묘지\\s*성향",
+    // "12운성 묘" + trailing 조사
+    "12운성\\s*묘\\s*(?:의|에서?|은|는)?",
+    // "일주 묘" + trailing 조사 (짧은 형태, 앉아 없이)
+    "일주\\s*묘\\s*(?:의|에서?|은|는)?",
+    // "대운 묘" / "운성 묘(" + trailing 조사
+    "대운\\s*\\(?\\s*묘\\s*(?:의|에서?)?",
+    "운성\\s*묘\\s*\\(",
+    // "묘(墓)" + trailing 조사 (최후 fallback)
+    "묘\\s*\\(墓\\)\\s*(?:의|에서?|은|는|이|가|도)?",
+  ].join("|"),
+  "g",
+);
+
+const MYO_MB_SOK_TEST = /묘\s*\(墓\)\s*속/;
+const KOREAN_PARTICLES = new Set(["이","가","은","는","을","를","의","에","도"]);
+
+function limitMyoMb(
+  text: string,
+  counter: { count: number },
+): { text: string; removed: number } {
+  if (!text) return { text, removed: 0 };
+  let removed = 0;
+
+  // 1) 지지 卯 패턴 보호 (플레이스홀더 치환)
+  const saved: [string, string][] = [];
+  let si = 0;
+  let work = text.replace(MYO_MAO_PROTECT, (m) => {
+    const ph = `\x00M${si++}\x00`;
+    saved.push([ph, m]);
+    return ph;
+  });
+
+  // 2) 12운성 묘(墓) 패턴 제한
+  work = work.replace(MYO_MB_MASTER, (match) => {
+    counter.count++;
+    if (counter.count <= 2) return match; // 첫 2회 유지
+    removed++;
+    // "묘(墓) 속 X" → "속마음" + 원래 조사 보존
+    if (MYO_MB_SOK_TEST.test(match)) {
+      const lastChar = match.trim().slice(-1);
+      return KOREAN_PARTICLES.has(lastChar) ? "속마음" + lastChar : "속마음";
+    }
+    return ""; // 나머지 → 삭제
+  });
+
+  // 3) 보호 패턴 복원
+  for (const [ph, orig] of saved) {
+    work = work.replace(ph, orig);
+  }
+
+  // 4) 삭제로 생긴 공백/구두점 정리
+  if (removed > 0) {
+    work = work
+      .replace(/\s{2,}/g, " ")
+      .replace(/^\s+/, "")
+      .replace(/\s+([.,])/g, "$1")
+      .replace(/,\s*,/g, ",")
+      .trim();
+  }
+
+  return { text: work, removed };
+}
+
 function applyTextFixes(text: string, warnings: string[], label: string): string {
   if (!text) return text;
 
@@ -560,6 +648,51 @@ export function postprocessBattleResult(
   shouldRetry: boolean;
 } {
   const warnings: string[] = [];
+
+  // ── 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지 → 3회부터 제거/치환) ──
+  const myoCounter = { count: 0 };
+  let totalMyoRemoved = 0;
+  const applyMyoLimit = (t: string) => {
+    const r = limitMyoMb(t, myoCounter);
+    totalMyoRemoved += r.removed;
+    return r.text;
+  };
+
+  result.heroQuip = applyMyoLimit(result.heroQuip);
+
+  for (const key of ["wealth", "love", "career", "health", "social"] as const) {
+    result.categoryResults[key].killingLine = applyMyoLimit(result.categoryResults[key].killingLine);
+    result.categoryResults[key].detail = applyMyoLimit(result.categoryResults[key].detail);
+  }
+
+  result.chemistry.punchline = applyMyoLimit(result.chemistry.punchline);
+  result.chemistry.analysis = applyMyoLimit(result.chemistry.analysis);
+  result.chemistry.mainScenario.analysis = applyMyoLimit(result.chemistry.mainScenario.analysis);
+  for (const bs of result.chemistry.bonusScenarios) {
+    bs.punchline = applyMyoLimit(bs.punchline);
+    bs.analysis = applyMyoLimit(bs.analysis);
+  }
+
+  for (const sim of result.simulations) {
+    sim.punchline = applyMyoLimit(sim.punchline);
+    sim.reasoning = applyMyoLimit(sim.reasoning);
+  }
+
+  result.futureOutlook.punchline = applyMyoLimit(result.futureOutlook.punchline);
+  for (const entry of result.futureOutlook.timeline) {
+    entry.eventA = applyMyoLimit(entry.eventA);
+    entry.eventB = applyMyoLimit(entry.eventB);
+    entry.relationship = applyMyoLimit(entry.relationship);
+  }
+
+  result.finalVerdict.punchline = applyMyoLimit(result.finalVerdict.punchline);
+  result.finalVerdict.verdict = applyMyoLimit(result.finalVerdict.verdict);
+
+  if (totalMyoRemoved > 0) {
+    warnings.push(
+      `[FIX] 묘(墓) 반복 제한: ${totalMyoRemoved}회 제거/치환 (총 탐지 ${myoCounter.count}회, 첫 2회 유지)`,
+    );
+  }
 
   // heroQuip
   result.heroQuip = applyTextFixes(result.heroQuip, warnings, "heroQuip");
