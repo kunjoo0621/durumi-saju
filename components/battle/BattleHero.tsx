@@ -65,10 +65,10 @@ export default function BattleHero({
         />
       )}
 
-      <div className="relative pt-7 px-5 pb-5">
+      <div className="relative pt-10 px-5 pb-0">
         {/* heroQuip — 최상단 */}
         {heroQuip && (
-          <p className="text-[20px] font-bold font-aggro text-white text-center leading-[1.5] tracking-[-0.02em] mb-6">
+          <p className="text-[22px] font-bold font-aggro text-white text-center leading-[1.5] tracking-[-0.02em] mb-6 break-keep">
             {heroQuip}
           </p>
         )}
