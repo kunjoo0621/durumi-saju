@@ -77,9 +77,6 @@ function SectionCard({
               />
             )}
           </div>
-          {collapsible && !expanded && punchline && (
-            <p className="text-[14px] text-gray-400 mt-1 line-clamp-1">{punchline}</p>
-          )}
         </button>
 
         <div
