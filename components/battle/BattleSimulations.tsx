@@ -159,7 +159,7 @@ export default function BattleSimulations({ simulations, icons }: Props) {
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <IconComp weight="duotone" size={28} color="#F59E0B" className="shrink-0" aria-hidden="true" />
-                  <span className="text-title-3 text-text-primary truncate">
+                  <span className="text-title-3 text-text-primary">
                     {sim.question}
                   </span>
                 </div>
