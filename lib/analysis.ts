@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { normalizeScores, type AnalysisScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { postprocessAnalysisResult } from "@/lib/analysis-postprocess";
+import { surgicalRewritePersonal } from "@/lib/surgical-rewrite";
 import { normalizeGender } from "@/lib/utils/gender";
 import {
   clampValue,
@@ -1955,7 +1956,8 @@ async function getGeminiSdkModel(model: string, systemText: string): Promise<Gem
 export async function callGemini(
   model: string,
   userInfo: string,
-  systemPrompt: string = SYSTEM_PROMPT
+  systemPrompt: string = SYSTEM_PROMPT,
+  configOverrides?: { temperature?: number; maxOutputTokens?: number },
 ) {
   const sdkModel = await getGeminiSdkModel(model, systemPrompt);
   if (sdkModel) {
@@ -1963,9 +1965,9 @@ export async function callGemini(
       const data = await sdkModel.generateContent({
         contents: [{ role: "user", parts: [{ text: userInfo }] }],
         generationConfig: {
-          maxOutputTokens: model.includes("lite") ? 12288 : 16384,
+          maxOutputTokens: configOverrides?.maxOutputTokens ?? (model.includes("lite") ? 12288 : 16384),
           responseMimeType: "application/json",
-          temperature: 0.75,
+          temperature: configOverrides?.temperature ?? 0.75,
         } as any,
       });
 
@@ -2011,9 +2013,9 @@ export async function callGemini(
         { role: "user", parts: [{ text: userInfo }] },
       ],
       generationConfig: {
-        maxOutputTokens: model.includes("lite") ? 12288 : 16384,
+        maxOutputTokens: configOverrides?.maxOutputTokens ?? (model.includes("lite") ? 12288 : 16384),
         response_mime_type: "application/json",
-        temperature: 0.75,
+        temperature: configOverrides?.temperature ?? 0.75,
       },
     }),
   });
@@ -2404,8 +2406,17 @@ ${serverScoreSummary}
         assembled.coreFearAxisBlock = resolveCoreFearAxisBlock(input, assembled.coreFearAxisBlock);
         assembled.scores = normalizeScores(serverScores);
         if (fortune) assembled.fortune = fortune;
-        const { result: postprocessed } = postprocessAnalysisResult(assembled);
-        return enforceNoLabelLeakAcrossResult(input, postprocessed);
+        const { result: postprocessed, warnings: postWarnings } = postprocessAnalysisResult(assembled);
+        // Surgical rewrite: 반복 감지 → 해당 필드만 리라이트
+        const rewritten = await surgicalRewritePersonal(postprocessed, postWarnings, {
+          name: input.name || "",
+        });
+        if (postWarnings.length > 0) {
+          for (const w of postWarnings) {
+            console.warn(`[개인사주 후처리] ${w}`);
+          }
+        }
+        return enforceNoLabelLeakAcrossResult(input, rewritten);
       } catch (error: any) {
         if (process.env.NODE_ENV !== "production") {
           console.warn("[ANALYSIS_DEBUG] Invalid JSON from model", { model, message: error?.message });

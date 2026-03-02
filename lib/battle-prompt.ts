@@ -10,6 +10,7 @@ import type {
   RelationshipType,
 } from "@/types/battle";
 import { postprocessBattleResult, type SubjectVerification } from "@/lib/battle-postprocess";
+import { surgicalRewriteBattle } from "@/lib/surgical-rewrite";
 import type { SelectedSimulation } from "@/lib/battle-simulations";
 
 /* ── 관계 유형별 톤 ── */
@@ -661,13 +662,20 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
           return runBattleAnalysisInner(opts, true);
         }
 
+        // Surgical rewrite: 반복 감지 → 해당 필드만 리라이트
+        const rewritten = await surgicalRewriteBattle(postprocessed, warnings, {
+          nameA: opts.nameA,
+          nameB: opts.nameB,
+          relationshipType: opts.relationshipType,
+        });
+
         if (warnings.length > 0) {
           for (const w of warnings) {
             console.warn(`[배틀 후처리] ${w}`);
           }
         }
 
-        return postprocessed;
+        return rewritten;
       } catch (parseErr) {
         console.warn("[BATTLE_LLM] 응답 파싱 실패:", model, parseErr);
         lastError = { message: "LLM 응답 파싱 실패" };
