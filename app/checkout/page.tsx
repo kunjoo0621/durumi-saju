@@ -520,55 +520,67 @@ function CheckoutForm({
           )}
 
           {isBattle ? (
-            <div className="rounded-2xl p-5" style={{ backgroundColor: "#141414" }}>
+            <>
               {/* Player cards with VS overlap */}
               <div className="relative flex gap-3">
-                <div className="flex-1 rounded-2xl bg-[#1A1A1A] p-5">
-                  <div className="text-[12px] font-semibold mb-2" style={{ color: "#FF6B6B" }}>나</div>
-                  <div className="text-[18px] font-bold text-white">{battleStore.playerA.name}</div>
-                  <div className="text-[13px] text-text-secondary mt-1">
-                    {battleStore.playerA.calendarType === "lunar" ? "음력 " : ""}
-                    {battleStore.playerA.birthYear}.{battleStore.playerA.birthMonth}.{battleStore.playerA.birthDay} · {battleStore.playerA.gender}
-                  </div>
-                  {tagsA.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {tagsA.map((tag) => {
-                        const c = getTagColors(tag.element);
-                        return (
-                          <span key={tag.label} className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{ color: c.color, backgroundColor: c.bg }}>
-                            {tag.label}
-                          </span>
-                        );
-                      })}
+                {/* Card A */}
+                <div className="flex-1 rounded-2xl bg-[#1A1A1A] border border-white/5 overflow-hidden">
+                  <div className="h-[3px]" style={{ backgroundColor: "#FF6B6B" }} />
+                  <div className="p-5">
+                    <div className="text-[11px] font-bold tracking-[0.05em] mb-2" style={{ color: "#FF6B6B" }}>나</div>
+                    <div className="text-[20px] font-bold font-aggro text-white">{battleStore.playerA.name}</div>
+                    <div className="text-[13px] text-text-secondary mt-1">
+                      {battleStore.playerA.calendarType === "lunar" ? "음력 " : ""}
+                      {battleStore.playerA.birthYear}.{battleStore.playerA.birthMonth}.{battleStore.playerA.birthDay} · {battleStore.playerA.gender}
                     </div>
-                  )}
+                    {tagsA.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {tagsA.map((tag) => {
+                          const c = getTagColors(tag.element);
+                          return (
+                            <span key={tag.label} className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{ color: c.color, backgroundColor: c.bg }}>
+                              {tag.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
+
                 {/* VS badge */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
-                  <span className="text-[12px] font-black text-black tracking-tight">VS</span>
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10
+                  w-11 h-11 rounded-full bg-white flex items-center justify-center
+                  shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+                  <span className="text-[13px] font-black text-black tracking-tight">VS</span>
                 </div>
-                <div className="flex-1 rounded-2xl bg-[#1A1A1A] p-5">
-                  <div className="text-[12px] font-semibold mb-2" style={{ color: "#A855F7" }}>상대</div>
-                  <div className="text-[18px] font-bold text-white">{battleStore.playerB.name}</div>
-                  <div className="text-[13px] text-text-secondary mt-1">
-                    {battleStore.playerB.calendarType === "lunar" ? "음력 " : ""}
-                    {battleStore.playerB.birthYear}.{battleStore.playerB.birthMonth}.{battleStore.playerB.birthDay} · {battleStore.playerB.gender}
-                  </div>
-                  {tagsB.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {tagsB.map((tag) => {
-                        const c = getTagColors(tag.element);
-                        return (
-                          <span key={tag.label} className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{ color: c.color, backgroundColor: c.bg }}>
-                            {tag.label}
-                          </span>
-                        );
-                      })}
+
+                {/* Card B */}
+                <div className="flex-1 rounded-2xl bg-[#1A1A1A] border border-white/5 overflow-hidden">
+                  <div className="h-[3px]" style={{ backgroundColor: "#A855F7" }} />
+                  <div className="p-5">
+                    <div className="text-[11px] font-bold tracking-[0.05em] mb-2" style={{ color: "#A855F7" }}>상대</div>
+                    <div className="text-[20px] font-bold font-aggro text-white">{battleStore.playerB.name}</div>
+                    <div className="text-[13px] text-text-secondary mt-1">
+                      {battleStore.playerB.calendarType === "lunar" ? "음력 " : ""}
+                      {battleStore.playerB.birthYear}.{battleStore.playerB.birthMonth}.{battleStore.playerB.birthDay} · {battleStore.playerB.gender}
                     </div>
-                  )}
+                    {tagsB.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {tagsB.map((tag) => {
+                          const c = getTagColors(tag.element);
+                          return (
+                            <span key={tag.label} className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{ color: c.color, backgroundColor: c.bg }}>
+                              {tag.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           ) : (
             <div className="rounded-2xl p-5" style={{ backgroundColor: '#141414' }}>
               <div className="text-sm text-gray-500 mb-3">입력 정보 확인</div>
