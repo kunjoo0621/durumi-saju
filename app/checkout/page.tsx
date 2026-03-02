@@ -510,8 +510,7 @@ function CheckoutForm({
         <div className="max-w-[640px] mx-auto pt-10 space-y-4">
           {isBattle ? (
             <div className="text-center">
-              <h2 className="text-[22px] font-bold font-aggro text-text-primary">{BATTLE_CHECKOUT_TITLES[battleStore.relationshipType] || "사주 대결"}</h2>
-              <p className="text-[14px] text-text-secondary mt-2">5개 카테고리, 누가 더 강한지 판가름해줄게</p>
+              <h2 className="text-[24px] font-bold font-aggro text-text-primary">{BATTLE_CHECKOUT_TITLES[battleStore.relationshipType] || "사주 대결"}</h2>
             </div>
           ) : (
             <>
@@ -527,14 +526,14 @@ function CheckoutForm({
                 <div className="flex-1 rounded-2xl bg-[#1A1A1A] border border-white/5 overflow-hidden">
                   <div className="h-[3px]" style={{ backgroundColor: "#FF6B6B" }} />
                   <div className="p-5">
-                    <div className="text-[11px] font-bold tracking-[0.05em] mb-2" style={{ color: "#FF6B6B" }}>나</div>
-                    <div className="text-[20px] font-bold font-aggro text-white">{battleStore.playerA.name}</div>
-                    <div className="text-[13px] text-text-secondary mt-1">
+                    <div className="text-[12px] font-bold tracking-[0.05em] mb-2" style={{ color: "#FF6B6B" }}>나</div>
+                    <div className="text-[22px] font-bold font-aggro text-white">{battleStore.playerA.name}</div>
+                    <div className="text-[14px] text-text-secondary mt-1">
                       {battleStore.playerA.calendarType === "lunar" ? "음력 " : ""}
                       {battleStore.playerA.birthYear}.{battleStore.playerA.birthMonth}.{battleStore.playerA.birthDay} · {battleStore.playerA.gender}
                     </div>
                     {tagsA.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
+                      <div className="flex flex-wrap gap-1.5 mt-[40px]">
                         {tagsA.map((tag) => {
                           const c = getTagColors(tag.element);
                           return (
@@ -552,21 +551,21 @@ function CheckoutForm({
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10
                   w-11 h-11 rounded-full bg-white flex items-center justify-center
                   shadow-[0_0_20px_rgba(255,255,255,0.15)]">
-                  <span className="text-[13px] font-black text-black tracking-tight">VS</span>
+                  <span className="text-[12px] font-black text-black tracking-tight">VS</span>
                 </div>
 
                 {/* Card B */}
                 <div className="flex-1 rounded-2xl bg-[#1A1A1A] border border-white/5 overflow-hidden">
                   <div className="h-[3px]" style={{ backgroundColor: "#A855F7" }} />
                   <div className="p-5">
-                    <div className="text-[11px] font-bold tracking-[0.05em] mb-2" style={{ color: "#A855F7" }}>상대</div>
-                    <div className="text-[20px] font-bold font-aggro text-white">{battleStore.playerB.name}</div>
-                    <div className="text-[13px] text-text-secondary mt-1">
+                    <div className="text-[12px] font-bold tracking-[0.05em] mb-2" style={{ color: "#A855F7" }}>상대</div>
+                    <div className="text-[22px] font-bold font-aggro text-white">{battleStore.playerB.name}</div>
+                    <div className="text-[14px] text-text-secondary mt-1">
                       {battleStore.playerB.calendarType === "lunar" ? "음력 " : ""}
                       {battleStore.playerB.birthYear}.{battleStore.playerB.birthMonth}.{battleStore.playerB.birthDay} · {battleStore.playerB.gender}
                     </div>
                     {tagsB.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
+                      <div className="flex flex-wrap gap-1.5 mt-[40px]">
                         {tagsB.map((tag) => {
                           const c = getTagColors(tag.element);
                           return (
