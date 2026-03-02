@@ -33,9 +33,17 @@ export async function getQuickSajuTags(input: TagInput): Promise<SajuTag[]> {
 
     const tags: SajuTag[] = [];
 
-    // 1. Day master: 양목, 음화, etc.
+    // 1. Day master: 자연물 표현 (큰 나무, 태양, etc.)
+    const DAY_MASTER_LABELS: Record<string, Record<string, string>> = {
+      목: { 양: "큰 나무", 음: "풀꽃" },
+      화: { 양: "태양", 음: "촛불" },
+      토: { 양: "큰 산", 음: "들판" },
+      금: { 양: "바위", 음: "보석" },
+      수: { 양: "바다", 음: "빗물" },
+    };
     const yy = enriched.dayMaster.yinYang === "양" ? "양" : "음";
-    tags.push({ label: `${yy}${enriched.dayMaster.element}`, element: enriched.dayMaster.element });
+    const dayLabel = DAY_MASTER_LABELS[enriched.dayMaster.element]?.[yy] ?? `${yy}${enriched.dayMaster.element}`;
+    tags.push({ label: dayLabel, element: enriched.dayMaster.element });
 
     // 2. Strength: 신강/신약
     if (enriched.strength?.legacy) {

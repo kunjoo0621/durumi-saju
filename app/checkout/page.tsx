@@ -525,7 +525,7 @@ function CheckoutForm({
                 {/* Card A */}
                 <div className="flex-1 rounded-2xl bg-[#1A1A1A] border border-white/5 overflow-hidden">
                   <div className="h-[3px]" style={{ backgroundColor: "#FF6B6B" }} />
-                  <div className="p-5">
+                  <div className="p-6">
                     <div className="text-[12px] font-bold tracking-[0.05em] mb-2" style={{ color: "#FF6B6B" }}>나</div>
                     <div className="text-[22px] font-bold font-aggro text-white">{battleStore.playerA.name}</div>
                     <div className="text-[14px] text-text-secondary mt-1">
@@ -549,15 +549,14 @@ function CheckoutForm({
 
                 {/* VS badge */}
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10
-                  w-11 h-11 rounded-full bg-white flex items-center justify-center
-                  shadow-[0_0_20px_rgba(255,255,255,0.15)]">
-                  <span className="text-[12px] font-black text-black tracking-tight">VS</span>
+                  w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 backdrop-blur-[8px] flex items-center justify-center">
+                  <span className="text-[12px] font-black text-white/70 tracking-tight">VS</span>
                 </div>
 
                 {/* Card B */}
                 <div className="flex-1 rounded-2xl bg-[#1A1A1A] border border-white/5 overflow-hidden">
                   <div className="h-[3px]" style={{ backgroundColor: "#A855F7" }} />
-                  <div className="p-5">
+                  <div className="p-6">
                     <div className="text-[12px] font-bold tracking-[0.05em] mb-2" style={{ color: "#A855F7" }}>상대</div>
                     <div className="text-[22px] font-bold font-aggro text-white">{battleStore.playerB.name}</div>
                     <div className="text-[14px] text-text-secondary mt-1">
