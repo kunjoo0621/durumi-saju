@@ -6,7 +6,6 @@ import type { BattleInteraction } from "@/lib/utils/battle-interaction";
 import type {
   BattleComparison,
   BattleLlmAnalysis,
-  ChemistryLabel,
   FutureTimelineEntry,
   RelationshipType,
 } from "@/types/battle";
@@ -127,29 +126,46 @@ detail:
   대인운: 비겁/식상 균형 또는 신살(역마/화개)이 반드시 메인. 다른 4개 카테고리와 메인 근거 겹침 금지.
 
 ────────────────────────────────
-[상성 진단 규칙]
+[상성 분석 규칙]
+이 섹션은 "두 사람이 만나면 어떤 관계가 되는지"를 분석해.
 
-chemistry.label:
-- 서버가 확정한 라벨을 그대로 복사해. 변경 금지.
+- punchline: 25~60자. 관계 역학을 일상 장면 하나로 보여줘.
+  규칙:
+  - 누구나 겪어본 일상 장면으로 "누가 주도하고 누가 따르는지" 보여줘
+  - 장면 자체가 관계 구조를 말해야 해. 추가 설명 필요 없이 바로 읽히는 장면
+  - 두 사람 이름 최소 1명 포함
+  - 사물 비유(리모컨, 거울, 통장, 저울 등) 금지 — 해석이 한 단계 더 필요해서 느려
+  - 역할 비유는 OK (형/동생, 감독/선수 등) — 단, 바로 이해되는 것만
+  ✅ "찰떡이긴 한데, 김채현이 메뉴 고르고 신건주는 '나도 그거' 하는 사이야"
+  ✅ "서로 편한 건 맞는데, 신건주만 맞춰주고 있다는 걸 둘 다 몰라"
+  ✅ "코드 잘 맞아서 싸울 일이 없는데, 그게 신건주가 참고 있는 거야"
+  ❌ "김채현 통장 앱에 신건주 편의점 결제 내역까지 찍혀" — 본문과 단절
+  ❌ "리모컨 잡고 소파에 눌러앉아" — 뜬금없음
 
-chemistry.punchline:
-- 두 사람의 관계 본질을 일상 장면 한 줄로.
-- label.title("거울 보는 느낌" 등)과 내용이 겹치면 안 돼.
-- label은 유형 분류, punchline은 구체적 장면.
+- analysis: 6~8문장, 소제목 없이 자연스러운 문단 흐름. 아래 4가지를 순서대로 자연스럽게 연결:
 
-chemistry.analysis:
-- 2~3문단. 일간 관계/오행 상보/용신 상보/대운 동기화 기반.
-  1문단: 일간 관계 + 오행 상보 분석
-  2문단: 대운 흐름 비교
-  3문단: 관계 종합 판정
-- ★ label과 analysis 정합성: label.title이 대등한 관계(예: "거울 보는 느낌", "라이벌")를 나타내면 analysis도 대등한 역학을 묘사해야 해. label이 대등인데 analysis가 일방적 지배-종속이면 규칙 위반. label이 "보호자" 같은 비대칭 관계면 그에 맞게 analysis를 쓰되, label의 뉘앙스를 존중해.
-- 조언/처방 절대 금지. 다음 표현이 하나라도 있으면 규칙 위반:
+  (1) 기본 케미 — 두 사람이 처음 만나면 어떤 느낌인지. 오행/일간 관계 기반.
+      "둘 다 수(水) 일간이라 처음 만나면 '이 사람 나랑 비슷하다' 느낌이 바로 와"
+
+  (2) 이 관계에서의 역학 — 선택한 관계 유형(연인/친구/동료/가족) 맥락에서 누가 주도하고 누가 따르는지.
+      구체적 일상 장면 1개 필수.
+      "3개월쯤 지나면 김채현은 '왜 맨날 나만 정하냐'고 짜증 내고, 신건주는 '네가 맨날 정하잖아'라고 터뜨려"
+
+  (3) 장기전 — 1~2년 후 이 관계가 어떻게 변하는지. 대운/세운 데이터 활용.
+      "김채현이 '나만 주고 있다'는 감각이 쌓이면 위기가 와"
+
+  (4) 지뢰 — 이 관계에서 가장 위험한 포인트 1가지.
+      "신건주가 속마음을 안 꺼내는 게 최대 리스크야"
+
+  이 4가지를 소제목/번호 없이 하나의 문단으로 써. "형이 옆에서 얘기해주는" 느낌.
+  분석 근거(오행, 십성, 합충)는 자연스럽게 녹여. "토 과다라서 주도적이야" 정도로.
+  사주 한자 병기는 최소화 (전체에서 2~3개 이내).
+  조언/처방 절대 금지. 다음 표현이 하나라도 있으면 규칙 위반:
   "~하려면", "~해야 해", "~해주고", "~해주면", "~하는 연습", "~을 존중", "~을 인정"
   → 있는 그대로의 관계 역학만 묘사. 처방 없이 끝내.
 
-mainScenario:
-- 선택된 관계 유형에 대한 구체적 분석, 1~2문단.
-- 구체적 상황 묘사 필수.
+- label 필드 제거됨. emoji, title, description 생성하지 마.
+- mainScenario 필드 제거됨. analysis에 통합.
 
 bonusScenarios:
 - 반드시 2개 생성 (비워두지 마). 다른 관계 유형이었다면의 분석. 각 4~5문장.
@@ -340,7 +356,7 @@ basis:
 8. "궁합" 금지
 9. 존댓말 금지
 10. heroQuip에 이름 금지
-11. chemistry.label은 서버값 그대로 복사
+11. chemistry에 label/mainScenario 필드 생성 금지 (제거됨)
 12. simulations[].question은 서버값 그대로 복사
 13. killingLine 5개가 서로 다른 메인 근거 사용
 14. bonusScenarios 2개 중 같은 사람만 깎고 있으면 1개를 반대로 수정
@@ -359,14 +375,12 @@ basis:
     "social": { "killingLine": "...", "detail": "..." }
   },
   "chemistry": {
-    "label": { "emoji": "서버값 복사", "title": "서버값 복사", "description": "서버값 복사" },
+    "punchline": "25~60자, 일상 장면으로 관계 역학",
+    "analysis": "6~8문장, 소제목 없는 자연스러운 문단",
     "bonusScenarios": [
       { "type": "관계유형", "label": "~였다면?", "punchline": "25~50자 hook", "analysis": "4~5문장" },
       { "type": "관계유형", "label": "~였다면?", "punchline": "25~50자 hook", "analysis": "4~5문장" }
-    ],
-    "punchline": "25~50자, 관계 본질 장면",
-    "analysis": "2~3문단",
-    "mainScenario": { "type": "서버가 지정한 관계", "analysis": "1~2문단" }
+    ]
   },
   "simulations": [
     { "question": "서버가 준 질문 그대로", "punchline": "25~50자 구체적 장면", "reasoning": "150~250자 근거 3~4문장", "basis": "20자 이내 키워드" }
@@ -401,7 +415,6 @@ export function buildBattleUserInfo(opts: {
   interaction?: BattleInteraction;
   fortuneBlockA?: string;
   fortuneBlockB?: string;
-  chemistryLabel?: ChemistryLabel;
   simulationQuestions?: SelectedSimulation[];
 }): string {
   const {
@@ -413,7 +426,6 @@ export function buildBattleUserInfo(opts: {
     sajuTextA, sajuTextB,
     interaction,
     fortuneBlockA, fortuneBlockB,
-    chemistryLabel,
     simulationQuestions,
   } = opts;
 
@@ -469,16 +481,7 @@ export function buildBattleUserInfo(opts: {
     interactionBlock = lines.join("\n");
   }
 
-  // Chemistry label block
-  let chemistryBlock = "";
-  if (chemistryLabel) {
-    chemistryBlock = `
-[상성 유형 라벨 — 서버 확정]
-emoji: ${chemistryLabel.emoji}
-title: ${chemistryLabel.title}
-description: ${chemistryLabel.description}
-→ 이 라벨을 chemistry.label에 그대로 복사해. 변경 금지.`;
-  }
+  // Chemistry label removed — no longer sent to LLM
 
   // Simulation questions block — subject 판정 포함
   let simulationBlock = "";
@@ -520,7 +523,6 @@ ${matchLines.join("\n")}
 ${nameA} ${comparison.winsA}승 / ${nameB} ${comparison.winsB}승 / 무승부 ${comparison.draws}
 최종 승자: ${overallLabel} (${comparison.overallIntensity})
 ${highlightInstruction}
-${chemistryBlock}
 ${simulationBlock}
 
 [미래 예측 연도 기준]
@@ -559,7 +561,6 @@ type BattleAnalysisOpts = {
   interaction?: BattleInteraction;
   fortuneBlockA?: string;
   fortuneBlockB?: string;
-  chemistryLabel?: ChemistryLabel;
   simulationQuestions?: SelectedSimulation[];
 };
 
@@ -590,7 +591,7 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
           const format = Array.isArray(fo.timeline) ? `timeline[${fo.timeline.length}]` : fo.nextYear ? "legacy(nextYear/threeYears)" : "unknown";
           console.info("[BATTLE_LLM_RAW] futureOutlook format:", format, JSON.stringify(fo).slice(0, 500));
         }
-        const validated = validateAndNormalize(raw, opts.relationshipType, opts.chemistryLabel, opts.simulationQuestions);
+        const validated = validateAndNormalize(raw, opts.relationshipType, opts.simulationQuestions);
 
         // Subject verification 파라미터 구성
         const subjectVerification: SubjectVerification | undefined =
@@ -638,7 +639,6 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
 function validateAndNormalize(
   raw: any,
   relationshipType: RelationshipType,
-  chemistryLabel?: ChemistryLabel,
   simulationQuestions?: SelectedSimulation[],
 ): BattleLlmAnalysis {
   // categoryResults
@@ -662,26 +662,32 @@ function validateAndNormalize(
     }
   }
 
-  // chemistry — force server label
+  // chemistry — new schema (label/mainScenario removed)
   const chem = raw.chemistry;
   const chemistry: BattleLlmAnalysis["chemistry"] = {
-    label: chemistryLabel || { emoji: "", title: "", description: "" },
     punchline: "",
     analysis: "",
-    mainScenario: { type: relationshipType, analysis: "" },
     bonusScenarios: [],
   };
 
   if (chem && typeof chem === "object") {
-    // punchline fallback: label.description
-    chemistry.punchline = chem.punchline || chemistryLabel?.description || "";
+    chemistry.punchline = chem.punchline || "";
     chemistry.analysis = chem.analysis || "";
-    if (chem.mainScenario) {
-      chemistry.mainScenario = {
-        type: relationshipType,
-        analysis: chem.mainScenario.analysis || "",
-      };
+
+    // 레거시 호환: mainScenario.analysis가 있으면 analysis에 합침
+    if (chem.mainScenario?.analysis && !chemistry.analysis.includes(chem.mainScenario.analysis)) {
+      chemistry.analysis = chemistry.analysis
+        ? chemistry.analysis + " " + chem.mainScenario.analysis
+        : chem.mainScenario.analysis;
     }
+
+    // 레거시 호환: loveAnalysis가 있으면 analysis에 합침
+    if (chem.loveAnalysis && !chemistry.analysis.includes(chem.loveAnalysis)) {
+      chemistry.analysis = chemistry.analysis
+        ? chemistry.analysis + " " + chem.loveAnalysis
+        : chem.loveAnalysis;
+    }
+
     if (Array.isArray(chem.bonusScenarios)) {
       chemistry.bonusScenarios = chem.bonusScenarios.map((s: any) => {
         // punchline fallback: analysis 첫 문장
@@ -823,7 +829,6 @@ function buildFallback(opts: {
   nameB: string;
   comparison: BattleComparison;
   relationshipType: RelationshipType;
-  chemistryLabel?: ChemistryLabel;
   simulationQuestions?: SelectedSimulation[];
 }): BattleLlmAnalysis {
   const winner = opts.comparison.overallWinner === "A" ? opts.nameA
@@ -838,10 +843,8 @@ function buildFallback(opts: {
       wealth: emptyCat, love: emptyCat, career: emptyCat, health: emptyCat, social: emptyCat,
     },
     chemistry: {
-      label: opts.chemistryLabel || { emoji: "", title: "", description: "" },
       punchline: "",
       analysis: "",
-      mainScenario: { type: opts.relationshipType, analysis: "" },
       bonusScenarios: [],
     },
     simulations: (opts.simulationQuestions || []).map((sq) => ({

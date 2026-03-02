@@ -402,7 +402,6 @@ function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
   }
   // chemistry
   allTexts.push(result.chemistry.analysis);
-  allTexts.push(result.chemistry.mainScenario.analysis);
   for (const bs of result.chemistry.bonusScenarios) {
     allTexts.push(bs.analysis);
   }
@@ -600,7 +599,6 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
     allTexts.push(cat.detail);
   }
   allTexts.push(result.chemistry.analysis);
-  allTexts.push(result.chemistry.mainScenario.analysis);
   for (const bs of result.chemistry.bonusScenarios) {
     allTexts.push(bs.analysis);
   }
@@ -667,7 +665,6 @@ export function postprocessBattleResult(
 
   result.chemistry.punchline = applyMyoLimit(result.chemistry.punchline);
   result.chemistry.analysis = applyMyoLimit(result.chemistry.analysis);
-  result.chemistry.mainScenario.analysis = applyMyoLimit(result.chemistry.mainScenario.analysis);
   for (const bs of result.chemistry.bonusScenarios) {
     bs.punchline = applyMyoLimit(bs.punchline);
     bs.analysis = applyMyoLimit(bs.analysis);
@@ -713,11 +710,6 @@ export function postprocessBattleResult(
 
   result.chemistry.analysis = applyTextFixes(result.chemistry.analysis, warnings, "chemistry.analysis");
   detectIssues(result.chemistry.analysis, "chemistry.analysis", warnings);
-
-  result.chemistry.mainScenario.analysis = applyTextFixes(
-    result.chemistry.mainScenario.analysis, warnings, "chemistry.mainScenario",
-  );
-  detectIssues(result.chemistry.mainScenario.analysis, "chemistry.mainScenario", warnings);
 
   for (let i = 0; i < result.chemistry.bonusScenarios.length; i++) {
     result.chemistry.bonusScenarios[i].punchline = applyTextFixes(

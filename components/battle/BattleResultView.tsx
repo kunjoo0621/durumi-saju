@@ -101,7 +101,7 @@ export default function BattleResultView({
           </div>
 
           {/* Section 4: Compatibility */}
-          <BattleCompatibility chemistry={llmAnalysis.chemistry} />
+          <BattleCompatibility chemistry={llmAnalysis.chemistry} relationshipType={result.relationshipType} />
 
           {/* Section 5: Simulations */}
           {llmAnalysis.simulations && llmAnalysis.simulations.length > 0 && (

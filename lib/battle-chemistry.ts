@@ -1,5 +1,11 @@
 import type { DayStemRelation } from "./utils/battle-interaction";
-import type { ChemistryLabel } from "@/types/battle";
+
+/** @deprecated No longer used — kept for reference only */
+type ChemistryLabel = {
+  emoji: string;
+  title: string;
+  description: string;
+};
 
 type Balance = "팽팽" | "일방";
 

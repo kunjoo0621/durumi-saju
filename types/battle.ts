@@ -62,17 +62,8 @@ export type BattleLlmAnalysis = {
     social: CategoryResult;
   };
   chemistry: {
-    label: {
-      emoji: string;
-      title: string;
-      description: string;
-    };
     punchline: string;
     analysis: string;
-    mainScenario: {
-      type: string;
-      analysis: string;
-    };
     bonusScenarios: {
       type: string;
       label: string;
@@ -113,12 +104,6 @@ export type BattleListItem = {
   created_at: string;
 };
 
-export type ChemistryLabel = {
-  emoji: string;
-  title: string;
-  description: string;
-};
-
 export type BattleResult = {
   playerA: {
     name: string;
@@ -133,6 +118,5 @@ export type BattleResult = {
   comparison: BattleComparison;
   llmAnalysis: BattleLlmAnalysis;
   relationshipType: RelationshipType;
-  chemistryLabel?: ChemistryLabel;
   simulationQuestions?: { icon: string; question: string }[];
 };

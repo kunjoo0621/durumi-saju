@@ -1,28 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, Users, Briefcase, House, Handshake, CaretDown } from "@phosphor-icons/react";
+import { Heart, UsersThree, Briefcase, House, Handshake, CaretDown } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import type { BattleLlmAnalysis, RelationshipType } from "@/types/battle";
 
 type Props = {
   chemistry: BattleLlmAnalysis["chemistry"];
+  relationshipType: RelationshipType;
 };
 
-const SCENARIO_ICONS: Record<string, Icon> = {
+const CHEMISTRY_TITLES: Record<string, string> = {
+  lover: "연인으로서 둘은",
+  friend: "친구로서 둘은",
+  colleague: "동료로서 둘은",
+  family: "가족으로서 둘은",
+  other: "둘의 관계는",
+};
+
+const CHEMISTRY_ICONS: Record<string, Icon> = {
   lover: Heart,
-  friend: Users,
+  friend: UsersThree,
   colleague: Briefcase,
   family: House,
   other: Handshake,
 };
 
-const MAIN_SCENARIO_DISPLAY: Record<RelationshipType, string> = {
-  lover: "연인으로서",
-  friend: "친구로서",
-  colleague: "직장동료로서",
-  family: "가족으로서",
-  other: "지인으로서",
+const SCENARIO_ICONS: Record<string, Icon> = {
+  lover: Heart,
+  friend: UsersThree,
+  colleague: Briefcase,
+  family: House,
+  other: Handshake,
 };
 
 /* ── Reusable collapsible card for bonus scenarios ── */
@@ -104,16 +113,20 @@ function SectionCard({
   );
 }
 
-export default function BattleCompatibility({ chemistry }: Props) {
-  const { label, punchline: chemPunchline, analysis: baseAnalysis, mainScenario, bonusScenarios } = chemistry;
-  const MainIcon = SCENARIO_ICONS[mainScenario.type] || Handshake;
-  const mainDisplay = MAIN_SCENARIO_DISPLAY[mainScenario.type as RelationshipType] || "상성 분석";
+export default function BattleCompatibility({ chemistry, relationshipType }: Props) {
+  const { punchline: chemPunchline, analysis, bonusScenarios } = chemistry;
+
+  // 레거시 호환: loveAnalysis가 있으면 analysis fallback
+  const displayAnalysis = analysis || (chemistry as any).loveAnalysis || "";
+
+  const sectionTitle = CHEMISTRY_TITLES[relationshipType] || "둘의 관계는";
+  const MainIcon = CHEMISTRY_ICONS[relationshipType] || Handshake;
   const [mainExpanded, setMainExpanded] = useState(false);
 
   return (
     <div className="space-y-5">
-      {/* Combined card: baseAnalysis + mainScenario — accordion */}
-      {(baseAnalysis || mainScenario.analysis) && (
+      {/* Main chemistry card — accordion */}
+      {(displayAnalysis || chemPunchline) && (
         <div className="flex bg-background-secondary rounded-2xl overflow-hidden">
           <div
             className="w-1 shrink-0 rounded-full my-2 ml-1.5"
@@ -128,23 +141,15 @@ export default function BattleCompatibility({ chemistry }: Props) {
               aria-expanded={mainExpanded}
             >
               <div className="flex items-center gap-2">
-                <Handshake weight="duotone" size={28} color="#A855F7" aria-hidden="true" />
-                <span className="text-title-3 text-text-primary">상성 진단</span>
+                <MainIcon weight="duotone" size={28} color="#A855F7" aria-hidden="true" />
+                <span className="text-title-3 text-text-primary">{sectionTitle}</span>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span
-                  className="text-[11px] font-medium px-2 py-0.5 rounded-md"
-                  style={{ color: "#A855F7", backgroundColor: "rgba(168,85,247,0.15)" }}
-                >
-                  상성
-                </span>
-                <CaretDown
-                  weight="bold"
-                  size={20}
-                  className={`text-text-secondary transition-transform ${mainExpanded ? "rotate-180" : ""}`}
-                  aria-hidden="true"
-                />
-              </div>
+              <CaretDown
+                weight="bold"
+                size={20}
+                className={`text-text-secondary transition-transform shrink-0 ml-2 ${mainExpanded ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
             </button>
 
             {/* Content — grid animation */}
@@ -155,56 +160,22 @@ export default function BattleCompatibility({ chemistry }: Props) {
             >
               <div className="overflow-hidden">
                 <div className="px-6 pb-6 pt-4">
-                  {/* Chemistry label */}
-                  {label.title && (
-                    <div className="mb-5">
-                      <div
-                        className="rounded-xl px-4 py-3 flex items-center gap-3"
-                        style={{ backgroundColor: "rgba(168,85,247,0.08)" }}
-                      >
-                        <span className="text-[28px] leading-none shrink-0">{label.emoji}</span>
-                        <div className="min-w-0">
-                          <p className="text-[15px] font-bold text-text-primary">{label.title}</p>
-                          <p className="text-[13px] text-text-secondary mt-0.5">{label.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Chemistry punchline */}
+                  {/* Punchline */}
                   {chemPunchline && (
-                    <p className="text-[16px] font-semibold text-white leading-[1.6] mt-4 mb-2">{chemPunchline}</p>
+                    <p className="text-[16px] font-semibold text-white leading-[1.6] mb-4">{chemPunchline}</p>
                   )}
 
-                  {/* baseAnalysis body */}
-                  {baseAnalysis && (
-                    <div className="space-y-6">
-                      {baseAnalysis.split(/\n\s*\n/).map((para: string, i: number) => (
-                        <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
-                          {para.trim()}
-                        </p>
-                      ))}
-                    </div>
+                  {/* Analysis body */}
+                  {displayAnalysis && (
+                    <p className="text-[15px] text-gray-400 leading-[1.75]">
+                      {displayAnalysis}
+                    </p>
                   )}
-
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Main scenario — separate accordion */}
-      {mainScenario.analysis?.trim() && (
-        <SectionCard
-          icon={MainIcon}
-          iconColor="#FF6B6B"
-          title={mainDisplay}
-          accentColor="#FF6B6B"
-          content={mainScenario.analysis}
-          collapsible
-          defaultExpanded={false}
-        />
       )}
 
       {/* Bonus scenarios — individual accordions, collapsed by default */}

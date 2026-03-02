@@ -601,69 +601,47 @@ export default function MyResultsPage() {
                         role="button"
                         tabIndex={0}
                       >
-                        {/* 배지 2개 겹침 */}
-                        <div className="flex items-center shrink-0" style={{ width: 56, height: 56 }}>
+                        {/* 배지 메인+서브 겹침 */}
+                        <div className="relative w-[56px] h-[56px] shrink-0">
                           <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center relative z-10"
+                            className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center"
                             style={{ background: gcA.bg }}
                           >
-                            <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={28} height={28} />
+                            <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={30} height={30} />
                           </div>
                           <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center relative z-0 -ml-3"
+                            className="absolute -right-2 -bottom-2 w-[40px] h-[40px] rounded-[10px] flex items-center justify-center ring-2 ring-[#141414]"
                             style={{ background: gcB.bg }}
                           >
-                            <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={28} height={28} />
+                            <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={22} height={22} />
                           </div>
                         </div>
 
-                        {/* 텍스트 3줄 */}
+                        {/* 정보 영역 */}
                         <div className="flex-1 min-w-0">
-                          {/* 1줄: 이름 */}
-                          <div className="flex items-baseline gap-0 mb-0.5">
-                            <span className="text-[16px] font-bold text-white truncate">{b.player_a_name}</span>
-                            <span className="text-[14px] font-normal text-gray-500 mx-1.5">vs</span>
-                            <span className="text-[16px] font-bold text-white truncate">{b.player_b_name}</span>
-                          </div>
-                          {/* 2줄: 등급 · 점수 */}
-                          <div className="flex items-center mb-0.5">
-                            <span className="text-[13px] font-semibold" style={{ color: gcA.text }}>
-                              {b.player_a_grade}등급
+                          {/* 1줄: 이름 + 등급·점수 */}
+                          <div className="flex items-baseline gap-2 mb-1.5">
+                            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
+                              {b.player_a_name} vs {b.player_b_name}
                             </span>
-                            {b.player_a_composite != null && (
-                              <span className="text-[13px] text-gray-400 ml-1">{b.player_a_composite}점</span>
-                            )}
-                            <span className="text-[13px] font-normal text-gray-600 mx-1.5">vs</span>
-                            <span className="text-[13px] font-semibold" style={{ color: gcB.text }}>
-                              {b.player_b_grade}등급
+                            <span
+                              className="text-[13px] font-semibold whitespace-nowrap shrink-0"
+                              style={{ color: (isDraw || isWinnerA ? gcA : gcB).text }}
+                            >
+                              {isDraw || isWinnerA ? b.player_a_grade : b.player_b_grade}등급
+                              {(isDraw || isWinnerA ? b.player_a_composite : b.player_b_composite) != null
+                                ? ` · ${isDraw || isWinnerA ? b.player_a_composite : b.player_b_composite}점`
+                                : ""}
                             </span>
-                            {b.player_b_composite != null && (
-                              <span className="text-[13px] text-gray-400 ml-1">{b.player_b_composite}점</span>
-                            )}
                           </div>
-                          {/* 3줄: 관계 · 승패 */}
-                          <div className="text-[13px] text-gray-500">
-                            {RELATIONSHIP_LABELS[b.relationship_type] || "기타"}
-                            <span className="text-gray-600 mx-1">·</span>
-                            <span className={isDraw ? "" : "text-gray-400"}>{intensityLabel}</span>
+                          {/* 2줄: 메타 */}
+                          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+                            <span>{RELATIONSHIP_LABELS[b.relationship_type] || "기타"}</span>
+                            <span style={{ color: "#2A2A2A" }}>·</span>
+                            <span>{intensityLabel}</span>
+                            <span style={{ color: "#2A2A2A" }}>·</span>
+                            <span>{b.wins_a}:{b.wins_b}</span>
                           </div>
-                        </div>
-
-                        {/* 스코어 */}
-                        <div className="flex items-center shrink-0 mr-1">
-                          <span
-                            className="text-[15px] font-bold font-aggro"
-                            style={{ color: isDraw ? "#9CA3AF" : isWinnerA ? "#FF6B6B" : "#374151" }}
-                          >
-                            {b.wins_a}
-                          </span>
-                          <span className="text-[15px] text-gray-600 mx-0.5">:</span>
-                          <span
-                            className="text-[15px] font-bold font-aggro"
-                            style={{ color: isDraw ? "#9CA3AF" : !isWinnerA ? "#A855F7" : "#374151" }}
-                          >
-                            {b.wins_b}
-                          </span>
                         </div>
 
                         {/* ··· 버튼 */}

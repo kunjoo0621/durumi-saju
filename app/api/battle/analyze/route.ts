@@ -6,7 +6,6 @@ import { resolveSajuEnrichedData, type InputPayload, buildFortunePromptBlock } f
 import { calculateServerScoring } from "@/lib/utils/saju-scoring";
 import { compareBattle } from "@/lib/utils/battle-compare";
 import { runBattleAnalysis } from "@/lib/battle-prompt";
-import { selectChemistryLabel } from "@/lib/battle-chemistry";
 import { selectSimulations } from "@/lib/battle-simulations";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
@@ -175,22 +174,6 @@ export async function POST(request: NextRequest) {
       body.playerB.name,
     );
 
-    // Chemistry label (deterministic, server-side)
-    const chemistryLabel = selectChemistryLabel(
-      interaction.dayStemRelation.type,
-      comparison.winsA,
-      comparison.winsB,
-      body.relationshipType,
-    );
-
-    console.info("[BATTLE_CHEMISTRY]", {
-      dayStemRelation: interaction.dayStemRelation.type,
-      winsA: comparison.winsA,
-      winsB: comparison.winsB,
-      relationshipType: body.relationshipType,
-      label: chemistryLabel,
-    });
-
     // Simulation questions (trigger-based, server-side) + subject determination
     const simulationQuestions = selectSimulations(
       enrichedA,
@@ -220,7 +203,6 @@ export async function POST(request: NextRequest) {
       interaction,
       fortuneBlockA,
       fortuneBlockB,
-      chemistryLabel,
       simulationQuestions,
     });
 
@@ -238,7 +220,6 @@ export async function POST(request: NextRequest) {
       comparison,
       llmAnalysis,
       relationshipType: body.relationshipType,
-      chemistryLabel,
       simulationQuestions,
     };
 
