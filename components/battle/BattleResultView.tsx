@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import SavePromptBanner from "@/components/SavePromptBanner";
@@ -10,7 +10,6 @@ import BattleCompatibility from "@/components/battle/BattleCompatibility";
 import BattleSimulations from "@/components/battle/BattleSimulations";
 import BattleFutureOutlook from "@/components/battle/BattleFutureOutlook";
 import BattleFinalVerdict from "@/components/battle/BattleFinalVerdict";
-import BattleUpsellCTA from "@/components/battle/BattleUpsellCTA";
 import type { BattleResult } from "@/types/battle";
 
 type BattleResultViewProps = {
@@ -34,8 +33,17 @@ export default function BattleResultView({
 }: BattleResultViewProps) {
   const router = useRouter();
   const [showToast, setShowToast] = useState(false);
+  const [hasPrimaryResult, setHasPrimaryResult] = useState<boolean | null>(null);
 
   const { playerA, playerB, comparison, llmAnalysis } = result;
+
+  useEffect(() => {
+    if (!shareableId) return;
+    fetch("/api/results/primary")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setHasPrimaryResult(!!data?.primaryResultId))
+      .catch(() => setHasPrimaryResult(false));
+  }, [shareableId]);
 
   // 결정타: 전체 승자가 이긴 카테고리 중 점수차 최대
   const highlightCategory = comparison.overallWinner === "draw"
@@ -121,10 +129,7 @@ export default function BattleResultView({
           {/* Section 6: Final verdict */}
           <BattleFinalVerdict finalVerdict={llmAnalysis.finalVerdict} />
 
-          {/* Section 7: Upsell */}
-          <BattleUpsellCTA nameA={playerA.name} nameB={playerB.name} />
-
-          {/* Share + rematch buttons (only on result page, not share page) */}
+          {/* Share + CTA buttons (only on result page, not share page) */}
           {shareableId && (
             <div className="space-y-3">
               <button
@@ -134,13 +139,24 @@ export default function BattleResultView({
               >
                 결과 공유로 도발하기
               </button>
-              <button
-                type="button"
-                onClick={() => router.push("/battle/input")}
-                className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
-              >
-                다른 상대와 재대결
-              </button>
+              {hasPrimaryResult === true && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/battle/input")}
+                  className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+                >
+                  다른 사람과 대결하기
+                </button>
+              )}
+              {hasPrimaryResult === false && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/start")}
+                  className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+                >
+                  내 사주 보러가기
+                </button>
+              )}
             </div>
           )}
         </div>
