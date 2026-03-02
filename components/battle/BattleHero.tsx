@@ -60,7 +60,7 @@ export default function BattleHero({
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `linear-gradient(180deg, ${winnerColor}0A 0%, ${winnerColor}05 40%, transparent 70%)`,
+            background: `linear-gradient(180deg, ${winnerColor}1A 0%, ${winnerColor}0D 40%, transparent 70%)`,
           }}
         />
       )}
@@ -68,7 +68,7 @@ export default function BattleHero({
       <div className="relative pt-7 px-5 pb-5">
         {/* heroQuip — 최상단 */}
         {heroQuip && (
-          <p className="text-[18px] font-bold text-white text-center leading-[1.5] tracking-[-0.02em] mb-6">
+          <p className="text-[20px] font-bold font-aggro text-white text-center leading-[1.5] tracking-[-0.02em] mb-6">
             {heroQuip}
           </p>
         )}
@@ -185,7 +185,7 @@ export default function BattleHero({
       </div>
 
       {/* Toggle: 상세 비교 보기 */}
-      <div className="px-5 pb-5">
+      <div className="px-5 pb-5 mt-[40px]">
         {!chartExpanded && (
           <button
             type="button"
