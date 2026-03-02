@@ -242,8 +242,8 @@ const SAJU_STRIP_PATTERNS: [RegExp, string][] = [
 function stripSajuTermsFromFuture(text: string): { text: string; count: number } {
   let count = 0;
   let result = text;
-  for (const [pattern] of SAJU_STRIP_PATTERNS) {
-    result = result.replace(pattern, () => { count++; return ""; });
+  for (const [pattern, replacement] of SAJU_STRIP_PATTERNS) {
+    result = result.replace(pattern, () => { count++; return replacement || ""; });
   }
   // 정리: 연속 공백, 문두 조사/쉼표, 빈 괄호
   result = result
