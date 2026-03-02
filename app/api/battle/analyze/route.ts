@@ -8,6 +8,7 @@ import { compareBattle } from "@/lib/utils/battle-compare";
 import { runBattleAnalysis } from "@/lib/battle-prompt";
 import { selectSimulations } from "@/lib/battle-simulations";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { validateBattleResult } from "@/lib/quality-gate";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { calculateBattleInteraction } from "@/lib/utils/battle-interaction";
 import { normalizeGender } from "@/lib/utils/gender";
@@ -222,6 +223,18 @@ export async function POST(request: NextRequest) {
       relationshipType: body.relationshipType,
       simulationQuestions,
     };
+
+    // ── Quality Gate (Layer 3) ──
+    const battleQualityIssues = validateBattleResult(llmAnalysis);
+    if (battleQualityIssues.length > 0) {
+      const errors = battleQualityIssues.filter((i) => i.severity === "error");
+      const warns = battleQualityIssues.filter((i) => i.severity === "warning");
+      console.warn("[QUALITY GATE] 배틀 품질 이슈 감지:", {
+        errors: errors.length,
+        warnings: warns.length,
+        issues: battleQualityIssues,
+      });
+    }
 
     // DB 저장 (동기 + 1회 재시도)
     const battleRow: Record<string, any> = {

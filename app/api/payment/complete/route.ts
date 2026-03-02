@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, buildTeaserFromFull, resolveSajuText, runFullAnalysis, type InputPayload } from "@/lib/analysis";
+import { validatePersonalResult } from "@/lib/quality-gate";
 import { SCORING_VERSION } from "@/lib/utils/saju-scoring";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { hashToken, getTokensFromCookie, getDbExpiresAt } from "@/lib/guest-token";
@@ -315,6 +316,18 @@ export async function POST(request: NextRequest) {
       const full = await runFullAnalysis({ ...input, saju: sajuText || input.saju });
       const teaser = buildTeaserFromFull(full);
 
+      // ── Quality Gate (Layer 3) ──
+      const personalQualityIssues = validatePersonalResult(full);
+      if (personalQualityIssues.length > 0) {
+        const errors = personalQualityIssues.filter((i) => i.severity === "error");
+        const warns = personalQualityIssues.filter((i) => i.severity === "warning");
+        console.warn("[QUALITY GATE] 개인 사주 품질 이슈 감지:", {
+          errors: errors.length,
+          warnings: warns.length,
+          issues: personalQualityIssues,
+        });
+      }
+
       const birthDate =
         input.birthYear && input.birthMonth && input.birthDay
           ? `${input.birthYear}-${input.birthMonth.padStart(2, "0")}-${input.birthDay.padStart(2, "0")}`
@@ -413,6 +426,18 @@ export async function POST(request: NextRequest) {
     const sajuText = await resolveSajuText(input);
     const full = await runFullAnalysis({ ...input, saju: sajuText || input.saju });
     const teaser = buildTeaserFromFull(full);
+
+    // ── Quality Gate (Layer 3 — guest) ──
+    const guestQualityIssues = validatePersonalResult(full);
+    if (guestQualityIssues.length > 0) {
+      const errors = guestQualityIssues.filter((i) => i.severity === "error");
+      const warns = guestQualityIssues.filter((i) => i.severity === "warning");
+      console.warn("[QUALITY GATE] 개인 사주(guest) 품질 이슈 감지:", {
+        errors: errors.length,
+        warnings: warns.length,
+        issues: guestQualityIssues,
+      });
+    }
 
     const birthDate =
       input.birthYear && input.birthMonth && input.birthDay

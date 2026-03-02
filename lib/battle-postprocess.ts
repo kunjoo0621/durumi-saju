@@ -172,6 +172,29 @@ function fixFormalEndings(text: string): { text: string; count: number } {
   return { text: result, count };
 }
 
+// ─── 문어체 → 반말 치환 ─────────────────────────────
+
+const FORMAL_TO_CASUAL: [RegExp, string][] = [
+  [/부른다/g, "불러"],
+  [/반복될\s*것이다/g, "반복될 거야"],
+  [/가져다줄\s*수\s*있다/g, "가져다줄 수 있어"],
+  [/필요하다(?=[.,\s]|$)/g, "필요해"],
+  [/중요하다(?=[.,\s]|$)/g, "중요해"],
+  [/어렵다(?=[.,\s]|$)/g, "어려워"],
+];
+
+function fixFormalToCasual(text: string): { text: string; count: number } {
+  let count = 0;
+  let result = text;
+  for (const [pattern, replacement] of FORMAL_TO_CASUAL) {
+    result = result.replace(pattern, () => {
+      count++;
+      return replacement;
+    });
+  }
+  return { text: result, count };
+}
+
 const SPECULATION_PATTERNS: [RegExp, string][] = [
   [/가능성이 매우 높아/g, "거야"],
   [/가능성이 높아/g, "거야"],
@@ -334,7 +357,10 @@ function applyTextFixes(text: string, warnings: string[], label: string): string
   const f = fixFormalEndings(h.text);
   if (f.count > 0) warnings.push(`[FIX] 격식체 ${f.count}회 치환: ${label}`);
 
-  return f.text;
+  const c = fixFormalToCasual(f.text);
+  if (c.count > 0) warnings.push(`[FIX] 문어체→반말 ${c.count}회 치환: ${label}`);
+
+  return c.text;
 }
 
 // ─── 탐지 (경고만) ──────────────────────────────────
@@ -508,6 +534,114 @@ function detectPunchlineDuplicates(result: BattleLlmAnalysis, warnings: string[]
       warnings.push(`[WARN] killingLine에 승패 서술: ${key} — 장면이 아닌 결과 보고`);
     }
   }
+}
+
+// ─── 구조적 반복 감지 ───────────────────────────────
+
+function detectStructuralRepetition(
+  texts: string[],
+  sectionLabels: string[],
+): { phrase: string; count: number; sections: string[] }[] {
+  const issues: { phrase: string; count: number; sections: string[] }[] = [];
+
+  // NOTE: 묘(墓) 관련 패턴은 limitMyoMb()가 이미 ≤2회로 자동수정하므로 여기서 제외
+  const patterns = [
+    { regex: /(?:제압|압도|누르는)\s*구조/g, label: "~제압/압도 구조" },
+    { regex: /하는\s*구조야/g, label: "~하는 구조야" },
+    { regex: /가능성이\s*(?:높아|커|있어)/g, label: "가능성이 높아/커" },
+  ];
+
+  for (const { regex, label } of patterns) {
+    const found: string[] = [];
+    texts.forEach((text, i) => {
+      const matches = text.match(new RegExp(regex.source, "g"));
+      if (matches) {
+        matches.forEach(() => found.push(sectionLabels[i]));
+      }
+    });
+    if (found.length >= 3) {
+      issues.push({ phrase: label, count: found.length, sections: found });
+    }
+  }
+
+  // N-gram 기반 반복 감지 (7글자 이상 동일 구절이 3개+ 섹션)
+  const N = 7;
+  const ngramCounts = new Map<string, { count: number; sections: Set<string> }>();
+
+  texts.forEach((text, i) => {
+    for (let j = 0; j <= text.length - N; j++) {
+      const ngram = text.substring(j, j + N);
+      if (/^[\s,.\u3000]+$/.test(ngram)) continue;
+      if (!ngramCounts.has(ngram)) {
+        ngramCounts.set(ngram, { count: 0, sections: new Set() });
+      }
+      const entry = ngramCounts.get(ngram)!;
+      entry.count++;
+      entry.sections.add(sectionLabels[i]);
+    }
+  });
+
+  for (const [ngram, { count, sections }] of ngramCounts) {
+    if (sections.size >= 3 && count >= 3) {
+      const alreadyCaught = issues.some(
+        (i) => ngram.includes(i.phrase) || i.phrase.includes(ngram),
+      );
+      if (!alreadyCaught) {
+        issues.push({ phrase: ngram, count, sections: Array.from(sections) });
+      }
+    }
+  }
+
+  return issues;
+}
+
+// ─── 시뮬레이션 reasoning 복붙 감지 ────────────────
+
+function detectSimulationCopypaste(
+  simulations: { question: string; reasoning: string }[],
+): string[] {
+  const issues: string[] = [];
+
+  // 마지막 문장 중복 체크
+  const lastSentences = simulations.map((s) => {
+    const sentences = s.reasoning
+      .split(/[.!?\n]/)
+      .filter((x) => x.trim().length > 5);
+    return sentences[sentences.length - 1]?.trim() || "";
+  });
+
+  for (let i = 0; i < lastSentences.length; i++) {
+    for (let j = i + 1; j < lastSentences.length; j++) {
+      if (lastSentences[i] && lastSentences[i] === lastSentences[j]) {
+        issues.push(
+          `시뮬레이션 "${simulations[i].question}" ↔ "${simulations[j].question}" 마지막 문장 동일: "${lastSentences[i]}"`,
+        );
+      }
+    }
+  }
+
+  // 전체 reasoning 유사도 (60% 이상 글자 일치 = 복붙)
+  for (let i = 0; i < simulations.length; i++) {
+    for (let j = i + 1; j < simulations.length; j++) {
+      const a = simulations[i].reasoning;
+      const b = simulations[j].reasoning;
+      const shorter = Math.min(a.length, b.length);
+      if (shorter < 20) continue;
+
+      let matches = 0;
+      for (let k = 0; k < shorter; k++) {
+        if (a[k] === b[k]) matches++;
+      }
+      const similarity = matches / shorter;
+      if (similarity > 0.6) {
+        issues.push(
+          `시뮬레이션 "${simulations[i].question}" ↔ "${simulations[j].question}" 유사도 ${(similarity * 100).toFixed(0)}%`,
+        );
+      }
+    }
+  }
+
+  return issues;
 }
 
 // ─── 어미 연속 탐지 ─────────────────────────────────
@@ -797,6 +931,58 @@ export function postprocessBattleResult(
   const uniqueMoods = new Set(moods);
   if (uniqueMoods.size === 1 && moods.length >= 3) {
     warnings.push(`[WARN] futureOutlook mood 전부 "${moods[0]}" — 다양성 부족`);
+  }
+
+  // ── 구조적 반복 감지 (Layer 2) ──
+  {
+    const structTexts: string[] = [];
+    const structLabels: string[] = [];
+    for (const [key, cat] of Object.entries(result.categoryResults)) {
+      structTexts.push(`${cat.killingLine} ${cat.detail}`);
+      structLabels.push(`카테고리:${key}`);
+    }
+    structTexts.push(`${result.chemistry.punchline} ${result.chemistry.analysis}`);
+    structLabels.push("상성진단");
+    for (const bs of result.chemistry.bonusScenarios) {
+      structTexts.push(`${bs.punchline} ${bs.analysis}`);
+      structLabels.push(`보너스:${bs.label}`);
+    }
+    for (const sim of result.simulations) {
+      structTexts.push(`${sim.punchline} ${sim.reasoning}`);
+      structLabels.push(`시뮬:${sim.question}`);
+    }
+    structTexts.push(
+      `${result.futureOutlook.punchline} ${result.futureOutlook.timeline.map((e) => `${e.eventA} ${e.eventB} ${e.relationship}`).join(" ")}`,
+    );
+    structLabels.push("미래예측");
+    structTexts.push(`${result.finalVerdict.punchline} ${result.finalVerdict.verdict}`);
+    structLabels.push("최종심판");
+
+    const structIssues = detectStructuralRepetition(structTexts, structLabels);
+    for (const issue of structIssues) {
+      warnings.push(
+        `[WARN] 구조적 반복: "${issue.phrase}" ${issue.count}회 — [${issue.sections.join(", ")}]`,
+      );
+    }
+  }
+
+  // ── 시뮬레이션 reasoning 복붙 감지 (Layer 2) ──
+  if (result.simulations.length > 1) {
+    const copyIssues = detectSimulationCopypaste(result.simulations);
+    for (const msg of copyIssues) {
+      warnings.push(`[WARN] 시뮬레이션 복붙: ${msg}`);
+    }
+  }
+
+  // ── 카테고리 detail 패턴화 감지 (Layer 2) ──
+  {
+    const details = Object.values(result.categoryResults).map((d) => d.detail || "");
+    const structureEnding = details.filter((d) => /구조야[.\s]*$/.test(d.trim()));
+    if (structureEnding.length >= 3) {
+      warnings.push(
+        `[WARN] 카테고리 detail 패턴화: ${structureEnding.length}개가 "~구조야"로 끝남`,
+      );
+    }
   }
 
   // 재시도 판정
