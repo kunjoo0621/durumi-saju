@@ -33,6 +33,27 @@ function fixHonorifics(text: string): { text: string; count: number } {
   return { text: result, count };
 }
 
+// ─── "~해봐" 자동 치환 ──────────────────────────────────────
+
+const HAEBWA_FIX_PATTERNS: [RegExp, string][] = [
+  [/해보는\s*게\s*어때/g, "하는 게 중요해"],
+  [/고려해봐/g, "고려해"],
+  [/들여봐/g, "들여"],
+  [/해\s?봐/g, "해"],
+];
+
+function fixHaebwa(text: string): { text: string; count: number } {
+  let count = 0;
+  let result = text;
+  for (const [pattern, replacement] of HAEBWA_FIX_PATTERNS) {
+    result = result.replace(pattern, () => {
+      count++;
+      return replacement;
+    });
+  }
+  return { text: result, count };
+}
+
 // ─── 탐지 (경고만) ──────────────────────────────────────────
 
 /** "~해봐" 패턴 탐지 */
@@ -171,9 +192,13 @@ const MYO_MB_MASTER = new RegExp(
 const MYO_MB_SOK_TEST = /묘\s*\(墓\)\s*속/;
 const KOREAN_PARTICLES = new Set(["이","가","은","는","을","를","의","에","도"]);
 
+// "지에 앉아" 반복 제한 — 장생/건록/제왕 등 다른 12운성 제외
+const JIE_ANJA_PATTERN = /(?<!장생|건록|제왕|관대|목욕|양|태|절|사|병|쇠)지에\s*앉[아은](?:서)?\s*/g;
+
 function limitMyoMb(
   text: string,
   counter: { count: number },
+  jieCounter: { count: number },
 ): { text: string; removed: number } {
   if (!text) return { text, removed: 0 };
   let removed = 0;
@@ -196,6 +221,14 @@ function limitMyoMb(
       const lastChar = match.trim().slice(-1);
       return KOREAN_PARTICLES.has(lastChar) ? "속마음" + lastChar : "속마음";
     }
+    return "";
+  });
+
+  // 2.5) "지에 앉아" 패턴 제한 (장생/건록/제왕 등 다른 12운성 제외, 첫 2회 유지)
+  work = work.replace(new RegExp(JIE_ANJA_PATTERN.source, "g"), (match) => {
+    jieCounter.count++;
+    if (jieCounter.count <= 2) return match;
+    removed++;
     return "";
   });
 
@@ -329,28 +362,45 @@ export function postprocessAnalysisResult(result: AnalysisResult): {
     warnings.push(`[FIX] 문어체→반말 ${totalFormalToCasual}회 치환됨`);
   }
 
-  // 3. 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지 → 3회부터 제거)
+  // 3. 묘(墓) + "지에 앉아" 반복 제한 (전역 카운터, 각 첫 2회 유지 → 3회부터 제거)
   const myoCounter = { count: 0 };
+  const jieCounter = { count: 0 };
   let totalMyoRemoved = 0;
   result.sections = result.sections.map((section) => {
-    const r = limitMyoMb(section.content, myoCounter);
+    const r = limitMyoMb(section.content, myoCounter, jieCounter);
     totalMyoRemoved += r.removed;
     return { ...section, content: r.text };
   });
   {
-    const r = limitMyoMb(result.tier.description, myoCounter);
+    const r = limitMyoMb(result.tier.description, myoCounter, jieCounter);
     totalMyoRemoved += r.removed;
     result.tier = { ...result.tier, description: r.text };
   }
   if (totalMyoRemoved > 0) {
     warnings.push(
-      `[FIX] 묘(墓) 반복 제한: ${totalMyoRemoved}회 제거 (총 탐지 ${myoCounter.count}회, 첫 2회 유지)`,
+      `[FIX] 묘(墓)/지에앉아 반복 제한: ${totalMyoRemoved}회 제거 (묘 ${myoCounter.count}회, 지에앉아 ${jieCounter.count}회, 각 첫 2회 유지)`,
     );
+  }
+
+  // === "~해봐" 자동 치환 (탐지 전에 실행) ===
+  let totalHaebwa = 0;
+  result.sections = result.sections.map((section) => {
+    const { text, count } = fixHaebwa(section.content);
+    totalHaebwa += count;
+    return { ...section, content: text };
+  });
+  {
+    const { text, count } = fixHaebwa(result.tier.description);
+    totalHaebwa += count;
+    result.tier = { ...result.tier, description: text };
+  }
+  if (totalHaebwa > 0) {
+    warnings.push(`[FIX] '~해봐' ${totalHaebwa}회 자동 치환됨`);
   }
 
   // === 탐지 + 경고 ===
 
-  // 3. "~해봐" 패턴
+  // 3. "~해봐" 패턴 (치환 후 잔존 감지)
   warnings.push(...detectHaebwa(result.sections));
 
   // 4. title 25자 초과

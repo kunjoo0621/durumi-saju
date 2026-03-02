@@ -211,6 +211,32 @@ export function validatePersonalResult(result: any): QualityIssue[] {
     }
   }
 
+  // 5. 한줄평 소개문 ↔ 종합 첫 문단 복붙 검사
+  if (result.tier?.description && result.sections?.length > 0) {
+    const tierDesc = (result.tier.description || "").trim();
+    const lastSection = result.sections[result.sections.length - 1];
+    const lastContent = (lastSection?.content || "").trim();
+    // 종합 첫 문단 추출
+    const firstParagraph = lastContent.split(/\n\n/)[0]?.trim() || lastContent;
+
+    if (tierDesc.length >= 10 && firstParagraph.length >= 10) {
+      const shorter = Math.min(tierDesc.length, firstParagraph.length);
+      let matches = 0;
+      for (let k = 0; k < shorter; k++) {
+        if (tierDesc[k] === firstParagraph[k]) matches++;
+      }
+      const similarity = matches / shorter;
+      if (similarity > 0.6) {
+        issues.push({
+          severity: "error",
+          code: "TIER_SUMMARY_COPYPASTE",
+          message: `한줄평 소개문 ↔ 종합 첫 문단 유사도 ${(similarity * 100).toFixed(0)}% (복붙 의심)`,
+          details: `한줄평: "${tierDesc.slice(0, 30)}..." / 종합: "${firstParagraph.slice(0, 30)}..."`,
+        });
+      }
+    }
+  }
+
   return issues;
 }
 
