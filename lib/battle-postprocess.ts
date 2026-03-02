@@ -295,13 +295,9 @@ const MYO_MB_MASTER = new RegExp(
 const MYO_MB_SOK_TEST = /묘\s*\(墓\)\s*속/;
 const KOREAN_PARTICLES = new Set(["이","가","은","는","을","를","의","에","도"]);
 
-// "지에 앉아" 반복 제한 — 장생/건록/제왕 등 다른 12운성 제외
-const JIE_ANJA_PATTERN = /(?<!장생|건록|제왕|관대|목욕|양|태|절|사|병|쇠)지에\s*앉[아은](?:서)?\s*/g;
-
 function limitMyoMb(
   text: string,
   counter: { count: number },
-  jieCounter: { count: number },
 ): { text: string; removed: number } {
   if (!text) return { text, removed: 0 };
   let removed = 0;
@@ -326,14 +322,6 @@ function limitMyoMb(
       return KOREAN_PARTICLES.has(lastChar) ? "속마음" + lastChar : "속마음";
     }
     return ""; // 나머지 → 삭제
-  });
-
-  // 2.5) "지에 앉아" 패턴 제한 (장생/건록/제왕 등 다른 12운성 제외, 첫 2회 유지)
-  work = work.replace(new RegExp(JIE_ANJA_PATTERN.source, "g"), (match) => {
-    jieCounter.count++;
-    if (jieCounter.count <= 2) return match;
-    removed++;
-    return "";
   });
 
   // 3) 보호 패턴 복원
@@ -795,10 +783,9 @@ export function postprocessBattleResult(
 
   // ── 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지 → 3회부터 제거/치환) ──
   const myoCounter = { count: 0 };
-  const jieCounter = { count: 0 };
   let totalMyoRemoved = 0;
   const applyMyoLimit = (t: string) => {
-    const r = limitMyoMb(t, myoCounter, jieCounter);
+    const r = limitMyoMb(t, myoCounter);
     totalMyoRemoved += r.removed;
     return r.text;
   };
@@ -834,7 +821,7 @@ export function postprocessBattleResult(
 
   if (totalMyoRemoved > 0) {
     warnings.push(
-      `[FIX] 묘(墓)/지에앉아 반복 제한: ${totalMyoRemoved}회 제거 (묘 ${myoCounter.count}회, 지에앉아 ${jieCounter.count}회, 각 첫 2회 유지)`,
+      `[FIX] 묘(墓) 반복 제한: ${totalMyoRemoved}회 제거/치환 (총 탐지 ${myoCounter.count}회, 첫 2회 유지)`,
     );
   }
 
