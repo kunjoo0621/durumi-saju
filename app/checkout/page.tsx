@@ -7,8 +7,23 @@ import Script from "next/script";
 import MenuDrawer from "../MenuDrawer";
 import { useAllInputs } from "@/store/useInputStore";
 import { useBattleStore } from "@/store/useBattleStore";
+import { getQuickSajuTags, type SajuTag } from "./actions";
 
 type CheckoutType = "analysis" | "battle";
+
+const ELEMENT_TAG_COLORS: Record<string, { color: string; bg: string }> = {
+  목: { color: "rgb(34 197 94)", bg: "rgb(34 197 94 / 0.12)" },
+  화: { color: "rgb(239 68 68)", bg: "rgb(239 68 68 / 0.12)" },
+  토: { color: "rgb(234 179 8)", bg: "rgb(234 179 8 / 0.12)" },
+  금: { color: "rgb(228 228 231)", bg: "rgb(228 228 231 / 0.12)" },
+  수: { color: "rgb(59 130 246)", bg: "rgb(59 130 246 / 0.12)" },
+};
+const NEUTRAL_TAG_COLOR = { color: "rgb(156 163 175)", bg: "rgb(156 163 175 / 0.12)" };
+
+function getTagColors(element: string | null) {
+  if (!element) return NEUTRAL_TAG_COLOR;
+  return ELEMENT_TAG_COLORS[element] ?? NEUTRAL_TAG_COLOR;
+}
 
 const BATTLE_RELATIONSHIP_EMOJI: Record<string, string> = {
   lover: "\u2764\uFE0F",
@@ -269,6 +284,30 @@ function CheckoutForm({
   clientKey, mockPayment, amount, hasRequiredInput, router,
   redirectResult, redirectBack, checkoutType,
 }: any) {
+  // 사주 태그 (배틀 전용)
+  const [tagsA, setTagsA] = useState<SajuTag[]>([]);
+  const [tagsB, setTagsB] = useState<SajuTag[]>([]);
+
+  useEffect(() => {
+    if (!isBattle) return;
+    const pA = battleStore.playerA;
+    const pB = battleStore.playerB;
+    if (!pA.birthYear || !pB.birthYear) return;
+
+    Promise.all([
+      getQuickSajuTags({
+        birthYear: pA.birthYear, birthMonth: pA.birthMonth, birthDay: pA.birthDay,
+        birthHour: pA.birthHour, birthMinute: pA.birthMinute,
+        birthLocation: pA.birthLocation, unknownBirthTime: pA.unknownBirthTime,
+      }),
+      getQuickSajuTags({
+        birthYear: pB.birthYear, birthMonth: pB.birthMonth, birthDay: pB.birthDay,
+        birthHour: pB.birthHour, birthMinute: pB.birthMinute,
+        birthLocation: pB.birthLocation, unknownBirthTime: pB.unknownBirthTime,
+      }),
+    ]).then(([a, b]) => { setTagsA(a); setTagsB(b); });
+  }, [isBattle]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 페이지 로드 시 세션 생성 + orderId 생성
   useEffect(() => {
     if (sessionId) return;
@@ -481,57 +520,52 @@ function CheckoutForm({
           )}
 
           {isBattle ? (
-            <div className="rounded-2xl p-5 space-y-3" style={{ backgroundColor: "#141414" }}>
-              {/* Relationship tab selector */}
-              <div className="flex bg-[#1A1A1A] rounded-xl p-1">
-                {(["lover", "friend", "colleague", "family"] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => battleStore.setRelationshipType(type)}
-                    className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-all ${
-                      battleStore.relationshipType === type
-                        ? "bg-[#252525] text-white"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {BATTLE_RELATIONSHIP_LABELS[type]}
-                  </button>
-                ))}
-              </div>
-              {battleStore.relationshipType === "other" ? (
-                <p className="text-[12px] text-primary text-center font-medium">기타 관계</p>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => battleStore.setRelationshipType("other")}
-                  className="text-[12px] text-gray-600 underline underline-offset-2 block mx-auto"
-                >
-                  기타 관계로 볼래
-                </button>
-              )}
-
+            <div className="rounded-2xl p-5" style={{ backgroundColor: "#141414" }}>
               {/* Player cards with VS overlap */}
               <div className="relative flex gap-3">
-                <div className="flex-1 rounded-xl bg-[#1A1A1A] p-4">
-                  <div className="text-[12px] font-semibold text-gray-500 mb-2">나</div>
-                  <div className="text-[15px] font-semibold text-text-primary">{battleStore.playerA.name}</div>
+                <div className="flex-1 rounded-2xl bg-[#1A1A1A] p-5">
+                  <div className="text-[12px] font-semibold mb-2" style={{ color: "#FF6B6B" }}>나</div>
+                  <div className="text-[18px] font-bold text-white">{battleStore.playerA.name}</div>
                   <div className="text-[13px] text-text-secondary mt-1">
                     {battleStore.playerA.calendarType === "lunar" ? "음력 " : ""}
                     {battleStore.playerA.birthYear}.{battleStore.playerA.birthMonth}.{battleStore.playerA.birthDay} · {battleStore.playerA.gender}
                   </div>
+                  {tagsA.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {tagsA.map((tag) => {
+                        const c = getTagColors(tag.element);
+                        return (
+                          <span key={tag.label} className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{ color: c.color, backgroundColor: c.bg }}>
+                            {tag.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 {/* VS badge */}
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
                   <span className="text-[12px] font-black text-black tracking-tight">VS</span>
                 </div>
-                <div className="flex-1 rounded-xl bg-[#1A1A1A] p-4">
-                  <div className="text-[12px] font-semibold text-gray-500 mb-2">상대</div>
-                  <div className="text-[15px] font-semibold text-text-primary">{battleStore.playerB.name}</div>
+                <div className="flex-1 rounded-2xl bg-[#1A1A1A] p-5">
+                  <div className="text-[12px] font-semibold mb-2" style={{ color: "#A855F7" }}>상대</div>
+                  <div className="text-[18px] font-bold text-white">{battleStore.playerB.name}</div>
                   <div className="text-[13px] text-text-secondary mt-1">
                     {battleStore.playerB.calendarType === "lunar" ? "음력 " : ""}
                     {battleStore.playerB.birthYear}.{battleStore.playerB.birthMonth}.{battleStore.playerB.birthDay} · {battleStore.playerB.gender}
                   </div>
+                  {tagsB.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {tagsB.map((tag) => {
+                        const c = getTagColors(tag.element);
+                        return (
+                          <span key={tag.label} className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{ color: c.color, backgroundColor: c.bg }}>
+                            {tag.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
