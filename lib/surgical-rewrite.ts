@@ -40,17 +40,24 @@ const REWRITE_SYSTEM = `너는 사주 분석 결과의 텍스트 교정기야.
 - "이겼어/승리했어/앞섰어/제쳤어" 같은 승패 동사 금지
 - 대신 구체적 일상 장면이나 행동으로 승패를 보여줘
 - 어순만 바꾸거나 유의어 치환은 리라이트가 아님
+- 해당 카테고리의 주제에 맞는 장면을 써야 해:
+  재물(wealth) → 돈/소비/투자/월급 관련
+  연애(love) → 연애/감정/매력 관련
+  직장(career) → 일/승진/직장생활 관련
+  건강(health) → 체력/건강/몸 관련
+  대인(social) → 사람/인맥/인기 관련
+- 아래 예시는 참고만 해. 그대로 복사하면 안 돼. 너만의 새로운 문장을 만들어
 
-❌ 나쁜 예시 (어순/유의어만 변경 — 이건 안 됨):
-  BEFORE: "건주가 8점 차이로 연애운 이겼어"
-  AFTER: "연애운, 건주가 8점 차이로 승리했어"
+❌ 나쁜 예시 (어순/유의어만 변경):
+  BEFORE: "A가 8점 차이로 연애운 이겼어"
+  AFTER: "연애운, A가 8점 차이로 승리했어"
 
-✅ 좋은 예시 (장면 묘사형 — 이런 수준으로 바꿔야 해):
-  - "건주 웃을 때 테스트는 속으로 끙끙대"
-  - "채연 통장이 신건주 통장을 삼켜버렸어"
-  - "체력 하나는 신건주가 채연 압도해"
-  - "인맥 싸움, 신건주가 1점 차로 간신히 살았어"
-  - "승진 축하는 채연이 먼저 받아"
+✅ 좋은 방향 (장면 묘사형, 카테고리별 다른 소재):
+  재물: 통장 잔고, 지갑, 투자 수익 등 돈 관련 장면
+  연애: 고백, 심쿵, 눈빛, 감정 표현 등 연애 장면
+  직장: 승진, 상사 인정, 프로젝트, 야근 등 직장 장면
+  건강: 체력, 마라톤, 컨디션, 활력 등 건강 장면
+  대인: 모임, 인기투표, 연락, 약속 등 인맥 장면
 
 응답 형식 (JSON):
 {
@@ -426,8 +433,15 @@ function buildRewriteUserPrompt(request: RewriteRequest): string {
   }
 
   prompt += "[리라이트 대상]\n";
+  const CATEGORY_LABEL: Record<string, string> = {
+    wealth: "재물운", love: "연애운", career: "직장운",
+    health: "건강운", social: "대인운",
+  };
   for (const t of request.targets) {
-    prompt += `- path: "${t.path}"\n  현재: "${t.currentText}"\n`;
+    // path에서 카테고리 추출 (categoryResults.love.killingLine → love)
+    const catMatch = t.path.match(/categoryResults\.(\w+)\./);
+    const catLabel = catMatch ? ` (${CATEGORY_LABEL[catMatch[1]] || catMatch[1]})` : "";
+    prompt += `- path: "${t.path}"${catLabel}\n  현재: "${t.currentText}"\n`;
   }
 
   if (request.preservedTexts.length > 0) {

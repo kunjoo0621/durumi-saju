@@ -4,14 +4,14 @@ import Providers from "./providers";
 
 const SITE_URL = "https://www.durumisaju.com";
 const SITE_NAME = "사주보는 두루미";
-const DESCRIPTION = "AI가 분석하는 사주팔자. 내 사주 등급은? 친구와 1:1 사주 배틀까지. 1,000원부터.";
+const DESCRIPTION = "내 사주 등급은 S? A? 친구와 1:1 사주 배틀까지. 1,000원부터.";
 
 export const metadata: Metadata = {
-  title: "사주보는 두루미 | AI 사주 분석 · 사주 배틀",
+  title: "사주보는 두루미 | 사주 등급 분석 · 사주 배틀",
   description: DESCRIPTION,
-  keywords: ["사주", "AI 사주", "사주 분석", "사주 배틀", "사주팔자", "운세", "MZ 사주", "사주 궁합", "만세력"],
+  keywords: ["사주", "사주 등급", "사주 분석", "사주 배틀", "사주팔자", "운세", "MZ 사주", "사주 궁합", "만세력"],
   openGraph: {
-    title: "사주보는 두루미 | AI 사주 분석 · 사주 배틀",
+    title: "사주보는 두루미 | 사주 등급 분석 · 사주 배틀",
     description: DESCRIPTION,
     url: SITE_URL,
     siteName: SITE_NAME,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "사주보는 두루미 | AI 사주 분석 · 사주 배틀",
+    title: "사주보는 두루미 | 사주 등급 분석 · 사주 배틀",
     description: DESCRIPTION,
     images: [`${SITE_URL}/og-image.png`],
   },

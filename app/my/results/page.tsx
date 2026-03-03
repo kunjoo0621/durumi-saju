@@ -299,9 +299,12 @@ export default function MyResultsPage() {
         deleteTarget.type === "saju"
           ? `/api/results/${deleteTarget.id}`
           : `/api/battles/${deleteTarget.id}`;
+      console.log("[handleDelete]", { type: deleteTarget.type, id: deleteTarget.id, endpoint });
       const res = await fetch(endpoint, { method: "DELETE" });
+      console.log("[handleDelete] response:", res.status, res.ok);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        console.error("[handleDelete] error body:", body);
         throw new Error(body?.error || "삭제 실패");
       }
 

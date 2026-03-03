@@ -768,6 +768,57 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
   return false;
 }
 
+// ─── 이름 변형 교정 ─────────────────────────────────
+//
+// Gemini가 "김채연" → "김채현" 같이 1글자 변형하는 현상 교정.
+// 동일 성씨 + 1자 차이면 원래 이름으로 치환.
+
+function fixNameVariations(
+  result: BattleLlmAnalysis,
+  knownNames: string[],
+  warnings: string[],
+): BattleLlmAnalysis {
+  const validNames = knownNames.filter((n) => n && n.length >= 2);
+  if (validNames.length === 0) return result;
+
+  let jsonStr = JSON.stringify(result);
+
+  // 전체 텍스트에서 한글 2-3음절 토큰 추출
+  const allTokens = new Set(jsonStr.match(/[\uAC00-\uD7A3]{2,3}/g) || []);
+
+  const replacements = new Map<string, string>();
+
+  for (const token of allTokens) {
+    if (validNames.includes(token)) continue;
+
+    for (const name of validNames) {
+      if (token.length !== name.length) continue;
+
+      // 글자 차이 카운트
+      let diff = 0;
+      for (let i = 0; i < token.length; i++) {
+        if (token[i] !== name[i]) diff++;
+      }
+
+      // 같은 성씨(첫 글자) + 1자만 다름 → 변형으로 판정
+      if (diff === 1 && token[0] === name[0]) {
+        replacements.set(token, name);
+        break;
+      }
+    }
+  }
+
+  if (replacements.size === 0) return result;
+
+  for (const [from, to] of replacements) {
+    const count = (jsonStr.match(new RegExp(from, "g")) || []).length;
+    jsonStr = jsonStr.replaceAll(from, to);
+    warnings.push(`[FIX] 이름 변형 교정: "${from}" → "${to}" (${count}회)`);
+  }
+
+  return JSON.parse(jsonStr);
+}
+
 // ─── 메인 후처리 ────────────────────────────────────
 
 export function postprocessBattleResult(
@@ -780,6 +831,11 @@ export function postprocessBattleResult(
   shouldRetry: boolean;
 } {
   const warnings: string[] = [];
+
+  // ── 이름 변형 교정 (가장 먼저 실행) ──
+  if (names) {
+    result = fixNameVariations(result, [names.nameA, names.nameB], warnings);
+  }
 
   // ── 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지 → 3회부터 제거/치환) ──
   const myoCounter = { count: 0 };

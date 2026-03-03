@@ -297,13 +297,63 @@ function detectStructuralRepetition(
   return issues;
 }
 
+// ─── 이름 변형 교정 ─────────────────────────────────────────
+//
+// Gemini가 이름을 1글자 변형하는 현상 교정 (예: 김채연 → 김채현)
+
+function fixNameVariationsGeneric<T>(
+  result: T,
+  knownNames: string[],
+  warnings: string[],
+): T {
+  const validNames = knownNames.filter((n) => n && n.length >= 2);
+  if (validNames.length === 0) return result;
+
+  let jsonStr = JSON.stringify(result);
+  const allTokens = new Set(jsonStr.match(/[\uAC00-\uD7A3]{2,3}/g) || []);
+  const replacements = new Map<string, string>();
+
+  for (const token of allTokens) {
+    if (validNames.includes(token)) continue;
+    for (const name of validNames) {
+      if (token.length !== name.length) continue;
+      let diff = 0;
+      for (let i = 0; i < token.length; i++) {
+        if (token[i] !== name[i]) diff++;
+      }
+      if (diff === 1 && token[0] === name[0]) {
+        replacements.set(token, name);
+        break;
+      }
+    }
+  }
+
+  if (replacements.size === 0) return result;
+
+  for (const [from, to] of replacements) {
+    const count = (jsonStr.match(new RegExp(from, "g")) || []).length;
+    jsonStr = jsonStr.replaceAll(from, to);
+    warnings.push(`[FIX] 이름 변형 교정: "${from}" → "${to}" (${count}회)`);
+  }
+
+  return JSON.parse(jsonStr);
+}
+
 // ─── 메인 후처리 함수 ──────────────────────────────────────
 
-export function postprocessAnalysisResult(result: AnalysisResult): {
+export function postprocessAnalysisResult(
+  result: AnalysisResult,
+  name?: string,
+): {
   result: AnalysisResult;
   warnings: string[];
 } {
   const warnings: string[] = [];
+
+  // ── 이름 변형 교정 (가장 먼저 실행) ──
+  if (name) {
+    result = fixNameVariationsGeneric(result, [name], warnings);
+  }
 
   // === 자동 치환 ===
 

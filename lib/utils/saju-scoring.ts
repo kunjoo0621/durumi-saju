@@ -9,7 +9,10 @@ import {
 import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 7;
+export const SCORING_VERSION = 8;
+
+/** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
+const SCORING_NEUTRAL = 58;
 
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
@@ -174,7 +177,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
 
   const deficientCount = countDeficientElements(input.elementDist);
 
-  const base = COMPOSITE_GRADE_CUTOFFS.C; // 58
+  const base = SCORING_NEUTRAL;
 
   // ── 재물운 (35~95) ──
   let 재물운 = base;
@@ -302,7 +305,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   const scores: ServerScores = { 재물운, 연애운, 직장운, 건강운, 대인운 };
   if (confidence === "low") {
     (Object.keys(scores) as CategoryKey[]).forEach((key) => {
-      scores[key] = COMPOSITE_GRADE_CUTOFFS.C;
+      scores[key] = SCORING_NEUTRAL;
     });
   } else if (confidence === "medium") {
     (Object.keys(scores) as CategoryKey[]).forEach((key) => {
@@ -425,7 +428,7 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
 
   // enriched=null → neutral C + low confidence
   if (confidence === "low") {
-    const composite = COMPOSITE_GRADE_CUTOFFS.C;
+    const composite = SCORING_NEUTRAL;
     const percentileRank = percentileRankFromComposite(composite);
     const topPercent = topPercentFromPercentileRank(percentileRank);
     return { grade: "C", composite, percentileRank, topPercent, confidence };

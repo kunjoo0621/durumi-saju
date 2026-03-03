@@ -2406,7 +2406,7 @@ ${serverScoreSummary}
         assembled.coreFearAxisBlock = resolveCoreFearAxisBlock(input, assembled.coreFearAxisBlock);
         assembled.scores = normalizeScores(serverScores);
         if (fortune) assembled.fortune = fortune;
-        const { result: postprocessed, warnings: postWarnings } = postprocessAnalysisResult(assembled);
+        const { result: postprocessed, warnings: postWarnings } = postprocessAnalysisResult(assembled, input.name);
         // Surgical rewrite: 반복 감지 → 해당 필드만 리라이트
         const rewritten = await surgicalRewritePersonal(postprocessed, postWarnings, {
           name: input.name || "",
