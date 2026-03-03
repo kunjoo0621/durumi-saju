@@ -11,8 +11,8 @@ export type GradeCutoffs = {
 
 export const COMPOSITE_GRADE_CUTOFFS: GradeCutoffs = {
   S: 86,
-  A: 76,
-  B: 64,
+  A: 79,
+  B: 66,
   C: 50,
   D: 0,
 };
@@ -21,8 +21,8 @@ export const COMPOSITE_GRADE_CUTOFFS: GradeCutoffs = {
 export const GRADE_MAX: Record<GradeLabel, number> = {
   S: 100,
   A: COMPOSITE_GRADE_CUTOFFS.S - 1,  // 85
-  B: COMPOSITE_GRADE_CUTOFFS.A - 1,  // 75
-  C: COMPOSITE_GRADE_CUTOFFS.B - 1,  // 63
+  B: COMPOSITE_GRADE_CUTOFFS.A - 1,  // 78
+  C: COMPOSITE_GRADE_CUTOFFS.B - 1,  // 65
   D: COMPOSITE_GRADE_CUTOFFS.C - 1,  // 49
 };
 
@@ -47,9 +47,9 @@ export function gradeFromComposite(value: number, cutoffs: GradeCutoffs = COMPOS
 
 const PERCENTILE_PIECEWISE = [
   { min: 0, max: 50, start: 5, end: 30 },   // D
-  { min: 50, max: 64, start: 30, end: 55 },  // C
-  { min: 64, max: 76, start: 55, end: 82 },  // B
-  { min: 76, max: 86, start: 82, end: 95 },  // A
+  { min: 50, max: 66, start: 30, end: 58 },  // C
+  { min: 66, max: 79, start: 58, end: 85 },  // B
+  { min: 79, max: 86, start: 85, end: 95 },  // A
   { min: 86, max: 100, start: 95, end: 99 }, // S
 ];
 
