@@ -234,10 +234,10 @@ select:focus {
 
 /* ===== 가로 스크롤 차단 ===== */
 html {
-  overflow-x: clip;
   overscroll-behavior: none;
 }
 
 body {
+  overflow-x: hidden;
   overscroll-behavior: none;
 }
