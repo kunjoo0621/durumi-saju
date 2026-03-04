@@ -81,7 +81,7 @@ function FeatureCard({
         <h3 className="text-center text-[22px] font-bold leading-[130%] text-white mb-2">
           {title}
         </h3>
-        <p className="text-center text-[15px] font-normal leading-[160%] text-[rgb(var(--c-text-sub))]">
+        <p className="text-center text-[15px] font-normal leading-[160%] text-[rgb(var(--c-text-sub))] break-keep">
           {body}
         </p>
       </div>
@@ -161,7 +161,7 @@ function FaqAccordion() {
           </button>
           {openIndex === i && (
             <div className="px-5 pb-5">
-              <p className="text-[15px] font-normal leading-[160%] text-[rgb(var(--c-text-sub))]">
+              <p className="text-[15px] font-normal leading-[160%] text-[rgb(var(--c-text-sub))] break-keep">
                 {item.a}
               </p>
             </div>
@@ -213,7 +213,7 @@ function LandingPageInner() {
       {/* ── header ── */}
       <header
         className={`sticky top-0 z-[120] px-5 py-4 transition-all duration-300 ${
-          isScrolled ? "bg-[#0D0D0D]" : "bg-transparent"
+          isScrolled ? "bg-[rgb(var(--c-dark-bg))]" : "bg-transparent"
         }`}
       >
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
