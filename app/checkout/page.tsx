@@ -685,23 +685,13 @@ function CheckoutForm({
 
           {/* 비로그인 시 선택적 카카오 로그인 */}
           {!isAuthenticated && (
-            <div className="mt-6 text-center">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-[#252525]" />
-                <span className="text-xs text-gray-600">또는</span>
-                <div className="flex-1 h-px bg-[#252525]" />
-              </div>
-              <button
-                type="button"
-                onClick={() => signIn("kakao", { callbackUrl: window.location.href })}
-                className="text-sm text-gray-400 underline underline-offset-4 decoration-gray-600"
-              >
-                카카오로 로그인하고 결제하기
-              </button>
-              <p className="text-xs text-gray-600 mt-1">
-                결과가 바로 저장돼
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => signIn("kakao", { callbackUrl: window.location.href })}
+              className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold mt-3"
+            >
+              카카오로 로그인하고 결제하기
+            </button>
           )}
         </div>
       </div>
