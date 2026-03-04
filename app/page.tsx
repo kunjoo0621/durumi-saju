@@ -230,7 +230,7 @@ function LandingPageInner() {
           style={revealStyle(hero.visible)}
           className="relative py-16 md:py-20"
         >
-          <div className="relative mx-auto max-w-[640px] px-5 sm:px-8 text-center">
+          <div className="relative mx-auto max-w-[640px] px-5 sm:px-0 text-center">
             <h2 className="font-aggro text-[28px] leading-[130%] font-bold text-white break-keep">
               사주 보면 결국
               <br />
@@ -260,7 +260,7 @@ function LandingPageInner() {
           style={revealStyle(analysis.visible)}
           className="relative py-16 md:py-20"
         >
-          <div className="relative mx-auto max-w-[640px] px-5 sm:px-8">
+          <div className="relative mx-auto max-w-[640px] px-5 sm:px-0">
             <h2 className="font-aggro text-[28px] leading-[130%] font-bold text-white text-center break-keep mb-8">
               너 사주가 어떻게 생겼고
               <br />
@@ -291,7 +291,7 @@ function LandingPageInner() {
           style={revealStyle(battle.visible)}
           className="relative py-16 md:py-20"
         >
-          <div className="relative mx-auto max-w-[640px] px-5 sm:px-8">
+          <div className="relative mx-auto max-w-[640px] px-5 sm:px-0">
             <h2 className="font-aggro text-[28px] leading-[130%] font-bold text-white text-center break-keep mb-8">
               두 사람의 사주를 비교해서,
               <br />
@@ -322,7 +322,7 @@ function LandingPageInner() {
           style={revealStyle(faq.visible)}
           className="relative py-16 md:py-20"
         >
-          <div className="relative mx-auto max-w-[640px] px-5 sm:px-8">
+          <div className="relative mx-auto max-w-[640px] px-5 sm:px-0">
             <h2 className="font-aggro text-[28px] leading-[130%] font-bold text-white text-center break-keep mb-8">
               자주 묻는 질문
             </h2>
