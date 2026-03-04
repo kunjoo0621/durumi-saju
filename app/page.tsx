@@ -71,21 +71,23 @@ function FeatureCard({
   imageAlt?: string;
 }) {
   return (
-    <div className="flex flex-col rounded-2xl bg-[rgb(var(--c-dark-surface))] p-6">
-      <div className="flex justify-center mb-4">
-        <span className="inline-block rounded-full bg-[rgb(var(--c-brand))] px-3 py-1 text-[12px] font-semibold text-white">
-          {badge}
-        </span>
+    <div className="flex flex-col rounded-2xl bg-[rgb(var(--c-dark-surface))] overflow-hidden">
+      <div className="px-6 pt-6 pb-5">
+        <div className="flex justify-center mb-4">
+          <span className="inline-block rounded-full bg-[rgb(var(--c-brand))] px-3 py-1 text-[12px] font-semibold text-white">
+            {badge}
+          </span>
+        </div>
+        <h3 className="text-center text-[22px] font-bold leading-[130%] text-white mb-2">
+          {title}
+        </h3>
+        <p className="text-center text-[15px] font-normal leading-[160%] text-[rgb(var(--c-text-sub))]">
+          {body}
+        </p>
       </div>
-      <h3 className="text-center text-[22px] font-bold leading-[130%] text-white mb-2">
-        {title}
-      </h3>
-      <p className="text-center text-[15px] font-normal leading-[160%] text-[rgb(var(--c-text-sub))] mb-5">
-        {body}
-      </p>
       <div className="mt-auto">
         {imageSrc ? (
-          <div className="relative w-full overflow-hidden rounded-2xl" style={{ paddingTop: "75%" }}>
+          <div className="relative w-full" style={{ paddingTop: "75%" }}>
             <Image
               src={imageSrc}
               alt={imageAlt || ""}
@@ -95,7 +97,9 @@ function FeatureCard({
             />
           </div>
         ) : (
-          <ImagePlaceholder ratio="4:3" />
+          <div className="px-6 pb-6">
+            <ImagePlaceholder ratio="4:3" />
+          </div>
         )}
       </div>
     </div>
