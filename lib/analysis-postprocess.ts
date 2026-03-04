@@ -195,9 +195,8 @@ const KOREAN_PARTICLES = new Set(["이","가","은","는","을","를","의","에
 function limitMyoMb(
   text: string,
   counter: { count: number },
-): { text: string; removed: number } {
-  if (!text) return { text, removed: 0 };
-  let removed = 0;
+): { text: string; removed: number; hasExcess: boolean } {
+  if (!text) return { text, removed: 0, hasExcess: false };
 
   // 1) 지지 卯 패턴 보호
   const saved: [string, string][] = [];
@@ -208,16 +207,13 @@ function limitMyoMb(
     return ph;
   });
 
-  // 2) 12운성 묘(墓) 패턴 제한
+  // 2) 12운성 묘(墓) 패턴 감지 (detect-only, 텍스트 미수정)
+  let hasExcess = false;
   work = work.replace(MYO_MB_MASTER, (match) => {
     counter.count++;
     if (counter.count <= 2) return match;
-    removed++;
-    if (MYO_MB_SOK_TEST.test(match)) {
-      const lastChar = match.trim().slice(-1);
-      return KOREAN_PARTICLES.has(lastChar) ? "속마음" + lastChar : "속마음";
-    }
-    return "";
+    hasExcess = true; // 감지만 하고 텍스트는 유지
+    return match;
   });
 
   // 3) 보호 패턴 복원
@@ -225,17 +221,7 @@ function limitMyoMb(
     work = work.replace(ph, orig);
   }
 
-  // 4) 삭제로 생긴 공백/구두점 정리
-  if (removed > 0) {
-    work = work
-      .replace(/\s{2,}/g, " ")
-      .replace(/^\s+/, "")
-      .replace(/\s+([.,])/g, "$1")
-      .replace(/,\s*,/g, ",")
-      .trim();
-  }
-
-  return { text: work, removed };
+  return { text: work, removed: 0, hasExcess };
 }
 
 // ─── 구조적 반복 감지 ──────────────────────────────────────
@@ -347,6 +333,7 @@ export function postprocessAnalysisResult(
 ): {
   result: AnalysisResult;
   warnings: string[];
+  myoExcessTargets: { path: string; currentText: string }[];
 } {
   const warnings: string[] = [];
 
@@ -400,22 +387,26 @@ export function postprocessAnalysisResult(
     warnings.push(`[FIX] 문어체→반말 ${totalFormalToCasual}회 치환됨`);
   }
 
-  // 3. 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지 → 3회부터 제거)
+  // 3. 묘(墓) 반복 감지 (detect-only, 첫 2회 유지 → 3회부터 surgical rewrite 대상)
   const myoCounter = { count: 0 };
-  let totalMyoRemoved = 0;
-  result.sections = result.sections.map((section) => {
-    const r = limitMyoMb(section.content, myoCounter);
-    totalMyoRemoved += r.removed;
-    return { ...section, content: r.text };
-  });
+  const myoExcessTargets: { path: string; currentText: string }[] = [];
+  for (let i = 0; i < result.sections.length; i++) {
+    const r = limitMyoMb(result.sections[i].content, myoCounter);
+    if (r.hasExcess) {
+      myoExcessTargets.push({ path: `sections.${i}.content`, currentText: result.sections[i].content });
+    }
+    result.sections[i] = { ...result.sections[i], content: r.text };
+  }
   {
     const r = limitMyoMb(result.tier.description, myoCounter);
-    totalMyoRemoved += r.removed;
+    if (r.hasExcess) {
+      myoExcessTargets.push({ path: "tier.description", currentText: result.tier.description });
+    }
     result.tier = { ...result.tier, description: r.text };
   }
-  if (totalMyoRemoved > 0) {
+  if (myoExcessTargets.length > 0) {
     warnings.push(
-      `[FIX] 묘(墓) 반복 제한: ${totalMyoRemoved}회 제거 (총 탐지 ${myoCounter.count}회, 첫 2회 유지)`,
+      `[DETECT] 묘(墓) 초과 감지: ${myoExcessTargets.length}개 필드 → surgical rewrite 대상 (총 탐지 ${myoCounter.count}회, 첫 2회 유지)`,
     );
   }
 
@@ -468,5 +459,5 @@ export function postprocessAnalysisResult(
     }
   }
 
-  return { result, warnings };
+  return { result, warnings, myoExcessTargets };
 }

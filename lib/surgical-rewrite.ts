@@ -59,6 +59,18 @@ const REWRITE_SYSTEM = `너는 사주 분석 결과의 텍스트 교정기야.
   건강: 체력, 마라톤, 컨디션, 활력 등 건강 장면
   대인: 모임, 인기투표, 연락, 약속 등 인맥 장면
 
+[묘(墓) 과다 리라이트 규칙]
+- 묘(墓)라는 용어를 다른 12운성 이름으로 1:1 치환하지 마. 실제 사주가 묘(墓)인 사람이야.
+- 대신 묘(墓)의 특성(내향, 잠복, 저장, 숨김, 에너지 수렴)을 "묘(墓)"라는 단어 없이 일상 언어로 풀어서 설명해.
+- 변환 예시:
+  "묘(墓)에 앉아 있어" → "에너지가 안으로 숨는 구조야" 또는 "속으로 삭이는 기질이야"
+  "묘(墓)의 기운으로" → "감정을 꾹꾹 눌러담는 성향 때문에"
+  "대운 묘 시기에" → "에너지가 내면으로 수렴하는 시기에"
+  "12운성 묘가 겹치면서" → "내면에 쌓이는 기운이 겹치면서"
+  "묘(墓) 속에서" → "깊이 묻어둔 내면에서"
+- 핵심: 묘(墓)의 의미를 살리되, "묘"/"墓" 글자 자체를 쓰지 않는 것이 목표
+- 문장 구조, 톤, 분량은 원본과 동일하게 유지해
+
 응답 형식 (JSON):
 {
   "rewrites": [
@@ -82,9 +94,22 @@ const ALLOWED_PATHS = new Set([
   "heroQuip",
   // simulation punchline (최대 5개)
   ...Array.from({ length: 5 }, (_, i) => `simulations.${i}.punchline`),
+  // chemistry analysis
+  "chemistry.analysis",
+  "chemistry.bonusScenarios.0.analysis",
+  "chemistry.bonusScenarios.1.analysis",
+  // simulation reasoning (최대 5개)
+  ...Array.from({ length: 5 }, (_, i) => `simulations.${i}.reasoning`),
+  // finalVerdict
+  "finalVerdict.verdict",
+  // futureOutlook timeline (최대 5개 시점)
+  ...Array.from({ length: 5 }, (_, i) => `futureOutlook.timeline.${i}.eventA`),
+  ...Array.from({ length: 5 }, (_, i) => `futureOutlook.timeline.${i}.eventB`),
+  ...Array.from({ length: 5 }, (_, i) => `futureOutlook.timeline.${i}.relationship`),
   // 개인사주 경로
   "tier.description",
   ...Array.from({ length: 10 }, (_, i) => `sections.${i}.title`),
+  ...Array.from({ length: 10 }, (_, i) => `sections.${i}.content`),
 ]);
 
 // ─── 유틸리티 ────────────────────────────────────
@@ -486,15 +511,20 @@ const COMMON_NON_NAME_WORDS = new Set([
   "문득", "주로", "주위", "주목", "우위", "우선", "우세", "구석", "구간", "민감",
   "남자", "남녀", "남쪽", "심한", "심각", "심리", "노력", "하나", "하지", "하루",
   "하필", "배로", "배경", "배치", "박수", "박력", "박차", "신경", "신나", "신비",
-  "권위", "권리", "황당", "황금", "안정", "안쪽", "안녕", "송이", "홍수", "홍보",
+  "권위", "권리", "황당", "황금", "송이", "홍수", "홍보",
+  // 안(安) 시작
+  "안정", "안쪽", "안녕", "안으로", "안에서", "안에", "안으로는",
+  "안전", "안내", "안심", "안부", "안색", "안목", "안개", "안팎", "안타",
   "임시", "윤리", "독보", "독특", "유리", "유독", "진짜", "진심", "진행", "지금",
   "지난", "지점", "나름",
 ]);
 
 /**
  * 리라이트 텍스트에 원본 + knownNames에 없는 고유명사가 있는지 검사.
- * 한국 성씨로 시작하는 2-3음절 한글 토큰 중,
- * 원본에도 없고 knownNames에도 없고 흔한 일반 단어도 아니면 → 환각 이름으로 판정.
+ *
+ * 방안 B: 독립된 2-3음절 한글 단어만 추출 (앞뒤 한글이 없는 경계).
+ *   "강해지다"(4음절)는 토큰에 안 잡히고, "차곡차곡"도 안 잡힘.
+ * 방안 C: 환각 후보가 2개 이상일 때만 skip (1개는 오탐 가능성이 높으므로 통과).
  */
 function containsUnknownName(
   newText: string,
@@ -502,9 +532,12 @@ function containsUnknownName(
   knownNames: string[],
 ): string | null {
   const knownSet = new Set(knownNames.filter(Boolean));
-  const origTokens = new Set(originalText.match(/[\uAC00-\uD7A3]{2,3}/g) || []);
-  const newTokens = newText.match(/[\uAC00-\uD7A3]{2,3}/g) || [];
+  // 독립된 2-3음절 한글 단어만 추출 (앞뒤가 한글이 아닌 경계)
+  const wordBoundaryRegex = /(?<![가-힣])[가-힣]{2,3}(?![가-힣])/g;
+  const origTokens = new Set(originalText.match(wordBoundaryRegex) || []);
+  const newTokens = newText.match(wordBoundaryRegex) || [];
 
+  const suspects: string[] = [];
   for (const token of newTokens) {
     if (knownSet.has(token)) continue;
     if (origTokens.has(token)) continue;
@@ -512,10 +545,11 @@ function containsUnknownName(
     // "민수는" 같이 knownName+조사 형태 허용 (이름이 토큰 접두어인 경우)
     if (knownNames.some((n) => n && n.length >= 2 && token.startsWith(n))) continue;
     if (KOREAN_SURNAMES.has(token[0])) {
-      return token; // 환각 이름 후보 반환
+      suspects.push(token);
     }
   }
-  return null;
+  // 2개 이상일 때만 환각 판정 (1개는 일반 단어 오탐 가능성 높음)
+  return suspects.length >= 2 ? suspects[0] : null;
 }
 
 // ─── Gemini 호출 + 패치 ──────────────────────────
@@ -551,6 +585,7 @@ function patchResults<T>(
   rewrites: { path: string; newText: string }[],
   warnings: string[],
   knownNames?: string[],
+  skipNameCheckPaths?: Set<string>,
 ): T {
   const patched = structuredClone(original);
   for (const rw of rewrites) {
@@ -558,17 +593,19 @@ function patchResults<T>(
       warnings.push(`[surgical-rewrite] 허용되지 않은 경로 skip: ${rw.path}`);
       continue;
     }
-    if (typeof rw.newText !== "string" || rw.newText.length < 5 || rw.newText.length > 500) {
-      warnings.push(`[surgical-rewrite] 텍스트 길이 이상 skip: ${rw.path} (${rw.newText?.length ?? 0}자)`);
-      continue;
-    }
     const existing = getByPath(patched, rw.path);
     if (typeof existing !== "string") {
       warnings.push(`[surgical-rewrite] 원본 경로에 문자열 없음 skip: ${rw.path}`);
       continue;
     }
+    const maxLen = Math.max(500, Math.round(existing.length * 1.5));
+    if (typeof rw.newText !== "string" || rw.newText.length < 5 || rw.newText.length > maxLen) {
+      warnings.push(`[surgical-rewrite] 텍스트 길이 이상 skip: ${rw.path} (${rw.newText?.length ?? 0}자, max=${maxLen})`);
+      continue;
+    }
     // 이름 환각 검증: 원본+knownNames에 없는 고유명사 감지
-    if (knownNames && knownNames.length > 0) {
+    // 묘(墓) 초과 리라이트 타겟은 이름 체크 스킵 (패러프레이즈 시 오탐 빈발)
+    if (knownNames && knownNames.length > 0 && !skipNameCheckPaths?.has(rw.path)) {
       const hallucinated = containsUnknownName(rw.newText, existing, knownNames);
       if (hallucinated) {
         warnings.push(`[surgical-rewrite] 알 수 없는 이름 "${hallucinated}" 감지 skip: ${rw.path}`);
@@ -586,6 +623,7 @@ export async function surgicalRewriteBattle(
   result: BattleLlmAnalysis,
   warnings: string[],
   context: { nameA: string; nameB: string; relationshipType: string },
+  myoExcessTargets?: { path: string; currentText: string }[],
 ): Promise<BattleLlmAnalysis> {
   const names = [context.nameA, context.nameB];
   const allRequests: RewriteRequest[] = [];
@@ -641,6 +679,19 @@ export async function surgicalRewriteBattle(
     });
   }
 
+  // 타겟 4: 묘(墓) 초과 — detect-only 모드에서 넘어온 필드
+  if (myoExcessTargets && myoExcessTargets.length > 0) {
+    allRequests.push({
+      targets: myoExcessTargets.map((t) => ({
+        path: t.path,
+        currentText: t.currentText,
+      })),
+      avoidPattern:
+        "이 필드에서 묘(墓) 언급이 과도해. 묘(墓)를 다른 사주 근거(다른 12운성: 장생/목욕/관대/건록/제왕/쇠/병/사/절/태/양, 신살, 오행 등)로 자연스럽게 바꿔서 다시 써. 문장 구조와 톤은 유지해.",
+      preservedTexts: [],
+    });
+  }
+
   // 리라이트 대상이 없으면 원본 반환
   if (allRequests.length === 0) return result;
 
@@ -674,7 +725,10 @@ export async function surgicalRewriteBattle(
   const rewrites = await callRewrite(userPrompt, warnings);
   if (!rewrites) return result;
 
-  return patchResults(result, rewrites, warnings, names);
+  const myoSkipPaths = new Set(
+    myoExcessTargets?.map((t) => t.path) ?? [],
+  );
+  return patchResults(result, rewrites, warnings, names, myoSkipPaths);
 }
 
 // ─── 메인 엔트리: 개인사주 ──────────────────────
@@ -683,6 +737,7 @@ export async function surgicalRewritePersonal(
   result: AnalysisResult,
   warnings: string[],
   context: { name: string },
+  myoExcessTargets?: { path: string; currentText: string }[],
 ): Promise<AnalysisResult> {
   const allRequests: RewriteRequest[] = [];
 
@@ -718,6 +773,19 @@ export async function surgicalRewritePersonal(
     });
   }
 
+  // P3: 묘(墓) 초과 — detect-only 모드에서 넘어온 필드
+  if (myoExcessTargets && myoExcessTargets.length > 0) {
+    allRequests.push({
+      targets: myoExcessTargets.map((t) => ({
+        path: t.path,
+        currentText: t.currentText,
+      })),
+      avoidPattern:
+        "이 필드에서 묘(墓) 언급이 과도해. 묘(墓)를 다른 사주 근거(다른 12운성: 장생/목욕/관대/건록/제왕/쇠/병/사/절/태/양, 신살, 오행 등)로 자연스럽게 바꿔서 다시 써. 문장 구조와 톤은 유지해.",
+      preservedTexts: [],
+    });
+  }
+
   // 리라이트 대상이 없으면 원본 반환
   if (allRequests.length === 0) return result;
 
@@ -743,7 +811,10 @@ export async function surgicalRewritePersonal(
   const rewrites = await callRewrite(userPrompt, warnings);
   if (!rewrites) return result;
 
-  return patchResults(result, rewrites, warnings, [context.name]);
+  const myoSkipPaths = new Set(
+    myoExcessTargets?.map((t) => t.path) ?? [],
+  );
+  return patchResults(result, rewrites, warnings, [context.name], myoSkipPaths);
 }
 
 // ─── 헬퍼: 모든 punchline 수집 ──────────────────

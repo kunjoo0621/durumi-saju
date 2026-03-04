@@ -680,7 +680,7 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
               }
             : undefined;
 
-        const { result: postprocessed, warnings, shouldRetry } = postprocessBattleResult(
+        const { result: postprocessed, warnings, shouldRetry, myoExcessTargets } = postprocessBattleResult(
           validated,
           subjectVerification,
           { nameA: opts.nameA, nameB: opts.nameB },
@@ -696,7 +696,7 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
           nameA: opts.nameA,
           nameB: opts.nameB,
           relationshipType: opts.relationshipType,
-        });
+        }, myoExcessTargets);
 
         if (warnings.length > 0) {
           for (const w of warnings) {

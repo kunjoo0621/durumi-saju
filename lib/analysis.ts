@@ -2406,11 +2406,11 @@ ${serverScoreSummary}
         assembled.coreFearAxisBlock = resolveCoreFearAxisBlock(input, assembled.coreFearAxisBlock);
         assembled.scores = normalizeScores(serverScores);
         if (fortune) assembled.fortune = fortune;
-        const { result: postprocessed, warnings: postWarnings } = postprocessAnalysisResult(assembled, input.name);
+        const { result: postprocessed, warnings: postWarnings, myoExcessTargets } = postprocessAnalysisResult(assembled, input.name);
         // Surgical rewrite: 반복 감지 → 해당 필드만 리라이트
         const rewritten = await surgicalRewritePersonal(postprocessed, postWarnings, {
           name: input.name || "",
-        });
+        }, myoExcessTargets);
         if (postWarnings.length > 0) {
           for (const w of postWarnings) {
             console.warn(`[개인사주 후처리] ${w}`);

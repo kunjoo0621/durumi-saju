@@ -298,9 +298,8 @@ const KOREAN_PARTICLES = new Set(["이","가","은","는","을","를","의","에
 function limitMyoMb(
   text: string,
   counter: { count: number },
-): { text: string; removed: number } {
-  if (!text) return { text, removed: 0 };
-  let removed = 0;
+): { text: string; removed: number; hasExcess: boolean } {
+  if (!text) return { text, removed: 0, hasExcess: false };
 
   // 1) 지지 卯 패턴 보호 (플레이스홀더 치환)
   const saved: [string, string][] = [];
@@ -311,17 +310,13 @@ function limitMyoMb(
     return ph;
   });
 
-  // 2) 12운성 묘(墓) 패턴 제한
+  // 2) 12운성 묘(墓) 패턴 감지 (detect-only, 텍스트 미수정)
+  let hasExcess = false;
   work = work.replace(MYO_MB_MASTER, (match) => {
     counter.count++;
-    if (counter.count <= 2) return match; // 첫 2회 유지
-    removed++;
-    // "묘(墓) 속 X" → "속마음" + 원래 조사 보존
-    if (MYO_MB_SOK_TEST.test(match)) {
-      const lastChar = match.trim().slice(-1);
-      return KOREAN_PARTICLES.has(lastChar) ? "속마음" + lastChar : "속마음";
-    }
-    return ""; // 나머지 → 삭제
+    if (counter.count <= 2) return match;
+    hasExcess = true; // 감지만 하고 텍스트는 유지
+    return match;
   });
 
   // 3) 보호 패턴 복원
@@ -329,17 +324,7 @@ function limitMyoMb(
     work = work.replace(ph, orig);
   }
 
-  // 4) 삭제로 생긴 공백/구두점 정리
-  if (removed > 0) {
-    work = work
-      .replace(/\s{2,}/g, " ")
-      .replace(/^\s+/, "")
-      .replace(/\s+([.,])/g, "$1")
-      .replace(/,\s*,/g, ",")
-      .trim();
-  }
-
-  return { text: work, removed };
+  return { text: work, removed: 0, hasExcess };
 }
 
 function applyTextFixes(text: string, warnings: string[], label: string): string {
@@ -847,6 +832,7 @@ export function postprocessBattleResult(
   result: BattleLlmAnalysis;
   warnings: string[];
   shouldRetry: boolean;
+  myoExcessTargets: { path: string; currentText: string }[];
 } {
   const warnings: string[] = [];
 
@@ -857,45 +843,65 @@ export function postprocessBattleResult(
 
   // ── 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지 → 3회부터 제거/치환) ──
   const myoCounter = { count: 0 };
-  let totalMyoRemoved = 0;
-  const applyMyoLimit = (t: string) => {
+  const myoExcessTargets: { path: string; currentText: string }[] = [];
+  const applyMyoLimit = (t: string, path: string) => {
     const r = limitMyoMb(t, myoCounter);
-    totalMyoRemoved += r.removed;
+    if (r.hasExcess) {
+      myoExcessTargets.push({ path, currentText: t });
+    }
     return r.text;
   };
 
-  result.heroQuip = applyMyoLimit(result.heroQuip);
+  result.heroQuip = applyMyoLimit(result.heroQuip, "heroQuip");
 
   for (const key of ["wealth", "love", "career", "health", "social"] as const) {
-    result.categoryResults[key].killingLine = applyMyoLimit(result.categoryResults[key].killingLine);
-    result.categoryResults[key].detail = applyMyoLimit(result.categoryResults[key].detail);
+    result.categoryResults[key].killingLine = applyMyoLimit(
+      result.categoryResults[key].killingLine, `categoryResults.${key}.killingLine`,
+    );
+    result.categoryResults[key].detail = applyMyoLimit(
+      result.categoryResults[key].detail, `categoryResults.${key}.detail`,
+    );
   }
 
-  result.chemistry.punchline = applyMyoLimit(result.chemistry.punchline);
-  result.chemistry.analysis = applyMyoLimit(result.chemistry.analysis);
-  for (const bs of result.chemistry.bonusScenarios) {
-    bs.punchline = applyMyoLimit(bs.punchline);
-    bs.analysis = applyMyoLimit(bs.analysis);
+  result.chemistry.punchline = applyMyoLimit(result.chemistry.punchline, "chemistry.punchline");
+  result.chemistry.analysis = applyMyoLimit(result.chemistry.analysis, "chemistry.analysis");
+  for (let i = 0; i < result.chemistry.bonusScenarios.length; i++) {
+    result.chemistry.bonusScenarios[i].punchline = applyMyoLimit(
+      result.chemistry.bonusScenarios[i].punchline, `chemistry.bonusScenarios.${i}.punchline`,
+    );
+    result.chemistry.bonusScenarios[i].analysis = applyMyoLimit(
+      result.chemistry.bonusScenarios[i].analysis, `chemistry.bonusScenarios.${i}.analysis`,
+    );
   }
 
-  for (const sim of result.simulations) {
-    sim.punchline = applyMyoLimit(sim.punchline);
-    sim.reasoning = applyMyoLimit(sim.reasoning);
+  for (let i = 0; i < result.simulations.length; i++) {
+    result.simulations[i].punchline = applyMyoLimit(
+      result.simulations[i].punchline, `simulations.${i}.punchline`,
+    );
+    result.simulations[i].reasoning = applyMyoLimit(
+      result.simulations[i].reasoning, `simulations.${i}.reasoning`,
+    );
   }
 
-  result.futureOutlook.punchline = applyMyoLimit(result.futureOutlook.punchline);
-  for (const entry of result.futureOutlook.timeline) {
-    entry.eventA = applyMyoLimit(entry.eventA);
-    entry.eventB = applyMyoLimit(entry.eventB);
-    entry.relationship = applyMyoLimit(entry.relationship);
+  result.futureOutlook.punchline = applyMyoLimit(result.futureOutlook.punchline, "futureOutlook.punchline");
+  for (let i = 0; i < result.futureOutlook.timeline.length; i++) {
+    result.futureOutlook.timeline[i].eventA = applyMyoLimit(
+      result.futureOutlook.timeline[i].eventA, `futureOutlook.timeline.${i}.eventA`,
+    );
+    result.futureOutlook.timeline[i].eventB = applyMyoLimit(
+      result.futureOutlook.timeline[i].eventB, `futureOutlook.timeline.${i}.eventB`,
+    );
+    result.futureOutlook.timeline[i].relationship = applyMyoLimit(
+      result.futureOutlook.timeline[i].relationship, `futureOutlook.timeline.${i}.relationship`,
+    );
   }
 
-  result.finalVerdict.punchline = applyMyoLimit(result.finalVerdict.punchline);
-  result.finalVerdict.verdict = applyMyoLimit(result.finalVerdict.verdict);
+  result.finalVerdict.punchline = applyMyoLimit(result.finalVerdict.punchline, "finalVerdict.punchline");
+  result.finalVerdict.verdict = applyMyoLimit(result.finalVerdict.verdict, "finalVerdict.verdict");
 
-  if (totalMyoRemoved > 0) {
+  if (myoExcessTargets.length > 0) {
     warnings.push(
-      `[FIX] 묘(墓) 반복 제한: ${totalMyoRemoved}회 제거/치환 (총 탐지 ${myoCounter.count}회, 첫 2회 유지)`,
+      `[DETECT] 묘(墓) 초과 감지: ${myoExcessTargets.length}개 필드 → surgical rewrite 대상 (총 탐지 ${myoCounter.count}회, 첫 2회 유지)`,
     );
   }
 
@@ -1062,5 +1068,5 @@ export function postprocessBattleResult(
   // 재시도 판정
   const shouldRetry = checkShouldRetry(result, warnings);
 
-  return { result, warnings, shouldRetry };
+  return { result, warnings, shouldRetry, myoExcessTargets };
 }
