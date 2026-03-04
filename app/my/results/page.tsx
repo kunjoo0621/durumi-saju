@@ -238,6 +238,9 @@ export default function MyResultsPage() {
   // Popover state
   const [popoverTarget, setPopoverTarget] = useState<string | null>(null);
 
+  // Toast state
+  const [toast, setToast] = useState<string | null>(null);
+
   const fetchResults = async () => {
     setLoading(true);
     setFetchError(false);
@@ -322,6 +325,10 @@ export default function MyResultsPage() {
       } else {
         setBattles((prev) => prev.filter((b) => b.id !== deleteTarget.id));
       }
+
+      const msg = deleteTarget.type === "saju" ? "결과가 삭제됐어" : "배틀이 삭제됐어";
+      setToast(msg);
+      setTimeout(() => setToast(null), 2000);
     } catch (err: any) {
       alert(err?.message || "삭제에 실패했습니다. 다시 시도해주세요.");
     } finally {
@@ -744,6 +751,13 @@ export default function MyResultsPage() {
                 })()
           }
         />
+      )}
+
+      {/* 삭제 완료 토스트 */}
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300">
+          {toast}
+        </div>
       )}
     </div>
   );
