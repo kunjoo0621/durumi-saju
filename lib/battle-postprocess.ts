@@ -541,6 +541,7 @@ function detectPunchlineDuplicates(result: BattleLlmAnalysis, warnings: string[]
 function detectStructuralRepetition(
   texts: string[],
   sectionLabels: string[],
+  names?: { nameA: string; nameB: string },
 ): { phrase: string; count: number; sections: string[] }[] {
   const issues: { phrase: string; count: number; sections: string[] }[] = [];
 
@@ -581,14 +582,31 @@ function detectStructuralRepetition(
     }
   });
 
-  for (const [ngram, { count, sections }] of ngramCounts) {
-    if (sections.size >= 3 && count >= 3) {
-      const alreadyCaught = issues.some(
-        (i) => ngram.includes(i.phrase) || i.phrase.includes(ngram),
-      );
-      if (!alreadyCaught) {
-        issues.push({ phrase: ngram, count, sections: Array.from(sections) });
+  // N-gram을 count 내림차순으로 정렬 후, overlap 제거하며 추가
+  const sortedNgrams = [...ngramCounts.entries()]
+    .filter(([, v]) => v.sections.size >= 3 && v.count >= 3)
+    .sort((a, b) => b[1].count - a[1].count);
+
+  for (const [ngram, { count, sections }] of sortedNgrams) {
+    // 이름+조사 패턴은 배틀 컨텍스트에서 자연스러운 반복이므로 완전 제외
+    if (names) {
+      const containsName = ngram.includes(names.nameA) || ngram.includes(names.nameB);
+      if (containsName) continue;
+    }
+
+    // overlap 체크: 기존에 잡힌 구절과 4글자 이상 겹치면 스킵 (shift 변형 방지)
+    const alreadyCaught = issues.some((i) => {
+      if (ngram.includes(i.phrase) || i.phrase.includes(ngram)) return true;
+      // 4글자 이상 공통 부분문자열이 있으면 같은 근원 패턴으로 간주
+      const shorter = ngram.length < i.phrase.length ? ngram : i.phrase;
+      const longer = ngram.length < i.phrase.length ? i.phrase : ngram;
+      for (let k = 0; k <= shorter.length - 4; k++) {
+        if (longer.includes(shorter.substring(k, k + 4))) return true;
       }
+      return false;
+    });
+    if (!alreadyCaught) {
+      issues.push({ phrase: ngram, count, sections: Array.from(sections) });
     }
   }
 
@@ -1014,7 +1032,7 @@ export function postprocessBattleResult(
     structTexts.push(`${result.finalVerdict.punchline} ${result.finalVerdict.verdict}`);
     structLabels.push("최종심판");
 
-    const structIssues = detectStructuralRepetition(structTexts, structLabels);
+    const structIssues = detectStructuralRepetition(structTexts, structLabels, names);
     for (const issue of structIssues) {
       warnings.push(
         `[WARN] 구조적 반복: "${issue.phrase}" ${issue.count}회 — [${issue.sections.join(", ")}]`,
