@@ -9,14 +9,10 @@ import type { AnalysisResult } from "@/store/useInputStore";
 import type { CalendarType } from "@/lib/utils/lunar";
 import ShareResultClient from "./ShareResultClient";
 
-function getTopPercent(grade: string): string {
-  switch (grade) {
-    case "S": return "상위 5%";
-    case "A": return "상위 20%";
-    case "B": return "상위 50%";
-    case "C": return "상위 80%";
-    default: return "";
-  }
+function getTopPercent(tier: AnalysisResult["tier"]): string {
+  const top = tier?.topPercent;
+  if (typeof top === "number" && top > 0 && top < 100) return `상위 ${top}%`;
+  return "";
 }
 
 function parseResult(data: { full_json: unknown }): AnalysisResult | null {
@@ -45,7 +41,7 @@ export async function generateMetadata({
   if (!result) return { title: "사주보는 두루미" };
 
   const grade = result.tier?.grade || "?";
-  const percent = getTopPercent(grade);
+  const percent = getTopPercent(result.tier);
   const headline = result.tier?.title || "";
   const userName = data.name || "";
 

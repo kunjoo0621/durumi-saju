@@ -447,7 +447,7 @@ export default function ResultClient() {
 
           {/* 클립보드 복사 토스트 */}
           <div
-            className={`fixed bottom-20 left-1/2 -translate-x-1/2 bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           >
             결과 링크가 복사되었어요
           </div>
