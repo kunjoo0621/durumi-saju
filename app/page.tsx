@@ -240,10 +240,10 @@ function LandingPageInner() {
               두루미가 진짜 네 사주만 말해줄게
             </p>
             <div className="mt-8">
-              <div className="relative w-full overflow-hidden rounded-2xl" style={{ paddingTop: "56.25%" }}>
+              <div className="relative w-full overflow-hidden rounded-2xl" style={{ paddingTop: "66.7%" }}>
                 <Image
                   src="/images/landing/section-01.png"
-                  alt="S·A·B 등급 카드를 들고 있는 두루미"
+                  alt="수정구를 들고 있는 두루미"
                   fill
                   priority
                   sizes="(max-width: 640px) 100vw, 640px"
