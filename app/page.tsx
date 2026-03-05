@@ -146,7 +146,7 @@ function FaqAccordion() {
           <button
             type="button"
             onClick={() => setOpenIndex(openIndex === i ? null : i)}
-            className="flex w-full items-center justify-between p-5 text-left"
+            className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
           >
             <span className="text-[15px] font-semibold text-white pr-4">
               Q. {item.q}
@@ -223,7 +223,7 @@ function LandingPageInner() {
         </div>
       </header>
 
-      <main className="pb-[calc(120px+env(safe-area-inset-bottom))]">
+      <main>
         {/* ── 섹션 1: 히어로 ── */}
         <section
           ref={hero.ref}
@@ -330,6 +330,40 @@ function LandingPageInner() {
           </div>
         </section>
       </main>
+
+      {/* ── 푸터 ── */}
+      <footer className="border-t border-white/[0.06] bg-[rgb(var(--c-dark-bg))] pb-[calc(120px+env(safe-area-inset-bottom))]">
+        <div className="mx-auto max-w-[720px] px-5 sm:px-0 pt-10 text-[13px] leading-[180%] text-[rgb(var(--c-text-muted))]">
+          <p>상호: 두루미 원정대 | 대표: 신건주</p>
+          <p>사업자등록번호: 000-00-00000 | 통신판매업 신고번호: 제 202X-경기용인-0000호</p>
+          <p>주소: 경기도 용인시</p>
+          <p>고객센터: 010-0000-0000 | 이메일: contact@durumi.kr</p>
+          <p>호스팅 서비스 제공자: Vercel Inc.</p>
+
+          <div className="mt-4 flex items-center gap-2 text-[13px]">
+            <a href="/terms" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
+              이용약관
+            </a>
+            <span>·</span>
+            <a href="/privacy" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
+              개인정보처리방침
+            </a>
+            <span>·</span>
+            <a
+              href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=0000000000"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
+            >
+              사업자정보확인
+            </a>
+          </div>
+
+          <p className="mt-4 text-[12px] text-[rgb(var(--c-text-muted))]">
+            © 2025 두루미 원정대. All rights reserved.
+          </p>
+        </div>
+      </footer>
 
       {/* ── 하단 스티키 CTA ── */}
       <div className="fixed inset-x-0 bottom-0 z-[130] bg-[linear-gradient(0deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_calc(70px+env(safe-area-inset-bottom)),rgba(0,0,0,0)_100%)] px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">

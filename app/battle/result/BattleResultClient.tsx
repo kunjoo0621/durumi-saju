@@ -37,7 +37,7 @@ export default function BattleResultClient() {
       })
       .catch(() => {})
       .finally(() => setClaimPending(false));
-  }, [claimPending, status, router]);
+  }, [claimPending, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load battle data
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function BattleResultClient() {
     }
 
     if (battleResult) setResult(battleResult);
-  }, [battleResult, router, battleId, claimPending]);
+  }, [battleResult, battleId, claimPending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Loading state
   if (dbLoading) {
