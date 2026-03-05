@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Binoculars, CaretDown, TrendUp, TrendDown, Minus } from "@phosphor-icons/react";
+import { Binoculars, CaretDown } from "@phosphor-icons/react";
 import type { BattleLlmAnalysis, FutureTimelineEntry } from "@/types/battle";
 
 type Props = {
@@ -10,10 +10,10 @@ type Props = {
   nameB: string;
 };
 
-const MOOD_CONFIG = {
-  up: { icon: TrendUp, color: "#22C55E", bg: "rgba(34,197,94,0.1)", label: "관계 ↑" },
-  down: { icon: TrendDown, color: "#EF4444", bg: "rgba(239,68,68,0.1)", label: "관계 ↓" },
-  neutral: { icon: Minus, color: "#6B7280", bg: "rgba(107,114,128,0.1)", label: "유지" },
+const MOOD_DOT: Record<string, string> = {
+  up: "bg-green-400",
+  down: "bg-red-400",
+  neutral: "bg-white/50",
 };
 
 /** DB에 저장된 레거시 형식(nextYear/threeYears)을 timeline[]로 변환 */
@@ -55,10 +55,11 @@ export default function BattleFutureOutlook({ futureOutlook, nameA, nameB }: Pro
         <button
           type="button"
           onClick={() => setExpanded((p) => !p)}
-          className="w-full pl-4 pr-6 py-5 flex items-center justify-between text-left"
+          className="w-full pl-4 pr-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
+          aria-expanded={expanded}
         >
           <div className="flex items-center gap-2">
-            <Binoculars weight="duotone" size={28} color="#6366F1" />
+            <Binoculars weight="duotone" size={28} color="#6366F1" aria-hidden="true" />
             <span className="text-title-3 text-text-primary">미래 예측</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -71,21 +72,20 @@ export default function BattleFutureOutlook({ futureOutlook, nameA, nameB }: Pro
             <CaretDown
               weight="bold"
               size={20}
-              className={`text-gray-500 transition-transform duration-300 ${
-                expanded ? "rotate-180" : ""
-              }`}
+              className={`text-text-secondary transition-transform ${expanded ? "rotate-180" : ""}`}
+              aria-hidden="true"
             />
           </div>
         </button>
 
-        {/* Content */}
+        {/* Content — grid animation */}
         <div
           className={`grid transition-[grid-template-rows] duration-300 ease-out ${
             expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
           }`}
         >
           <div className="overflow-hidden">
-            <div className="px-6 pb-6 pt-4">
+            <div className="px-6 pb-6 pt-2">
               {/* Punchline */}
               {normalized.punchline && (
                 <p className="text-[16px] font-semibold text-white leading-[1.6] mb-5">
@@ -93,85 +93,48 @@ export default function BattleFutureOutlook({ futureOutlook, nameA, nameB }: Pro
                 </p>
               )}
 
-              {/* Vertical Timeline */}
+              {/* Timeline */}
               <div className="relative">
-                {/* Timeline line */}
-                <div className="absolute left-[15px] top-2 bottom-2 w-[2px] bg-white/[0.06]" />
+                {/* Vertical line */}
+                <div className="absolute left-[3.5px] top-2 bottom-2 w-px bg-white/[0.08]" />
 
-                <div className="space-y-6">
+                <div className="space-y-0">
                   {normalized.timeline.map((entry, i) => {
-                    const moodCfg = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.neutral;
-                    const MoodIcon = moodCfg.icon;
+                    const dotColor = MOOD_DOT[entry.mood] || MOOD_DOT.neutral;
                     const isLast = i === normalized.timeline.length - 1;
 
                     return (
-                      <div key={entry.year} className="relative flex gap-4">
-                        {/* Timeline node */}
-                        <div className="relative z-10 shrink-0 flex flex-col items-center">
-                          <div
-                            className="w-[32px] h-[32px] rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: moodCfg.bg }}
-                          >
-                            <MoodIcon weight="bold" size={16} color={moodCfg.color} />
-                          </div>
+                      <div key={entry.year}>
+                        {/* dot + year row */}
+                        <div className="relative flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${dotColor} shrink-0 z-[1]`} />
+                          <span className="text-[14px] font-bold text-white">
+                            {entry.year}년
+                          </span>
+                          <span className="text-[12px] text-white/40">{entry.label}</span>
                         </div>
 
-                        {/* Content */}
-                        <div className={`flex-1 min-w-0 ${!isLast ? "pb-1" : ""}`}>
-                          {/* Year + mood label */}
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[14px] font-bold text-white">
-                              {entry.year}년
-                            </span>
-                            <span className="text-[11px] text-gray-500">
-                              {entry.label}
-                            </span>
-                            <span
-                              className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                              style={{ color: moodCfg.color, backgroundColor: moodCfg.bg }}
-                            >
-                              {moodCfg.label}
-                            </span>
-                          </div>
-
-                          {/* Events */}
+                        {/* content */}
+                        <div className={`ml-[3.5px] pl-[16.5px] border-l border-transparent ${isLast ? "pb-0" : "pb-5"}`}>
                           {entry.eventA && (
-                            <div className="flex gap-2 mb-1.5">
-                              <span
-                                className="shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded mt-0.5"
-                                style={{ color: "#FF6B6B", backgroundColor: "rgba(255,107,107,0.1)" }}
-                              >
-                                {nameA}
-                              </span>
-                              <p className="text-[14px] text-gray-400 leading-[1.6]">
-                                {entry.eventA}
-                              </p>
-                            </div>
+                            <p className="text-[14px] text-gray-400 leading-[1.65] mt-1.5">
+                              <span className="text-gray-300 font-medium">{nameA}</span>
+                              {" · "}{entry.eventA}
+                            </p>
                           )}
                           {entry.eventB && (
-                            <div className="flex gap-2 mb-2">
-                              <span
-                                className="shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded mt-0.5"
-                                style={{ color: "#A855F7", backgroundColor: "rgba(168,85,247,0.1)" }}
-                              >
-                                {nameB}
-                              </span>
-                              <p className="text-[14px] text-gray-400 leading-[1.6]">
-                                {entry.eventB}
-                              </p>
-                            </div>
+                            <p className="text-[14px] text-gray-400 leading-[1.65] mt-1">
+                              <span className="text-gray-300 font-medium">{nameB}</span>
+                              {" · "}{entry.eventB}
+                            </p>
                           )}
-
-                          {/* Relationship impact */}
                           {entry.relationship && (
-                            <div
-                              className="mt-2 px-3 py-2.5 rounded-xl"
-                              style={{ backgroundColor: "rgba(99,102,241,0.06)" }}
+                            <p
+                              className="text-[13px] leading-[1.6] mt-2 px-3 py-2 rounded-lg"
+                              style={{ color: "#A5B4FC", backgroundColor: "rgba(99,102,241,0.06)" }}
                             >
-                              <p className="text-[13px] leading-[1.65]" style={{ color: "#A5B4FC" }}>
-                                {entry.relationship}
-                              </p>
-                            </div>
+                              {entry.relationship}
+                            </p>
                           )}
                         </div>
                       </div>
