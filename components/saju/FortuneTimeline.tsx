@@ -129,7 +129,7 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           <div
             ref={daeunScrollRef}
             onScroll={() => updateScrollState(daeunScrollRef.current, setDaeunScroll)}
-            className="flex gap-2 overflow-x-auto scrollbar-hide pb-1"
+            className="flex gap-2 overflow-x-auto scrollbar-hide py-1"
           >
             {daeun.pillars.map((p) => {
               const isCurrent = currentDaeun?.index === p.index;
@@ -147,10 +147,10 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           </div>
           {/* 그라데이션 오버레이 */}
           {daeunScroll.left && (
-            <div className="absolute left-0 top-0 bottom-1 w-8 bg-gradient-to-r from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
+            <div className="absolute left-0 top-1 bottom-1 w-8 bg-gradient-to-r from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
           )}
           {daeunScroll.right && (
-            <div className="absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
+            <div className="absolute right-0 top-1 bottom-1 w-8 bg-gradient-to-l from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
           )}
           {/* 화살표 버튼 — PC only */}
           {daeunScroll.left && (
@@ -217,7 +217,7 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           <div
             ref={seunScrollRef}
             onScroll={() => updateScrollState(seunScrollRef.current, setSeunScroll)}
-            className="flex gap-2 overflow-x-auto scrollbar-hide pb-1"
+            className="flex gap-2 overflow-x-auto scrollbar-hide py-1"
           >
             {seun.map((s) => {
               const isCurrent = s.year === currentYear;
@@ -235,10 +235,10 @@ export default function FortuneTimeline({ fortune, birthYear }: FortuneTimelineP
           </div>
           {/* 그라데이션 오버레이 */}
           {seunScroll.left && (
-            <div className="absolute left-0 top-0 bottom-1 w-8 bg-gradient-to-r from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
+            <div className="absolute left-0 top-1 bottom-1 w-8 bg-gradient-to-r from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
           )}
           {seunScroll.right && (
-            <div className="absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
+            <div className="absolute right-0 top-1 bottom-1 w-8 bg-gradient-to-l from-[rgb(20,20,20)] to-transparent pointer-events-none z-[1]" />
           )}
           {/* 화살표 버튼 — PC only */}
           {seunScroll.left && (
