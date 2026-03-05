@@ -435,12 +435,12 @@ export default function EditProfilePage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
           {toast}
         </div>
       )}
       {errorToast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-background-tertiary text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
           {errorToast}
         </div>
       )}
