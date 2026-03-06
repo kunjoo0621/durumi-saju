@@ -7,6 +7,10 @@ const SITE_NAME = "사주보는 두루미";
 const DESCRIPTION = "내 사주 등급은 S? A? 친구와 1:1 사주 배틀까지. 1,000원부터.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "/",
+  },
   title: "사주보는 두루미 | 사주 등급 분석 · 사주 배틀",
   description: DESCRIPTION,
   keywords: ["사주", "사주 등급", "사주 분석", "사주 배틀", "사주팔자", "운세", "MZ 사주", "사주 궁합", "만세력"],

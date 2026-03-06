@@ -189,13 +189,7 @@ export default function MenuPage() {
       {/* ── 푸터 ── */}
       <footer className="border-t border-white/[0.06] bg-[rgb(var(--c-dark-bg))]">
         <div className="mx-auto max-w-[640px] px-5 sm:px-0 pt-10 pb-12 text-[13px] leading-[180%] text-[rgb(var(--c-text-muted))]">
-          <p>상호: 두루미 원정대 | 대표: 신건주</p>
-          <p>사업자등록번호: 000-00-00000 | 통신판매업 신고번호: 제 202X-경기용인-0000호</p>
-          <p>주소: 경기도 용인시</p>
-          <p>고객센터: 010-0000-0000 | 이메일: contact@durumi.kr</p>
-          <p>호스팅 서비스 제공자: Vercel Inc.</p>
-
-          <div className="mt-4 flex items-center gap-2 text-[13px]">
+          <div className="flex items-center gap-2 text-[13px]">
             <a href="/terms" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
               이용약관
             </a>
@@ -203,16 +197,29 @@ export default function MenuPage() {
             <a href="/privacy" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
               개인정보처리방침
             </a>
-            <span>·</span>
-            <a
-              href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=0000000000"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
-            >
-              사업자정보확인
-            </a>
           </div>
+
+          <details className="mt-4 group">
+            <summary className="cursor-pointer list-none flex items-center gap-1 text-[12px] text-[rgb(var(--c-text-muted))] hover:text-[rgb(var(--c-text-sub))] transition-colors">
+              사업자 정보
+              <svg className="w-3 h-3 transition-transform group-open:rotate-180" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </summary>
+            <div className="mt-2 text-[11px] leading-[180%] text-[rgb(var(--c-text-muted))]/60">
+              <p>상호: 두루미 원정대 | 대표: 신건주</p>
+              <p>사업자등록번호: 000-00-00000 | 통신판매업 신고번호: 제 202X-경기용인-0000호</p>
+              <p>주소: 경기도 용인시</p>
+              <p>고객센터: 010-0000-0000 | 이메일: contact@durumi.kr</p>
+              <p>호스팅 서비스 제공자: Vercel Inc.</p>
+              <a
+                href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=0000000000"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-1 underline hover:text-[rgb(var(--c-text-sub))] transition-colors"
+              >
+                사업자정보확인
+              </a>
+            </div>
+          </details>
 
           <p className="mt-4 text-[12px] text-[rgb(var(--c-text-muted))]">
             © 2025 두루미 원정대. All rights reserved.
