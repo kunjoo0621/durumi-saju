@@ -39,6 +39,14 @@ const ELEMENT_HEX: Record<ElementType, string> = {
   water: "#3B82F6",
 };
 
+const ELEMENT_BG: Record<ElementType, string> = {
+  wood:  "rgba(34, 197, 94, 0.10)",   // 목 — 초록 틴트
+  fire:  "rgba(239, 68, 68, 0.10)",   // 화 — 빨강 틴트
+  earth: "rgba(234, 179, 8, 0.08)",   // 토 — 노랑 틴트
+  metal: "rgba(209, 213, 219, 0.06)", // 금 — 회색 틴트
+  water: "rgba(59, 130, 246, 0.10)",  // 수 — 파랑 틴트
+};
+
 const KR_ELEMENT_HEX: Record<KoreanElement, string> = {
   목: "#22C55E",
   화: "#EF4444",
@@ -354,57 +362,76 @@ function SajuChartInner({ sajuData, enriched, hideStrengthPanel }: SajuChartProp
         {pillars.map((p) => {
           const hex = getElementHex(p.stemElement);
           const isDayCol = p.key === "day";
+          const isHourUnknown = enriched?.isTimeUnknown && p.key === "hour";
+          const bgColor = isHourUnknown ? undefined : (p.stemElement ? ELEMENT_BG[p.stemElement] : undefined);
           return (
             <div
               key={`s-${p.key}`}
-              className={`py-2.5 text-center rounded-xl ${isDayCol ? "bg-[#222222]" : "bg-[#1A1A1A]"}`}
-              style={isDayCol ? { border: `1px solid ${hex}33` } : undefined}
+              className="py-2.5 text-center rounded-xl"
+              style={{
+                backgroundColor: bgColor ?? "#1A1A1A",
+                ...(isDayCol ? { border: `1px solid ${hex}33` } : {}),
+              }}
             >
               <div
                 className="text-xl font-bold text-[#E5E5E5]"
                 style={isDayCol ? { textShadow: `0 0 12px ${hex}4D` } : undefined}
               >
-                {p.stemLabel}
+                {isHourUnknown ? "—" : p.stemLabel}
               </div>
-              <div className="text-xs mt-0.5" style={{ color: getElementHex(p.stemElement) }}>
-                {p.stemElement ? getElementName(p.stemElement) : ""}
-              </div>
+              {!isHourUnknown && (
+                <div className="text-xs mt-0.5" style={{ color: getElementHex(p.stemElement) }}>
+                  {p.stemElement ? getElementName(p.stemElement) : ""}
+                </div>
+              )}
             </div>
           );
         })}
 
         {/* ── Row: 천간 십성 ── */}
         <div className="hidden sm:block" />
-        {pillars.map((p) => (
-          <div key={`st-${p.key}`} className="py-1 text-center">
-            <span className="text-xs" style={{ color: getTenGodHex(p.stemTenGod, dayEl) }}>
-              {p.stemTenGod || "-"}
-            </span>
-          </div>
-        ))}
+        {pillars.map((p) => {
+          const isHourUnknown = enriched?.isTimeUnknown && p.key === "hour";
+          return (
+            <div key={`st-${p.key}`} className="py-1 text-center">
+              <span className="text-xs" style={{ color: isHourUnknown ? "#6B7280" : getTenGodHex(p.stemTenGod, dayEl) }}>
+                {isHourUnknown ? "—" : (p.stemTenGod || "-")}
+              </span>
+            </div>
+          );
+        })}
 
         {/* ── Row: 지지 (label + cards) ── */}
         <div className={ROW_LABEL}>지지</div>
-        {pillars.map((p) => (
-          <div key={`b-${p.key}`} className="py-2.5 text-center rounded-xl bg-[#1A1A1A]">
-            <div className="text-xl font-bold text-[#E5E5E5]">
-              {p.branchLabel}
+        {pillars.map((p) => {
+          const isHourUnknown = enriched?.isTimeUnknown && p.key === "hour";
+          const bgColor = isHourUnknown ? undefined : (p.branchElement ? ELEMENT_BG[p.branchElement] : undefined);
+          return (
+            <div key={`b-${p.key}`} className="py-2.5 text-center rounded-xl" style={{ backgroundColor: bgColor ?? "#1A1A1A" }}>
+              <div className="text-xl font-bold text-[#E5E5E5]">
+                {isHourUnknown ? "—" : p.branchLabel}
+              </div>
+              {!isHourUnknown && (
+                <div className="text-xs mt-0.5" style={{ color: getElementHex(p.branchElement) }}>
+                  {p.branchElement ? getElementName(p.branchElement) : ""}
+                </div>
+              )}
             </div>
-            <div className="text-xs mt-0.5" style={{ color: getElementHex(p.branchElement) }}>
-              {p.branchElement ? getElementName(p.branchElement) : ""}
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* ── Row: 지지 십성 ── */}
         <div className="hidden sm:block" />
-        {pillars.map((p) => (
-          <div key={`bt-${p.key}`} className="py-1 text-center">
-            <span className="text-xs" style={{ color: getTenGodHex(p.branchTenGod, dayEl) }}>
-              {p.branchTenGod || "-"}
-            </span>
-          </div>
-        ))}
+        {pillars.map((p) => {
+          const isHourUnknown = enriched?.isTimeUnknown && p.key === "hour";
+          return (
+            <div key={`bt-${p.key}`} className="py-1 text-center">
+              <span className="text-xs" style={{ color: isHourUnknown ? "#6B7280" : getTenGodHex(p.branchTenGod, dayEl) }}>
+                {isHourUnknown ? "—" : (p.branchTenGod || "-")}
+              </span>
+            </div>
+          );
+        })}
 
         {/* ── Row: 12운성 ── */}
         {enriched?.twelveStages && (
