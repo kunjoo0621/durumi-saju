@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Script from "next/script";
 import Header from "@/components/layout/Header";
 import {
   useBattleStore,
@@ -634,11 +633,6 @@ export default function BattleInputPage() {
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
-      {/* 토스 SDK 프리로드 */}
-      <Script
-        src="https://js.tosspayments.com/v2/standard"
-        strategy="lazyOnload"
-      />
       <Header showBack onBack={handleBack} />
 
       <main className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto">

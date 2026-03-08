@@ -11,7 +11,7 @@ import { hashToken, getTokensFromCookie, getDbExpiresAt } from "@/lib/guest-toke
 type PaymentCompleteBody = {
   sessionId?: string;
   orderId?: string;
-  paymentKey?: string;
+  paymentId?: string;
   amount?: number;
   paymentStatus?: string;
   paymentMethod?: string;
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "결제가 완료되지 않았습니다." }, { status: 402 });
       }
     } else {
-      if (!body.orderId || !body.paymentKey || !body.amount) {
+      if (!body.orderId || !body.paymentId || !body.amount) {
         return NextResponse.json({ error: "결제 정보가 부족합니다." }, { status: 400 });
       }
 
@@ -173,34 +173,42 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "결제 금액이 올바르지 않습니다." }, { status: 400 });
       }
 
-      const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
-      if (!tossSecretKey) {
+      const portoneSecret = process.env.PORTONE_API_SECRET;
+      if (!portoneSecret) {
         return NextResponse.json({ error: "결제 설정이 누락되었습니다." }, { status: 500 });
       }
 
-      const authHeader = Buffer.from(`${tossSecretKey}:`).toString("base64");
-      const confirmResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${authHeader}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          paymentKey: body.paymentKey,
-          orderId: body.orderId,
-          amount: Number(body.amount),
-        }),
-      });
+      const verifyResponse = await fetch(
+        `https://api.portone.io/payments/${encodeURIComponent(body.paymentId)}`,
+        {
+          headers: { Authorization: `Bearer ${portoneSecret}` },
+        }
+      );
 
-      const confirmData = await confirmResponse.json().catch(() => ({}));
-      if (!confirmResponse.ok) {
+      const paymentData = await verifyResponse.json().catch(() => ({}));
+      if (!verifyResponse.ok) {
         return NextResponse.json(
-          { error: confirmData?.message || "결제 승인에 실패했습니다." },
+          { error: paymentData?.message || "결제 검증에 실패했습니다." },
           { status: 400 }
         );
       }
 
-      paymentMethod = confirmData?.method || "toss";
+      if (paymentData.status !== "PAID") {
+        return NextResponse.json(
+          { error: `결제가 완료되지 않았습니다. (상태: ${paymentData.status})` },
+          { status: 400 }
+        );
+      }
+
+      const paidAmount = paymentData.amount?.total ?? paymentData.amount?.paid;
+      if (paidAmount !== Number(body.amount)) {
+        return NextResponse.json(
+          { error: "결제 금액이 일치하지 않습니다." },
+          { status: 400 }
+        );
+      }
+
+      paymentMethod = paymentData.method?.provider || paymentData.method?.type || "portone";
       amount = Number(body.amount);
     }
 

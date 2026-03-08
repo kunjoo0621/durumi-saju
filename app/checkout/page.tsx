@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import Script from "next/script";
+import * as PortOne from "@portone/browser-sdk/v2";
 import MenuDrawer from "../MenuDrawer";
 import { useAllInputs } from "@/store/useInputStore";
 import { useBattleStore } from "@/store/useBattleStore";
@@ -78,19 +78,17 @@ function CheckoutContent() {
   const [paying, setPaying] = useState(false);
   const [orderId, setOrderId] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [widgets, setWidgets] = useState<any>(null);
-  const [widgetReady, setWidgetReady] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const confirmingRef = useRef(false);
-  const [sdkReady, setSdkReady] = useState(false);
 
-  const paymentKey = searchParams?.get("paymentKey");
+  const paymentId = searchParams?.get("paymentId");
   const orderIdParam = searchParams?.get("orderId");
   const amountParam = searchParams?.get("amount");
   const sessionIdParam = searchParams?.get("sessionId");
   const typeParam = searchParams?.get("type") || "analysis";
-  const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
-  const mockPayment = process.env.NEXT_PUBLIC_USE_MOCK_PAYMENT === "true";
+  const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID || "";
+  const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || "";
+  const mockPayment = process.env.NEXT_PUBLIC_USE_MOCK_PAYMENT === "true" || (!storeId && !channelKey);
 
   const hasRequiredInput = useMemo(() => {
     if (isBattle) {
@@ -126,22 +124,28 @@ function CheckoutContent() {
 
   // 입력 검증 실패 시 redirect
   useEffect(() => {
-    if (!paymentKey && !hasRequiredInput) {
+    if (!paymentId && !hasRequiredInput) {
       router.replace(redirectBack);
     }
-  }, [hasRequiredInput, paymentKey, router, redirectBack]);
+  }, [hasRequiredInput, paymentId, router, redirectBack]);
 
   // 에러 쿼리 파라미터 처리
   useEffect(() => {
     if (searchParams?.get("error") === "payment") {
       setError("결제가 안 됐어. 다시 시도해봐.");
     }
+    const portoneCode = searchParams?.get("code");
+    if (portoneCode) {
+      setError(searchParams?.get("message") || "결제가 취소되었습니다.");
+    }
   }, [searchParams]);
 
-  // 결제 완료 후 복귀 (paymentKey 있음) → confirm 처리
+  // 결제 완료 후 복귀 (paymentId 있음) → confirm 처리
   useEffect(() => {
     if (mockPayment) return;
-    if (!paymentKey || !orderIdParam || !amountParam || !sessionIdParam) return;
+    if (!paymentId || !orderIdParam || !amountParam || !sessionIdParam) return;
+    // 포트원 에러 코드가 있으면 에러 useEffect에서 처리
+    if (searchParams?.get("code")) return;
     if (confirmingRef.current) return;
     confirmingRef.current = true;
 
@@ -154,7 +158,7 @@ function CheckoutContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId: sessionIdParam,
-            paymentKey,
+            paymentId,
             orderId: orderIdParam,
             amount: Number(amountParam),
             type: typeParam,
@@ -202,10 +206,10 @@ function CheckoutContent() {
       }
     };
     run();
-  }, [mockPayment, paymentKey, orderIdParam, amountParam, sessionIdParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mockPayment, paymentId, orderIdParam, amountParam, sessionIdParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 결제 완료 복귀 모드면 early return
-  if (paymentKey) {
+  if (paymentId) {
     return (
       <div className="min-h-screen bg-background-primary flex flex-col items-center justify-center px-5">
         {confirming && (
@@ -254,17 +258,14 @@ function CheckoutContent() {
     setError={setError}
     paying={paying}
     setPaying={setPaying}
+    confirming={confirming}
+    setConfirming={setConfirming}
     orderId={orderId}
     setOrderId={setOrderId}
     sessionId={sessionId}
     setSessionId={setSessionId}
-    widgets={widgets}
-    setWidgets={setWidgets}
-    widgetReady={widgetReady}
-    setWidgetReady={setWidgetReady}
-    sdkReady={sdkReady}
-    setSdkReady={setSdkReady}
-    clientKey={clientKey}
+    storeId={storeId}
+    channelKey={channelKey}
     mockPayment={mockPayment}
     amount={amount}
     hasRequiredInput={hasRequiredInput}
@@ -278,10 +279,10 @@ function CheckoutContent() {
 function CheckoutForm({
   inputs, battleStore, isBattle, productName,
   session, isAuthenticated, error, setError,
-  paying, setPaying, orderId, setOrderId,
-  sessionId, setSessionId, widgets, setWidgets,
-  widgetReady, setWidgetReady, sdkReady, setSdkReady,
-  clientKey, mockPayment, amount, hasRequiredInput, router,
+  paying, setPaying, confirming, setConfirming,
+  orderId, setOrderId,
+  sessionId, setSessionId,
+  storeId, channelKey, mockPayment, amount, hasRequiredInput, router,
   redirectResult, redirectBack, checkoutType,
 }: any) {
   // 사주 태그 (배틀 전용)
@@ -359,39 +360,13 @@ function CheckoutForm({
     createSession();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Toss 위젯 초기화
-  useEffect(() => {
-    if (mockPayment) return;
-    if (!sdkReady || !clientKey || !orderId || !sessionId) return;
-    if (!window || !(window as any).TossPayments) return;
-
-    const init = async () => {
-      try {
-        const tossPayments = (window as any).TossPayments(clientKey);
-        const userId = (session?.user as { id?: string })?.id;
-        const customerKey = isAuthenticated && userId
-          ? `user_${userId}`
-          : (window as any).TossPayments.ANONYMOUS;
-        const nextWidgets = tossPayments.widgets({ customerKey });
-        await nextWidgets.setAmount({ currency: "KRW", value: amount });
-        await nextWidgets.renderPaymentMethods({ selector: "#payment-method", variantKey: "DEFAULT" });
-        await nextWidgets.renderAgreement({ selector: "#payment-agreement" });
-        setWidgets(nextWidgets);
-        setWidgetReady(true);
-      } catch (err: any) {
-        setError(err?.message || "결제 화면을 못 불러왔어.");
-      }
-    };
-    init();
-  }, [sdkReady, clientKey, session?.user, isAuthenticated, orderId, sessionId, mockPayment]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const handlePay = async () => {
     if (!sessionId) {
       setError("아직 결제 준비 중이야. 잠깐만.");
       return;
     }
-    if (!mockPayment && !widgets) {
-      setError("결제 화면 준비 중. 잠깐만.");
+    if (!mockPayment && (!storeId || !channelKey)) {
+      setError("결제 설정이 누락되었어. 관리자에게 문의해봐.");
       return;
     }
 
@@ -457,23 +432,87 @@ function CheckoutForm({
       }
 
       const origin = window.location.origin;
-      const typeQuery = isBattle ? `&type=battle` : "";
-      const successUrl = `${origin}/checkout?sessionId=${encodeURIComponent(sessionId)}${typeQuery}`;
-      const failUrl = `${origin}/checkout?error=payment${typeQuery}`;
-
+      const typeQuery = isBattle ? "&type=battle" : "";
+      const redirectUrl = `${origin}/checkout?sessionId=${encodeURIComponent(sessionId)}&orderId=${encodeURIComponent(safeOrderId)}&amount=${amount}${typeQuery}`;
       const displayInputs = isBattle ? battleStore?.playerA : inputs;
 
-      await widgets.requestPayment({
-        orderId: safeOrderId,
+      const response = await PortOne.requestPayment({
+        storeId,
+        channelKey,
+        paymentId: safeOrderId,
         orderName: productName,
-        successUrl,
-        failUrl,
-        customerName: session?.user?.name || displayInputs?.name || "두루미",
+        totalAmount: amount,
+        currency: "CURRENCY_KRW",
+        payMethod: "EASY_PAY",
+        customer: {
+          fullName: session?.user?.name || displayInputs?.name || "두루미",
+        },
+        redirectUrl,
       });
+
+      // redirect 발생 시 (모바일 등) — 페이지가 이동하므로 여기 도달하지 않음
+      if (!response) return;
+
+      // 결제 실패/취소
+      if (response.code != null) {
+        throw new Error(response.message || "결제가 취소되었습니다.");
+      }
+
+      // 인라인 결제 성공 — 서버에서 검증
+      setPaying(false);
+      setConfirming(true);
+
+      const completeRes = await fetch("/api/payment/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          paymentId: response.paymentId,
+          orderId: safeOrderId,
+          amount,
+          type: isBattle ? "battle" : "analysis",
+        }),
+      });
+
+      if (!completeRes.ok) {
+        const data = await completeRes.json().catch(() => ({}));
+        throw new Error(data?.error || "결제 확인이 안 되고 있어.");
+      }
+
+      const completeData = await completeRes.json().catch(() => ({}));
+
+      if (isBattle) {
+        const analyzeRes = await fetch("/api/battle/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playerA: battleStore.playerA,
+            playerB: battleStore.playerB,
+            relationshipType: battleStore.relationshipType,
+            sessionId,
+          }),
+        });
+        if (!analyzeRes.ok) {
+          const errData = await analyzeRes.json().catch(() => ({}));
+          throw new Error(errData?.error || "배틀 분석이 안 됐어. 다시 해볼까?");
+        }
+        const analyzeData = await analyzeRes.json();
+        if (analyzeData?.result) {
+          battleStore.setBattleResult(analyzeData.result);
+        }
+        sessionStorage.setItem("sajuBattleJustPaid", "1");
+        sessionStorage.removeItem("sajuOrderId");
+        router.replace(`/battle/result${analyzeData.battleId ? `?id=${analyzeData.battleId}` : ""}`);
+      } else {
+        sessionStorage.setItem("sajuJustPaid", "1");
+        sessionStorage.removeItem("sajuOrderId");
+        router.replace(completeData.resultId ? `/result?resultId=${completeData.resultId}` : "/result");
+      }
     } catch (err: any) {
-      setError(err?.message || "결제창 호출에 실패했습니다.");
+      setError(err?.message || "결제 처리에 실패했습니다.");
     } finally {
       setPaying(false);
+      setConfirming(false);
     }
   };
 
@@ -481,15 +520,6 @@ function CheckoutForm({
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
-      {!mockPayment && (
-        <Script
-          src="https://js.tosspayments.com/v2/standard"
-          strategy="afterInteractive"
-          onLoad={() => setSdkReady(true)}
-          onError={() => setError("결제 화면을 못 불러왔어. 새로고침 해봐.")}
-        />
-      )}
-
       <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
         <div className="max-w-[640px] mx-auto flex items-center justify-between">
           <button
@@ -626,24 +656,12 @@ function CheckoutForm({
           )}
 
           {!mockPayment && (
-            <div className="rounded-2xl bg-background-secondary p-5 space-y-3">
-              <div className="text-[14px] text-text-secondary">결제 수단</div>
-              {!clientKey && (
-                <div className="text-[13px] text-text-tertiary">
-                  결제 키가 설정되지 않았습니다. 환경변수를 확인해주세요.
-                </div>
-              )}
-              <div id="payment-method" className="rounded-xl overflow-hidden min-h-[200px]">
-                {!widgetReady && (
-                  <div className="flex items-center justify-center h-[200px] text-[13px] text-text-tertiary">
-                    결제 수단을 불러오는 중…
-                  </div>
-                )}
+            <div className="rounded-2xl bg-background-secondary p-5">
+              <div className="flex items-center gap-2 text-[14px] text-text-secondary">
+                <span>카카오페이로 결제됩니다</span>
               </div>
-              <div id="payment-agreement" className="rounded-xl overflow-hidden min-h-[80px]" />
             </div>
           )}
-
 
           {error && (
             <div className="rounded-xl bg-background-secondary px-4 py-3 text-[14px] text-text-secondary">
@@ -661,7 +679,7 @@ function CheckoutForm({
           <button
             type="button"
             onClick={handlePay}
-            disabled={paying || !hasRequiredInput || !sessionId || (!mockPayment && !widgetReady)}
+            disabled={paying || confirming || !hasRequiredInput || !sessionId}
             className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
           >
             {paying ? (
@@ -672,7 +690,15 @@ function CheckoutForm({
                 </svg>
                 결제창 여는 중...
               </span>
-            ) : (!sessionId || (!mockPayment && !widgetReady)) ? (
+            ) : confirming ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                결제 확인 중...
+              </span>
+            ) : !sessionId ? (
               <span className="flex items-center justify-center gap-2 text-gray-400">
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />

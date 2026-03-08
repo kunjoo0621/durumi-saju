@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Script from "next/script";
 import { useAllInputs, useStoreActions } from "@/store/useInputStore";
 import Header from "@/components/layout/Header";
 
@@ -462,11 +461,6 @@ export default function Home() {
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
-      {/* 토스 SDK 프리로드 — checkout 진입 시 캐시에서 즉시 로드 */}
-      <Script
-        src="https://js.tosspayments.com/v2/standard"
-        strategy="lazyOnload"
-      />
       <Header
         showBack
         onBack={currentStep > 0 ? handleBack : () => router.push("/menu")}
