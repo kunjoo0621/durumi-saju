@@ -142,7 +142,7 @@ export default function BattleResultView({
               {hasPrimaryResult === true && (
                 <button
                   type="button"
-                  onClick={() => router.push("/battle/input")}
+                  onClick={() => router.push("/menu")}
                   className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
                 >
                   다른 사람과 대결하기
