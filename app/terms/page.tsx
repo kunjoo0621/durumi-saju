@@ -173,7 +173,7 @@ export default function TermsPage() {
                   </ul>
                 </li>
                 <li>
-                  환불 요청은 결제일로부터 7일 이내에 contact@durumi.kr로
+                  환불 요청은 결제일로부터 7일 이내에 kunjoo0621@gmail.com로
                   접수해주시기 바랍니다.
                 </li>
               </ol>

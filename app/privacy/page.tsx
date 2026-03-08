@@ -233,7 +233,7 @@ export default function PrivacyPage() {
                 </li>
               </ol>
               <p className="mt-3">
-                권리 행사는 contact@durumi.kr로 요청해주시기 바랍니다.
+                권리 행사는 kunjoo0621@gmail.com로 요청해주시기 바랍니다.
               </p>
             </section>
 
@@ -322,7 +322,7 @@ export default function PrivacyPage() {
                 </p>
                 <p>
                   <strong className="text-white">이메일:</strong>{" "}
-                  contact@durumi.kr
+                  kunjoo0621@gmail.com
                 </p>
               </div>
               <p className="mt-4">
