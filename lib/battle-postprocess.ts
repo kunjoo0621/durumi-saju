@@ -845,6 +845,12 @@ export function postprocessBattleResult(
     result = fixNameVariations(result, [names.nameA, names.nameB], warnings);
   }
 
+  // ── bonusScenarios 누락 보정 ──
+  if (!Array.isArray(result.chemistry?.bonusScenarios)) {
+    result.chemistry = result.chemistry || {} as any;
+    result.chemistry.bonusScenarios = [];
+  }
+
   // ── 묘(墓) 반복 제한 (전역 카운터, 첫 2회 유지 → 3회부터 제거/치환) ──
   const myoCounter = { count: 0 };
   const myoExcessTargets: { path: string; currentText: string }[] = [];
