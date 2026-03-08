@@ -8,6 +8,7 @@ import MenuDrawer from "../MenuDrawer";
 import { useAllInputs } from "@/store/useInputStore";
 import { useBattleStore } from "@/store/useBattleStore";
 import { getQuickSajuTags, type SajuTag } from "./actions";
+import { FullScreenLoading, ButtonSpinner } from "@/components/loading";
 
 type CheckoutType = "analysis" | "battle";
 
@@ -50,11 +51,7 @@ const BATTLE_CHECKOUT_TITLES: Record<string, string> = {
 };
 
 function CheckoutLoading() {
-  return (
-    <div className="min-h-screen bg-background-primary flex items-center justify-center px-5">
-      <div className="text-text-secondary text-[14px]">화면 로딩 중...</div>
-    </div>
-  );
+  return <FullScreenLoading message="화면 로딩 중..." />;
 }
 
 function CheckoutContent() {
@@ -210,14 +207,11 @@ function CheckoutContent() {
 
   // 결제 완료 복귀 모드면 early return
   if (paymentId) {
+    if (confirming) {
+      return <FullScreenLoading message="결제 확인 중..." />;
+    }
     return (
       <div className="min-h-screen bg-background-primary flex flex-col items-center justify-center px-5">
-        {confirming && (
-          <>
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="mt-4 text-text-secondary text-[14px]">결제 확인 중...</p>
-          </>
-        )}
         {error && (
           <div className="max-w-[640px] w-full text-center">
             <p className="text-body-2 text-text-secondary mb-6">{error}</p>
@@ -683,29 +677,11 @@ function CheckoutForm({
             className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
           >
             {paying ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                결제창 여는 중...
-              </span>
+              <ButtonSpinner message="결제창 여는 중..." />
             ) : confirming ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                결제 확인 중...
-              </span>
+              <ButtonSpinner message="결제 확인 중..." />
             ) : !sessionId ? (
-              <span className="flex items-center justify-center gap-2 text-gray-400">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                결제 준비 중...
-              </span>
+              <span className="text-gray-400"><ButtonSpinner message="결제 준비 중..." /></span>
             ) : isBattle ? `${amount.toLocaleString()}원 결제하고 대결하기` : `${amount.toLocaleString()}원 결제하기`}
           </button>
 

@@ -6,13 +6,17 @@ import type { BattleLlmAnalysis } from "@/types/battle";
 
 type Props = {
   finalVerdict: BattleLlmAnalysis["finalVerdict"] | string;
+  nameA?: string;
+  nameB?: string;
 };
 
-export default function BattleFinalVerdict({ finalVerdict }: Props) {
+export default function BattleFinalVerdict({ finalVerdict, nameA, nameB }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   // Support both old (string) and new ({ punchline, verdict }) formats
   const punchline = typeof finalVerdict === "object" ? finalVerdict.punchline : "";
+  const verdictA = typeof finalVerdict === "object" ? finalVerdict.verdictA : undefined;
+  const verdictB = typeof finalVerdict === "object" ? finalVerdict.verdictB : undefined;
   const verdict = typeof finalVerdict === "object" ? finalVerdict.verdict : finalVerdict;
 
   if (!verdict && !punchline) return null;
@@ -62,14 +66,35 @@ export default function BattleFinalVerdict({ finalVerdict }: Props) {
               {punchline && (
                 <p className="text-[16px] font-semibold text-white leading-[1.6] mb-4">{punchline}</p>
               )}
+
+              {/* 개인 판정 (레거시 호환: verdictA/verdictB 없으면 스킵) */}
+              {verdictA && nameA && (
+                <p className="text-[14px] text-gray-400 leading-[1.65] mt-1.5 mb-3">
+                  <span className="text-gray-300 font-medium">{nameA}</span>
+                  {" · 판정  "}{verdictA}
+                </p>
+              )}
+              {verdictB && nameB && (
+                <p className="text-[14px] text-gray-400 leading-[1.65] mb-4">
+                  <span className="text-gray-300 font-medium">{nameB}</span>
+                  {" · 판정  "}{verdictB}
+                </p>
+              )}
+
+              {/* 종합 판정 */}
               {verdict && (
-                <div className="space-y-6">
-                  {verdict.split(/\n\s*\n/).map((para, i) => (
-                    <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
-                      {para.trim()}
-                    </p>
-                  ))}
-                </div>
+                <>
+                  {(verdictA || verdictB) && (
+                    <div className="border-t border-white/[0.06] my-4" />
+                  )}
+                  <div className="space-y-6">
+                    {verdict.split(/\n\s*\n/).map((para, i) => (
+                      <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
+                        {para.trim()}
+                      </p>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>

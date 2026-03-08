@@ -304,7 +304,7 @@ export function validateBattleResult(result: any): QualityIssue[] {
   }
   if (result.finalVerdict) {
     allTexts.push(
-      `${result.finalVerdict.punchline || ""} ${result.finalVerdict.verdict || ""}`,
+      `${result.finalVerdict.punchline || ""} ${result.finalVerdict.verdictA || ""} ${result.finalVerdict.verdictB || ""} ${result.finalVerdict.verdict || ""}`,
     );
     allLabels.push("최종심판");
   }

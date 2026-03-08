@@ -123,7 +123,11 @@ export default function BattleResultView({
           />
 
           {/* Section 6: Final verdict */}
-          <BattleFinalVerdict finalVerdict={llmAnalysis.finalVerdict} />
+          <BattleFinalVerdict
+            finalVerdict={llmAnalysis.finalVerdict}
+            nameA={playerA.name}
+            nameB={playerB.name}
+          />
 
           {/* Share + CTA buttons (only on result page, not share page) */}
           {shareableId && (

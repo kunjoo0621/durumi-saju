@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useBattleResult } from "@/store/useBattleStore";
 import BattleResultView from "@/components/battle/BattleResultView";
 import type { BattleResult } from "@/types/battle";
+import { FullScreenLoading } from "@/components/loading";
 
 export default function BattleResultClient() {
   const router = useRouter();
@@ -72,11 +73,7 @@ export default function BattleResultClient() {
 
   // Loading state
   if (dbLoading) {
-    return (
-      <div className="min-h-screen bg-background-primary flex items-center justify-center px-6">
-        <div className="text-text-secondary text-[14px]">불러오는 중...</div>
-      </div>
-    );
+    return <FullScreenLoading message="불러오는 중..." />;
   }
 
   // No result

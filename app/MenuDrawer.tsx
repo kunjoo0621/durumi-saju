@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import { X } from "@phosphor-icons/react";
+import { SkeletonBar } from "@/components/loading";
 
 export default function MenuDrawer() {
   const { data: session, status } = useSession();
@@ -118,7 +119,7 @@ export default function MenuDrawer() {
             >
               {status === "loading" ? (
                 <div className="px-6 py-8">
-                  <div className="h-5 w-24 bg-zinc-700 rounded animate-pulse" />
+                  <SkeletonBar />
                 </div>
               ) : session?.user ? (
                 <>

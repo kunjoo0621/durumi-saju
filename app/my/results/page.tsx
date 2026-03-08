@@ -9,6 +9,7 @@ import Header from "@/components/layout/Header";
 import { useStoreActions } from "@/store/useInputStore";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import type { BattleListItem } from "@/types/battle";
+import { FullScreenLoading, InlineLoading } from "@/components/loading";
 
 type ResultItem = {
   id: string;
@@ -359,11 +360,7 @@ export default function MyResultsPage() {
   };
 
   if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen bg-background-primary flex items-center justify-center px-5">
-        <div className="text-text-secondary text-[14px]">불러오는 중...</div>
-      </div>
-    );
+    return <FullScreenLoading message="불러오는 중..." />;
   }
 
   if (!session?.user) {
@@ -582,9 +579,7 @@ export default function MyResultsPage() {
           {tab === "battle" && (
             <>
               {battleLoading && (
-                <div className="pt-12 flex items-center justify-center">
-                  <div className="text-text-secondary text-[14px]">불러오는 중...</div>
-                </div>
+                <InlineLoading message="불러오는 중..." />
               )}
 
               {!battleLoading && !battleError && battles.length > 0 && (

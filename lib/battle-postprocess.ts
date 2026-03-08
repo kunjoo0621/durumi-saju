@@ -427,6 +427,8 @@ function detectRepetition(result: BattleLlmAnalysis, warnings: string[]): void {
     allTexts.push(entry.relationship);
   }
   // finalVerdict
+  allTexts.push(result.finalVerdict.verdictA);
+  allTexts.push(result.finalVerdict.verdictB);
   allTexts.push(result.finalVerdict.verdict);
 
   const combined = allTexts.join(" ");
@@ -747,6 +749,8 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
     allTexts.push(entry.eventB);
     allTexts.push(entry.relationship);
   }
+  allTexts.push(result.finalVerdict.verdictA);
+  allTexts.push(result.finalVerdict.verdictB);
   allTexts.push(result.finalVerdict.verdict);
 
   const combined = allTexts.join(" ");
@@ -897,6 +901,8 @@ export function postprocessBattleResult(
   }
 
   result.finalVerdict.punchline = applyMyoLimit(result.finalVerdict.punchline, "finalVerdict.punchline");
+  result.finalVerdict.verdictA = applyMyoLimit(result.finalVerdict.verdictA, "finalVerdict.verdictA");
+  result.finalVerdict.verdictB = applyMyoLimit(result.finalVerdict.verdictB, "finalVerdict.verdictB");
   result.finalVerdict.verdict = applyMyoLimit(result.finalVerdict.verdict, "finalVerdict.verdict");
 
   if (myoExcessTargets.length > 0) {
@@ -990,6 +996,10 @@ export function postprocessBattleResult(
   // finalVerdict
   result.finalVerdict.punchline = applyTextFixes(result.finalVerdict.punchline, warnings, "finalVerdict.punchline");
   detectIssues(result.finalVerdict.punchline, "finalVerdict.punchline", warnings);
+  result.finalVerdict.verdictA = applyTextFixes(result.finalVerdict.verdictA, warnings, "finalVerdict.verdictA");
+  detectIssues(result.finalVerdict.verdictA, "finalVerdict.verdictA", warnings);
+  result.finalVerdict.verdictB = applyTextFixes(result.finalVerdict.verdictB, warnings, "finalVerdict.verdictB");
+  detectIssues(result.finalVerdict.verdictB, "finalVerdict.verdictB", warnings);
   result.finalVerdict.verdict = applyTextFixes(result.finalVerdict.verdict, warnings, "finalVerdict.verdict");
   detectIssues(result.finalVerdict.verdict, "finalVerdict.verdict", warnings);
 
@@ -1035,7 +1045,7 @@ export function postprocessBattleResult(
       `${result.futureOutlook.punchline} ${result.futureOutlook.timeline.map((e) => `${e.eventA} ${e.eventB} ${e.relationship}`).join(" ")}`,
     );
     structLabels.push("미래예측");
-    structTexts.push(`${result.finalVerdict.punchline} ${result.finalVerdict.verdict}`);
+    structTexts.push(`${result.finalVerdict.punchline} ${result.finalVerdict.verdictA} ${result.finalVerdict.verdictB} ${result.finalVerdict.verdict}`);
     structLabels.push("최종심판");
 
     const structIssues = detectStructuralRepetition(structTexts, structLabels, names);

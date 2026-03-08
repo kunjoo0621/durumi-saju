@@ -83,7 +83,9 @@ export type BattleLlmAnalysis = {
   };
   finalVerdict: {
     punchline: string;
-    verdict: string;
+    verdictA: string;  // A에 대한 최종 판정 1~2문장
+    verdictB: string;  // B에 대한 최종 판정 1~2문장
+    verdict: string;   // 종합 판정 3~4문장
   };
 };
 

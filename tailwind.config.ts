@@ -54,6 +54,23 @@ const config: Config = {
           from: { opacity: '0', transform: 'scale(0.95)' },
           to: { opacity: '1', transform: 'scale(1)' },
         },
+        spinnerRotate: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        textFadeIn: {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        shimmerSlide: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+      },
+      animation: {
+        'spinner': 'spinnerRotate 0.8s linear infinite',
+        'text-fade-in': 'textFadeIn 0.4s ease-out both',
+        'shimmer': 'shimmerSlide 1.5s ease-in-out infinite',
       },
       fontSize: {
         // Major Third 1.25 Scale

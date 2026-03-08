@@ -154,7 +154,7 @@ export default function ResultTable({
             <div className="mt-10 text-2xl font-bold font-aggro text-white line-clamp-2">
               {safeTier.title}
             </div>
-            <p className="mt-3 max-w-sm text-[16px] text-gray-400 text-center leading-7">
+            <p className="mt-3 max-w-lg text-[16px] text-gray-400 text-center leading-7">
               {safeTier.description}
             </p>
             {safeTier.confidence === "low" && (

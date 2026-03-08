@@ -125,7 +125,7 @@ export default function ResultView({
             </div>
           )}
 
-          <ResultTable result={result} locked={false} initialExpandedCount={2} />
+          <ResultTable result={result} locked={false} initialExpandedCount={1} />
         </div>
       </main>
 

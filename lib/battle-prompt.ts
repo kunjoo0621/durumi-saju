@@ -341,11 +341,23 @@ basis:
 
 ────────────────────────────────
 [최종 심판 규칙]
-- punchline: 전체 배틀의 최종 한 줄 판정. 승자를 축하하지 말고, 승패의 의미를 비틀어. "이겼는데 ~" 반전 구조 권장.
-- verdict: 2~3문장. 승패 요약 + 핵심 원인 + 역설 (이기고도 편하지 않은 등)
-- 새로운 인사이트 1개 필수 (다른 섹션에서 안 나온 것)
-- heroQuip과 절대 겹치지 않게.
-- 조언/격려 금지. "~노력이 필요해", "~하면 좋겠어", "~해야 해" 금지. 판정만. 냉정하게 끝내.
+- punchline: 배틀 전체를 관통하는 최종 한 줄.
+  다양한 구조 사용:
+  · "A가 ~할 때 B는 ~하고 있었어" (대비 장면)
+  · "결국 ~을/를 가른 건 ~이었어" (결정적 차이 지목)
+  · "~인 줄 알았는데, 사주는 반대로 말하더라" (반전)
+  · "이긴 게 전부가 아닌 게 ~" (승리의 이면)
+  ⚠️ "이겼는데 ~" 한 가지 패턴에 편중 금지. 매번 다른 구조.
+- verdictA: A에 대한 최종 판정 1~2문장. 이 배틀에서 드러난 A의 핵심 강점과 약점을 짚어. 다른 섹션에서 안 나온 각도로.
+- verdictB: B에 대한 최종 판정 1~2문장. 이 배틀에서 드러난 B의 핵심 강점과 약점을 짚어. 다른 섹션에서 안 나온 각도로.
+- verdict: 3~4문장. 종합 판정.
+  1문장: 승패 요약 (어디서 갈렸는지)
+  2문장: 핵심 원인 (사주 구조 차이)
+  3문장: 역설 또는 반전 (이기고도 편하지 않은 등)
+  4문장: 새로운 인사이트 (다른 섹션에서 안 나온 것)
+- verdictA/verdictB에서 서로 다른 사주 근거를 사용해야 해.
+- heroQuip, categoryResults의 killingLine과 절대 겹치지 않게.
+- 조언/격려 금지. 판정만. 냉정하게 끝내.
 
 ────────────────────────────────
 [heroQuip 규칙]
@@ -480,8 +492,10 @@ basis:
     ]
   },
   "finalVerdict": {
-    "punchline": "25~50자, 최종 판정 한 줄",
-    "verdict": "2~3문장"
+    "punchline": "25~50자, 최종 판정 한 줄 (다양한 구조, '이겼는데~' 편중 금지)",
+    "verdictA": "A 이름 언급, 1~2문장 (60~120자), A에 대한 최종 판정",
+    "verdictB": "B 이름 언급, 1~2문장 (60~120자), B에 대한 최종 판정",
+    "verdict": "3~4문장 (150~250자), 종합 판정: 승패 요약 + 핵심 원인 + 역설 + 새 인사이트"
   }
 }`;
 
@@ -896,11 +910,15 @@ function validateAndNormalize(
   if (raw.finalVerdict && typeof raw.finalVerdict === "object") {
     finalVerdict = {
       punchline: raw.finalVerdict.punchline || "",
+      verdictA: raw.finalVerdict.verdictA || "",
+      verdictB: raw.finalVerdict.verdictB || "",
       verdict: raw.finalVerdict.verdict || "",
     };
   } else {
     finalVerdict = {
       punchline: "",
+      verdictA: "",
+      verdictB: "",
       verdict: typeof raw.finalVerdict === "string" ? raw.finalVerdict : "",
     };
   }
@@ -956,6 +974,8 @@ function buildFallback(opts: {
     },
     finalVerdict: {
       punchline: "",
+      verdictA: "",
+      verdictB: "",
       verdict: winner
         ? `종합적으로 ${winner}의 사주가 더 강한 기운을 갖고 있어.`
         : "두 사람 다 비슷한 수준의 사주 기운이야.",

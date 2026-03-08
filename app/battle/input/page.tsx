@@ -12,6 +12,7 @@ import {
   useBattleRelationship,
 } from "@/store/useBattleStore";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
+import { ButtonSpinner } from "@/components/loading";
 
 const LOCATIONS = [
   "서울", "경기", "인천", "강원", "충북", "충남",
@@ -294,7 +295,7 @@ export default function BattleInputPage() {
                   disabled={loadingMySaju}
                   className="btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98]"
                 >
-                  {loadingMySaju ? "불러오는 중..." : "기존 사주 불러오기"}
+                  {loadingMySaju ? <ButtonSpinner message="불러오는 중..." /> : "기존 사주 불러오기"}
                 </button>
                 <button
                   type="button"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import MenuDrawer from "../MenuDrawer";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import { ButtonSpinner } from "@/components/loading";
 
 export default function CoinsPage() {
   const router = useRouter();
@@ -112,7 +113,7 @@ export default function CoinsPage() {
             disabled={loading}
             className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
           >
-            {loading ? "처리 중..." : "코인 1개(1000원) 구매"}
+            {loading ? <ButtonSpinner message="처리 중..." /> : "코인 1개(1000원) 구매"}
           </button>
         </div>
       </div>

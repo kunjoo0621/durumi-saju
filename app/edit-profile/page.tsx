@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import Header from "@/components/layout/Header";
+import { InlineLoading, ButtonSpinner } from "@/components/loading";
 
 type ProfileForm = {
   name: string;
@@ -210,10 +211,7 @@ export default function EditProfilePage() {
       <main className="px-5 pb-6 flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-[640px] mx-auto space-y-7 pt-10">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 text-text-secondary">
-              <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin" />
-              <p className="mt-4 text-[14px] text-text-secondary">불러오는 중...</p>
-            </div>
+            <InlineLoading message="불러오는 중..." />
           ) : authRequired ? (
             <div className="text-center py-24">
               <p className="text-[14px] text-text-secondary mb-6">로그인이 필요해</p>
@@ -428,7 +426,7 @@ export default function EditProfilePage() {
               disabled={!canSave || saving}
               className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold disabled:cursor-not-allowed"
             >
-              {saving ? "저장 중..." : "저장하기"}
+              {saving ? <ButtonSpinner message="저장 중..." /> : "저장하기"}
             </button>
           </div>
         </footer>

@@ -101,6 +101,8 @@ const ALLOWED_PATHS = new Set([
   // simulation reasoning (최대 5개)
   ...Array.from({ length: 5 }, (_, i) => `simulations.${i}.reasoning`),
   // finalVerdict
+  "finalVerdict.verdictA",
+  "finalVerdict.verdictB",
   "finalVerdict.verdict",
   // futureOutlook timeline (최대 5개 시점)
   ...Array.from({ length: 5 }, (_, i) => `futureOutlook.timeline.${i}.eventA`),

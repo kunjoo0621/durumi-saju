@@ -10,6 +10,7 @@ import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { Warning } from "@phosphor-icons/react";
+import { FullScreenLoading } from "@/components/loading";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -17,6 +18,12 @@ const CORE_FEAR_LABELS: Record<string, string> = {
   INCOMPETENT: "돈·재정",
   LOSS_OF_CONTROL: "건강·컨디션",
 };
+
+const LOADING_STEPS = [
+  { message: "사주 데이터를 계산하고 있어", delay: 0 },
+  { message: "해석을 작성하고 있어", delay: 5000 },
+  { message: "마무리하고 있어", delay: 12000 },
+];
 
 export default function ResultClient() {
   const searchParams = useSearchParams();
@@ -64,30 +71,6 @@ export default function ResultClient() {
     }
     return false;
   });
-
-  // 로딩 단계 표시
-  const LOADING_STEPS = [
-    { message: "사주 데이터를 계산하고 있어", delay: 0 },
-    { message: "해석을 작성하고 있어", delay: 5000 },
-    { message: "마무리하고 있어", delay: 12000 },
-  ];
-  const [loadingStep, setLoadingStep] = useState(0);
-  const loadingTimerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    if (!loading) {
-      loadingTimerRef.current.forEach(clearTimeout);
-      loadingTimerRef.current = [];
-      setLoadingStep(0);
-      return;
-    }
-    setLoadingStep(0);
-    const timers = LOADING_STEPS.slice(1).map((step, i) =>
-      setTimeout(() => setLoadingStep(i + 1), step.delay)
-    );
-    loadingTimerRef.current = timers;
-    return () => timers.forEach(clearTimeout);
-  }, [loading]);
 
   // 입력값 해시 - 의존성 최적화
   const inputHash = useMemo(
@@ -293,15 +276,10 @@ export default function ResultClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
-        <div className="max-w-[640px] w-full text-center">
-          <div className="mb-6">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" aria-label="로딩 중" />
-          </div>
-          <h2 className="text-title-2 text-text-primary mb-2">{LOADING_STEPS[loadingStep].message}</h2>
-          <p className="text-body-2 text-text-secondary">보통 10~20초 정도 걸려요</p>
-        </div>
-      </div>
+      <FullScreenLoading
+        steps={LOADING_STEPS}
+        subMessage="보통 10~20초 정도 걸려요"
+      />
     );
   }
 
