@@ -440,7 +440,7 @@ export default function MyResultsPage() {
                         {badgeSrc ? (
                           <div
                             className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
-                            style={{ background: gc?.bg || "rgba(184,122,64,0.15)" }}
+                            style={{ background: gc?.bg || "#2D231B" }}
                           >
                             <Image
                               src={badgeSrc}
