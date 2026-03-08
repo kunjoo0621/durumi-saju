@@ -5,6 +5,8 @@
  * 현재 단계: 로그만 찍고 저장은 차단하지 않음.
  */
 
+import { detectCrossSectionRepetition } from "@/lib/surgical-rewrite";
+
 export interface QualityIssue {
   severity: "error" | "warning";
   code: string;
@@ -235,6 +237,17 @@ export function validatePersonalResult(result: any): QualityIssue[] {
         });
       }
     }
+  }
+
+  // 6. 섹션 간 content 반복 검사
+  const crossReps = detectCrossSectionRepetition(result);
+  for (const rep of crossReps) {
+    issues.push({
+      severity: "warning",
+      code: "CROSS_SECTION_REPEAT",
+      message: `섹션 ${rep.sectionIndexA} ↔ 섹션 ${rep.sectionIndexB} 유사 문장 ${rep.similarPairs.length}쌍`,
+      details: rep.similarPairs.slice(0, 2).map((p) => `"${p.sentenceA.slice(0, 30)}..." ≈ "${p.sentenceB.slice(0, 30)}..."`).join("; "),
+    });
   }
 
   return issues;

@@ -54,6 +54,32 @@ function fixHaebwa(text: string): { text: string; count: number } {
   return { text: result, count };
 }
 
+// ─── 오탈자 치환 ──────────────────────────────────────────────
+
+const TYPO_PATTERNS: [RegExp, string][] = [
+  [/자기 자신에게에게/g, "자기 자신에게"],
+  [/낚았아/g, "낚았어"],
+  [/필숴/g, "필수야"],
+  [/丁財運/g, "正財運"],
+  [/(\S+)\(\1\)/g, "$1"], // 괄호 반복: "직장인(직장인)" → "직장인"
+];
+
+function fixTypos(text: string): { text: string; count: number } {
+  let count = 0;
+  let result = text;
+  for (const [pattern, replacement] of TYPO_PATTERNS) {
+    result = result.replace(pattern, (...args) => {
+      count++;
+      // 캡처 그룹이 있는 패턴은 $1 치환 직접 처리
+      if (replacement.includes("$1") && args.length > 2) {
+        return replacement.replace("$1", args[1]);
+      }
+      return replacement;
+    });
+  }
+  return { text: result, count };
+}
+
 // ─── 탐지 (경고만) ──────────────────────────────────────────
 
 /** "~해봐" 패턴 탐지 */
@@ -424,6 +450,22 @@ export function postprocessAnalysisResult(
   }
   if (totalHaebwa > 0) {
     warnings.push(`[FIX] '~해봐' ${totalHaebwa}회 자동 치환됨`);
+  }
+
+  // === 오탈자 치환 ===
+  let totalTypos = 0;
+  result.sections = result.sections.map((section) => {
+    const { text, count } = fixTypos(section.content);
+    totalTypos += count;
+    return { ...section, content: text };
+  });
+  {
+    const { text, count } = fixTypos(result.tier.description);
+    totalTypos += count;
+    result.tier = { ...result.tier, description: text };
+  }
+  if (totalTypos > 0) {
+    warnings.push(`[FIX] 오탈자 ${totalTypos}회 치환됨`);
   }
 
   // === 탐지 + 경고 ===

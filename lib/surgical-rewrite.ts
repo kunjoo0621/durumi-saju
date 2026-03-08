@@ -437,6 +437,93 @@ export function detectTitleKeywordOverlap(
   return { needsRewrite: false, targets: [], keyword: "" };
 }
 
+// ─── 개인사주 P4: 섹션 간 문장 반복 감지 ─────────
+
+export interface CrossSectionRepetition {
+  sectionIndexA: number;
+  sectionIndexB: number;
+  similarPairs: { sentenceA: string; sentenceB: string; similarity: number }[];
+}
+
+/**
+ * 섹션 content 본문 간 유사 문장 반복 감지.
+ * - 각 섹션 content를 문장 분리 후 pairwise 비교
+ * - 기본: 유사도 50%+ 문장 쌍 3쌍+ → 반복 판정
+ * - 종합(index 9) 관련: 60%+ 문장 쌍 4쌍+ (종합은 요약 역할이므로 완화)
+ */
+export function detectCrossSectionRepetition(
+  result: AnalysisResult,
+): CrossSectionRepetition[] {
+  const sections = result.sections || [];
+  if (sections.length < 2) return [];
+
+  // 각 섹션의 문장 분리 (5자 이상만)
+  const sectionSentences: string[][] = sections.map((s) =>
+    s.content
+      .split(/[.?!]\s+/)
+      .map((sent) => sent.trim())
+      .filter((sent) => sent.length >= 5),
+  );
+
+  const results: CrossSectionRepetition[] = [];
+
+  for (let i = 0; i < sections.length; i++) {
+    for (let j = i + 1; j < sections.length; j++) {
+      const sentencesA = sectionSentences[i];
+      const sentencesB = sectionSentences[j];
+      if (sentencesA.length === 0 || sentencesB.length === 0) continue;
+
+      // 종합(index 9) 관련 조합은 기준 완화
+      const involvesConclusion = i === 9 || j === 9;
+      const similarityThreshold = involvesConclusion ? 0.6 : 0.5;
+      const minPairs = involvesConclusion ? 4 : 3;
+
+      const similarPairs: CrossSectionRepetition["similarPairs"] = [];
+
+      for (const sentA of sentencesA) {
+        for (const sentB of sentencesB) {
+          const sim = charSimilarity(sentA, sentB);
+          if (sim >= similarityThreshold) {
+            similarPairs.push({ sentenceA: sentA, sentenceB: sentB, similarity: sim });
+          }
+        }
+      }
+
+      if (similarPairs.length >= minPairs) {
+        results.push({
+          sectionIndexA: i,
+          sectionIndexB: j,
+          similarPairs,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+// ─── cross-section 전용 리라이트 프롬프트 ────────
+
+const CROSS_SECTION_REWRITE_SYSTEM = `너는 사주 분석 결과의 텍스트 교정기야.
+아래 텍스트는 사주 분석 결과의 특정 섹션인데, 다른 섹션과 내용이 중복돼 있어.
+중복된 문장들을 제거하고, 이 섹션 고유의 관점에서 완전히 새로운 내용으로 다시 써.
+
+[절대 규칙]
+1. 반말(~야, ~거든, ~지, ~거야) 유지
+2. 위로/격려 금지
+3. 사주 용어는 자연스럽게 사용
+4. 800~1200자
+5. 3문단 구조 유지
+6. 중복으로 지적된 문장은 절대 반복하지 마
+7. 해당 섹션의 주제에 맞는 고유한 내용만 써
+
+응답 형식 (JSON):
+{
+  "rewrites": [
+    { "path": "필드경로", "newText": "새 텍스트" }
+  ]
+}`;
+
 // ─── 리라이트 프롬프트 빌더 ──────────────────────
 
 interface RewriteTarget {
@@ -557,10 +644,11 @@ function containsUnknownName(
 async function callRewrite(
   userPrompt: string,
   warnings: string[],
+  systemPrompt: string = REWRITE_SYSTEM,
 ): Promise<{ path: string; newText: string }[] | null> {
   const model = DEFAULT_MODELS[0]; // gemini-2.5-flash-lite
   try {
-    const res = await callGemini(model, userPrompt, REWRITE_SYSTEM, {
+    const res = await callGemini(model, userPrompt, systemPrompt, {
       temperature: 0.85,
       maxOutputTokens: 2048,
     });
@@ -786,35 +874,100 @@ export async function surgicalRewritePersonal(
     });
   }
 
-  // 리라이트 대상이 없으면 원본 반환
-  if (allRequests.length === 0) return result;
+  // P4: 섹션 간 문장 반복
+  const crossSectionRequests: RewriteRequest[] = [];
+  const crossDetect = detectCrossSectionRepetition(result);
+  if (crossDetect.length > 0) {
+    for (const rep of crossDetect) {
+      // index가 큰 쪽을 rewrite 대상으로
+      const targetIdx = Math.max(rep.sectionIndexA, rep.sectionIndexB);
+      const sourceIdx = Math.min(rep.sectionIndexA, rep.sectionIndexB);
+      const duplicatedSentences = rep.similarPairs.map((p) =>
+        targetIdx === rep.sectionIndexB ? p.sentenceB : p.sentenceA,
+      );
 
-  // 모든 request를 하나의 프롬프트로 합침
-  const mergedTargets: RewriteTarget[] = [];
-  const mergedPreserved: string[] = [];
-  const patterns: string[] = [];
-
-  for (const req of allRequests) {
-    mergedTargets.push(...req.targets);
-    mergedPreserved.push(...req.preservedTexts);
-    if (req.avoidPattern) patterns.push(req.avoidPattern);
+      crossSectionRequests.push({
+        targets: [
+          {
+            path: `sections.${targetIdx}.content`,
+            currentText: result.sections[targetIdx].content,
+          },
+        ],
+        avoidPattern: `이 섹션이 섹션 ${sourceIdx}와 내용이 중복됨.\n중복된 문장들:\n${duplicatedSentences.map((s) => `- "${s}"`).join("\n")}\n위 내용을 반복하지 말고 이 섹션 고유의 관점에서 새로 써.`,
+        preservedTexts: [result.sections[sourceIdx].content.slice(0, 300)],
+      });
+    }
   }
 
-  const userPrompt = buildRewriteUserPrompt({
-    targets: mergedTargets,
-    avoidPattern: patterns.join("\n"),
-    preservedTexts: [...new Set(mergedPreserved)],
-  });
+  // 리라이트 대상이 없으면 원본 반환
+  if (allRequests.length === 0 && crossSectionRequests.length === 0) return result;
 
-  warnings.push(`[surgical-rewrite] 개인사주 리라이트 발동: ${mergedTargets.length}개 필드`);
+  let patched = result;
 
-  const rewrites = await callRewrite(userPrompt, warnings);
-  if (!rewrites) return result;
+  // P1~P3: 기존 프롬프트로 합쳐서 호출
+  if (allRequests.length > 0) {
+    const mergedTargets: RewriteTarget[] = [];
+    const mergedPreserved: string[] = [];
+    const patterns: string[] = [];
 
-  const myoSkipPaths = new Set(
-    myoExcessTargets?.map((t) => t.path) ?? [],
-  );
-  return patchResults(result, rewrites, warnings, [context.name], myoSkipPaths);
+    for (const req of allRequests) {
+      mergedTargets.push(...req.targets);
+      mergedPreserved.push(...req.preservedTexts);
+      if (req.avoidPattern) patterns.push(req.avoidPattern);
+    }
+
+    const userPrompt = buildRewriteUserPrompt({
+      targets: mergedTargets,
+      avoidPattern: patterns.join("\n"),
+      preservedTexts: [...new Set(mergedPreserved)],
+    });
+
+    warnings.push(`[surgical-rewrite] 개인사주 리라이트 발동: ${mergedTargets.length}개 필드`);
+
+    const rewrites = await callRewrite(userPrompt, warnings);
+    if (rewrites) {
+      const myoSkipPaths = new Set(
+        myoExcessTargets?.map((t) => t.path) ?? [],
+      );
+      patched = patchResults(patched, rewrites, warnings, [context.name], myoSkipPaths);
+    }
+  }
+
+  // P4: cross-section 전용 프롬프트로 별도 호출
+  if (crossSectionRequests.length > 0) {
+    const crossTargets: RewriteTarget[] = [];
+    const crossPreserved: string[] = [];
+    const crossPatterns: string[] = [];
+
+    for (const req of crossSectionRequests) {
+      crossTargets.push(...req.targets);
+      crossPreserved.push(...req.preservedTexts);
+      if (req.avoidPattern) crossPatterns.push(req.avoidPattern);
+    }
+
+    // 중복 타겟 제거 (path 기준)
+    const seen = new Set<string>();
+    const uniqueCrossTargets = crossTargets.filter((t) => {
+      if (seen.has(t.path)) return false;
+      seen.add(t.path);
+      return true;
+    });
+
+    const crossUserPrompt = buildRewriteUserPrompt({
+      targets: uniqueCrossTargets,
+      avoidPattern: crossPatterns.join("\n"),
+      preservedTexts: [...new Set(crossPreserved)],
+    });
+
+    warnings.push(`[surgical-rewrite] 섹션 간 반복 리라이트 발동: ${uniqueCrossTargets.length}개 필드`);
+
+    const crossRewrites = await callRewrite(crossUserPrompt, warnings, CROSS_SECTION_REWRITE_SYSTEM);
+    if (crossRewrites) {
+      patched = patchResults(patched, crossRewrites, warnings, [context.name]);
+    }
+  }
+
+  return patched;
 }
 
 // ─── 헬퍼: 모든 punchline 수집 ──────────────────
