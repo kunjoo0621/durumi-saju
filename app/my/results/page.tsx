@@ -615,10 +615,10 @@ export default function MyResultsPage() {
                             <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={30} height={30} />
                           </div>
                           <div
-                            className="absolute -right-2 -bottom-2 w-[40px] h-[40px] rounded-[10px] flex items-center justify-center ring-2 ring-[#141414]"
+                            className="absolute -right-1.5 -bottom-1.5 w-[28px] h-[28px] rounded-[8px] flex items-center justify-center ring-2 ring-[#141414]"
                             style={{ background: gcB.bg }}
                           >
-                            <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={22} height={22} />
+                            <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={16} height={16} />
                           </div>
                         </div>
 
