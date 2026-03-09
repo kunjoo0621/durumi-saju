@@ -624,19 +624,10 @@ export default function MyResultsPage() {
 
                         {/* 정보 영역 */}
                         <div className="flex-1 min-w-0">
-                          {/* 1줄: 이름 + 등급·점수 */}
+                          {/* 1줄: 이름 */}
                           <div className="flex items-baseline gap-2 mb-1.5">
                             <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
                               {b.player_a_name} vs {b.player_b_name}
-                            </span>
-                            <span
-                              className="text-[13px] font-semibold whitespace-nowrap shrink-0"
-                              style={{ color: (isDraw || isWinnerA ? gcA : gcB).text }}
-                            >
-                              {isDraw || isWinnerA ? b.player_a_grade : b.player_b_grade}등급
-                              {(isDraw || isWinnerA ? b.player_a_composite : b.player_b_composite) != null
-                                ? ` · ${isDraw || isWinnerA ? b.player_a_composite : b.player_b_composite}점`
-                                : ""}
                             </span>
                           </div>
                           {/* 2줄: 메타 */}
