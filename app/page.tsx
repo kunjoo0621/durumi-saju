@@ -354,7 +354,7 @@ function LandingPageInner() {
               <p>사업자등록번호: 801-02-03874</p>
               <p>업태: 도매 및 소매업 | 종목: 전자상거래 소매업</p>
               <p>주소: 경기 용인시 수지구 용구대로2790번길 7, 302호 S218</p>
-              <p>고객센터: 010-4021-6982 | 이메일: kunjoo0621@gmail.com</p>
+              <p>고객센터: 0502-1913-6990 | 이메일: kunjoo0621@gmail.com</p>
               <p>호스팅 서비스 제공자: Vercel Inc.</p>
               <a
                 href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=8010203874"
