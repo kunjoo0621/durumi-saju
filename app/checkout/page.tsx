@@ -270,6 +270,10 @@ function CheckoutContent() {
     redirectResult={isBattle ? "/battle/result" : "/result"}
     redirectBack={redirectBack}
     checkoutType={checkoutType}
+    existingResultId={existingResultId}
+    setExistingResultId={setExistingResultId}
+    showDuplicateModal={showDuplicateModal}
+    setShowDuplicateModal={setShowDuplicateModal}
   />;
 }
 
@@ -281,6 +285,8 @@ function CheckoutForm({
   sessionId, setSessionId,
   storeId, channelKey, mockPayment, amount, hasRequiredInput, router,
   redirectResult, redirectBack, checkoutType,
+  existingResultId, setExistingResultId,
+  showDuplicateModal, setShowDuplicateModal,
 }: any) {
   // 사주 태그 (배틀 전용)
   const [tagsA, setTagsA] = useState<SajuTag[]>([]);
