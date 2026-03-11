@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
           .eq("input_hash", inputHash)
           .in("guest_token_hash", existingHashes)
           .gt("guest_token_expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (existing?.id) {

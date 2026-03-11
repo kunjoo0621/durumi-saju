@@ -671,7 +671,7 @@ function CheckoutForm({
 
         <BusinessFooter
           footerClassName="border-t border-white/[0.06] mt-8"
-          innerClassName="px-5 pt-8 pb-[calc(120px+env(safe-area-inset-bottom))] text-[13px] leading-[180%] text-[rgb(var(--c-text-muted))]"
+          innerClassName="max-w-[640px] mx-auto px-5 pt-8 pb-[calc(120px+env(safe-area-inset-bottom))] text-[13px] leading-[180%] text-[rgb(var(--c-text-muted))]"
         />
       </main>
 

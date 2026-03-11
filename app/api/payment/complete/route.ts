@@ -45,7 +45,7 @@ async function markSessionConsumed(
   userId: string | null,
   guestTokenHash: string | null,
 ) {
-  const query = supabaseAdmin
+  let query = supabaseAdmin
     .from("prepayment_sessions")
     .update({
       status: "consumed",
@@ -55,9 +55,9 @@ async function markSessionConsumed(
     .eq("status", "pending");
 
   if (userId) {
-    query.eq("user_id", userId);
+    query = query.eq("user_id", userId);
   } else if (guestTokenHash) {
-    query.eq("guest_token_hash", guestTokenHash);
+    query = query.eq("guest_token_hash", guestTokenHash);
   }
 
   const { error } = await query;
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
       const verifyResponse = await fetch(
         `https://api.portone.io/payments/${encodeURIComponent(body.paymentId)}`,
         {
-          headers: { Authorization: `Bearer ${portoneSecret}` },
+          headers: { Authorization: `PortOne ${portoneSecret}` },
         }
       );
 
@@ -441,6 +441,8 @@ export async function POST(request: NextRequest) {
         .eq("input_hash", inputHash)
         .in("guest_token_hash", guestHashes)
         .gt("guest_token_expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (existingGuest?.id) {
