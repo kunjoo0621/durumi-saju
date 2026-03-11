@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import {
   useBattleStore,
@@ -70,6 +71,15 @@ export default function BattleInputPage() {
   } = useBattleActions();
 
   const playerAMode = useBattleStore((s) => s.playerAMode);
+  const { status } = useSession();
+
+  // 비로그인 시 selectMode 스킵 → 바로 이름 입력
+  useEffect(() => {
+    if (status === "unauthenticated" && !playerAMode) {
+      setPlayerAMode("new");
+      setStep(1); // myName
+    }
+  }, [status, playerAMode, setPlayerAMode, setStep]);
 
   const [loadingMySaju, setLoadingMySaju] = useState(false);
   const [mySajuLoaded, setMySajuLoaded] = useState(false);
