@@ -9,7 +9,7 @@ import {
 import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 8;
+export const SCORING_VERSION = 9;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;
@@ -468,9 +468,9 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
   // 게이트 2: risk 상한 — 리스크가 극단적이면 등급 제한
   if (risk >= COMPOSITE_GRADE_CUTOFFS.A) { grade = capGrade(grade, "C"); }
 
-  // 게이트 3: 최저 카테고리 극단 낮음 → -1 등급 (B-2: ≤44)
+  // 게이트 3: 최저 카테고리 극단 낮음 → -1 등급 (B-2: ≤39)
   const minScore = Math.min(...scoreValues);
-  if (minScore <= 44 && isAbove(grade, "D")) {
+  if (minScore <= 39 && isAbove(grade, "D")) {
     grade = lowerGrade(grade);
   }
 
