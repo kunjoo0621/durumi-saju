@@ -106,7 +106,7 @@ export default function CoinsPage() {
         </div>
       </main>
 
-      <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] max-w-[640px] mx-auto">
+      <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
           <button
             onClick={handlePurchase}
