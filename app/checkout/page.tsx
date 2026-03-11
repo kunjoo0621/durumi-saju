@@ -708,7 +708,7 @@ function CheckoutForm({
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
           <p className="text-[12px] text-gray-500 text-center mb-2">
-            환불 불가 · {isAuthenticated ? "결과는 저장되니까 안심해" : "로그인하면 결과가 저장돼"} · 결제 후 바로 사주 결과를 받아볼 수 있어
+            {isAuthenticated ? "결과는 저장되니까 안심해" : "로그인하면 결과가 저장돼"} · 결제 후 바로 사주 결과를 받아볼 수 있어
           </p>
           <button
             type="button"
