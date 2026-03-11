@@ -166,10 +166,10 @@ export default function BattleResultView({
 
       {/* 게스트용 하단 스티키 카카오 로그인 CTA */}
       {showSavePrompt && saveBannerReturnTo && (
-        <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl max-w-[640px] mx-auto">
           <div className="max-w-[640px] mx-auto">
             <p className="text-[12px] text-white/78 text-center mb-2">
-              지금 로그인하면 결과가 영구 저장돼요
+              지금 로그인하면 결과가 계속 저장돼
             </p>
             <button
               type="button"

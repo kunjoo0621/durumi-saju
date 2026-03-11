@@ -386,10 +386,10 @@ export default function ResultClient() {
             <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
               <div className="w-full max-w-[340px] bg-[#1A1A1A] rounded-2xl p-6">
                 <h3 className="text-[17px] font-bold text-white text-center mb-2">
-                  지금 나가시면 결과가 저장되지 않아요
+                  지금 나가면 결과가 저장 안 돼
                 </h3>
                 <p className="text-[13px] text-gray-400 text-center mb-6">
-                  카카오 로그인하면 결과가 영구 저장돼요
+                  카카오 로그인하면 결과가 계속 저장돼
                 </p>
                 <div className="space-y-2.5">
                   <button
@@ -432,10 +432,10 @@ export default function ResultClient() {
 
           {/* 게스트용 하단 스티키 카카오 로그인 CTA */}
           {isGuest && (
-            <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+            <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl max-w-[640px] mx-auto">
               <div className="max-w-[640px] mx-auto">
                 <p className="text-[12px] text-white/78 text-center mb-2">
-                  지금 로그인하면 결과가 영구 저장돼요
+                  지금 로그인하면 결과가 계속 저장돼
                 </p>
                 <button
                   type="button"

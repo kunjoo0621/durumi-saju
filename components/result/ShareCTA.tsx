@@ -17,7 +17,7 @@ export default function ShareCTA() {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-[130] bg-[#141414] px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="fixed inset-x-0 bottom-0 z-[130] bg-[#141414] px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] max-w-[640px] mx-auto">
         <div className="max-w-[640px] mx-auto">
           <p className="text-sm text-gray-400 text-center mb-2">
             내 사주는 몇 등급일까?

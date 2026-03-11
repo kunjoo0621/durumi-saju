@@ -648,7 +648,7 @@ async function callRewrite(
   warnings: string[],
   systemPrompt: string = REWRITE_SYSTEM,
 ): Promise<{ path: string; newText: string }[] | null> {
-  const model = DEFAULT_MODELS[0]; // gemini-2.5-flash-lite
+  const model = DEFAULT_MODELS[0]; // gemini-2.5-flash
   try {
     const res = await callGemini(model, userPrompt, systemPrompt, {
       temperature: 0.85,

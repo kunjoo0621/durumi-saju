@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Spinner from "./Spinner";
 
 interface FullScreenLoadingProps {
@@ -15,7 +15,6 @@ export default function FullScreenLoading({
   steps,
 }: FullScreenLoadingProps) {
   const [stepIndex, setStepIndex] = useState(0);
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     if (!steps || steps.length <= 1) return;
@@ -23,7 +22,6 @@ export default function FullScreenLoading({
     const timers = steps.slice(1).map((step, i) =>
       setTimeout(() => setStepIndex(i + 1), step.delay)
     );
-    timersRef.current = timers;
     return () => timers.forEach(clearTimeout);
   }, [steps]);
 

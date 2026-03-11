@@ -6,7 +6,7 @@ type LandingCTAProps = {
 
 export default function LandingCTA({ onStart }: LandingCTAProps) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+    <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl max-w-[640px] mx-auto">
       <div className="max-w-[640px] mx-auto">
         <p className="text-[12px] text-white/78 text-center mb-2">
           결과를 저장하고 다시 보려면 로그인이 필요해요

@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
-import { generateToken, hashToken, addTokenToCookie } from "@/lib/guest-token";
+import { generateToken, hashToken, addTokenToCookie, getTokensFromCookie } from "@/lib/guest-token";
+import { SCORING_VERSION } from "@/lib/utils/saju-scoring";
 
 function isValidInput(input: InputPayload) {
   if (
@@ -47,6 +48,36 @@ export async function POST(request: NextRequest) {
     }
 
     const inputHash = buildInputHash(input);
+
+    // ── 게스트: 기존 결과 체크 (세션 INSERT 전에 확인) ──
+    if (!userId) {
+      const existingTokens = await getTokensFromCookie();
+      const existingHashes = existingTokens.map(t => hashToken(t));
+      if (existingHashes.length > 0) {
+        const { data: existing } = await supabaseAdmin
+          .from("saju_results")
+          .select("id, full_json")
+          .eq("input_hash", inputHash)
+          .in("guest_token_hash", existingHashes)
+          .gt("guest_token_expires_at", new Date().toISOString())
+          .maybeSingle();
+
+        if (existing?.id) {
+          const storedVersion = (existing.full_json as any)?.scoringVersion ?? 0;
+          if (storedVersion >= SCORING_VERSION) {
+            const response = NextResponse.json({
+              sessionId: "",
+              existingResultId: existing.id,
+            });
+            if (rawToken) {
+              await addTokenToCookie(response, rawToken);
+            }
+            return response;
+          }
+        }
+      }
+    }
+
     const payload = {
       ...input,
       name: input.name.trim(),

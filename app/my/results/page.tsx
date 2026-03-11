@@ -709,7 +709,7 @@ export default function MyResultsPage() {
 
       {/* 하단 플로팅 CTA */}
       {tab === "saju" && results.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="fixed inset-x-0 bottom-0 z-[130] border-t border-white/10 bg-black/45 px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-xl max-w-[640px] mx-auto">
           <div className="max-w-[640px] mx-auto">
             <button
               type="button"

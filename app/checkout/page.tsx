@@ -9,6 +9,7 @@ import { useAllInputs } from "@/store/useInputStore";
 import { useBattleStore } from "@/store/useBattleStore";
 import { getQuickSajuTags, type SajuTag } from "./actions";
 import { FullScreenLoading, ButtonSpinner } from "@/components/loading";
+import BusinessFooter from "@/components/BusinessFooter";
 
 type CheckoutType = "analysis" | "battle";
 
@@ -335,6 +336,10 @@ function CheckoutForm({
           throw new Error(data?.error || "결제 준비가 안 됐어.");
         }
         const data = await res.json();
+        if (data.existingResultId && !isBattle) {
+          router.replace(`/result?resultId=${data.existingResultId}`);
+          return;
+        }
         const sid = typeof data?.sessionId === "string" ? data.sessionId : "";
         if (!sid) throw new Error("결제 연결이 안 됐어.");
         setSessionId(sid);
@@ -664,56 +669,19 @@ function CheckoutForm({
           )}
         </div>
 
-        {/* 사업자정보 footer */}
-        <footer className="border-t border-white/[0.06] mt-8">
-          <div className="px-5 pt-8 pb-[calc(180px+env(safe-area-inset-bottom))] text-[13px] leading-[180%] text-[rgb(var(--c-text-muted))]">
-            <div className="flex items-center gap-2 text-[13px]">
-              <a href="/terms" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
-                이용약관
-              </a>
-              <span>·</span>
-              <a href="/privacy" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
-                개인정보처리방침
-              </a>
-            </div>
-
-            <details className="mt-4 group">
-              <summary className="cursor-pointer list-none flex items-center gap-1 text-[12px] text-[rgb(var(--c-text-muted))] hover:text-[rgb(var(--c-text-sub))] transition-colors">
-                사업자 정보
-                <svg className="w-3 h-3 transition-transform group-open:rotate-180" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </summary>
-              <div className="mt-2 text-[11px] leading-[180%] text-[rgb(var(--c-text-muted))]/60">
-                <p>상호: 두루미 원정대 | 대표: 신건주</p>
-                <p>사업자등록번호: 801-02-03874</p>
-                <p>업태: 도매 및 소매업 | 종목: 전자상거래 소매업</p>
-                <p>주소: 경기 용인시 수지구 용구대로2790번길 7, 302호 S218</p>
-                <p>고객센터: 0502-1913-6990 | 이메일: kunjoo0621@gmail.com</p>
-                <p>호스팅 서비스 제공자: Vercel Inc.</p>
-                <a
-                  href="https://www.ftc.go.kr/bizCommPop.do?wrkr_no=8010203874"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-1 underline hover:text-[rgb(var(--c-text-sub))] transition-colors"
-                >
-                  사업자정보확인
-                </a>
-              </div>
-            </details>
-
-            <p className="mt-4 text-[12px] text-[rgb(var(--c-text-muted))]">
-              © 2026 두루미 원정대. All rights reserved.
-            </p>
-          </div>
-        </footer>
+        <BusinessFooter
+          footerClassName="border-t border-white/[0.06] mt-8"
+          innerClassName="px-5 pt-8 pb-[calc(120px+env(safe-area-inset-bottom))] text-[13px] leading-[180%] text-[rgb(var(--c-text-muted))]"
+        />
       </main>
 
-      <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))] max-w-[640px] mx-auto">
         <div className="max-w-[640px] mx-auto">
-          <p className="text-[13px] text-gray-500 text-center mb-1">
-            디지털 콘텐츠 특성상 결과 확인 후 환불이 불가합니다
+          <p className="text-[12px] text-gray-500 text-center mb-1">
+            환불 불가 · {isAuthenticated ? "결과는 저장되니까 안심해" : "로그인하면 결과가 저장돼"}
           </p>
-          <p className="text-sm text-gray-400 text-center mb-2">
-            {isAuthenticated ? "결과는 저장되니까 안심해" : isBattle ? "카카오 로그인하면 결과가 계속 저장돼" : "결과는 24시간 뒤 사라져. 로그인하면 계속 저장돼"}
+          <p className="text-xs text-gray-500 text-center mb-2">
+            결제 완료 즉시 이용 가능
           </p>
           <button
             type="button"
@@ -735,7 +703,8 @@ function CheckoutForm({
             <button
               type="button"
               onClick={() => signIn("kakao", { callbackUrl: window.location.href })}
-              className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold mt-3"
+              disabled={paying || confirming}
+              className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold mt-3 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               카카오로 로그인하고 결제하기
             </button>

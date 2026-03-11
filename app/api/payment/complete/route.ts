@@ -431,6 +431,27 @@ export async function POST(request: NextRequest) {
 
     // ============ guest: RPC 우회, 직접 INSERT ============
 
+    // ── 게스트 중복 결제 방지 (LLM 호출 전에 체크) ──
+    const guestHashes = guestTokens.map(t => hashToken(t));
+
+    if (guestHashes.length > 0) {
+      const { data: existingGuest } = await supabaseAdmin
+        .from("saju_results")
+        .select("id, full_json")
+        .eq("input_hash", inputHash)
+        .in("guest_token_hash", guestHashes)
+        .gt("guest_token_expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (existingGuest?.id) {
+        const storedVersion = (existingGuest.full_json as any)?.scoringVersion ?? 0;
+        if (storedVersion >= SCORING_VERSION) {
+          await markSessionConsumed(body.sessionId!, null, guestTokenHash);
+          return NextResponse.json({ ok: true, resultId: existingGuest.id, reused: true });
+        }
+      }
+    }
+
     const sajuText = await resolveSajuText(input);
     const full = await runFullAnalysis({ ...input, saju: sajuText || input.saju });
     const teaser = buildTeaserFromFull(full);
