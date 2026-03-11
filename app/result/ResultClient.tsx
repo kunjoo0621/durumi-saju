@@ -20,9 +20,7 @@ const CORE_FEAR_LABELS: Record<string, string> = {
 };
 
 const LOADING_STEPS = [
-  { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: "해석을 작성하고 있어", delay: 5000 },
-  { message: "마무리하고 있어", delay: 12000 },
+  { message: "결과를 불러오고 있어", delay: 0 },
 ];
 
 export default function ResultClient() {
@@ -278,7 +276,7 @@ export default function ResultClient() {
     return (
       <FullScreenLoading
         steps={LOADING_STEPS}
-        subMessage="보통 10~20초 정도 걸려요"
+        subMessage="잠깐이면 돼"
       />
     );
   }

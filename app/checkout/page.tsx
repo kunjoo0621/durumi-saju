@@ -524,6 +524,29 @@ function CheckoutForm({
 
   const displayInputs = isBattle ? battleStore.playerA : inputs;
 
+  const CONFIRM_STEPS = isBattle
+    ? [
+        { message: "결제를 확인하고 있어", delay: 0 },
+        { message: "두 사람의 사주를 분석하고 있어", delay: 3000 },
+        { message: "대결 결과를 만들고 있어", delay: 10000 },
+        { message: "마무리하고 있어", delay: 25000 },
+      ]
+    : [
+        { message: "결제를 확인하고 있어", delay: 0 },
+        { message: "사주 데이터를 계산하고 있어", delay: 3000 },
+        { message: "해석을 작성하고 있어", delay: 8000 },
+        { message: "마무리하고 있어", delay: 18000 },
+      ];
+
+  if (confirming) {
+    return (
+      <FullScreenLoading
+        steps={CONFIRM_STEPS}
+        subMessage="보통 10~20초 정도 걸려"
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
       <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
