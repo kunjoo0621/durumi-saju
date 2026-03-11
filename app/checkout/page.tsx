@@ -78,6 +78,8 @@ function CheckoutContent() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const confirmingRef = useRef(false);
+  const [existingResultId, setExistingResultId] = useState<string | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   const paymentId = searchParams?.get("paymentId");
   const orderIdParam = searchParams?.get("orderId");
@@ -337,8 +339,7 @@ function CheckoutForm({
         }
         const data = await res.json();
         if (data.existingResultId && !isBattle) {
-          router.replace(`/result?resultId=${data.existingResultId}`);
-          return;
+          setExistingResultId(data.existingResultId);
         }
         const sid = typeof data?.sessionId === "string" ? data.sessionId : "";
         if (!sid) throw new Error("결제 연결이 안 됐어.");
@@ -375,6 +376,12 @@ function CheckoutForm({
       sessionStorage.setItem("sajuOrderId", generated);
       setOrderId(generated);
       safeOrderId = generated;
+    }
+
+    // 중복 결과가 있고 아직 모달을 보여주지 않았으면 모달 표시
+    if (existingResultId && !showDuplicateModal) {
+      setShowDuplicateModal(true);
+      return;
     }
 
     setPaying(true);
@@ -708,6 +715,40 @@ function CheckoutForm({
           )}
         </div>
       </div>
+
+      {/* 중복 결과 모달 */}
+      {showDuplicateModal && existingResultId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
+          <div className="w-full max-w-[340px] bg-[#1A1A1A] rounded-2xl p-6">
+            <h3 className="text-[17px] font-bold text-white text-center mb-2">
+              이미 같은 사주로 본 결과가 있어
+            </h3>
+            <p className="text-[13px] text-gray-400 text-center mb-6">
+              기존 결과를 볼 수도 있고, 새로 결제할 수도 있어
+            </p>
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => router.push(`/result?resultId=${existingResultId}`)}
+                className="btn-primary w-full h-[48px] rounded-xl text-[15px] font-semibold"
+              >
+                결과 보러가기
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDuplicateModal(false);
+                  setExistingResultId(null);
+                  handlePay();
+                }}
+                className="w-full h-[48px] rounded-xl text-[15px] font-semibold text-gray-400 bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+              >
+                새로 결제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
