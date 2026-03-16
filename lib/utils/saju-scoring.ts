@@ -9,7 +9,7 @@ import {
 import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 9;
+export const SCORING_VERSION = 10;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;
@@ -143,6 +143,12 @@ export function getElementAnalysis(dist: Record<string, number>) {
   return { max, min, diff: max - min, hasDeficiency, hasDominance, isBalanced };
 }
 
+/** v10: 시간 미입력 시 isBalanced 완화 (nonZero >= 3), 그 외에는 원본 유지 */
+function effectiveIsBalanced(elem: ReturnType<typeof getElementAnalysis>, input: ScoringInput): boolean {
+  if (!input.isTimeUnknown) return elem.isBalanced;
+  return Object.values(input.elementDist || {}).filter((v) => v >= 1).length >= 3;
+}
+
 function countDataTypes(input: ScoringInput) {
   const hasElements = Object.values(input.elementDist || {}).some((v) => v > 0);
   const hasTenStars = Array.isArray(input.tenStars) && input.tenStars.length > 0;
@@ -157,6 +163,11 @@ function countDataTypes(input: ScoringInput) {
 
 export function calculateScores(input: ScoringInput): ServerScores {
   const elem = getElementAnalysis(input.elementDist);
+
+  // v10: 시간 미입력 보정 — 6글자 데이터 부족 보정
+  const balanced = effectiveIsBalanced(elem, input);
+  const defScale = input.isTimeUnknown ? 0.75 : 1;
+
   const hasChung = (input.relationships?.chung?.length || 0) > 0;
   const hasHyung = (input.relationships?.hyung?.length || 0) > 0;
   const hasChungOrHyung = hasChung || hasHyung;
@@ -186,7 +197,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hasStar(input.tenStars, "식신")) 재물운 += 4;
   if (hasStar(input.tenStars, "상관")) 재물운 += 2;
   if (hasSikSang && hasJaeSung) 재물운 += 6; // 식상생재
-  if (elem.isBalanced) 재물운 += 4;
+  if (balanced) 재물운 += 4;
   if (isSingang) 재물운 += 3;
   if (hasHap) 재물운 += 2;
   if (hasStar(input.tenStars, "비견")) 재물운 -= 6;
@@ -195,7 +206,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   // v6: 충+형 동시인 경우에만 재물운 감점 복원
   if (hasChung && hasHyung) 재물운 -= 3;
   // v6: 오행결핍 2개 이상인 경우에만 재물운 감점 복원
-  if (deficientCount >= 2) 재물운 -= 3;
+  if (deficientCount >= 2) 재물운 -= Math.round(3 * defScale);
   if (elem.hasDominance) 재물운 -= 2; // 오행편중: -4 → -2
   if (isSinyak) 재물운 -= 2;
 
@@ -207,7 +218,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hasStar(input.tenStars, "정재")) 연애운 += 3;
   if (hasHap) 연애운 += 7;
   if (hapCount >= 2) 연애운 += 4;
-  if (elem.isBalanced) 연애운 += 3;
+  if (balanced) 연애운 += 3;
   if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 연애운 += 3;
   if (countStar(input.tenStars, "비견") >= 2) 연애운 -= 5; // A-2: 비견 2개 이상만 감점
   if (hasStar(input.tenStars, "겁재")) 연애운 -= 6;
@@ -229,7 +240,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hasStar(input.tenStars, "식신")) 직장운 += 3;
   if (isSingang) 직장운 += 3;
   if (hasHap) 직장운 += 2;
-  if (elem.isBalanced) 직장운 += 3;
+  if (balanced) 직장운 += 3;
   if (hasStar(input.tenStars, "상관")) 직장운 -= 5;
   if (hasStar(input.tenStars, "상관") && hasGwanSung) 직장운 -= 5; // 상관견관
   if (hasBigyeobOverload) 직장운 -= 5;
@@ -237,19 +248,19 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hasChung) 직장운 -= 2;  // 충: -4 → -2 (v5 카테고리 특화)
   if (hasHyung) 직장운 -= 2; // 형살: -4 → -2 (v5 카테고리 특화)
   // v6: 오행결핍 2개 이상인 경우에만 직장운 감점 복원
-  if (deficientCount >= 2) 직장운 -= 3;
+  if (deficientCount >= 2) 직장운 -= Math.round(3 * defScale);
   if (isSinyak) 직장운 -= 3;
 
   // ── 건강운 (35~88) ──
   let 건강운 = base;
-  if (elem.isBalanced) 건강운 += 10;
-  if (elem.isBalanced && elem.diff <= 1 && !elem.hasDeficiency) 건강운 += 5; // 극균형
+  if (balanced) 건강운 += 10;
+  if (balanced && elem.diff <= 1 && !elem.hasDeficiency) 건강운 += 5; // 극균형
   if (hasStar(input.tenStars, "식신")) 건강운 += 5;
   if (hasInSung) 건강운 += 3;
   if (isSingang) 건강운 += 3;
   if (hasHap) 건강운 += 2;
   if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 건강운 += 2;
-  건강운 -= deficientCount * 6; // 결핍 원소별 -6
+  건강운 -= Math.round(deficientCount * 6 * defScale); // 결핍 원소별 -6 (v10: 시간미상 0.75 스케일링)
   if (elem.max >= 4) 건강운 -= 6; // 편중
   if (elem.max >= 5) 건강운 -= 5; // 극편중 추가
   if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 건강운 -= 5;
@@ -269,7 +280,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hapCount >= 2) 대인운 += 3;
   if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 대인운 += 5;
   if ((input.shinsal || []).some((s) => String(s).includes("문창"))) 대인운 += 3;
-  if (elem.isBalanced) 대인운 += 3;
+  if (balanced) 대인운 += 3;
   if (hasStar(input.tenStars, "겁재") && !hasBigyeobOverload) 대인운 -= 6;
   if (hasStar(input.tenStars, "상관") && hasGwanSung) 대인운 -= 4; // 상관견관
   if (hasChung) 대인운 -= 5;
@@ -334,6 +345,7 @@ function gradeFromCompositeSafe(composite: number): GradeLabel {
 
 function calculateAxes(input: ScoringInput) {
   const elem = getElementAnalysis(input.elementDist);
+  const balanced = effectiveIsBalanced(elem, input);
   const hasChungOrHyung =
     (input.relationships?.chung?.length || 0) > 0 || (input.relationships?.hyung?.length || 0) > 0;
   const hasHap = (input.relationships?.hap?.length || 0) > 0;
@@ -346,7 +358,7 @@ function calculateAxes(input: ScoringInput) {
   if (hasStar(input.tenStars, "정인") || hasStar(input.tenStars, "편인") || hasStar(input.tenStars, "인성"))
     potential += 4;
   if (input.strength === "신강" || input.strength === "추정 신강") potential += 4;
-  if (elem.isBalanced) potential += 3;
+  if (balanced) potential += 3;
   if (hasHap) potential += 3;
   if (bigyeobCount >= 3) potential -= 6;
   if (elem.hasDeficiency) potential -= 4;
