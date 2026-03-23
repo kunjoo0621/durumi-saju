@@ -46,7 +46,7 @@ export default function Header({
     }
   };
 
-  const showCoinBalance = showBalance && isLoggedIn;
+  const showCoinBalance = isLoggedIn;
 
   const defaultCls = `shrink-0 z-[100] bg-background-primary px-5 py-4${sticky ? ' sticky top-0' : ''}`;
 
