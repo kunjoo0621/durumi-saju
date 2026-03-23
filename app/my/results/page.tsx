@@ -437,7 +437,7 @@ export default function MyResultsPage() {
                       >
                         <Link
                           href={`/result?resultId=${item.id}`}
-                          className="flex-1 min-w-0 p-5 flex items-center gap-4"
+                          className="flex-1 min-w-0 py-5 pl-5 pr-2 flex items-center gap-4"
                         >
                           {/* 등급 메달 */}
                           {badgeSrc ? (
@@ -497,7 +497,7 @@ export default function MyResultsPage() {
                           {/* 대표 뱃지 */}
                           {item.is_primary && (
                             <span
-                              className="text-[11px] font-bold px-2.5 py-[3px] rounded-[6px] shrink-0 mr-1"
+                              className="text-[11px] font-bold px-2.5 py-[3px] rounded-[6px] shrink-0"
                               style={{ background: "rgba(255,107,107,0.12)", color: "#FF6B6B" }}
                             >
                               대표
@@ -609,7 +609,7 @@ export default function MyResultsPage() {
                       >
                         <Link
                           href={`/battle/result?id=${b.id}`}
-                          className="flex-1 min-w-0 p-5 flex items-center gap-4"
+                          className="flex-1 min-w-0 py-5 pl-5 pr-2 flex items-center gap-4"
                         >
                           {/* 배지 메인+서브 겹침 */}
                           <div className="relative w-[56px] h-[56px] shrink-0">
