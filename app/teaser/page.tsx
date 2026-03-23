@@ -84,13 +84,12 @@ function TeaserContent() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showChargeSheet, setShowChargeSheet] = useState(false);
 
-  // PortOne redirect 복귀 감지 (chargeOrderId 파라미터가 있으면 결제 후 복귀)
-  // redirectPath를 /coins로 설정했으므로 teaser로는 돌아오지 않지만, 안전장치로 유지
+  // PortOne redirect 복귀 감지
   const isChargeRedirect = useMemo(() => {
     if (typeof window === "undefined") return false;
-    const params = new URLSearchParams(window.location.search);
-    return !!params.get("chargeOrderId");
+    return !!new URLSearchParams(window.location.search).get("chargeOrderId");
   }, []);
+  const [chargeProcessing, setChargeProcessing] = useState(isChargeRedirect);
 
   // 배틀 사주 태그
   const [tagsA, setTagsA] = useState<SajuTag[]>([]);
@@ -140,6 +139,75 @@ function TeaserContent() {
       router.replace(redirectBack);
     }
   }, [hydrated, hasRequiredInput, router, redirectBack, isChargeRedirect]);
+
+  // PortOne redirect 복귀: 충전 → 자동 spend → 결과
+  useEffect(() => {
+    if (!isChargeRedirect || !isAuthenticated || !hydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    const chargeOrderId = params.get("chargeOrderId");
+    const packageId = params.get("packageId");
+    const amount = params.get("amount");
+    const paymentId = params.get("paymentId");
+
+    if (!chargeOrderId || !packageId || !amount) return;
+
+    // URL 정리
+    const cleanUrl = new URL(window.location.href);
+    ["chargeOrderId", "packageId", "amount", "paymentId", "code", "message"].forEach(k => cleanUrl.searchParams.delete(k));
+    window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search);
+
+    // 결제 취소
+    if (params.get("code")) {
+      setError(params.get("message") || "결제가 취소되었습니다.");
+      setChargeProcessing(false);
+      return;
+    }
+
+    // 충전 API 호출
+    (async () => {
+      try {
+        const res = await fetch("/api/coins/charge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            packageId,
+            orderId: chargeOrderId,
+            paymentId: paymentId || chargeOrderId,
+            amount: Number(amount),
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || "충전에 실패했습니다.");
+        }
+        const data = await res.json();
+        setBalance(data.balance);
+
+        // sessionStorage에서 저장된 sessionId 복원
+        const savedSessionId = sessionStorage.getItem("teaserSessionId");
+        if (savedSessionId) {
+          sessionStorage.removeItem("teaserSessionId");
+          setSessionId(savedSessionId);
+          // sessionId 설정 후 자동 spend 플래그
+          sessionStorage.setItem("teaserAutoSpend", "1");
+        }
+        setChargeProcessing(false);
+      } catch (err: any) {
+        setError(err?.message || "충전에 실패했습니다.");
+        setChargeProcessing(false);
+      }
+    })();
+  }, [isChargeRedirect, isAuthenticated, hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 자동 spend: sessionId 준비 + autoSpend 플래그
+  useEffect(() => {
+    if (!sessionId) return;
+    const autoSpend = sessionStorage.getItem("teaserAutoSpend");
+    if (autoSpend) {
+      sessionStorage.removeItem("teaserAutoSpend");
+      executeSpend();
+    }
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 비인증 시 로그인으로 리다이렉트 (fallback)
   useEffect(() => {
@@ -388,6 +456,11 @@ function TeaserContent() {
     return <FullScreenLoading message="로그인으로 이동 중" />;
   }
 
+  // 충전 redirect 복귀 처리 중
+  if (chargeProcessing) {
+    return <FullScreenLoading message="충전을 처리하고 있어" subMessage="잠깐이면 돼" />;
+  }
+
   // 로딩 상태
   if (!hydrated || (!isBattle && calculating)) {
     return <FullScreenLoading message="사주를 계산하고 있어" subMessage="잠깐이면 돼" />;
@@ -614,7 +687,10 @@ function TeaserContent() {
         requiredCoins={eggCost}
         currentBalance={balance ?? 0}
         onChargeComplete={handleChargeComplete}
-        redirectPath="/coins"
+        redirectPath={isBattle ? "/teaser?type=battle" : "/teaser"}
+        onBeforeCharge={() => {
+          if (sessionId) sessionStorage.setItem("teaserSessionId", sessionId);
+        }}
       />
 
       {/* 중복 결과 모달 (사주 분석 전용) */}

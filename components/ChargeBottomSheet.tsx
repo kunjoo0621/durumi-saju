@@ -14,6 +14,7 @@ interface ChargeBottomSheetProps {
   currentBalance: number;
   onChargeComplete: (newBalance: number) => void;
   redirectPath?: string;
+  onBeforeCharge?: () => void;
 }
 
 export default function ChargeBottomSheet({
@@ -23,11 +24,17 @@ export default function ChargeBottomSheet({
   currentBalance,
   onChargeComplete,
   redirectPath,
+  onBeforeCharge,
 }: ChargeBottomSheetProps) {
   const { charge, charging, error } = useCharge({
     redirectPath,
     onSuccess: (data) => onChargeComplete(data.balance),
   });
+
+  const handleCharge = (pkg: Parameters<typeof charge>[0]) => {
+    onBeforeCharge?.();
+    charge(pkg);
+  };
 
   const shortage = Math.max(0, requiredCoins - currentBalance);
 
@@ -52,7 +59,7 @@ export default function ChargeBottomSheet({
           <CoinPackageCard
             key={pkg.id}
             pkg={pkg}
-            onClick={() => charge(pkg)}
+            onClick={() => handleCharge(pkg)}
             disabled={charging}
           />
         ))}
