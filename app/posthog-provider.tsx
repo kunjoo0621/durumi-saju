@@ -8,6 +8,11 @@ import { useSession } from "next-auth/react";
 import { useInputStore } from "@/store/useInputStore";
 import { useCoinStore } from "@/store/useCoinStore";
 
+// 내부 테스트 계정 (PostHog 추적 제외)
+const INTERNAL_USER_IDS = new Set([
+  "b1fa9eba-2953-45d1-975b-fdf8a5d9b44f", // 신건주
+]);
+
 if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
@@ -53,6 +58,11 @@ function PostHogIdentify() {
 
     const user = session?.user as { supabaseId?: string; name?: string; email?: string } | undefined;
     if (user?.supabaseId) {
+      if (INTERNAL_USER_IDS.has(user.supabaseId)) {
+        posthogClient.opt_out_capturing();
+        return;
+      }
+      posthogClient.opt_in_capturing();
       posthogClient.identify(user.supabaseId, {
         name: user.name || undefined,
         email: user.email || undefined,
