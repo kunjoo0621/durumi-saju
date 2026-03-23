@@ -39,7 +39,8 @@ export async function DELETE(
     console.log("[DELETE /api/results]", { id, userId, deletedRows: data?.length ?? 0 });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[RESULTS] delete error", error.message);
+      return NextResponse.json({ error: "결과 삭제 중 오류가 발생했습니다." }, { status: 500 });
     }
     if (!data || data.length === 0) {
       return NextResponse.json({ error: "삭제할 결과를 찾을 수 없습니다." }, { status: 404 });
@@ -73,7 +74,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error("[DELETE /api/results] 예외", error?.message);
     return NextResponse.json(
-      { error: "삭제 중 오류가 발생했습니다.", details: error?.message },
+      { error: "삭제 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }

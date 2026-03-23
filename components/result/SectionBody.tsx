@@ -9,7 +9,7 @@ type SectionBodyProps = {
   unlockLabel?: string;
 };
 
-const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
+const DEFAULT_UNLOCK_LABEL = "전체 결과 보기";
 const SELECTED_ISSUE_PREFIX = "선택한 고민:";
 
 function parseStructuredContent(content: string) {

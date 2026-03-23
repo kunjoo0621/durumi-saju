@@ -21,6 +21,12 @@ import {
 
 export { normalizeScores } from "@/lib/resultSchema";
 
+function getAges(birthYear: string | number) {
+  const currentYear = new Date().getFullYear();
+  const y = Number(birthYear);
+  return { currentYear, koreanAge: currentYear - y + 1, internationalAge: currentYear - y };
+}
+
 function inputHash(y: number, m: number, d: number, h?: number, min?: number): string {
   return crypto.createHash("sha256")
     .update(`${y}-${m}-${d}-${h ?? ""}-${min ?? ""}`)
@@ -802,7 +808,7 @@ function replaceForbiddenLabelsWithRealityWords(text: string, input: InputPayloa
   let normalized = String(text || "");
   FORBIDDEN_LABELS.forEach((label, index) => {
     if (normalized.includes(label)) {
-      const replacement = pickRealityKeywords(input, label, "core", `${seedSalt}:${index}`)
+      const replacement = pickRealityKeywords(input, label, "core", `${index}`)
         .slice(0, 2)
         .join("·");
       normalized = normalized.split(label).join(replacement);
@@ -820,7 +826,8 @@ function sanitizeTextForOutput(input: InputPayload, text: unknown, seedSalt = ""
   const raw = typeof text === "string" ? text : "";
   // v3 prompt rule: only section.icon should carry emojis; strip from all other text.
   const noEmojis = raw.replace(EMOJI_REGEX, "");
-  return replaceForbiddenLabelsWithRealityWords(noEmojis, input, seedSalt).trim();
+  const grammarFixed = noEmojis.replace(/에게를/g, "에게");
+  return replaceForbiddenLabelsWithRealityWords(grammarFixed, input, seedSalt).trim();
 }
 
 export function validateSectionFormat(content: string): boolean {
@@ -2345,11 +2352,13 @@ export async function runFullAnalysis(input: InputPayload) {
   const coreFearLabel = input.coreFearAxis
     ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
     : "미선택";
+  const { currentYear, koreanAge, internationalAge } = getAges(input.birthYear);
   const userInfo = `
 이름: ${input.name}
 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일
 달력구분: ${input.calendarType === "lunar" ? "음력" : "양력"}
 출생시간: ${input.unknownBirthTime ? "모름" : `${input.birthHour}시 ${input.birthMinute}분`}
+현재 나이: 만 ${internationalAge}세 (한국 나이 ${koreanAge}세) — ${currentYear}년 기준
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}${shinsalPromptBlock}
@@ -2393,10 +2402,7 @@ ${serverScoreSummary}
             ? parsed.sections
                 .filter(Boolean)
                 .map((section: any, index: number) => ({
-                  icon:
-                    typeof section?.icon === "string" && section.icon.trim()
-                      ? section.icon
-                      : SECTION_THEME_SEEDS[index]?.icon || "🧩",
+                  icon: SECTION_THEME_SEEDS[index]?.icon || "🧩",
                   title:
                     typeof section?.title === "string" && section.title.trim()
                       ? section.title
@@ -2480,11 +2486,13 @@ export async function runTeaserAnalysis(input: InputPayload) {
   const coreFearLabel = input.coreFearAxis
     ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
     : "미선택";
+  const { currentYear: teaserCurrentYear, koreanAge: teaserKoreanAge, internationalAge: teaserInternationalAge } = getAges(input.birthYear);
   const userInfo = `
 이름: ${input.name}
 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일
 달력구분: ${input.calendarType === "lunar" ? "음력" : "양력"}
 출생시간: ${input.unknownBirthTime ? "모름" : `${input.birthHour}시 ${input.birthMinute}분`}
+현재 나이: 만 ${teaserInternationalAge}세 (한국 나이 ${teaserKoreanAge}세) — ${teaserCurrentYear}년 기준
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
 직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}
@@ -2521,7 +2529,7 @@ ${serverScoreSummary}
           const fallbackIcon = SECTION_THEME_SEEDS[index]?.icon || "🧩";
           const fallbackTitle = SECTION_THEME_SEEDS[index]?.title || `분석 섹션 ${index + 1}`;
           return {
-            icon: typeof section?.icon === "string" && section.icon.trim() ? section.icon : fallbackIcon,
+            icon: fallbackIcon,
             title: sanitizeTextForOutput(input, section?.title, `teaser-title:${index}`) || fallbackTitle,
           };
         });

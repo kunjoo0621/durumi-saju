@@ -227,10 +227,11 @@ export default function EditProfilePage() {
           ) : (
             <>
               <div>
-                <label className="block text-[16px] text-white mb-2">
+                <label htmlFor="edit-name" className="block text-[16px] text-white mb-2">
                   이름 <span className="text-primary">*</span>
                 </label>
                 <input
+                  id="edit-name"
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -244,7 +245,7 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="block text-[16px] text-white mb-2">
+                <label htmlFor="edit-birth-date" className="block text-[16px] text-white mb-2">
                   생년월일 <span className="text-primary">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3 mb-3">
@@ -270,6 +271,7 @@ export default function EditProfilePage() {
                   })}
                 </div>
                 <input
+                  id="edit-birth-date"
                   type="text"
                   inputMode="numeric"
                   value={form.birthDate}
@@ -285,8 +287,9 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="block text-[16px] text-white mb-2">태어난 시간</label>
+                <label htmlFor="edit-birth-time" className="block text-[16px] text-white mb-2">태어난 시간</label>
                 <select
+                  id="edit-birth-time"
                   value={form.birthTime}
                   onChange={(e) => setForm({ ...form, birthTime: e.target.value })}
                   className="w-full h-[52px] text-[16px]"
@@ -301,8 +304,8 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="block text-[16px] text-white mb-2">태어난 지역</label>
-                <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label="태어난 지역">
+                <label id="edit-region" className="block text-[16px] text-white mb-2">태어난 지역</label>
+                <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="edit-region">
                   {REGIONS.map((region) => {
                     const selected = form.region === region;
                     return (
@@ -326,10 +329,10 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="block text-[16px] text-white mb-2">
+                <label id="edit-gender" className="block text-[16px] text-white mb-2">
                   성별 <span className="text-primary">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="성별">
+                <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-labelledby="edit-gender">
                   {GENDERS.map((gender) => {
                     const selected = form.gender === gender;
                     return (
@@ -356,8 +359,8 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="block text-[16px] text-white mb-2">연애 상태</label>
-                <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label="연애 상태">
+                <label id="edit-relationship" className="block text-[16px] text-white mb-2">연애 상태</label>
+                <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="edit-relationship">
                   {RELATIONSHIPS.map((status) => {
                     const selected = form.relationshipStatus === status;
                     return (
@@ -381,10 +384,10 @@ export default function EditProfilePage() {
               </div>
 
               <div>
-                <label className="block text-[16px] text-white mb-2">
+                <label id="edit-employment" className="block text-[16px] text-white mb-2">
                   현재 상태 <span className="text-primary">*</span>
                 </label>
-                <div className="space-y-3" role="radiogroup" aria-label="현재 상태">
+                <div className="space-y-3" role="radiogroup" aria-labelledby="edit-employment">
                   {EMPLOYMENT.map((status) => {
                     const selected = form.employmentStatus === status;
                     return (
@@ -433,12 +436,12 @@ export default function EditProfilePage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
+        <div role="status" aria-live="polite" className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
           {toast}
         </div>
       )}
       {errorToast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
+        <div role="alert" aria-live="assertive" className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg">
           {errorToast}
         </div>
       )}

@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ unlocked: false });
   } catch (error: any) {
-    return NextResponse.json({ unlocked: false, error: error?.message }, { status: 500 });
+    console.error("[RESULTS] status error", error?.message);
+    return NextResponse.json({ unlocked: false, error: "상태 조회 중 오류가 발생했습니다." }, { status: 500 });
   }
 }

@@ -25,7 +25,7 @@ export default function BattleShareCTA() {
           <button
             type="button"
             onClick={() => router.push("/battle/input")}
-            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
           >
             사주 배틀하기
           </button>

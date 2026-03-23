@@ -6,6 +6,7 @@ import { buildInputHash, buildTeaserFromFull, resolveSajuText, runFullAnalysis, 
 import { validatePersonalResult } from "@/lib/quality-gate";
 import { SCORING_VERSION } from "@/lib/utils/saju-scoring";
 import { getSupabaseUserId } from "@/lib/server/user";
+import { hasRequiredInput, markSessionConsumed, autoSetPrimaryIfNeeded } from "@/lib/server/session-helpers";
 import { hashToken, getTokensFromCookie, getDbExpiresAt } from "@/lib/guest-token";
 
 type PaymentCompleteBody = {
@@ -17,83 +18,6 @@ type PaymentCompleteBody = {
   paymentMethod?: string;
   type?: string;
 };
-
-function hasRequiredInput(input: InputPayload) {
-  if (
-    !input?.name ||
-    !input.birthYear ||
-    !input.birthMonth ||
-    !input.birthDay ||
-    !input.birthLocation ||
-    !input.gender ||
-    !input.relationshipStatus ||
-    !input.employmentStatus ||
-    !input.coreFearAxis
-  ) {
-    return false;
-  }
-
-  if (!input.unknownBirthTime && (!input.birthHour || !input.birthMinute)) {
-    return false;
-  }
-
-  return true;
-}
-
-async function markSessionConsumed(
-  sessionId: string,
-  userId: string | null,
-  guestTokenHash: string | null,
-) {
-  let query = supabaseAdmin
-    .from("prepayment_sessions")
-    .update({
-      status: "consumed",
-      consumed_at: new Date().toISOString(),
-    })
-    .eq("id", sessionId)
-    .eq("status", "pending");
-
-  if (userId) {
-    query = query.eq("user_id", userId);
-  } else if (guestTokenHash) {
-    query = query.eq("guest_token_hash", guestTokenHash);
-  }
-
-  const { error } = await query;
-
-  if (error) {
-    console.error("[markSessionConsumed] failed:", { sessionId, error: error.message });
-  }
-}
-
-async function autoSetPrimaryIfNeeded(userId: string, inputHash: string) {
-  try {
-    const { data: u } = await supabaseAdmin
-      .from("users")
-      .select("primary_result_id")
-      .eq("id", userId)
-      .single();
-
-    if (!u?.primary_result_id) {
-      const { data: unlock } = await supabaseAdmin
-        .from("result_unlocks")
-        .select("result_id")
-        .eq("user_id", userId)
-        .eq("input_hash", inputHash)
-        .maybeSingle();
-
-      if (unlock?.result_id) {
-        await supabaseAdmin
-          .from("users")
-          .update({ primary_result_id: unlock.result_id })
-          .eq("id", userId);
-      }
-    }
-  } catch (e) {
-    console.error("[autoSetPrimary] non-fatal error:", e);
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -129,7 +53,8 @@ export async function POST(request: NextRequest) {
     const pendingSession = await sessionQuery.maybeSingle();
 
     if (pendingSession.error) {
-      return NextResponse.json({ error: pendingSession.error.message }, { status: 500 });
+      console.error("[PAYMENT] session lookup error", pendingSession.error.message);
+      return NextResponse.json({ error: "결제 세션 조회 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     const sessionRow = pendingSession.data;
@@ -204,6 +129,18 @@ export async function POST(request: NextRequest) {
       if (paidAmount !== Number(body.amount)) {
         return NextResponse.json(
           { error: "결제 금액이 일치하지 않습니다." },
+          { status: 400 }
+        );
+      }
+
+      // PortOne paymentId와 우리 orderId 일치 검증
+      // 클라이언트가 PortOne에 paymentId=orderId로 결제를 시작하므로,
+      // PortOne이 반환한 id와 body.orderId가 일치해야 함 (다른 결제 건 재사용 방지)
+      const verifiedPaymentId = paymentData.id ?? body.paymentId;
+      if (verifiedPaymentId !== body.orderId) {
+        console.error("[PAYMENT] paymentId-orderId mismatch", { verified: verifiedPaymentId, orderId: body.orderId });
+        return NextResponse.json(
+          { error: "결제 정보가 일치하지 않습니다." },
           { status: 400 }
         );
       }
@@ -305,7 +242,8 @@ export async function POST(request: NextRequest) {
               .select("id")
               .maybeSingle();
             if (unlockUpsert.error) {
-              return NextResponse.json({ error: unlockUpsert.error.message }, { status: 500 });
+              console.error("[PAYMENT] unlock upsert error", unlockUpsert.error.message);
+              return NextResponse.json({ error: "결과 저장 중 오류가 발생했습니다." }, { status: 500 });
             }
 
             await markSessionConsumed(body.sessionId, userId, null);
@@ -372,7 +310,8 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (upserted.error || !upserted.data?.id) {
-          return NextResponse.json({ error: upserted.error?.message || "결과 저장 실패" }, { status: 500 });
+          console.error("[PAYMENT] result upsert error", upserted.error?.message);
+          return NextResponse.json({ error: "결과 저장 중 오류가 발생했습니다." }, { status: 500 });
         }
 
         const unlockUpsert = await supabaseAdmin
@@ -390,7 +329,8 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (unlockUpsert.error) {
-          return NextResponse.json({ error: unlockUpsert.error.message }, { status: 500 });
+          console.error("[PAYMENT] unlock upsert error", unlockUpsert.error.message);
+          return NextResponse.json({ error: "결과 저장 중 오류가 발생했습니다." }, { status: 500 });
         }
 
         await markSessionConsumed(body.sessionId, userId, null);
@@ -419,7 +359,8 @@ export async function POST(request: NextRequest) {
       });
 
       if (rpc.error) {
-        return NextResponse.json({ error: rpc.error.message }, { status: 500 });
+        console.error("[PAYMENT] rpc error", rpc.error.message);
+        return NextResponse.json({ error: "결제 처리 중 오류가 발생했습니다." }, { status: 500 });
       }
 
       await markSessionConsumed(body.sessionId, userId, null);
@@ -530,7 +471,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, resultId: resultData.id });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || "결제 처리 중 오류가 발생했습니다." },
+      { error: "결제 처리 중 오류가 발생했습니다." },
       { status: 500 }
     );
   }

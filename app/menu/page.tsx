@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import MenuDrawer from "../MenuDrawer";
+import { Egg } from "@phosphor-icons/react";
+import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
+import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
 
 export default function MenuPage() {
@@ -51,32 +53,16 @@ export default function MenuPage() {
 
   return (
     <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white flex flex-col">
-      <header className="px-6 py-5 sticky top-0 z-[100] bg-[#0D0D0D]">
-        <div className="max-w-[640px] mx-auto flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-zinc-800/40 transition-colors"
-            aria-label="이전 화면"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-title-3 text-text-primary font-aggro">사주보는 두루미</h1>
-          <MenuDrawer />
-        </div>
-      </header>
+      <Header showBack sticky onBack={() => router.push("/")} />
 
       <main className="flex-1 px-5 pb-12">
         <section className="max-w-[640px] mx-auto pt-10 space-y-4">
           {/* 사주 카드 */}
-          <div
-            className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-all duration-200 animate-[slideUp_0.5s_ease-out_both]"
+          <button
+            type="button"
+            className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_both] w-full text-left"
             style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
             onClick={handleSajuClick}
-            role="button"
-            tabIndex={0}
           >
             <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
               style={{ background: 'rgba(255,107,107,0.08)' }} />
@@ -92,8 +78,8 @@ export default function MenuPage() {
               <p className="text-sm text-gray-400 leading-relaxed mt-2">
                 등급부터 운세 흐름까지<br/>낱낱이 해부해줄게
               </p>
-              <p className="text-lg font-bold mt-3.5" style={{ color: '#FF6B6B' }}>
-                1,000원
+              <p className="text-lg font-bold mt-3.5 flex items-center gap-1" style={{ color: '#FF6B6B' }}>
+                <Egg size={18} weight="fill" />{SAJU_COST}알
               </p>
             </div>
 
@@ -115,7 +101,7 @@ export default function MenuPage() {
                 <path d="M22 22l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#FF6B6B" fillOpacity="0.25"/>
               </svg>
             </div>
-          </div>
+          </button>
 
           {checkError && (
             <div className="rounded-2xl bg-zinc-900 px-5 py-5 space-y-4">
@@ -142,15 +128,15 @@ export default function MenuPage() {
           )}
 
           {/* 배틀 카드 */}
-          <div
+          <button
+            type="button"
+            disabled={isBattleDisabled}
             className={[
-              "group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-all duration-200 animate-[slideUp_0.5s_ease-out_0.1s_both]",
+              "group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_0.1s_both] w-full text-left",
               isBattleDisabled ? "cursor-not-allowed opacity-55" : "",
             ].join(" ")}
             style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-            onClick={() => { if (!isBattleDisabled) { resetBattle(); router.push("/battle/input"); } }}
-            role="button"
-            tabIndex={0}
+            onClick={() => { resetBattle(); router.push("/battle/input"); }}
           >
             <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
               style={{ background: 'rgba(168,85,247,0.08)' }} />
@@ -164,8 +150,8 @@ export default function MenuPage() {
               <p className="text-sm text-gray-400 leading-relaxed mt-2">
                 둘 다 입력하면 5판 승부로<br/>판정해줄게
               </p>
-              <p className="text-lg font-bold mt-3.5" style={{ color: '#A855F7' }}>
-                2,000원
+              <p className="text-lg font-bold mt-3.5 flex items-center gap-1" style={{ color: '#A855F7' }}>
+                <Egg size={18} weight="fill" />{BATTLE_COST}알
               </p>
             </div>
 
@@ -183,7 +169,60 @@ export default function MenuPage() {
                 <circle cx="86" cy="36" r="2.5" fill="#A855F7" fillOpacity="0.25"/>
               </svg>
             </div>
-          </div>
+          </button>
+
+          {/* 반려동물 궁합 카드 (준비중) */}
+          <button
+            type="button"
+            disabled
+            className="group relative bg-[#141414] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-not-allowed opacity-55 transition-opacity duration-200 animate-[slideUp_0.5s_ease-out_0.2s_both] w-full text-left"
+            style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          >
+            <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
+              style={{ background: 'rgba(52,211,153,0.08)' }} />
+
+            <div className="relative z-[2] flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold"
+                  style={{ background: 'rgba(52,211,153,0.08)', color: '#34D399' }}>
+                  반려동물 궁합
+                </span>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold"
+                  style={{ background: 'rgba(161,161,170,0.08)', color: '#A1A1AA' }}>
+                  준비중
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-zinc-400 tracking-tight">반려동물 궁합 보기</h3>
+              <p className="text-sm text-gray-400 leading-relaxed mt-2">
+                우리 아이와 나의 사주<br/>궁합을 분석해줄게
+              </p>
+              <p className="text-lg font-bold mt-3.5 text-zinc-600">
+                준비중..
+              </p>
+            </div>
+
+            <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
+              <svg className="w-[104px] h-[104px] transition-transform duration-300" style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} viewBox="0 0 96 96" fill="none">
+                <ellipse cx="48" cy="90" rx="24" ry="4" fill="#34D399" fillOpacity="0.1"/>
+                {/* 메인 하트 */}
+                <path d="M48 84C44 78 8 56 8 32c0-14 10-24 22-24 8 0 14 4 18 10 4-6 10-10 18-10 12 0 22 10 22 24 0 24-36 46-40 52z" fill="#34D399" fillOpacity="0.15"/>
+                <path d="M48 84C44 78 8 56 8 32c0-14 10-24 22-24 8 0 14 4 18 10 4-6 10-10 18-10 12 0 22 10 22 24 0 24-36 46-40 52z" stroke="#34D399" strokeOpacity="0.45" strokeWidth="2.5" strokeLinejoin="round"/>
+                <ellipse cx="30" cy="28" rx="11" ry="6.5" fill="white" fillOpacity="0.12" transform="rotate(-25, 30, 28)"/>
+                {/* 하트 안 발바닥 */}
+                <ellipse cx="48" cy="46" rx="10" ry="9" fill="#34D399" fillOpacity="0.3"/>
+                <circle cx="40" cy="33" r="4.5" fill="#34D399" fillOpacity="0.35"/>
+                <circle cx="56" cy="33" r="4.5" fill="#34D399" fillOpacity="0.35"/>
+                <circle cx="34" cy="42" r="3.5" fill="#34D399" fillOpacity="0.3"/>
+                <circle cx="62" cy="42" r="3.5" fill="#34D399" fillOpacity="0.3"/>
+                {/* 별/반짝이 장식 */}
+                <path d="M48 16l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#34D399" fillOpacity="0.6"/>
+                <circle cx="82" cy="16" r="3" fill="#34D399" fillOpacity="0.5"/>
+                <circle cx="14" cy="54" r="2.5" fill="#34D399" fillOpacity="0.3"/>
+                <path d="M78 56l1.2 3.5 3.5 1.2-3.5 1.2-1.2 3.5-1.2-3.5-3.5-1.2 3.5-1.2z" fill="#34D399" fillOpacity="0.35"/>
+                <path d="M18 18l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#34D399" fillOpacity="0.25"/>
+              </svg>
+            </div>
+          </button>
         </section>
       </main>
 

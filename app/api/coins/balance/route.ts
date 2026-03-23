@@ -27,11 +27,15 @@ export async function GET() {
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[COINS] balance query error", error.message);
+      return NextResponse.json({ error: "잔액 조회 중 오류가 발생했습니다." }, { status: 500 });
     }
 
-    return NextResponse.json({ balance: data?.coin_balance ?? 0 });
+    return NextResponse.json({
+      balance: data?.coin_balance ?? 0,
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "조회 중 오류가 발생했습니다." }, { status: 500 });
+    console.error("[COINS] balance error", error?.message);
+    return NextResponse.json({ error: "조회 중 오류가 발생했습니다." }, { status: 500 });
   }
 }

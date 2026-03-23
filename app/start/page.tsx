@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useAllInputs, useStoreActions } from "@/store/useInputStore";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import { trackFormStep, trackFormComplete, trackLoginTrigger } from "@/lib/analytics";
 import Header from "@/components/layout/Header";
 
 // 상수를 모듈 레벨로 이동 (렌더링마다 재생성 방지)
@@ -40,6 +43,8 @@ const CORE_FEAR_OPTIONS = [
 
 export default function Home() {
   const router = useRouter();
+  const { status } = useSession();
+  const { login } = useKakaoLogin();
   const [currentStep, setCurrentStep] = useState(0);
 
   // 최적화된 선택자 사용 - 전체 스토어 구독 대신 필요한 필드만
@@ -125,6 +130,7 @@ export default function Home() {
 
   const handleNext = () => {
     if (currentStep < totalSteps - 1) {
+      trackFormStep("start", currentStep + 1, QUESTIONS[currentStep + 1].id);
       setCurrentStep(currentStep + 1);
     }
   };
@@ -136,7 +142,13 @@ export default function Home() {
   };
 
   const handleSubmit = () => {
-    router.push("/checkout");
+    if (status !== "authenticated") {
+      trackLoginTrigger("start_form_complete");
+      login(`${window.location.origin}/teaser`);
+      return;
+    }
+    trackFormComplete("start");
+    router.push("/teaser");
   };
 
   // 생년월일 입력 처리
@@ -324,7 +336,7 @@ export default function Home() {
                 });
                 setBirthTimeDisplay("");
               }}
-              className="btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200"
+              className="btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-[transform,background-color,color] duration-200"
               aria-pressed={formData.unknownBirthTime}
             >
               {formData.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
@@ -341,7 +353,7 @@ export default function Home() {
                 onClick={() => {
                   setField("birthLocation", location);
                 }}
-                className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-all duration-200 active:scale-[0.98] ${
+                className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                   formData.birthLocation === location
                     ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
                     : ""
@@ -361,7 +373,7 @@ export default function Home() {
           <div className="space-y-3" role="radiogroup" aria-label="성별">
             <button
               onClick={() => setField("gender", "남성")}
-              className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+              className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                 formData.gender === "남성"
                   ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
                   : ""
@@ -374,7 +386,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setField("gender", "여성")}
-              className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+              className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                 formData.gender === "여성"
                   ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
                   : ""
@@ -395,7 +407,7 @@ export default function Home() {
               <button
                 key={status}
                 onClick={() => setField("relationshipStatus", status)}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                   formData.relationshipStatus === status
                     ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
                     : ""
@@ -417,7 +429,7 @@ export default function Home() {
               <button
                 key={status}
                 onClick={() => setField("employmentStatus", status)}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                   formData.employmentStatus === status
                     ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
                     : ""
@@ -439,7 +451,7 @@ export default function Home() {
               <button
                 key={option.value}
                 onClick={() => setField("coreFearAxis", option.value)}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                   formData.coreFearAxis === option.value
                     ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
                     : ""
@@ -463,6 +475,7 @@ export default function Home() {
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
       <Header
         showBack
+        showBalance
         onBack={currentStep > 0 ? handleBack : () => router.push("/menu")}
       />
 
@@ -497,7 +510,7 @@ export default function Home() {
               aria-valuemax={totalSteps}
             >
               <div
-                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
                 style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
               />
             </div>
@@ -506,7 +519,7 @@ export default function Home() {
           <button
             onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
             disabled={!canProceed()}
-            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
           >
             {currentStep === totalSteps - 1 ? "결과 받기" : "다음"}
           </button>

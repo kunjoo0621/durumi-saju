@@ -55,7 +55,8 @@ export async function GET() {
       .in("id", resultIds);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[RESULTS] list error", error.message);
+      return NextResponse.json({ error: "결과 목록 조회 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     const resultMap = new Map(results?.map((item) => [item.id, item]));

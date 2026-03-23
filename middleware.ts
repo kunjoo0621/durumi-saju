@@ -39,10 +39,13 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/payment",
+    "/payment/:path*",
     "/coins",
     "/edit-profile",
     "/my/results",
     "/api/profile",
+    "/api/profile/:path*",
     "/api/coins",
+    "/api/coins/:path*",
   ],
 };

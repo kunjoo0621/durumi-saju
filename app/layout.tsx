@@ -4,7 +4,7 @@ import Providers from "./providers";
 
 const SITE_URL = "https://www.durumisaju.com";
 const SITE_NAME = "사주보는 두루미";
-const DESCRIPTION = "내 사주 등급은 S? A? 친구와 1:1 사주 배틀까지. 1,000원부터.";
+const DESCRIPTION = "내 사주 등급은 S? A? 사주 등급 분석부터 친구와 1:1 배틀까지.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -40,6 +40,7 @@ export const metadata: Metadata = {
     icon: "/favicon.png",
     apple: "/favicon.png",
   },
+  themeColor: "#09090B",
   verification: {
     other: {
       "naver-site-verification": "f4bbf6412e11400b7b1f8b7073c678b19fbd53a9",
@@ -68,7 +69,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" style={{ colorScheme: "dark" }}>
       <body className="antialiased">
         <script
           type="application/ld+json"

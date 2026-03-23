@@ -80,44 +80,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "양쪽 플레이어 정보가 부족합니다." }, { status: 400 });
     }
 
-    // Enrich + score Player A
+    // Enrich + score Player A & B (병렬)
     const inputA = playerToInputPayload(body.playerA);
-    const { sajuText: sajuTextA, enriched: enrichedA } = await resolveSajuEnrichedData(inputA);
-    console.info("[BATTLE_ENRICHED_A]", JSON.stringify(enrichedA).slice(0, 2000));
+    const inputB = playerToInputPayload(body.playerB);
+
+    const [enrichResultA, enrichResultB] = await Promise.all([
+      resolveSajuEnrichedData(inputA),
+      resolveSajuEnrichedData(inputB),
+    ]);
+
+    const { sajuText: sajuTextA, enriched: enrichedA } = enrichResultA;
+    const { sajuText: sajuTextB, enriched: enrichedB } = enrichResultB;
 
     const scoringA = calculateServerScoring(enrichedA);
 
     console.info("[BATTLE_SCORING] playerA", {
-      name: body.playerA.name,
-      isTimeUnknown: scoringA.scoringInput.isTimeUnknown,
-      calendarType: inputA.calendarType,
-      birthHour: inputA.birthHour,
-      birthMinute: inputA.birthMinute,
-      confidence: scoringA.tier.confidence,
       grade: scoringA.tier.grade,
       composite: scoringA.tier.composite,
-      scores: scoringA.scores,
-      tenStars: scoringA.scoringInput.tenStars,
-      elementDist: scoringA.scoringInput.elementDist,
+      confidence: scoringA.tier.confidence,
     });
 
-    // Enrich + score Player B
-    const inputB = playerToInputPayload(body.playerB);
-    const { sajuText: sajuTextB, enriched: enrichedB } = await resolveSajuEnrichedData(inputB);
     const scoringB = calculateServerScoring(enrichedB);
 
     console.info("[BATTLE_SCORING] playerB", {
-      name: body.playerB.name,
-      isTimeUnknown: scoringB.scoringInput.isTimeUnknown,
-      calendarType: inputB.calendarType,
-      birthHour: inputB.birthHour,
-      birthMinute: inputB.birthMinute,
-      confidence: scoringB.tier.confidence,
       grade: scoringB.tier.grade,
       composite: scoringB.tier.composite,
-      scores: scoringB.scores,
-      tenStars: scoringB.scoringInput.tenStars,
-      elementDist: scoringB.scoringInput.elementDist,
+      confidence: scoringB.tier.confidence,
     });
 
     // Fortune for both players

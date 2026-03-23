@@ -59,6 +59,17 @@ const REWRITE_SYSTEM = `너는 사주 분석 결과의 텍스트 교정기야.
   건강: 체력, 마라톤, 컨디션, 활력 등 건강 장면
   대인: 모임, 인기투표, 연락, 약속 등 인맥 장면
 
+[시뮬레이션 punchline 리라이트 규칙]
+- 시뮬레이션 punchline끼리 같은 문장 구조를 반복하면 안 돼
+- 특히 "A가 ~하고 B는 ~해" 대비 구조 반복 금지
+- 5가지 스타일 중 하나로 다시 써:
+  ① 찔림형: 2인칭(너)으로 읽는 사람을 찌르는 느낌 ("~하는 거 너지?")
+  ② 장면형: 구체적 일상 장면 ("카페에서 메뉴 고르는 데 10분")
+  ③ 반전형: 앞에서 좋게 말하다 뒤집기 ("잘 맞는 것 같지? 근데~")
+  ④ 한마디형: 짧고 강하게 15~25자 ("여행은 절대 같이 가면 안 돼")
+  ⑤ 비유형: 일상 비유 ("A는 네비, B는 느낌대로 가자파")
+- 이미 보존된 punchline과 같은 스타일은 피해야 함
+
 [묘(墓) 과다 리라이트 규칙]
 - 묘(墓)라는 용어를 다른 12운성 이름으로 1:1 치환하지 마. 실제 사주가 묘(墓)인 사람이야.
 - 대신 묘(墓)의 특성(내향, 잠복, 저장, 숨김, 에너지 수렴)을 "묘(墓)"라는 단어 없이 일상 언어로 풀어서 설명해.
@@ -380,6 +391,84 @@ export function detectDetailFirstSentence(
       needsRewrite: true,
       targets,
       pattern: "detail 첫 문장이 유사한 패턴을 반복함",
+    };
+  }
+
+  return { needsRewrite: false, targets: [], pattern: "" };
+}
+
+/**
+ * 타겟 5: 시뮬레이션 punchline 구조 반복 (배틀 전용)
+ * "A가 ~하고 B는 ~해" 같은 대비 구조가 3개 이상 반복되면 감지
+ * + 같은 이름으로 시작하는 punchline이 4개 이상이면 감지
+ */
+export function detectSimulationStructureRepetition(
+  result: BattleLlmAnalysis,
+  names: string[],
+): { needsRewrite: boolean; targets: number[]; pattern: string } {
+  const sims = result.simulations;
+  if (!sims || sims.length < 3) return { needsRewrite: false, targets: [], pattern: "" };
+
+  // 패턴 1: "A가/은/는 ~하고/~하면 B가/은/는 ~해" 대비 구조 감지
+  const contrastPattern = /(.+(?:이|가|은|는)\s*.+(?:하고|하면|인데|하는데|한테).*(?:이|가|은|는)\s*.+(?:해|야|지|거야|돼))/;
+  const contrastIndices: number[] = [];
+  for (let i = 0; i < sims.length; i++) {
+    const masked = maskNames(sims[i].punchline, names);
+    if (contrastPattern.test(masked)) {
+      contrastIndices.push(i);
+    }
+  }
+
+  if (contrastIndices.length >= 3) {
+    // 처음 1개는 유지, 나머지가 리라이트 대상
+    return {
+      needsRewrite: true,
+      targets: contrastIndices.slice(1),
+      pattern: `시뮬레이션 punchline ${contrastIndices.length}개가 "A가 ~하고 B는 ~해" 대비 구조를 반복함. 찔림형(2인칭), 반전형, 한마디형, 비유형 등 다양한 구조로 바꿔야 함`,
+    };
+  }
+
+  // 패턴 2: 같은 이름으로 시작하는 punchline이 4개 이상
+  for (const name of names) {
+    if (!name) continue;
+    const startsWithName = sims
+      .map((s, i) => ({ i, starts: s.punchline.trim().startsWith(name) }))
+      .filter((x) => x.starts);
+    if (startsWithName.length >= 4) {
+      return {
+        needsRewrite: true,
+        targets: startsWithName.slice(1).map((x) => x.i),
+        pattern: `시뮬레이션 punchline ${startsWithName.length}개가 "${name}"으로 시작함. 다른 이름으로 시작하거나 2인칭(너), 비유, 짧은 단정 등 다양한 시작 구조로 바꿔야 함`,
+      };
+    }
+  }
+
+  // 패턴 3: 마스킹 후 pairwise 유사도가 50%를 넘는 쌍이 과반
+  const maskedPunchlines = sims.map((s) => maskNames(s.punchline, names));
+  let highSimPairs = 0;
+  const totalPairs = (sims.length * (sims.length - 1)) / 2;
+  const simScores: number[] = new Array(sims.length).fill(0);
+  for (let i = 0; i < sims.length; i++) {
+    for (let j = i + 1; j < sims.length; j++) {
+      const sim = charSimilarity(maskedPunchlines[i], maskedPunchlines[j]);
+      if (sim > 0.5) {
+        highSimPairs++;
+        simScores[i]++;
+        simScores[j]++;
+      }
+    }
+  }
+
+  if (highSimPairs >= Math.ceil(totalPairs * 0.4)) {
+    // 유사도 점수 높은 순으로 정렬, 상위를 리라이트 대상
+    const sorted = simScores
+      .map((score, i) => ({ i, score }))
+      .sort((a, b) => b.score - a.score);
+    const targets = sorted.slice(1).map((x) => x.i);
+    return {
+      needsRewrite: true,
+      targets,
+      pattern: `시뮬레이션 punchline 간 문장 구조가 전반적으로 유사함(유사 쌍 ${highSimPairs}/${totalPairs}). 찔림형, 장면형, 반전형, 한마디형, 비유형 등 각각 다른 스타일로 바꿔야 함`,
     };
   }
 
@@ -779,6 +868,25 @@ export async function surgicalRewriteBattle(
       avoidPattern:
         "이 필드에서 묘(墓) 언급이 과도해. 묘(墓)를 다른 사주 근거(다른 12운성: 장생/목욕/관대/건록/제왕/쇠/병/사/절/태/양, 신살, 오행 등)로 자연스럽게 바꿔서 다시 써. 문장 구조와 톤은 유지해.",
       preservedTexts: [],
+    });
+  }
+
+  // 타겟 5: 시뮬레이션 punchline 구조 반복
+  const simDetect = detectSimulationStructureRepetition(result, names);
+  if (simDetect.needsRewrite) {
+    const targets: RewriteTarget[] = simDetect.targets.map((idx) => ({
+      path: `simulations.${idx}.punchline`,
+      currentText: result.simulations[idx].punchline,
+    }));
+    const preservedIndices = result.simulations
+      .map((_, i) => i)
+      .filter((i) => !simDetect.targets.includes(i));
+    const preserved = preservedIndices.map((i) => result.simulations[i].punchline);
+
+    allRequests.push({
+      targets,
+      avoidPattern: simDetect.pattern,
+      preservedTexts: preserved,
     });
   }
 

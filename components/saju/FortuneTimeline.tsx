@@ -320,7 +320,7 @@ function DaeunCard({
       onClick={onSelect}
       aria-pressed={isSelected}
       aria-label={`대운 ${entry.pillar} ${entry.startAge}~${entry.endAge}세 ${entry.tenStar}`}
-      className={`flex-shrink-0 w-[80px] rounded-xl py-3 px-2 flex flex-col items-center gap-1 transition-all duration-200 cursor-pointer active:scale-[0.98] ${getCardClasses(isCurrent, isSelected)}`}
+      className={`flex-shrink-0 w-[80px] rounded-xl py-3 px-2 flex flex-col items-center gap-1 transition-[transform,background-color,color] duration-200 cursor-pointer active:scale-[0.98] ${getCardClasses(isCurrent, isSelected)}`}
     >
       <span className="text-[10px] text-gray-500">
         {entry.startAge}~{entry.endAge}세
@@ -360,7 +360,7 @@ function SeunCard({
       onClick={onSelect}
       aria-pressed={isSelected}
       aria-label={`세운 ${entry.pillar} ${entry.year}년 ${entry.tenStar}`}
-      className={`flex-shrink-0 w-[68px] rounded-xl py-2.5 px-2 flex flex-col items-center gap-1 transition-all duration-200 cursor-pointer active:scale-[0.98] ${getCardClasses(isCurrent, isSelected)}`}
+      className={`flex-shrink-0 w-[68px] rounded-xl py-2.5 px-2 flex flex-col items-center gap-1 transition-[transform,background-color,color] duration-200 cursor-pointer active:scale-[0.98] ${getCardClasses(isCurrent, isSelected)}`}
     >
       <span className="text-[10px] text-gray-500">
         {entry.year}

@@ -1,15 +1,21 @@
 import { Suspense } from "react";
 import ResultClient from "./ResultClient";
+import { FullScreenLoading } from "@/components/loading";
 
 export const dynamic = "force-dynamic";
+
+const LOADING_STEPS = [
+  { message: "결과를 불러오고 있어", delay: 0 },
+];
 
 export default function ResultPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background-primary px-6">
-          <div className="text-text-secondary text-body-2">결과를 불러오는 중...</div>
-        </div>
+        <FullScreenLoading
+          steps={LOADING_STEPS}
+          subMessage="잠깐이면 돼"
+        />
       }
     >
       <ResultClient />

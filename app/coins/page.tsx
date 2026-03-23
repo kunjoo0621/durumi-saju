@@ -1,122 +1,252 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import MenuDrawer from "../MenuDrawer";
+import Header from "@/components/layout/Header";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import { useCharge } from "@/hooks/useCharge";
 import { ButtonSpinner } from "@/components/loading";
+import CoinPackageCard from "@/components/CoinPackageCard";
+import { COIN_PACKAGES, SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
+import { useCoinStore } from "@/store/useCoinStore";
+import { Egg, CaretDown } from "@phosphor-icons/react";
+
+// 코인 페이지 진입 시 PortOne SDK 스크립트를 미리 로드
+if (typeof window !== "undefined" && !document.querySelector('link[href*="cdn.portone.io"]')) {
+  const link = document.createElement("link");
+  link.rel = "preload";
+  link.as = "script";
+  link.href = "https://cdn.portone.io/v2/browser-sdk.js";
+  document.head.appendChild(link);
+}
+
+const TX_TYPE_LABELS: Record<string, string> = {
+  charge: "충전",
+  spend: "사용",
+  bonus: "보너스",
+  refund: "환불",
+};
+
+const TX_TYPE_COLORS: Record<string, string> = {
+  charge: "text-saju-water-muted",
+  spend: "text-primary",
+  bonus: "text-saju-earth-muted",
+  refund: "text-saju-wood-muted",
+};
 
 export default function CoinsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { login } = useKakaoLogin();
-  const [balance, setBalance] = useState<number | null>(null);
+  const { balance, fetchBalance, setBalance } = useCoinStore();
   const [loading, setLoading] = useState(true);
-  const [returnTo, setReturnTo] = useState("/start");
+  const [toast, setToast] = useState<string | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [redirectError, setRedirectError] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const target = params.get("returnTo");
-    if (target && target.startsWith("/")) {
-      setReturnTo(target);
-    }
-  }, []);
+  const { charge, charging, error } = useCharge({
+    customerName: session?.user?.name || undefined,
+    onSuccess: (data) => {
+      setBalance(data.balance);
+      setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
+      fetchHistory();
+    },
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
       login("/coins");
     }
-  }, [status]);
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/coins/history");
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.transactions ?? []);
+      }
+    } catch {} finally {
+      setHistoryLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!session?.user) return;
-    let cancelled = false;
-    const fetchBalance = async () => {
-      setLoading(true);
-      const res = await fetch("/api/coins/balance");
-      if (!res.ok) {
-        setLoading(false);
-        return;
-      }
-      const data = await res.json();
-      if (!cancelled) {
-        setBalance(typeof data.balance === "number" ? data.balance : 0);
-        setLoading(false);
-      }
-    };
-    fetchBalance();
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
-
-  const handlePurchase = async () => {
     setLoading(true);
-    const res = await fetch("/api/coins/purchase", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 1 }),
-    });
+    Promise.all([fetchBalance(), fetchHistory()]).finally(() => setLoading(false));
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (res.ok) {
-      router.push(returnTo);
+  // PortOne redirect 복귀 처리
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const chargeOrderId = params.get("chargeOrderId");
+    const packageId = params.get("packageId");
+    const amount = params.get("amount");
+    const paymentId = params.get("paymentId");
+
+    if (!chargeOrderId || !packageId || !amount || !paymentId) return;
+    if (params.get("code")) {
+      setRedirectError(params.get("message") || "결제가 취소되었습니다.");
       return;
     }
-    setLoading(false);
-  };
 
-  const subtitle = useMemo(() => {
-    if (balance === null) return "코인 잔액을 불러오는 중입니다.";
-    return `현재 잔액: ${balance}코인`;
-  }, [balance]);
+    fetch("/api/coins/charge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        packageId,
+        orderId: chargeOrderId,
+        paymentId,
+        amount: Number(amount),
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || "충전에 실패했습니다.");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setBalance(data.balance);
+        setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
+        fetchHistory();
+        window.history.replaceState({}, "", "/coins");
+      })
+      .catch((err) => {
+        setRedirectError(err?.message || "충전에 실패했습니다.");
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 토스트 자동 숨김
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const sajuCount = balance !== null ? Math.floor(balance / SAJU_COST) : 0;
+  const battleCount = balance !== null ? Math.floor(balance / BATTLE_COST) : 0;
+
+  const displayError = error || redirectError;
 
   return (
-    <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
-      <header className="sticky top-0 z-[100] bg-[#0D0D0D] px-5 py-5">
-        <div className="max-w-[640px] mx-auto flex items-center justify-between">
-          <button
-            onClick={() => router.back()}
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg-background-secondary transition-colors"
-            aria-label="이전 화면"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-title-3 text-text-primary font-aggro">코인 구매</h1>
-          <MenuDrawer />
-        </div>
-      </header>
+    <div className="min-h-[100dvh] bg-background-primary text-text-primary flex flex-col">
+      <Header title="알 충전" showBack sticky />
 
-      <main className="flex-1 px-5 pb-40">
+      <main className="flex-1 px-5 pb-10">
         <div className="max-w-[640px] mx-auto pt-10 space-y-6">
-          <div className="bg-background-secondary rounded-2xl p-5 space-y-2">
-            <div className="text-[18px] font-semibold">1코인 = 1,000원</div>
-            <p className="text-[14px] text-text-secondary">{subtitle}</p>
+          {/* 잔액 표시 */}
+          <div className="text-center">
+            <div className="text-[28px] font-bold font-aggro text-text-primary">
+              <Egg size={28} weight="fill" className="inline-block -mt-1" /> {loading ? "..." : (balance ?? 0)}알
+            </div>
+            {!loading && balance !== null && (
+              <p className="text-[14px] text-text-secondary mt-2">
+                사주 {sajuCount}회 / 배틀 {battleCount}회 이용 가능
+              </p>
+            )}
           </div>
 
-          <div className="bg-background-secondary rounded-2xl p-5">
-            <div className="text-[16px] font-semibold mb-2">결제는 현재 Mock 처리</div>
-            <p className="text-[14px] text-text-secondary">
-              실제 결제 연동 전이므로 버튼을 누르면 코인이 즉시 충전됩니다.
-            </p>
+          {/* 패키지 카드 */}
+          <div className="space-y-3">
+            {COIN_PACKAGES.map((pkg) => (
+              <CoinPackageCard
+                key={pkg.id}
+                pkg={pkg}
+                onClick={() => charge(pkg)}
+                disabled={charging || loading}
+              />
+            ))}
           </div>
+
+          {charging && (
+            <div className="flex justify-center py-2">
+              <ButtonSpinner message="충전 처리 중..." />
+            </div>
+          )}
+
+          {displayError && (
+            <div className="rounded-xl bg-background-secondary px-4 py-3 text-[14px] text-text-secondary">
+              {displayError}
+            </div>
+          )}
+
+          {/* 이용 내역 (아코디언) */}
+          {!loading && history.length > 0 && (
+            <div className="rounded-2xl bg-background-secondary overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(!historyOpen)}
+                className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
+              >
+                <span className="text-[15px] font-semibold text-text-secondary">
+                  이용 내역
+                </span>
+                <CaretDown
+                  size={18}
+                  weight="bold"
+                  className={`shrink-0 text-text-tertiary transition-transform duration-200 ${
+                    historyOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {historyOpen && (
+                <div>
+                  <div className="h-px mx-4" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  {history.map((tx: any, i: number) => {
+                    const typeLabel = TX_TYPE_LABELS[tx.type] ?? tx.type;
+                    const typeColor = TX_TYPE_COLORS[tx.type] ?? "text-text-secondary";
+                    const sign = tx.amount > 0 ? "+" : "";
+                    const date = new Date(tx.created_at);
+                    const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+                    return (
+                      <div key={tx.id}>
+                        {i > 0 && <div className="h-px mx-4" style={{ background: "rgba(255,255,255,0.06)" }} />}
+                        <div className="flex items-center justify-between px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <span className={`text-[13px] font-semibold ${typeColor} w-[42px]`}>
+                              {typeLabel}
+                            </span>
+                            <span className="text-[13px] text-text-tertiary">{dateStr}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-[14px] font-semibold ${tx.amount > 0 ? "text-text-primary" : "text-text-secondary"}`}>
+                              {sign}{tx.amount}알
+                            </span>
+                            <span className="text-[12px] text-text-tertiary w-[48px] text-right">
+                              잔액 {tx.balance_after}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 안내문 */}
+          <p className="text-caption text-text-tertiary text-center">
+            충전한 알은 1년간 유효합니다
+          </p>
         </div>
       </main>
 
-      <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <div className="max-w-[640px] mx-auto">
-          <button
-            onClick={handlePurchase}
-            disabled={loading}
-            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
-          >
-            {loading ? <ButtonSpinner message="처리 중..." /> : "코인 1개(1000원) 구매"}
-          </button>
+      {/* 토스트 */}
+      {toast && (
+        <div role="status" aria-live="polite" className="fixed top-20 left-1/2 -translate-x-1/2 z-[300] bg-background-secondary rounded-2xl px-5 py-3 text-[14px] font-semibold text-text-primary shadow-lg animate-fadeIn flex items-center gap-1.5">
+          <Egg size={16} weight="fill" /> {toast}
         </div>
-      </div>
+      )}
     </div>
   );
 }

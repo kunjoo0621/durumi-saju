@@ -70,7 +70,7 @@ function CategoryCard({
             <span className="text-[12px] text-text-tertiary w-12 shrink-0 truncate">{nameA}</span>
             <div className="flex-1 h-5 bg-background-primary rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-[width] duration-500"
                 style={{ width: `${pctA}%`, backgroundColor: aWins ? COLOR_WINNER : COLOR_LOSER }}
               />
             </div>
@@ -87,7 +87,7 @@ function CategoryCard({
             <span className="text-[12px] text-text-tertiary w-12 shrink-0 truncate">{nameB}</span>
             <div className="flex-1 h-5 bg-background-primary rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-[width] duration-500"
                 style={{ width: `${pctB}%`, backgroundColor: bWins ? COLOR_WINNER : COLOR_LOSER }}
               />
             </div>

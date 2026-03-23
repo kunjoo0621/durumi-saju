@@ -65,9 +65,11 @@ export type InputState = {
   coreFearAxis: CoreFearAxis | "";
   unknownBirthTime: boolean;
   analysisResult: AnalysisResult | TeaserResult | null;
+  cachedResultResponse: Record<string, unknown> | null;
   setField: <K extends keyof InputState>(key: K, value: InputState[K]) => void;
   setFields: (values: Partial<InputState>) => void;
   setAnalysisResult: (result: AnalysisResult | TeaserResult | null) => void;
+  setCachedResultResponse: (data: Record<string, unknown> | null) => void;
   reset: () => void;
 };
 
@@ -86,6 +88,7 @@ const initialState = {
   coreFearAxis: "" as CoreFearAxis | "",
   unknownBirthTime: false,
   analysisResult: null,
+  cachedResultResponse: null,
 };
 
 export const useInputStore = create<InputState>()(
@@ -95,6 +98,7 @@ export const useInputStore = create<InputState>()(
       setField: (key, value) => set({ [key]: value } as Partial<InputState>),
       setFields: (values) => set(values),
       setAnalysisResult: (result) => set({ analysisResult: result }),
+      setCachedResultResponse: (data) => set({ cachedResultResponse: data }),
       reset: () => set(initialState),
     }),
     {
@@ -102,9 +106,17 @@ export const useInputStore = create<InputState>()(
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? localStorage : (undefined as unknown as Storage)
       ),
+      partialize: (state) => {
+        // cachedResultResponse는 일시적 데이터이므로 localStorage에 저장하지 않음
+        const { cachedResultResponse, ...rest } = state;
+        return rest as Partial<InputState>;
+      },
     }
   )
 );
+
+/** localStorage에서 hydration이 완료되었는지 동기 체크 */
+export const hasInputHydrated = () => useInputStore.persist.hasHydrated();
 
 // 개별 필드 선택자 - 불필요한 리렌더링 방지
 export const useInputField = <K extends keyof InputState>(key: K) =>

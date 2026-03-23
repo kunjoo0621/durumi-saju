@@ -19,13 +19,15 @@ export async function GET() {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[RESULTS] primary query error", error.message);
+      return NextResponse.json({ error: "대표 사주 조회 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     return NextResponse.json({ primaryResultId: data?.primary_result_id ?? null });
   } catch (error: any) {
+    console.error("[RESULTS] primary error", error?.message);
     return NextResponse.json(
-      { error: error?.message || "조회 중 오류가 발생했습니다." },
+      { error: "조회 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }
@@ -64,13 +66,15 @@ export async function PUT(request: NextRequest) {
       .eq("id", userId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[RESULTS] primary update error", error.message);
+      return NextResponse.json({ error: "대표 사주 설정 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("[RESULTS] primary error", error?.message);
     return NextResponse.json(
-      { error: error?.message || "설정 중 오류가 발생했습니다." },
+      { error: "설정 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }

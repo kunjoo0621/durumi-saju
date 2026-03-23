@@ -132,24 +132,36 @@ export default function TermsPage() {
             {/* 제6조 */}
             <section>
               <h2 className="text-lg font-semibold text-white mb-3">
-                제6조 (유료 서비스 및 결제)
+                제6조 (유료 서비스 및 이용권)
               </h2>
               <ol className="list-decimal pl-5 space-y-2">
                 <li>
-                  유료 서비스의 가격은 다음과 같습니다.
+                  유료 서비스는 &ldquo;알&rdquo;(이용권)을 사용하여
+                  이용합니다. 1알 = 100원이며, 서비스별 필요 알은 다음과
+                  같습니다.
                   <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>개인 사주 분석: 1,000원</li>
-                    <li>사주 배틀: 2,000원</li>
+                    <li>개인 사주 분석: 10알 (1,000원 상당)</li>
+                    <li>사주 배틀: 20알 (2,000원 상당)</li>
                   </ul>
                 </li>
                 <li>
-                  결제는 포트원(PortOne)을 통해 처리되며, 이용 가능한 결제
-                  수단은 카카오페이 등 포트원이 지원하는 방식에 따릅니다.
-                  서비스 제공 기간: 온라인 상품 구매 후 바로 사용 가능합니다.
+                  알은 서비스 내 충전 페이지에서 패키지 단위로 구매할 수
+                  있으며, 결제는 포트원(PortOne)을 통해 처리됩니다. 이용
+                  가능한 결제 수단은 카카오페이 등 포트원이 지원하는 방식에
+                  따릅니다.
                 </li>
                 <li>
-                  회사는 서비스 가격을 변경할 수 있으며, 변경 시 사전에
-                  공지합니다. 변경 전 결제 건에는 변경 전 가격이 적용됩니다.
+                  알 패키지 가격 및 보너스 구성은 다음과 같습니다.
+                  <ul className="list-disc pl-5 mt-2 space-y-1">
+                    <li>기본: 1,000원 (10알)</li>
+                    <li>인기: 3,000원 (30알 + 보너스 5알)</li>
+                    <li>알뜰: 5,000원 (50알 + 보너스 12알)</li>
+                  </ul>
+                </li>
+                <li>
+                  회사는 알 패키지의 가격 및 구성을 변경할 수 있으며, 변경 시
+                  사전에 공지합니다. 변경 전 충전 건에는 변경 전 구성이
+                  적용됩니다.
                 </li>
               </ol>
             </section>
@@ -157,25 +169,46 @@ export default function TermsPage() {
             {/* 제7조 */}
             <section>
               <h2 className="text-lg font-semibold text-white mb-3">
-                제7조 (환불 규정)
+                제7조 (알 환불 정책)
               </h2>
               <ol className="list-decimal pl-5 space-y-2">
                 <li>
-                  본 서비스는 디지털 콘텐츠의 특성상, 분석 결과가 제공된 이후에는
-                  환불이 불가합니다.
+                  <strong className="text-white">미사용 알 환불:</strong>{" "}
+                  충전일로부터 7일 이내에 충전한 알을 전혀 사용하지 않은 경우,
+                  전액 환불이 가능합니다.
                 </li>
                 <li>
-                  다만, 다음의 경우에는 환불 또는 재분석을 제공합니다.
-                  <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>결제 후 시스템 오류로 결과가 정상 제공되지 않은 경우</li>
-                    <li>
-                      동일 건에 대해 중복 결제가 발생한 경우 (중복 건에 한해 환불)
-                    </li>
-                  </ul>
+                  <strong className="text-white">일부 사용 후 환급:</strong>{" "}
+                  충전한 알의 60% 이상을 사용한 경우, 잔여 알에 해당하는 금액을
+                  환급받을 수 있습니다. 보너스로 지급된 알은 환급 대상에서
+                  제외됩니다.
                 </li>
                 <li>
-                  환불 요청은 결제일로부터 7일 이내에 kunjoo0621@gmail.com로
-                  접수해주시기 바랍니다.
+                  <strong className="text-white">환불 방식:</strong> 환불은
+                  원래 결제 수단과 동일한 방식(카드 취소 등)으로 처리됩니다.
+                  처리 기간은 결제 수단에 따라 영업일 기준 3~7일 소요될 수
+                  있습니다.
+                </li>
+                <li>
+                  <strong className="text-white">유효기간:</strong> 충전한 알은
+                  충전일로부터 1년간 유효합니다. 유효기간이 만료된 알은 자동
+                  소멸되며, 소멸된 알에 대해서는 환불이 불가합니다.
+                </li>
+                <li>
+                  <strong className="text-white">만료 사전 통지:</strong>{" "}
+                  회사는 알 유효기간 만료 30일 전에 회원의 카카오 계정에
+                  등록된 이메일로 만료 예정 안내를 발송합니다.
+                </li>
+                <li>
+                  <strong className="text-white">시스템 오류 환불:</strong>{" "}
+                  결제 후 시스템 오류로 알이 정상 충전되지 않은 경우 또는 알
+                  사용 후 서비스가 정상 제공되지 않은 경우, 해당 알은 자동
+                  환불됩니다. 자동 환불이 이루어지지 않은 경우
+                  kunjoo0621@gmail.com으로 접수해주시기 바랍니다.
+                </li>
+                <li>
+                  환불 요청은 kunjoo0621@gmail.com으로 접수하며, 접수 후
+                  영업일 기준 3일 이내에 처리됩니다.
                 </li>
               </ol>
             </section>

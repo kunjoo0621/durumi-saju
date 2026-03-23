@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useKakaoLogin } from "@/hooks/useKakaoLogin";
+import { trackFormStep, trackFormComplete, trackLoginTrigger } from "@/lib/analytics";
 import Header from "@/components/layout/Header";
 import {
   useBattleStore,
@@ -72,6 +74,7 @@ export default function BattleInputPage() {
 
   const playerAMode = useBattleStore((s) => s.playerAMode);
   const { status } = useSession();
+  const { login } = useKakaoLogin();
 
   // 비로그인 시 selectMode 스킵 → 바로 이름 입력
   useEffect(() => {
@@ -267,7 +270,10 @@ export default function BattleInputPage() {
   };
 
   const handleNext = () => {
-    if (step < totalSteps - 1) setStep(step + 1);
+    if (step < totalSteps - 1) {
+      trackFormStep("battle", step + 1, steps[step + 1]);
+      setStep(step + 1);
+    }
   };
 
   const handleBack = () => {
@@ -285,7 +291,13 @@ export default function BattleInputPage() {
   };
 
   const handleSubmit = () => {
-    router.push("/checkout?type=battle");
+    if (status !== "authenticated") {
+      trackLoginTrigger("battle_form_complete");
+      login(`${window.location.origin}/teaser?type=battle`);
+      return;
+    }
+    trackFormComplete("battle");
+    router.push("/teaser?type=battle");
   };
 
   const renderStep = () => {
@@ -303,7 +315,7 @@ export default function BattleInputPage() {
                   type="button"
                   onClick={handleLoadMySaju}
                   disabled={loadingMySaju}
-                  className="btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98]"
+                  className="btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98]"
                 >
                   {loadingMySaju ? <ButtonSpinner message="불러오는 중..." /> : "기존 사주 불러오기"}
                 </button>
@@ -313,7 +325,7 @@ export default function BattleInputPage() {
                     setPlayerAMode("new");
                     setStep(1); // Go to myName step
                   }}
-                  className="btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98]"
+                  className="btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98]"
                 >
                   새로 입력하기
                 </button>
@@ -385,8 +397,9 @@ export default function BattleInputPage() {
               ))}
             </div>
             <div>
-              <label className="block text-[12px] text-text-secondary mb-2">생년월일</label>
+              <label htmlFor="birth-date-a" className="block text-[12px] text-text-secondary mb-2">생년월일</label>
               <input
+                id="birth-date-a"
                 type="text"
                 inputMode="numeric"
                 value={birthDateDisplayA}
@@ -400,8 +413,9 @@ export default function BattleInputPage() {
             </div>
             {!playerA.unknownBirthTime && (
               <div>
-                <label className="block text-[12px] text-text-secondary mb-2">태어난 시간</label>
+                <label htmlFor="birth-time-a" className="block text-[12px] text-text-secondary mb-2">태어난 시간</label>
                 <input
+                  id="birth-time-a"
                   type="text"
                   inputMode="numeric"
                   value={birthTimeDisplayA}
@@ -420,7 +434,7 @@ export default function BattleInputPage() {
                 setPlayerA({ unknownBirthTime: !playerA.unknownBirthTime, birthHour: "", birthMinute: "" });
                 setBirthTimeDisplayA("");
               }}
-              className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200 ${playerA.unknownBirthTime ? "btn-option--selected" : ""}`}
+              className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-[transform,background-color,color] duration-200 ${playerA.unknownBirthTime ? "btn-option--selected" : ""}`}
               aria-pressed={playerA.unknownBirthTime}
             >
               {playerA.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
@@ -440,7 +454,7 @@ export default function BattleInputPage() {
                   key={loc}
                   type="button"
                   onClick={() => setPlayerA({ birthLocation: loc })}
-                  className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-all duration-200 active:scale-[0.98] ${
+                  className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                     playerA.birthLocation === loc ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
                   }`}
                 >
@@ -464,7 +478,7 @@ export default function BattleInputPage() {
                   key={g}
                   type="button"
                   onClick={() => setPlayerA({ gender: g })}
-                  className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                  className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                     playerA.gender === g ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
                   }`}
                 >
@@ -488,7 +502,7 @@ export default function BattleInputPage() {
                   key={opt.value}
                   type="button"
                   onClick={() => setRelationshipType(opt.value)}
-                  className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                  className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                     relationshipType === opt.value
                       ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
                       : ""
@@ -543,8 +557,9 @@ export default function BattleInputPage() {
               ))}
             </div>
             <div>
-              <label className="block text-[12px] text-text-secondary mb-2">생년월일</label>
+              <label htmlFor="birth-date-b" className="block text-[12px] text-text-secondary mb-2">생년월일</label>
               <input
+                id="birth-date-b"
                 type="text"
                 inputMode="numeric"
                 value={birthDateDisplayB}
@@ -558,8 +573,9 @@ export default function BattleInputPage() {
             </div>
             {!playerB.unknownBirthTime && (
               <div>
-                <label className="block text-[12px] text-text-secondary mb-2">태어난 시간</label>
+                <label htmlFor="birth-time-b" className="block text-[12px] text-text-secondary mb-2">태어난 시간</label>
                 <input
+                  id="birth-time-b"
                   type="text"
                   inputMode="numeric"
                   value={birthTimeDisplayB}
@@ -578,7 +594,7 @@ export default function BattleInputPage() {
                 setPlayerB({ unknownBirthTime: !playerB.unknownBirthTime, birthHour: "", birthMinute: "" });
                 setBirthTimeDisplayB("");
               }}
-              className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-all duration-200 ${playerB.unknownBirthTime ? "btn-option--selected" : ""}`}
+              className={`btn-option w-full py-3.5 rounded-xl text-button-sm active:scale-[0.98] transition-[transform,background-color,color] duration-200 ${playerB.unknownBirthTime ? "btn-option--selected" : ""}`}
               aria-pressed={playerB.unknownBirthTime}
             >
               {playerB.unknownBirthTime ? "✓ 태어난 시간을 몰라요" : "태어난 시간을 몰라요"}
@@ -598,7 +614,7 @@ export default function BattleInputPage() {
                   key={loc}
                   type="button"
                   onClick={() => setPlayerBField("birthLocation", loc)}
-                  className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-all duration-200 active:scale-[0.98] ${
+                  className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                     playerB.birthLocation === loc ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
                   }`}
                 >
@@ -622,7 +638,7 @@ export default function BattleInputPage() {
                   key={g}
                   type="button"
                   onClick={() => setPlayerBField("gender", g)}
-                  className={`btn-option w-full py-4 rounded-xl text-button-md transition-all duration-200 active:scale-[0.98] ${
+                  className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
                     playerB.gender === g ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
                   }`}
                 >
@@ -644,7 +660,7 @@ export default function BattleInputPage() {
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
-      <Header showBack onBack={handleBack} />
+      <Header showBack showBalance onBack={handleBack} />
 
       <main className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
@@ -661,7 +677,7 @@ export default function BattleInputPage() {
             <span className="text-[14px] text-text-secondary">{step + 1} / {totalSteps}</span>
             <div className="ml-3 flex-1 h-1 bg-background-tertiary rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
                 style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
               />
             </div>
@@ -671,7 +687,7 @@ export default function BattleInputPage() {
               type="button"
               onClick={isLastStep ? handleSubmit : handleNext}
               disabled={!canProceed()}
-              className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
+              className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
             >
               {isLastStep ? "결제하러 가기" : "다음"}
             </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import Image from "next/image";
@@ -10,6 +11,7 @@ import { useStoreActions } from "@/store/useInputStore";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import type { BattleListItem } from "@/types/battle";
 import { FullScreenLoading, InlineLoading } from "@/components/loading";
+import Modal from "@/components/Modal";
 
 type ResultItem = {
   id: string;
@@ -161,8 +163,8 @@ function DeleteModal({
   const { title, desc } = texts[variant];
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="bg-[#1C1C1C] rounded-2xl p-6 mx-6 w-full max-w-[320px] text-center" onClick={(e) => e.stopPropagation()}>
+    <Modal isOpen onClose={onCancel} maxWidth="320px" ariaLabel="삭제 확인">
+      <div className="p-6 text-center">
         <p className="text-text-primary text-[16px] font-semibold">
           {title}
         </p>
@@ -186,7 +188,7 @@ function DeleteModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -385,7 +387,7 @@ export default function MyResultsPage() {
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
-      <Header showBack sticky title="내 결과" onBack={() => router.push("/menu")} />
+      <Header showBack showBalance sticky title="내 결과" onBack={() => router.push("/menu")} />
 
       {/* Tabs */}
       <div className="max-w-[640px] mx-auto w-full px-5">
@@ -428,13 +430,11 @@ export default function MyResultsPage() {
                     const birthTime = formatBirthTime(item.birth_time);
 
                     return (
-                      <div
+                      <Link
                         key={item.id}
-                        className="rounded-2xl p-5 flex items-center gap-4 cursor-pointer active:opacity-80 transition-opacity"
+                        href={`/result?resultId=${item.id}`}
+                        className="rounded-2xl p-5 flex items-center gap-4 active:opacity-80 transition-opacity"
                         style={{ background: "#141414" }}
-                        onClick={() => router.push(`/result?resultId=${item.id}`)}
-                        role="button"
-                        tabIndex={0}
                       >
                         {/* 등급 메달 */}
                         {badgeSrc ? (
@@ -518,7 +518,7 @@ export default function MyResultsPage() {
                             />
                           )}
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -598,13 +598,11 @@ export default function MyResultsPage() {
                         : `${winnerName}의 ${b.overall_intensity}`;
 
                     return (
-                      <div
+                      <Link
                         key={b.id}
-                        className="rounded-2xl p-5 flex items-center gap-4 cursor-pointer active:opacity-80 transition-opacity"
+                        href={`/battle/result?id=${b.id}`}
+                        className="rounded-2xl p-5 flex items-center gap-4 active:opacity-80 transition-opacity"
                         style={{ background: "#141414" }}
-                        onClick={() => router.push(`/battle/result?id=${b.id}`)}
-                        role="button"
-                        tabIndex={0}
                       >
                         {/* 배지 메인+서브 겹침 */}
                         <div className="relative w-[56px] h-[56px] shrink-0">
@@ -649,7 +647,7 @@ export default function MyResultsPage() {
                             }}
                           />
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -741,7 +739,7 @@ export default function MyResultsPage() {
 
       {/* 삭제 완료 토스트 */}
       {toast && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300">
+        <div role="status" aria-live="polite" className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300">
           {toast}
         </div>
       )}

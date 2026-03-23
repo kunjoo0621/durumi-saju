@@ -29,11 +29,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (purchase.error) {
-      return NextResponse.json({ error: purchase.error.message }, { status: 500 });
+      console.error("[COINS] purchase rpc error", purchase.error.message);
+      return NextResponse.json({ error: "구매 처리 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, balance: purchase.data?.balance ?? null });
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "구매 처리 중 오류가 발생했습니다." }, { status: 500 });
+    console.error("[COINS] purchase error", error?.message);
+    return NextResponse.json({ error: "구매 처리 중 오류가 발생했습니다." }, { status: 500 });
   }
 }

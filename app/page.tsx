@@ -3,8 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import MenuDrawer from "./MenuDrawer";
 import { CaretDown } from "@phosphor-icons/react";
+import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
 
 /* ─── scroll-reveal hook ─── */
@@ -127,8 +127,8 @@ const FAQ_ITEMS = [
     a: "카카오 로그인을 하면 결과가 자동 저장돼. 공유 링크를 보내면 상대방은 로그인 없이 결과를 볼 수 있어.",
   },
   {
-    q: "결제는 어떻게 해?",
-    a: "사주 분석 1,000원, 배틀 2,000원이야. 로그인 없이 바로 결제하고 결과를 볼 수 있어. 나중에 카카오로 로그인하면 결과가 자동으로 저장돼.",
+    q: "알은 뭐야?",
+    a: "알은 두루미 서비스에서 쓰는 재화야. 사주 분석 10알, 배틀 20알이 필요해. 카카오 로그인 후 알을 충전하면 바로 이용할 수 있어.",
   },
 ];
 
@@ -211,18 +211,12 @@ function LandingPageInner() {
 
   return (
     <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white">
-      {/* ── header ── */}
-      <header
-        className={`sticky top-0 z-[120] px-5 py-4 transition-all duration-300 ${
+      <Header
+        sticky
+        className={`shrink-0 z-[120] px-5 py-4 sticky top-0 transition-[background-color,backdrop-filter] duration-300 ${
           isScrolled ? "bg-[rgb(var(--c-dark-bg))]" : "bg-transparent"
         }`}
-      >
-        <div className="max-w-[640px] mx-auto flex items-center justify-between">
-          <div className="w-10" />
-          <h1 className="text-title-3 font-aggro text-white">사주보는 두루미</h1>
-          <MenuDrawer />
-        </div>
-      </header>
+      />
 
       <main>
         {/* ── 섹션 1: 히어로 ── */}

@@ -67,7 +67,7 @@ export default function BattleResultView({
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary animate-fadeIn">
-      <Header showBack sticky onBack={() => router.push(headerBackTo)} />
+      <Header showBack showBalance sticky onBack={() => router.push(headerBackTo)} />
 
       <main className="px-6 py-8">
         <div className="max-w-[640px] mx-auto space-y-6">
@@ -135,7 +135,7 @@ export default function BattleResultView({
               <button
                 type="button"
                 onClick={handleShare}
-                className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
+                className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
               >
                 결과 공유로 도발하기
               </button>

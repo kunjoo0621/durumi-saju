@@ -51,7 +51,8 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[BATTLES] list error", error.message);
+      return NextResponse.json({ error: "배틀 목록 조회 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     const slim = ((battles ?? []) as unknown as BattleRow[]).map(({ full_result, ...rest }) => ({

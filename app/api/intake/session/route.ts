@@ -109,7 +109,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !data?.id) {
-      return NextResponse.json({ error: error?.message || "임시 저장에 실패했습니다." }, { status: 500 });
+      console.error("[INTAKE] session create error", error?.message);
+      return NextResponse.json({ error: "세션 생성에 실패했습니다." }, { status: 500 });
     }
 
     const response = NextResponse.json({ sessionId: data.id });

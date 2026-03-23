@@ -4,13 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import ResultView from "@/components/result/ResultView";
-import { useAllInputs, type AnalysisResult } from "@/store/useInputStore";
+import { useAllInputs, useInputStore, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { Warning } from "@phosphor-icons/react";
 import { FullScreenLoading } from "@/components/loading";
+import Modal from "@/components/Modal";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -21,6 +22,12 @@ const CORE_FEAR_LABELS: Record<string, string> = {
 
 const LOADING_STEPS = [
   { message: "결과를 불러오고 있어", delay: 0 },
+];
+
+const PENDING_ANALYSIS_STEPS = [
+  { message: "사주 데이터를 계산하고 있어", delay: 0 },
+  { message: "해석을 작성하고 있어", delay: 5000 },
+  { message: "마무리하고 있어", delay: 15000 },
 ];
 
 export default function ResultClient() {
@@ -49,6 +56,7 @@ export default function ResultClient() {
 
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const usedCacheRef = useRef(false);
   const [error, setError] = useState<string>("");
   const [paidButFailed, setPaidButFailed] = useState(false);
   const [resultId, setResultId] = useState<string | null>(null);
@@ -58,8 +66,12 @@ export default function ResultClient() {
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
   const [resultBirthYear, setResultBirthYear] = useState<number>(0);
   const resultIdParam = useMemo(() => searchParams?.get("resultId"), [searchParams]);
+  const pendingParam = useMemo(() => searchParams?.get("pending") === "true", [searchParams]);
   const claimParam = useMemo(() => searchParams?.get("claim") === "true", [searchParams]);
   const [claimPending, setClaimPending] = useState(claimParam);
+  const [analysisStatus, setAnalysisStatus] = useState<"pending" | "completed" | "failed" | null>(
+    pendingParam ? "pending" : null
+  );
   const [allowedByPayment, setAllowedByPayment] = useState(() => {
     if (typeof window === "undefined") return false;
     const justPaid = sessionStorage.getItem("sajuJustPaid") === "1";
@@ -78,28 +90,37 @@ export default function ResultClient() {
 
   const fetchResult = useCallback(async () => {
     try {
-      setLoading(true);
       setError("");
       setPaidButFailed(false);
 
+      // 캐시된 결과가 있으면 fetch 생략
+      const cached = useInputStore.getState().cachedResultResponse;
       const hasStoreInput = Boolean(birthYear && birthMonth && birthDay);
-      const payload = hasStoreInput
-        ? {
-            name,
-            birthYear,
-            birthMonth,
-            birthDay,
-            calendarType,
-            birthHour,
-            birthMinute,
-            birthLocation,
-            gender,
-            relationshipStatus,
-            employmentStatus,
-            coreFearAxis,
-            unknownBirthTime,
-          }
-          : null;
+      let data: any;
+
+      if (cached) {
+        data = cached;
+        usedCacheRef.current = true;
+      } else {
+        setLoading(true);
+
+        const payload = hasStoreInput
+          ? {
+              name,
+              birthYear,
+              birthMonth,
+              birthDay,
+              calendarType,
+              birthHour,
+              birthMinute,
+              birthLocation,
+              gender,
+              relationshipStatus,
+              employmentStatus,
+              coreFearAxis,
+              unknownBirthTime,
+            }
+            : null;
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -116,16 +137,30 @@ export default function ResultClient() {
 
         clearTimeout(timeoutId);
 
+        // 분석 진행 중 (202 Accepted)
+        if (res.status === 202) {
+          const pendingData = await res.json().catch(() => ({}));
+          if (pendingData.resultId) setResultId(pendingData.resultId);
+          setAnalysisStatus("pending");
+          return;
+        }
+
         if (!res.ok) {
           if (res.status === 404 && status !== "authenticated") {
             setError("결과가 사라졌거나 못 찾겠어.\n게스트 결과는 24시간 뒤에 지워져.");
             return;
           }
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error || "결과를 못 불러왔어.");
+          const errData = await res.json().catch(() => ({}));
+          if (errData?.failed && errData?.refunded) {
+            setError("분석에 실패했어. 알은 환불됐으니 걱정마.");
+            // paidButFailed 설정 안 함 — 알이 환불되었으므로 "처음으로" 유도
+            return;
+          }
+          throw new Error(errData?.error || "결과를 못 불러왔어.");
         }
 
-        const data = await res.json();
+        data = await res.json();
+      }
         setIsGuest(Boolean(data.is_guest));
         if (data.resultId) setResultId(data.resultId);
         const parsed =
@@ -212,13 +247,64 @@ export default function ResultClient() {
       }
     } finally {
       setLoading(false);
+      // 캐시 1회 소비 후 store 정리 (결과 설정 이후에 실행하여 불필요한 리렌더 방지)
+      if (usedCacheRef.current) {
+        useInputStore.getState().setCachedResultResponse(null);
+      }
     }
   }, [inputHash, resultIdParam, allowedByPayment, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // analysisStatus를 ref로도 추적 (main effect의 deps에서 제외하기 위함)
+  const analysisStatusRef = useRef(analysisStatus);
+  analysisStatusRef.current = analysisStatus;
+
   useEffect(() => {
     if (claimPending) return;
+    if (analysisStatusRef.current === "pending") return;
     fetchResult();
-  }, [fetchResult, claimPending]);
+  }, [fetchResult, claimPending]); // analysisStatus 의존성 제거 → 이중 호출 방지
+
+  // pending 상태 진입 시 분석 트리거 + polling 시작
+  const analyzeTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (analysisStatus !== "pending") return;
+    const rid = resultId || resultIdParam;
+    if (!rid) return;
+
+    // 분석 API 호출 (fire-and-forget — 별도 함수에서 LLM 실행)
+    if (!analyzeTriggeredRef.current) {
+      analyzeTriggeredRef.current = true;
+      fetch("/api/results/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resultId: rid }),
+        keepalive: true, // 탭 닫혀도 요청이 서버에 도달하도록
+      }).catch(() => {});
+    }
+
+    // polling: 분석은 최소 8초 걸리므로 첫 poll은 7초 후, 이후 3초 간격
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/results/progress?resultId=${rid}`);
+        const data = await res.json();
+        if (data.status === "completed") {
+          setAnalysisStatus(null);
+          fetchResult(); // 직접 호출 (state 변경 경유 X → 이중 호출 방지)
+        } else if (data.status === "failed") {
+          setAnalysisStatus("failed");
+          setError("분석에 실패했어. 알은 환불됐으니 걱정마.");
+          setLoading(false);
+          // paidButFailed 설정 안 함 — 알이 환불되었으므로 "다시 시도" 대신 처음으로 유도
+        }
+      } catch {
+        // polling 실패는 무시, 다음 interval에서 재시도
+      }
+    };
+
+    const firstTimeout = setTimeout(poll, 7000);
+    const interval = setInterval(poll, 3000);
+    return () => { clearTimeout(firstTimeout); clearInterval(interval); };
+  }, [analysisStatus, resultId, resultIdParam, fetchResult]);
 
 
   // 로그인 후 돌아왔을 때 자동 claim
@@ -272,7 +358,16 @@ export default function ResultClient() {
     }
   };
 
-  if (loading) {
+  if (analysisStatus === "pending") {
+    return (
+      <FullScreenLoading
+        steps={PENDING_ANALYSIS_STEPS}
+        subMessage="잠깐이면 돼"
+      />
+    );
+  }
+
+  if (loading && !usedCacheRef.current) {
     return (
       <FullScreenLoading
         steps={LOADING_STEPS}
@@ -354,7 +449,7 @@ export default function ResultClient() {
               {shareableId && (
                 <button
                   onClick={handleShare}
-                  className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
+                  className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
                 >
                   결과 공유하기
                 </button>
@@ -380,49 +475,54 @@ export default function ResultClient() {
           </footer>
 
           {/* 게스트 이탈 방지 다이얼로그 */}
-          {showLeaveDialog && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
-              <div className="w-full max-w-[340px] bg-[#1A1A1A] rounded-2xl p-6">
-                <h3 className="text-[17px] font-bold text-white text-center mb-2">
-                  지금 나가면 결과가 저장 안 돼
-                </h3>
-                <p className="text-[13px] text-gray-400 text-center mb-6">
-                  카카오 로그인하면 결과가 계속 저장돼
-                </p>
-                <div className="space-y-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowLeaveDialog(false);
-                      signIn("kakao", { callbackUrl: "/result?claim=true" });
-                    }}
-                    className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
-                      <path
-                        d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                    카카오로 저장하기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowLeaveDialog(false);
-                      if (pendingLeaveUrl) router.push(pendingLeaveUrl);
-                    }}
-                    className="w-full h-[54px] rounded-xl text-[14px] text-gray-500 transition-colors"
-                  >
-                    저장하지 않고 나가기
-                  </button>
-                </div>
+          <Modal
+            isOpen={showLeaveDialog}
+            onClose={() => setShowLeaveDialog(false)}
+            maxWidth="340px"
+            ariaLabel="결과 저장 안내"
+          >
+            <div className="p-6">
+              <h3 className="text-[17px] font-bold text-text-primary text-center mb-2">
+                지금 나가면 결과가 저장 안 돼
+              </h3>
+              <p className="text-[13px] text-text-secondary text-center mb-6">
+                카카오 로그인하면 결과가 계속 저장돼
+              </p>
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLeaveDialog(false);
+                    signIn("kakao", { callbackUrl: "/result?claim=true" });
+                  }}
+                  className="w-full h-[54px] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
+                    <path
+                      d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                  카카오로 저장하기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLeaveDialog(false);
+                    if (pendingLeaveUrl) router.push(pendingLeaveUrl);
+                  }}
+                  className="w-full h-[54px] rounded-xl text-[14px] text-text-tertiary transition-colors"
+                >
+                  저장하지 않고 나가기
+                </button>
               </div>
             </div>
-          )}
+          </Modal>
 
           {/* 클립보드 복사 토스트 */}
           <div
+            role="status"
+            aria-live="polite"
             className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           >
             결과 링크가 복사되었어요

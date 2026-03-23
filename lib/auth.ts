@@ -47,11 +47,20 @@ export const authOptions: NextAuthOptions = {
         const kakaoProfile = profile as {
           id?: string | number;
           properties?: { nickname?: string; profile_image?: string };
-          kakao_account?: { email?: string };
+          kakao_account?: {
+            email?: string;
+            profile?: { nickname?: string; profile_image_url?: string };
+          };
         };
         token.kakaoId = kakaoProfile.id?.toString();
-        token.name = kakaoProfile.properties?.nickname || token.name;
-        token.picture = kakaoProfile.properties?.profile_image || token.picture;
+        token.name =
+          kakaoProfile.kakao_account?.profile?.nickname ||
+          kakaoProfile.properties?.nickname ||
+          token.name;
+        token.picture =
+          kakaoProfile.kakao_account?.profile?.profile_image_url ||
+          kakaoProfile.properties?.profile_image ||
+          token.picture;
         token.email = kakaoProfile.kakao_account?.email || token.email;
 
         const kakaoId = token.kakaoId as string | undefined;

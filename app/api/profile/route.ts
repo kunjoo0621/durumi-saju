@@ -19,13 +19,15 @@ export async function GET() {
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[PROFILE] get error", error.message);
+      return NextResponse.json({ error: "프로필 조회 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     return NextResponse.json({ profile: data || null });
   } catch (error: any) {
+    console.error("[PROFILE] get error", error?.message);
     return NextResponse.json(
-      { error: "정보 조회 중 오류가 발생했습니다.", details: error?.message },
+      { error: "정보 조회 중 오류가 발생했습니다." },
       { status: 500 }
     );
   }
@@ -70,13 +72,15 @@ export async function POST(request: NextRequest) {
       .eq("id", userId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[PROFILE] update error", error.message);
+      return NextResponse.json({ error: "프로필 저장 중 오류가 발생했습니다." }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {
+    console.error("[PROFILE] update error", error?.message);
     return NextResponse.json(
-      { error: "정보 저장 중 오류가 발생했습니다.", details: error?.message },
+      { error: "정보 저장 중 오류가 발생했습니다." },
       { status: 500 }
     );
   }

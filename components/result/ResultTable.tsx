@@ -16,7 +16,7 @@ import {
 import { getGradeBadge, getGradeColor } from "@/lib/utils/grade-colors";
 import { SECTION_ORDER, resolveKey } from "@/lib/constants/section-icons";
 
-const DEFAULT_UNLOCK_LABEL = "1,000원으로 전체 결과 보기";
+const DEFAULT_UNLOCK_LABEL = "전체 결과 보기";
 
 type ResultTableProps = {
   result: AnalysisResult | TeaserResult;

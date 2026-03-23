@@ -44,7 +44,8 @@ export async function GET(
         .maybeSingle();
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[BATTLES] guest query error", error.message);
+        return NextResponse.json({ error: "배틀 조회 중 오류가 발생했습니다." }, { status: 500 });
       }
 
       if (battle) {
@@ -54,8 +55,9 @@ export async function GET(
 
     return NextResponse.json({ error: "배틀을 찾을 수 없습니다." }, { status: 404 });
   } catch (error: any) {
+    console.error("[BATTLES] get error", error?.message);
     return NextResponse.json(
-      { error: "배틀 조회 중 오류가 발생했습니다.", details: error?.message },
+      { error: "배틀 조회 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }
@@ -84,7 +86,8 @@ export async function DELETE(
     console.log("[DELETE /api/battles]", { id, userId, deletedRows: data?.length ?? 0 });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[BATTLES] delete error", error.message);
+      return NextResponse.json({ error: "배틀 삭제 중 오류가 발생했습니다." }, { status: 500 });
     }
     if (!data || data.length === 0) {
       return NextResponse.json({ error: "삭제할 배틀을 찾을 수 없습니다." }, { status: 404 });
@@ -94,7 +97,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error("[DELETE /api/battles] 예외", error?.message);
     return NextResponse.json(
-      { error: "삭제 중 오류가 발생했습니다.", details: error?.message },
+      { error: "배틀 삭제 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }

@@ -178,11 +178,26 @@ export async function POST(request: NextRequest) {
       const { data, error } = await query.maybeSingle();
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[RESULTS] full query error", error.message);
+        return NextResponse.json({ error: "결과 조회 중 오류가 발생했습니다." }, { status: 500 });
       }
 
-      if (!data?.full_json) {
+      if (!data) {
         return NextResponse.json({ error: "결과를 찾을 수 없습니다." }, { status: 404 });
+      }
+
+      // 분석 진행 중 (full_json이 아직 null)
+      if (data.full_json === null) {
+        return NextResponse.json({ pending: true, resultId: data.id }, { status: 202 });
+      }
+
+      // 분석 실패
+      if ((data.full_json as any)?._error) {
+        return NextResponse.json({
+          error: "분석에 실패했습니다. 알은 환불되었습니다.",
+          failed: true,
+          refunded: true,
+        }, { status: 500 });
       }
 
       const resp = buildResponse(data, "user");
@@ -215,7 +230,8 @@ export async function POST(request: NextRequest) {
       const { data, error } = await guestQuery.maybeSingle();
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error("[RESULTS] guest query error", error.message);
+        return NextResponse.json({ error: "결과 조회 중 오류가 발생했습니다." }, { status: 500 });
       }
 
       if (data?.full_json) {
@@ -230,6 +246,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "결과를 찾을 수 없습니다." }, { status: 404 });
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "조회 중 오류가 발생했습니다." }, { status: 500 });
+    console.error("[RESULTS] full error", error?.message);
+    return NextResponse.json({ error: "조회 중 오류가 발생했습니다." }, { status: 500 });
   }
 }

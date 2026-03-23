@@ -25,7 +25,7 @@ export default function ShareCTA() {
           <button
             type="button"
             onClick={() => router.push("/start")}
-            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-all duration-200"
+            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
           >
             내 사주 등급 확인하기
           </button>

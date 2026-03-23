@@ -82,6 +82,9 @@ export const useBattleStore = create<BattleState>()(
   )
 );
 
+/** localStorage에서 hydration이 완료되었는지 동기 체크 */
+export const hasBattleHydrated = () => useBattleStore.persist.hasHydrated();
+
 // Selector hooks
 export const useBattlePlayerA = () => useBattleStore((s) => s.playerA);
 export const useBattlePlayerB = () => useBattleStore((s) => s.playerB);

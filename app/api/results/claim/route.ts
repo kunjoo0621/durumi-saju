@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { hashToken, getTokensFromCookie, deleteAllTokenCookies } from "@/lib/guest-token";
+import { autoSetPrimaryIfNeeded } from "@/lib/server/session-helpers";
 
 export async function POST() {
   // 1. 로그인 필수
@@ -29,51 +30,73 @@ export async function POST() {
   // 3. 전체 토큰 해시 배열 생성
   const hashes = tokens.map((t) => hashToken(t));
 
-  // 4. RPC 호출 (단일 트랜잭션)
-  const { data, error } = await supabaseAdmin.rpc("claim_guest_results", {
-    p_user_id: userId,
-    p_guest_token_hashes: hashes,
-  });
-
-  if (error) {
-    console.error("[claim_guest_results] RPC error:", error);
-    return NextResponse.json({ error: "claim 실패" }, { status: 500 });
-  }
-
-  // 4-b. saju_battles도 이전 (RPC가 미처리할 경우 대비)
-  await supabaseAdmin
-    .from("saju_battles")
-    .update({ user_id: userId, guest_token_hash: null, guest_token_expires_at: null })
+  // 4. guest saju_results 조회 → user_id 설정 → result_unlocks 삽입
+  const { data: guestResults, error: selectError } = await supabaseAdmin
+    .from("saju_results")
+    .select("id, input_hash, order_id")
     .in("guest_token_hash", hashes)
     .is("user_id", null);
 
-  // 4-c. 대표 사주 자동 설정 (claim 후, 대표 없으면)
-  try {
-    const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("primary_result_id")
-      .eq("id", userId)
-      .single();
+  if (selectError) {
+    console.error("[claim] select error:", selectError);
+    return NextResponse.json({ error: "claim 실패" }, { status: 500 });
+  }
 
-    if (!user?.primary_result_id) {
-      const { data: firstUnlock } = await supabaseAdmin
+  let claimed = 0;
+
+  if (guestResults && guestResults.length > 0) {
+    // saju_results: user_id 설정, guest_token 정보 제거
+    const resultIds = guestResults.map((r) => r.id);
+    const { error: updateError } = await supabaseAdmin
+      .from("saju_results")
+      .update({
+        user_id: userId,
+        guest_token_hash: null,
+        guest_token_expires_at: null,
+      })
+      .in("id", resultIds);
+
+    if (updateError) {
+      console.error("[claim] update error:", updateError);
+      return NextResponse.json({ error: "claim 실패" }, { status: 500 });
+    }
+
+    // result_unlocks 삽입 (ON CONFLICT DO NOTHING)
+    const unlockRows = guestResults
+      .filter((r) => r.order_id)
+      .map((r) => ({
+        user_id: userId,
+        result_id: r.id,
+        input_hash: r.input_hash,
+        order_id: r.order_id,
+      }));
+
+    if (unlockRows.length > 0) {
+      const { error: insertError } = await supabaseAdmin
         .from("result_unlocks")
-        .select("result_id")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .upsert(unlockRows, { onConflict: "user_id,input_hash", ignoreDuplicates: true });
 
-      if (firstUnlock?.result_id) {
-        await supabaseAdmin
-          .from("users")
-          .update({ primary_result_id: firstUnlock.result_id })
-          .eq("id", userId);
+      if (insertError) {
+        console.error("[claim] result_unlocks insert error:", insertError);
+        // non-fatal: results are already claimed, just unlock records failed
       }
     }
-  } catch (e) {
-    console.error("[claim] autoSetPrimary non-fatal error:", e);
+
+    claimed = resultIds.length;
   }
+
+  const data = { success: true, claimed };
+
+  // 4-b. saju_battles 이전 + 대표 사주 자동 설정 (병렬 실행)
+  const firstInputHash = guestResults?.[0]?.input_hash;
+  await Promise.all([
+    supabaseAdmin
+      .from("saju_battles")
+      .update({ user_id: userId, guest_token_hash: null, guest_token_expires_at: null })
+      .in("guest_token_hash", hashes)
+      .is("user_id", null),
+    firstInputHash ? autoSetPrimaryIfNeeded(userId, firstInputHash) : Promise.resolve(),
+  ]);
 
   // 5. 성공 시 쿠키 전체 삭제
   const response = NextResponse.json(data);
