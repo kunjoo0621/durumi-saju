@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import { useCharge } from "@/hooks/useCharge";
-import { ButtonSpinner } from "@/components/loading";
+import { ButtonSpinner, FullScreenLoading } from "@/components/loading";
 import CoinPackageCard from "@/components/CoinPackageCard";
 import { COIN_PACKAGES, SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
 import { useCoinStore } from "@/store/useCoinStore";
@@ -46,6 +46,10 @@ export default function CoinsPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // pendingSpend redirect 처리 중 여부
+  const hasPendingSpend = typeof window !== "undefined" && !!sessionStorage.getItem("pendingSpend");
+  const [processingSpend, setProcessingSpend] = useState(hasPendingSpend);
 
   const { charge, charging, error } = useCharge({
     customerName: session?.user?.name || undefined,
@@ -170,6 +174,7 @@ export default function CoinsPage() {
           } catch (err: any) {
             console.error("[COINS] pendingSpend error:", err?.message);
             setRedirectError(err?.message || "결과 처리에 실패했습니다. 알은 충전되었습니다.");
+            setProcessingSpend(false);
           }
         }
 
@@ -179,6 +184,7 @@ export default function CoinsPage() {
       })
       .catch((err) => {
         setRedirectError(err?.message || "충전에 실패했습니다.");
+        setProcessingSpend(false);
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -193,6 +199,19 @@ export default function CoinsPage() {
   const battleCount = balance !== null ? Math.floor(balance / BATTLE_COST) : 0;
 
   const displayError = error || redirectError;
+
+  // 결제 후 자동 충전→차감 처리 중
+  if (processingSpend) {
+    return (
+      <FullScreenLoading
+        steps={[
+          { message: "충전을 처리하고 있어", delay: 0 },
+          { message: "결과를 준비하고 있어", delay: 3000 },
+        ]}
+        subMessage="잠깐이면 돼"
+      />
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] bg-background-primary text-text-primary flex flex-col">
