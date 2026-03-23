@@ -92,7 +92,7 @@ export default function Header({
             <button
               type="button"
               onClick={() => login()}
-              className="text-[13px] font-semibold px-2.5 py-1 rounded-lg bg-kakao text-[#191600]"
+              className="text-[13px] font-semibold px-2.5 py-1 rounded-lg bg-[#FEE500] text-black"
             >
               로그인
             </button>

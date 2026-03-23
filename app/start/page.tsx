@@ -7,6 +7,7 @@ import { useAllInputs, useStoreActions } from "@/store/useInputStore";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import { trackFormStep, trackFormComplete, trackLoginTrigger } from "@/lib/analytics";
 import Header from "@/components/layout/Header";
+import Modal from "@/components/Modal";
 
 // 상수를 모듈 레벨로 이동 (렌더링마다 재생성 방지)
 const QUESTIONS = [
@@ -141,14 +142,21 @@ export default function Home() {
     }
   };
 
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
   const handleSubmit = () => {
     if (status !== "authenticated") {
-      trackLoginTrigger("start_form_complete");
-      login(`${window.location.origin}/teaser`);
+      setShowLoginModal(true);
       return;
     }
     trackFormComplete("start");
     router.push("/teaser");
+  };
+
+  const handleLoginConfirm = () => {
+    setShowLoginModal(false);
+    trackLoginTrigger("start_form_complete");
+    login(`${window.location.origin}/teaser`);
   };
 
   // 생년월일 입력 처리
@@ -525,6 +533,44 @@ export default function Home() {
           </button>
         </div>
       </footer>
+
+      <Modal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        maxWidth="340px"
+        ariaLabel="로그인 안내"
+      >
+        <div className="p-6">
+          <h3 className="text-[17px] font-bold text-text-primary text-center mb-2">
+            결과를 받으려면 로그인이 필요해
+          </h3>
+          <p className="text-[13px] text-text-secondary text-center mb-6">
+            카카오로 로그인하면 결과가 저장돼
+          </p>
+          <div className="space-y-2.5">
+            <button
+              type="button"
+              onClick={handleLoginConfirm}
+              className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
+                <path
+                  d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
+                  fill="currentColor"
+                />
+              </svg>
+              카카오로 로그인하기
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLoginModal(false)}
+              className="w-full h-[48px] rounded-xl text-[14px] text-text-tertiary transition-colors"
+            >
+              돌아가기
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

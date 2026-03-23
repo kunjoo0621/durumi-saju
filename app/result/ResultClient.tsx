@@ -495,7 +495,7 @@ export default function ResultClient() {
                     setShowLeaveDialog(false);
                     signIn("kakao", { callbackUrl: "/result?claim=true" });
                   }}
-                  className="w-full h-[54px] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold flex items-center justify-center gap-2"
+                  className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
                     <path

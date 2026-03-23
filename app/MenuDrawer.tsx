@@ -143,7 +143,7 @@ export default function MenuDrawer() {
               <button
                 onClick={handleKakaoLogin}
                 disabled={signing}
-                className="w-full py-4 rounded-[14px] bg-primary-kakao text-[#191600] text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] active:opacity-90 transition-[transform,opacity] duration-200 disabled:opacity-50"
+                className="w-full py-4 rounded-[14px] bg-[#FEE500] text-black text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] active:opacity-90 transition-[transform,opacity] duration-200 disabled:opacity-50"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.7 6.73-.16.58-.6 2.1-.69 2.43-.11.4.15.39.31.28.13-.08 2.05-1.36 2.88-1.91.57.09 1.17.14 1.8.14 5.5 0 10-3.58 10-8S17.5 3 12 3z"/>

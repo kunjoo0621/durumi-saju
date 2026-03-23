@@ -6,11 +6,12 @@ import { getPaymentConfig, type CoinPackage } from "@/lib/constants/coins";
 
 interface UseChargeOptions {
   customerName?: string;
+  redirectPath?: string;
   onSuccess: (data: { balance: number; charged: number; bonus: number }) => void;
   onError?: (message: string) => void;
 }
 
-export function useCharge({ customerName, onSuccess, onError }: UseChargeOptions) {
+export function useCharge({ customerName, redirectPath, onSuccess, onError }: UseChargeOptions) {
   const [charging, setCharging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +55,7 @@ export function useCharge({ customerName, onSuccess, onError }: UseChargeOptions
         currency: "CURRENCY_KRW",
         payMethod: "EASY_PAY",
         customer: { fullName: customerName || "두루미" },
-        redirectUrl: `${window.location.origin}/coins?chargeOrderId=${encodeURIComponent(orderId)}&packageId=${pkg.id}&amount=${pkg.price}`,
+        redirectUrl: `${window.location.origin}${redirectPath || "/coins"}?chargeOrderId=${encodeURIComponent(orderId)}&packageId=${pkg.id}&amount=${pkg.price}`,
       });
 
       if (!response) return;

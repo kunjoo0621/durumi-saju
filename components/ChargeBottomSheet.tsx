@@ -13,6 +13,7 @@ interface ChargeBottomSheetProps {
   requiredCoins: number;
   currentBalance: number;
   onChargeComplete: (newBalance: number) => void;
+  redirectPath?: string;
 }
 
 export default function ChargeBottomSheet({
@@ -21,8 +22,10 @@ export default function ChargeBottomSheet({
   requiredCoins,
   currentBalance,
   onChargeComplete,
+  redirectPath,
 }: ChargeBottomSheetProps) {
   const { charge, charging, error } = useCharge({
+    redirectPath,
     onSuccess: (data) => onChargeComplete(data.balance),
   });
 

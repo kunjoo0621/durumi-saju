@@ -83,6 +83,61 @@ function TeaserContent() {
   const [existingResultId, setExistingResultId] = useState<string | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showChargeSheet, setShowChargeSheet] = useState(false);
+  const [chargeRedirectHandled, setChargeRedirectHandled] = useState(false);
+
+  // PortOne redirect 복귀 처리 (모바일 결제 후 teaser로 돌아온 경우)
+  useEffect(() => {
+    if (typeof window === "undefined" || chargeRedirectHandled) return;
+    const params = new URLSearchParams(window.location.search);
+    const chargeOrderId = params.get("chargeOrderId");
+    const packageId = params.get("packageId");
+    const amount = params.get("amount");
+    const paymentId = params.get("paymentId");
+
+    if (!chargeOrderId || !packageId || !amount) return;
+    setChargeRedirectHandled(true);
+
+    // 결제 취소된 경우
+    if (params.get("code")) {
+      setError(params.get("message") || "결제가 취소되었습니다.");
+      // URL 정리
+      const url = new URL(window.location.href);
+      ["chargeOrderId", "packageId", "amount", "paymentId", "code", "message"].forEach(k => url.searchParams.delete(k));
+      window.history.replaceState({}, "", url.pathname + url.search);
+      return;
+    }
+
+    // 충전 완료 처리
+    fetch("/api/coins/charge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        packageId,
+        orderId: chargeOrderId,
+        paymentId: paymentId || chargeOrderId,
+        amount: Number(amount),
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error || "충전에 실패했습니다.");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setBalance(data.balance);
+        // URL 정리
+        const url = new URL(window.location.href);
+        ["chargeOrderId", "packageId", "amount", "paymentId"].forEach(k => url.searchParams.delete(k));
+        window.history.replaceState({}, "", url.pathname + url.search);
+        // 충전 성공 → 자동 spend 플래그
+        sessionStorage.setItem("teaserAutoSpend", "1");
+      })
+      .catch((err) => {
+        setError(err?.message || "충전에 실패했습니다.");
+      });
+  }, [chargeRedirectHandled, setBalance]);
 
   // 배틀 사주 태그
   const [tagsA, setTagsA] = useState<SajuTag[]>([]);
@@ -251,6 +306,16 @@ function TeaserContent() {
     };
     createSession();
   }, [isAuthenticated, hydrated, hasRequiredInput, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 충전 redirect 복귀 후 sessionId 준비되면 자동 spend
+  useEffect(() => {
+    if (!sessionId) return;
+    const autoSpend = sessionStorage.getItem("teaserAutoSpend");
+    if (autoSpend) {
+      sessionStorage.removeItem("teaserAutoSpend");
+      executeSpend();
+    }
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 알 차감 실행
   const executeSpend = async () => {
@@ -606,6 +671,7 @@ function TeaserContent() {
         requiredCoins={eggCost}
         currentBalance={balance ?? 0}
         onChargeComplete={handleChargeComplete}
+        redirectPath={isBattle ? "/teaser?type=battle" : "/teaser"}
       />
 
       {/* 중복 결과 모달 (사주 분석 전용) */}
