@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -90,11 +90,15 @@ export default function CoinsPage() {
     const amount = params.get("amount");
     const paymentId = params.get("paymentId");
 
-    if (!chargeOrderId || !packageId || !amount || !paymentId) return;
+    if (!chargeOrderId || !packageId || !amount) return;
     if (params.get("code")) {
       setRedirectError(params.get("message") || "결제가 취소되었습니다.");
+      sessionStorage.removeItem("pendingSpend");
+      window.history.replaceState({}, "", "/coins");
       return;
     }
+
+    const effectivePaymentId = paymentId || chargeOrderId;
 
     fetch("/api/coins/charge", {
       method: "POST",
@@ -102,7 +106,7 @@ export default function CoinsPage() {
       body: JSON.stringify({
         packageId,
         orderId: chargeOrderId,
-        paymentId,
+        paymentId: effectivePaymentId,
         amount: Number(amount),
       }),
     })
@@ -113,11 +117,65 @@ export default function CoinsPage() {
         }
         return res.json();
       })
-      .then((data) => {
+      .then(async (data) => {
         setBalance(data.balance);
+        window.history.replaceState({}, "", "/coins");
+
+        // pendingSpend가 있으면 자동 spend → 결과 페이지
+        const raw = sessionStorage.getItem("pendingSpend");
+        if (raw) {
+          sessionStorage.removeItem("pendingSpend");
+          try {
+            const pending = JSON.parse(raw) as { sessionId: string; type: "analysis" | "battle" };
+            const spendRes = await fetch("/api/coins/spend", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId: pending.sessionId, type: pending.type }),
+            });
+            const spendData = await spendRes.json().catch(() => ({}));
+
+            if (spendData.insufficient) {
+              setToast("알이 아직 부족해. 더 충전해줘.");
+              return;
+            }
+            if (!spendRes.ok) {
+              throw new Error(spendData?.error || "처리에 실패했습니다.");
+            }
+
+            if (pending.type === "battle") {
+              // 배틀: analyze API 호출
+              const analyzeRes = await fetch("/api/battle/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  playerA: (pending as any).playerA,
+                  playerB: (pending as any).playerB,
+                  relationshipType: (pending as any).relationshipType,
+                  sessionId: pending.sessionId,
+                }),
+              });
+              if (!analyzeRes.ok) throw new Error("배틀 분석에 실패했습니다.");
+              const analyzeData = await analyzeRes.json();
+              sessionStorage.setItem("sajuBattleJustPaid", "1");
+              router.replace(`/battle/result${analyzeData.battleId ? `?id=${analyzeData.battleId}` : ""}`);
+            } else {
+              // 사주 분석: 결과 페이지로
+              sessionStorage.setItem("sajuJustPaid", "1");
+              const resultParams = new URLSearchParams();
+              if (spendData.resultId) resultParams.set("resultId", spendData.resultId);
+              if (spendData.pending) resultParams.set("pending", "true");
+              router.replace(`/result?${resultParams.toString()}`);
+            }
+            return;
+          } catch (err: any) {
+            console.error("[COINS] pendingSpend error:", err?.message);
+            setRedirectError(err?.message || "결과 처리에 실패했습니다. 알은 충전되었습니다.");
+          }
+        }
+
+        // pendingSpend 없으면 일반 충전 완료
         setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
         fetchHistory();
-        window.history.replaceState({}, "", "/coins");
       })
       .catch((err) => {
         setRedirectError(err?.message || "충전에 실패했습니다.");
