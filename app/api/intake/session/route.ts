@@ -44,6 +44,15 @@ export async function POST(request: NextRequest) {
 
     const input = (await request.json()) as InputPayload;
     if (!isValidInput(input)) {
+      const missing = [
+        !input?.name && "name", !input?.birthYear && "birthYear", !input?.birthMonth && "birthMonth",
+        !input?.birthDay && "birthDay", !input?.birthLocation && "birthLocation", !input?.gender && "gender",
+        !input?.relationshipStatus && "relationshipStatus", !input?.employmentStatus && "employmentStatus",
+        !input?.coreFearAxis && "coreFearAxis",
+        !input?.unknownBirthTime && !input?.birthHour && "birthHour",
+        !input?.unknownBirthTime && !input?.birthMinute && "birthMinute",
+      ].filter(Boolean);
+      console.error("[INTAKE] invalid input, missing:", missing);
       return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
     }
 
@@ -121,8 +130,9 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: any) {
+    console.error("[INTAKE] session error:", error?.message);
     return NextResponse.json(
-      { error: error?.message || "임시 저장 중 오류가 발생했습니다." },
+      { error: "세션 생성에 실패했습니다." },
       { status: 500 }
     );
   }
