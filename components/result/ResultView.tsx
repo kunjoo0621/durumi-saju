@@ -54,7 +54,6 @@ export default function ResultView({
     <div className="min-h-screen bg-background-primary animate-fadeIn">
       <Header
         showBack
-        showBalance
         sticky
         onBack={onBack || (headerBackTo ? () => router.push(headerBackTo) : undefined)}
       />

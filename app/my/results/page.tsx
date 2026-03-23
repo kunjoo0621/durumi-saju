@@ -387,7 +387,7 @@ export default function MyResultsPage() {
 
   return (
     <div className="min-h-screen bg-background-primary flex flex-col">
-      <Header showBack showBalance sticky title="내 결과" onBack={() => router.push("/menu")} />
+      <Header showBack sticky title="내 결과" onBack={() => router.push("/menu")} />
 
       {/* Tabs */}
       <div className="max-w-[640px] mx-auto w-full px-5">

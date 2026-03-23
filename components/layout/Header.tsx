@@ -14,7 +14,6 @@ interface HeaderProps {
   showBack?: boolean;
   onBack?: () => void;
   sticky?: boolean;
-  showBalance?: boolean;
   /** 헤더 배경 클래스 override (랜딩 투명 배경 등) */
   className?: string;
 }
@@ -24,7 +23,6 @@ export default function Header({
   showBack = false,
   onBack,
   sticky = false,
-  showBalance = false,
   className,
 }: HeaderProps) {
   const router = useRouter();

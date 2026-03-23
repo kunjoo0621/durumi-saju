@@ -516,7 +516,7 @@ function CheckoutForm({
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
-      <Header showBack showBalance sticky onBack={() => router.push(redirectBack)} />
+      <Header showBack sticky onBack={() => router.push(redirectBack)} />
 
       <main className="flex-1 px-5 pb-48">
         <div className="max-w-[640px] mx-auto pt-10 space-y-4">

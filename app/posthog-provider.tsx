@@ -52,6 +52,8 @@ function PostHogIdentify() {
 
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
+  const identifiedRef = useRef<string | null>(null);
+
   // 세션 변경 시 즉시 identify/reset
   useEffect(() => {
     if (!posthogClient) return;
@@ -60,15 +62,21 @@ function PostHogIdentify() {
     if (user?.supabaseId) {
       if (INTERNAL_USER_IDS.has(user.supabaseId)) {
         posthogClient.opt_out_capturing();
+        identifiedRef.current = null;
         return;
       }
-      posthogClient.opt_in_capturing();
-      posthogClient.identify(user.supabaseId, {
-        name: user.name || undefined,
-        email: user.email || undefined,
-      });
+      // 같은 유저로 이미 identify됐으면 skip
+      if (identifiedRef.current !== user.supabaseId) {
+        posthogClient.opt_in_capturing();
+        posthogClient.identify(user.supabaseId, {
+          name: user.name || undefined,
+          email: user.email || undefined,
+        });
+        identifiedRef.current = user.supabaseId;
+      }
     } else if (status === "unauthenticated") {
       posthogClient.reset();
+      identifiedRef.current = null;
     }
   }, [session, status, posthogClient]);
 

@@ -67,7 +67,7 @@ export default function BattleResultView({
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary animate-fadeIn">
-      <Header showBack showBalance sticky onBack={() => router.push(headerBackTo)} />
+      <Header showBack sticky onBack={() => router.push(headerBackTo)} />
 
       <main className="px-6 py-8">
         <div className="max-w-[640px] mx-auto space-y-6">

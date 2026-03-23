@@ -400,7 +400,7 @@ function TeaserContent() {
 
   return (
     <div className="min-h-screen bg-background-primary animate-fadeIn">
-      <Header showBack showBalance sticky onBack={() => router.push(redirectBack)} />
+      <Header showBack sticky onBack={() => router.push(redirectBack)} />
 
       <main className="px-6 py-8 pb-48">
         <div className="max-w-[640px] mx-auto space-y-6">

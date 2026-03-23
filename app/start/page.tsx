@@ -483,7 +483,6 @@ export default function Home() {
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
       <Header
         showBack
-        showBalance
         onBack={currentStep > 0 ? handleBack : () => router.push("/menu")}
       />
 

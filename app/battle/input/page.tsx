@@ -668,7 +668,7 @@ export default function BattleInputPage() {
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
-      <Header showBack showBalance onBack={handleBack} />
+      <Header showBack onBack={handleBack} />
 
       <main className="flex-1 min-h-0 px-6 pb-6 overflow-y-auto">
         <div className="max-w-[640px] w-full mx-auto pt-10">
