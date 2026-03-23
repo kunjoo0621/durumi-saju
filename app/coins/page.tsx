@@ -178,9 +178,14 @@ export default function CoinsPage() {
             </div>
           )}
 
+          {/* 안내문 */}
+          <p className="text-caption text-text-tertiary text-center">
+            충전한 알은 1년간 유효합니다
+          </p>
+
           {/* 이용 내역 (아코디언) */}
           {!loading && history.length > 0 && (
-            <div className="rounded-2xl bg-background-secondary overflow-hidden">
+            <div className="rounded-2xl bg-background-secondary overflow-hidden mt-4">
               <button
                 type="button"
                 onClick={() => setHistoryOpen(!historyOpen)}
@@ -200,44 +205,58 @@ export default function CoinsPage() {
               {historyOpen && (
                 <div>
                   <div className="h-px mx-4" style={{ background: "rgba(255,255,255,0.06)" }} />
-                  {history.map((tx: any, i: number) => {
-                    const typeLabel = TX_TYPE_LABELS[tx.type] ?? tx.type;
-                    const typeColor = TX_TYPE_COLORS[tx.type] ?? "text-text-secondary";
-                    const sign = tx.amount > 0 ? "+" : "";
-                    const date = new Date(tx.created_at);
-                    const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+                  {(() => {
+                    // charge+bonus 병합: 같은 시간(60초 이내)의 charge 뒤 bonus를 한 행으로 합침
+                    const merged: Array<{ id: string; type: string; amount: number; bonus?: number; balance_after: number; created_at: string }> = [];
+                    for (let i = 0; i < history.length; i++) {
+                      const tx = history[i];
+                      if (tx.type === "bonus") continue; // bonus는 charge에 병합됨
+                      if (tx.type === "charge") {
+                        // 다음 항목이 bonus이고 60초 이내면 병합
+                        const next = history[i + 1];
+                        if (next?.type === "bonus" && Math.abs(new Date(tx.created_at).getTime() - new Date(next.created_at).getTime()) < 60000) {
+                          merged.push({ ...tx, bonus: next.amount, balance_after: next.balance_after });
+                          i++; // bonus 건너뜀
+                          continue;
+                        }
+                      }
+                      merged.push(tx);
+                    }
+                    return merged.map((tx, i) => {
+                      const typeLabel = TX_TYPE_LABELS[tx.type] ?? tx.type;
+                      const typeColor = TX_TYPE_COLORS[tx.type] ?? "text-text-secondary";
+                      const sign = tx.amount > 0 ? "+" : "";
+                      const date = new Date(tx.created_at);
+                      const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 
-                    return (
-                      <div key={tx.id}>
-                        {i > 0 && <div className="h-px mx-4" style={{ background: "rgba(255,255,255,0.06)" }} />}
-                        <div className="flex items-center justify-between px-5 py-3">
-                          <div className="flex items-center gap-3">
-                            <span className={`text-[13px] font-semibold ${typeColor} w-[42px]`}>
-                              {typeLabel}
-                            </span>
-                            <span className="text-[13px] text-text-tertiary">{dateStr}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className={`text-[14px] font-semibold ${tx.amount > 0 ? "text-text-primary" : "text-text-secondary"}`}>
-                              {sign}{tx.amount}알
-                            </span>
-                            <span className="text-[12px] text-text-tertiary w-[48px] text-right">
-                              잔액 {tx.balance_after}
-                            </span>
+                      return (
+                        <div key={tx.id}>
+                          {i > 0 && <div className="h-px mx-4" style={{ background: "rgba(255,255,255,0.06)" }} />}
+                          <div className="flex items-center justify-between px-5 py-3">
+                            <div className="flex items-center gap-3">
+                              <span className={`text-[13px] font-semibold ${typeColor} w-[42px]`}>
+                                {typeLabel}
+                              </span>
+                              <span className="text-[13px] text-text-tertiary">{dateStr}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`text-[14px] font-semibold ${tx.amount > 0 ? "text-text-primary" : "text-text-secondary"}`}>
+                                {sign}{tx.amount}알
+                                {tx.bonus ? <span className="text-primary ml-1">+{tx.bonus}</span> : null}
+                              </span>
+                              <span className="text-[12px] text-text-tertiary w-[48px] text-right">
+                                잔액 {tx.balance_after}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
           )}
-
-          {/* 안내문 */}
-          <p className="text-caption text-text-tertiary text-center">
-            충전한 알은 1년간 유효합니다
-          </p>
         </div>
       </main>
 
