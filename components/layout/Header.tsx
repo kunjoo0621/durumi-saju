@@ -92,7 +92,7 @@ export default function Header({
             <button
               type="button"
               onClick={() => login()}
-              className="text-[13px] font-semibold px-2.5 py-1 rounded-lg bg-[#FEE500] text-black"
+              className="text-[13px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 bg-background-secondary text-text-secondary hover:bg-background-secondary/80 transition-colors"
             >
               로그인
             </button>

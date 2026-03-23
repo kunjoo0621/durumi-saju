@@ -291,7 +291,7 @@ w-10 h-10 flex items-center justify-center rounded-lg text-text-primary hover:bg
 ### 4-4. 카카오 로그인 버튼
 
 ```
-w-full h-[54px] rounded-xl bg-primary-kakao text-black text-[15px] font-semibold
+w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold
 flex items-center justify-center gap-2
 ```
 
