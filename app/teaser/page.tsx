@@ -84,12 +84,14 @@ function TeaserContent() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showChargeSheet, setShowChargeSheet] = useState(false);
 
-  // PortOne redirect 복귀 감지
-  const isChargeRedirect = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return !!new URLSearchParams(window.location.search).get("chargeOrderId");
-  }, []);
-  const [chargeProcessing, setChargeProcessing] = useState(isChargeRedirect);
+  // PortOne redirect 복귀 감지 (searchParams는 클라이언트에서 정상 동작)
+  const isChargeRedirect = !!searchParams?.get("chargeOrderId");
+  const [chargeProcessing, setChargeProcessing] = useState(false);
+
+  // isChargeRedirect가 true로 확정되면 chargeProcessing 활성화
+  useEffect(() => {
+    if (isChargeRedirect) setChargeProcessing(true);
+  }, [isChargeRedirect]);
 
   // 배틀 사주 태그
   const [tagsA, setTagsA] = useState<SajuTag[]>([]);
