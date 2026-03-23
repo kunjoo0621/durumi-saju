@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -40,12 +40,15 @@ export const metadata: Metadata = {
     icon: "/favicon.png",
     apple: "/favicon.png",
   },
-  themeColor: "#09090B",
   verification: {
     other: {
       "naver-site-verification": "f4bbf6412e11400b7b1f8b7073c678b19fbd53a9",
     },
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#09090B",
 };
 
 const jsonLd = {

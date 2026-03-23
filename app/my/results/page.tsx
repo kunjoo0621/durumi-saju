@@ -430,79 +430,83 @@ export default function MyResultsPage() {
                     const birthTime = formatBirthTime(item.birth_time);
 
                     return (
-                      <Link
+                      <div
                         key={item.id}
-                        href={`/result?resultId=${item.id}`}
-                        className="rounded-2xl p-5 flex items-center gap-4 active:opacity-80 transition-opacity"
+                        className="relative rounded-2xl flex items-center active:opacity-80 transition-opacity"
                         style={{ background: "#141414" }}
                       >
-                        {/* 등급 메달 */}
-                        {badgeSrc ? (
-                          <div
-                            className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
-                            style={{ background: gc?.bg || "#2D231B" }}
-                          >
-                            <Image
-                              src={badgeSrc}
-                              alt={`${item.grade}등급`}
-                              width={30}
-                              height={30}
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0 bg-white/5">
-                            <span className="text-[#4B5563] text-[14px]">?</span>
-                          </div>
-                        )}
+                        <Link
+                          href={`/result?resultId=${item.id}`}
+                          className="flex-1 min-w-0 p-5 flex items-center gap-4"
+                        >
+                          {/* 등급 메달 */}
+                          {badgeSrc ? (
+                            <div
+                              className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
+                              style={{ background: gc?.bg || "#2D231B" }}
+                            >
+                              <Image
+                                src={badgeSrc}
+                                alt={`${item.grade}등급`}
+                                width={30}
+                                height={30}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0 bg-white/5">
+                              <span className="text-[#4B5563] text-[14px]">?</span>
+                            </div>
+                          )}
 
-                        {/* 정보 영역 */}
-                        <div className="flex-1 min-w-0">
-                          {/* 1줄: 이름 + 등급 */}
-                          <div className="flex items-baseline gap-2 mb-1.5">
-                            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
-                              {item.name || `사주 #${item.id.slice(0, 6)}`}
-                            </span>
-                            {item.grade && (
-                              <span
-                                className="text-[13px] font-semibold whitespace-nowrap shrink-0"
-                                style={{ color: gc?.text || "#D0A070" }}
-                              >
-                                {item.grade}등급{item.score != null ? ` · ${item.score}점` : ""}
+                          {/* 정보 영역 */}
+                          <div className="flex-1 min-w-0">
+                            {/* 1줄: 이름 + 등급 */}
+                            <div className="flex items-baseline gap-2 mb-1.5">
+                              <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
+                                {item.name || `사주 #${item.id.slice(0, 6)}`}
                               </span>
-                            )}
+                              {item.grade && (
+                                <span
+                                  className="text-[13px] font-semibold whitespace-nowrap shrink-0"
+                                  style={{ color: gc?.text || "#D0A070" }}
+                                >
+                                  {item.grade}등급{item.score != null ? ` · ${item.score}점` : ""}
+                                </span>
+                              )}
+                            </div>
+                            {/* 2줄: 메타 */}
+                            <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+                              {item.birth_date && (
+                                <span>{item.birth_date.replace(/-/g, ".")}</span>
+                              )}
+                              {item.gender && (
+                                <>
+                                  <span style={{ color: "#2A2A2A" }}>·</span>
+                                  <span>{item.gender}</span>
+                                </>
+                              )}
+                              {birthTime && (
+                                <>
+                                  <span style={{ color: "#2A2A2A" }}>·</span>
+                                  <span>{birthTime}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          {/* 2줄: 메타 */}
-                          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
-                            {item.birth_date && (
-                              <span>{item.birth_date.replace(/-/g, ".")}</span>
-                            )}
-                            {item.gender && (
-                              <>
-                                <span style={{ color: "#2A2A2A" }}>·</span>
-                                <span>{item.gender}</span>
-                              </>
-                            )}
-                            {birthTime && (
-                              <>
-                                <span style={{ color: "#2A2A2A" }}>·</span>
-                                <span>{birthTime}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
 
-                        {/* 대표 뱃지 */}
-                        {item.is_primary && (
-                          <span
-                            className="text-[11px] font-bold px-2.5 py-[3px] rounded-[6px] shrink-0 mr-1"
-                            style={{ background: "rgba(255,107,107,0.12)", color: "#FF6B6B" }}
-                          >
-                            대표
-                          </span>
-                        )}
+                          {/* 대표 뱃지 */}
+                          {item.is_primary && (
+                            <span
+                              className="text-[11px] font-bold px-2.5 py-[3px] rounded-[6px] shrink-0 mr-1"
+                              style={{ background: "rgba(255,107,107,0.12)", color: "#FF6B6B" }}
+                            >
+                              대표
+                            </span>
+                          )}
+                        </Link>
 
-                        {/* ··· 버튼 */}
-                        <div className="relative shrink-0">
+                        {/* ··· 버튼 (Link 바깥) */}
+                        <div className="relative shrink-0 pr-5">
                           <DotsButton
                             onClick={(e) => {
                               e.stopPropagation();
@@ -518,7 +522,7 @@ export default function MyResultsPage() {
                             />
                           )}
                         </div>
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
@@ -598,48 +602,52 @@ export default function MyResultsPage() {
                         : `${winnerName}의 ${b.overall_intensity}`;
 
                     return (
-                      <Link
+                      <div
                         key={b.id}
-                        href={`/battle/result?id=${b.id}`}
-                        className="rounded-2xl p-5 flex items-center gap-4 active:opacity-80 transition-opacity"
+                        className="relative rounded-2xl flex items-center active:opacity-80 transition-opacity"
                         style={{ background: "#141414" }}
                       >
-                        {/* 배지 메인+서브 겹침 */}
-                        <div className="relative w-[56px] h-[56px] shrink-0">
-                          <div
-                            className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center"
-                            style={{ background: gcA.bg }}
-                          >
-                            <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={30} height={30} />
+                        <Link
+                          href={`/battle/result?id=${b.id}`}
+                          className="flex-1 min-w-0 p-5 flex items-center gap-4"
+                        >
+                          {/* 배지 메인+서브 겹침 */}
+                          <div className="relative w-[56px] h-[56px] shrink-0">
+                            <div
+                              className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center"
+                              style={{ background: gcA.bg }}
+                            >
+                              <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={30} height={30} />
+                            </div>
+                            <div
+                              className="absolute -right-1.5 -bottom-1.5 w-[28px] h-[28px] rounded-[8px] flex items-center justify-center ring-2 ring-[#141414]"
+                              style={{ background: gcB.bg }}
+                            >
+                              <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={16} height={16} />
+                            </div>
                           </div>
-                          <div
-                            className="absolute -right-1.5 -bottom-1.5 w-[28px] h-[28px] rounded-[8px] flex items-center justify-center ring-2 ring-[#141414]"
-                            style={{ background: gcB.bg }}
-                          >
-                            <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={16} height={16} />
-                          </div>
-                        </div>
 
-                        {/* 정보 영역 */}
-                        <div className="flex-1 min-w-0">
-                          {/* 1줄: 이름 */}
-                          <div className="flex items-baseline gap-2 mb-1.5">
-                            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
-                              {b.player_a_name} vs {b.player_b_name}
-                            </span>
+                          {/* 정보 영역 */}
+                          <div className="flex-1 min-w-0">
+                            {/* 1줄: 이름 */}
+                            <div className="flex items-baseline gap-2 mb-1.5">
+                              <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
+                                {b.player_a_name} vs {b.player_b_name}
+                              </span>
+                            </div>
+                            {/* 2줄: 메타 */}
+                            <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+                              <span>{RELATIONSHIP_LABELS[b.relationship_type] || "기타"}</span>
+                              <span style={{ color: "#2A2A2A" }}>·</span>
+                              <span>{intensityLabel}</span>
+                              <span style={{ color: "#2A2A2A" }}>·</span>
+                              <span>{b.wins_a}:{b.wins_b}</span>
+                            </div>
                           </div>
-                          {/* 2줄: 메타 */}
-                          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
-                            <span>{RELATIONSHIP_LABELS[b.relationship_type] || "기타"}</span>
-                            <span style={{ color: "#2A2A2A" }}>·</span>
-                            <span>{intensityLabel}</span>
-                            <span style={{ color: "#2A2A2A" }}>·</span>
-                            <span>{b.wins_a}:{b.wins_b}</span>
-                          </div>
-                        </div>
+                        </Link>
 
-                        {/* ··· 버튼 */}
-                        <div className="relative shrink-0">
+                        {/* ··· 버튼 (Link 바깥) */}
+                        <div className="relative shrink-0 pr-5">
                           <DotsButton
                             onClick={(e) => {
                               e.stopPropagation();
@@ -647,7 +655,7 @@ export default function MyResultsPage() {
                             }}
                           />
                         </div>
-                      </Link>
+                      </div>
                     );
                   })}
                 </div>
