@@ -710,7 +710,7 @@ export default function BattleInputPage() {
             로그인하면 결과가 저장돼
           </p>
           <LoginForm
-            callbackUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/teaser?type=battle`}
+            callbackUrl="/teaser?type=battle"
             onClose={() => setShowLoginModal(false)}
           />
         </div>
