@@ -1,5 +1,6 @@
 import { type NextAuthOptions } from "next-auth";
 import KakaoProvider from "next-auth/providers/kakao";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -32,6 +33,33 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.KAKAO_CLIENT_ID || "",
       clientSecret: process.env.KAKAO_CLIENT_SECRET || "",
     }),
+    ...(process.env.REVIEW_ACCOUNT_EMAIL
+      ? [
+          CredentialsProvider({
+            name: "이메일",
+            credentials: {
+              email: { label: "이메일", type: "email" },
+              password: { label: "비밀번호", type: "password" },
+            },
+            async authorize(credentials) {
+              const email = process.env.REVIEW_ACCOUNT_EMAIL;
+              const password = process.env.REVIEW_ACCOUNT_PASSWORD;
+              if (!email || !password) return null;
+              if (credentials?.email !== email || credentials?.password !== password) return null;
+
+              const reviewKakaoId = `review-${email}`;
+              const userId = await upsertUserWithRetry(reviewKakaoId, "심사계정");
+
+              return {
+                id: reviewKakaoId,
+                name: "심사계정",
+                email,
+                supabaseId: userId,
+              };
+            },
+          }),
+        ]
+      : []),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -39,10 +67,21 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30일
   },
   pages: {
+    signIn: "/login",
     error: "/auth/error",
   },
   callbacks: {
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account, profile, user }) {
+      // Credentials 로그인 (심사용)
+      if (account?.provider === "credentials" && user) {
+        const u = user as { id: string; name?: string; email?: string; supabaseId?: string };
+        token.kakaoId = u.id;
+        token.name = u.name;
+        token.email = u.email;
+        token.supabaseUserId = u.supabaseId;
+        return token;
+      }
+
       if (account && profile) {
         const kakaoProfile = profile as {
           id?: string | number;
