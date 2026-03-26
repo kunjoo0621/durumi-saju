@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useKakaoLogin } from "@/hooks/useKakaoLogin";
-import { trackFormStep, trackFormComplete, trackLoginTrigger } from "@/lib/analytics";
+import { trackFormStep, trackFormComplete } from "@/lib/analytics";
 import Header from "@/components/layout/Header";
 import {
   useBattleStore,
@@ -17,6 +16,7 @@ import {
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
 import { ButtonSpinner } from "@/components/loading";
 import Modal from "@/components/Modal";
+import LoginForm from "@/components/LoginForm";
 
 const LOCATIONS = [
   "서울", "경기", "인천", "강원", "충북", "충남",
@@ -75,8 +75,6 @@ export default function BattleInputPage() {
 
   const playerAMode = useBattleStore((s) => s.playerAMode);
   const { status } = useSession();
-  const { login } = useKakaoLogin();
-
   // 비로그인 시 selectMode 스킵 → 바로 이름 입력
   useEffect(() => {
     if (status === "unauthenticated" && !playerAMode) {
@@ -302,11 +300,6 @@ export default function BattleInputPage() {
     router.push("/teaser?type=battle");
   };
 
-  const handleLoginConfirm = () => {
-    setShowLoginModal(false);
-    trackLoginTrigger("battle_form_complete");
-    login(`${window.location.origin}/teaser?type=battle`);
-  };
 
   const renderStep = () => {
     switch (currentStepId) {
@@ -706,8 +699,8 @@ export default function BattleInputPage() {
       <Modal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        maxWidth="340px"
-        ariaLabel="로그인 안내"
+        maxWidth="380px"
+        ariaLabel="로그인"
       >
         <div className="p-6">
           <h3 className="text-[17px] font-bold text-text-primary text-center mb-2">
@@ -716,38 +709,10 @@ export default function BattleInputPage() {
           <p className="text-[13px] text-text-secondary text-center mb-6">
             로그인하면 결과가 저장돼
           </p>
-          <div className="space-y-2.5">
-            <button
-              type="button"
-              onClick={handleLoginConfirm}
-              className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" className="text-black">
-                <path
-                  d="M12 4c-5.06 0-9 3.15-9 7.03 0 2.47 1.54 4.63 3.9 5.87l-.7 3.06a.5.5 0 0 0 .75.54l3.56-2.26c.5.07 1.02.1 1.55.1 5.06 0 9-3.15 9-7.03S17.06 4 12 4z"
-                  fill="currentColor"
-                />
-              </svg>
-              카카오로 로그인하기
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowLoginModal(false);
-                router.push("/login");
-              }}
-              className="w-full h-[48px] rounded-xl text-[14px] text-text-secondary border border-white/10 bg-background-secondary hover:bg-background-secondary/80 transition-colors"
-            >
-              이메일로 로그인하기
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowLoginModal(false)}
-              className="w-full h-[48px] rounded-xl text-[14px] text-text-tertiary transition-colors"
-            >
-              돌아가기
-            </button>
-          </div>
+          <LoginForm
+            callbackUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/teaser?type=battle`}
+            onClose={() => setShowLoginModal(false)}
+          />
         </div>
       </Modal>
     </div>
