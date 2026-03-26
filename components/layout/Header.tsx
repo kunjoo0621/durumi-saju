@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { CaretLeft, Egg } from "@phosphor-icons/react";
 import MenuDrawer from "@/app/MenuDrawer";
 import { useCoinStore } from "@/store/useCoinStore";
-import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 import { useEffect } from "react";
 
 interface HeaderProps {
@@ -28,7 +27,6 @@ export default function Header({
   const router = useRouter();
   const { data: session } = useSession();
   const { balance, fetchBalance } = useCoinStore();
-  const { login } = useKakaoLogin();
 
   const isLoggedIn = !!session?.user;
 
@@ -87,13 +85,12 @@ export default function Header({
           {isLoggedIn ? (
             <MenuDrawer />
           ) : (
-            <button
-              type="button"
-              onClick={() => login()}
+            <Link
+              href="/login"
               className="text-[13px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 bg-background-secondary text-text-secondary hover:bg-background-secondary/80 transition-colors"
             >
               로그인
-            </button>
+            </Link>
           )}
         </div>
       </div>
