@@ -368,12 +368,14 @@ function TeaserContent() {
     ? [
         { message: "알을 사용하고 있어", delay: 0 },
         { message: "두 사람의 사주를 분석하고 있어", delay: 3000 },
-        { message: "대결 결과를 만들고 있어", delay: 10000 },
-        { message: "마무리하고 있어", delay: 25000 },
+        { message: "대결 결과를 만들고 있어", delay: 15000 },
+        { message: "거의 다 됐어", delay: 40000 },
       ]
     : [
         { message: "알을 사용하고 있어", delay: 0 },
       ], [isBattle]);
+
+  const confirmDuration = isBattle ? 60000 : undefined;
 
   // 비인증 시 로그인 리다이렉트 중 — 불필요한 렌더링 방지
   if (!isAuthenticated) {
@@ -389,7 +391,7 @@ function TeaserContent() {
     return (
       <FullScreenLoading
         steps={confirmSteps}
-        subMessage={isBattle ? "최대 3분까지 걸릴 수 있어" : undefined}
+        estimatedDuration={confirmDuration}
       />
     );
   }

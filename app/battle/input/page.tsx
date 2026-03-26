@@ -714,7 +714,7 @@ export default function BattleInputPage() {
             대결하려면 로그인이 필요해
           </h3>
           <p className="text-[13px] text-text-secondary text-center mb-6">
-            카카오로 로그인하면 결과가 저장돼
+            로그인하면 결과가 저장돼
           </p>
           <div className="space-y-2.5">
             <button
@@ -729,6 +729,16 @@ export default function BattleInputPage() {
                 />
               </svg>
               카카오로 로그인하기
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowLoginModal(false);
+                router.push("/login");
+              }}
+              className="w-full h-[48px] rounded-xl text-[14px] text-text-secondary border border-white/10 bg-background-secondary hover:bg-background-secondary/80 transition-colors"
+            >
+              이메일로 로그인하기
             </button>
             <button
               type="button"
