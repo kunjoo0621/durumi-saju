@@ -29,16 +29,17 @@ export default function FullScreenLoading({
     return () => timers.forEach(clearTimeout);
   }, [steps]);
 
-  // 프로그레스 바 애니메이션
+  // 프로그레스 바 애니메이션 (로그 곡선 — 처음 빠르게, 뒤로 갈수록 느리게)
   useEffect(() => {
     if (!estimatedDuration) return;
     const start = Date.now();
     const tick = () => {
       const elapsed = Date.now() - start;
-      // 90%까지만 자연스럽게 채움 (완료는 페이지 전환으로)
-      const pct = Math.min(90, (elapsed / estimatedDuration) * 100);
+      const t = elapsed / estimatedDuration; // 0~1 (1 이상도 가능)
+      // 로그 곡선: 처음 50%가 빠르게, 이후 점점 느려짐. 최대 95%
+      const pct = Math.min(95, (1 - Math.pow(1 - Math.min(t, 1), 2.5)) * 85 + (t > 1 ? Math.min((t - 1) * 5, 10) : 0));
       setProgress(pct);
-      if (pct < 90) raf = requestAnimationFrame(tick);
+      if (pct < 95) raf = requestAnimationFrame(tick);
     };
     let raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
