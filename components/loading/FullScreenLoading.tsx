@@ -50,22 +50,24 @@ export default function FullScreenLoading({
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background-primary px-6">
       <div className="max-w-[640px] w-full text-center">
-        <div className="mb-6 flex justify-center">
-          <Spinner size="lg" />
-        </div>
+        {!estimatedDuration && (
+          <div className="mb-6 flex justify-center">
+            <Spinner size="lg" />
+          </div>
+        )}
         {displayMessage && (
           <h2
             key={displayMessage}
-            className="text-title-2 text-text-primary mb-2 animate-text-fade-in"
+            className="text-title-2 text-text-primary mb-3 animate-text-fade-in"
           >
             {displayMessage}
           </h2>
         )}
         {subMessage && (
-          <p className="text-body-2 text-text-secondary">{subMessage}</p>
+          <p className="text-body-2 text-text-secondary mb-6">{subMessage}</p>
         )}
         {estimatedDuration && (
-          <div className="mt-6 mx-auto max-w-[280px]">
+          <div className="mx-auto max-w-[280px]">
             <div className="h-1.5 bg-background-tertiary rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-[width] duration-300 ease-out"
