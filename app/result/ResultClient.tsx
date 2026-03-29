@@ -363,6 +363,7 @@ export default function ResultClient() {
       <FullScreenLoading
         steps={PENDING_ANALYSIS_STEPS}
         estimatedDuration={25000}
+        subMessage="보통 30초 정도 걸려. 잠시만 기다려줘"
       />
     );
   }

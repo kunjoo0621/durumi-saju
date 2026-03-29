@@ -72,9 +72,6 @@ export default function FullScreenLoading({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-[12px] text-text-tertiary mt-2">
-              {progress < 30 ? "잠깐이면 돼" : progress < 70 ? "거의 다 됐어" : "마무리하고 있어"}
-            </p>
           </div>
         )}
       </div>

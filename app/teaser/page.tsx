@@ -392,6 +392,7 @@ function TeaserContent() {
       <FullScreenLoading
         steps={confirmSteps}
         estimatedDuration={confirmDuration}
+        subMessage={isBattle ? "3~5분 정도 걸릴 수 있어. 잠시만 기다려줘" : undefined}
       />
     );
   }
