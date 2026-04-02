@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/result/share/"],
-        disallow: ["/api/", "/result/", "/checkout/", "/my/"],
+        allow: ["/", "/result/share/", "/battle/result/share/"],
+        disallow: ["/api/", "/result/", "/battle/result/", "/checkout/", "/my/", "/edit-profile/"],
       },
     ],
     sitemap: "https://www.durumisaju.com/sitemap.xml",
