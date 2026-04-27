@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { normalizeScores, type AnalysisScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { postprocessAnalysisResult } from "@/lib/analysis-postprocess";
-import { surgicalRewritePersonal } from "@/lib/surgical-rewrite";
+import { surgicalRewritePersonal, dedupHanjaInResult } from "@/lib/surgical-rewrite";
 import { normalizeGender } from "@/lib/utils/gender";
 import {
   clampValue,
@@ -435,9 +435,9 @@ const THEME_WORDS_BY_SECTION: Record<SectionTheme, string[]> = {
 
 const THEME_HOOK_POOLS: Record<SectionTheme, string[]> = {
   natal: [
-    "기본 엔진은 탄탄한데 조향 기준이 흐리면 같은 패턴을 다시 밟기 쉬워.",
+    "스킬셋은 탄탄한데 빌드가 꼬이면 같은 실수를 다시 밟기 쉬워.",
     "타고난 추진력은 충분한데 멈추는 지점이 없어서 피로가 먼저 올라와.",
-    "기질 자체는 강한데 완급조절이 늦으면 좋은 카드도 값이 떨어져.",
+    "기본기 자체는 강한데 완급조절이 늦으면 좋은 카드도 값이 떨어져.",
     "원국의 장점은 분명한데 반응 순서가 꼬이면 체감 성과가 줄어들어.",
   ],
   strength: [
@@ -1170,7 +1170,7 @@ const MOCK_DATA: AnalysisResult = {
     composite: 82,
     percentileRank: 90,
     topPercent: 10,
-    title: "엔진은 강력한데 핸들이 좀 헐거운 스포츠카",
+    title: "데미지는 센데 빌드가 꼬인 챔피언",
     description:
       "잠재력은 충분한데 방향성이 애매할 때가 많아. 한 분야에 집중하면 탑티어까지 올라갈 수 있는 사람인데, 이것저것 손대다가 에너지가 분산되는 경향이 있어. 한 우물만 파면 진짜 터지는 타입이야.",
   },
@@ -1405,7 +1405,14 @@ const SYSTEM_PROMPT = `너는 '사주보는 두루미'의 사주 결과 생성�
   "sections": [ { "icon": string, "title": string, "content": string } ] (네가 생성)
 }
 
-tier.title: 15~25자. 이 사주를 한 줄로 요약한 날카로운 제목. 예시: "엔진은 좋은데 브레이크가 없는 팔자", "돈 버는 재주는 있는데 새는 구멍이 더 큰 구조".
+tier.title: 15~25자. 이 사주를 한 줄로 요약한 날카로운 제목.
+  예시 (카테고리별 풀에서 입력 상태에 맞춰 1개 선택, 자동차 비유는 백업용으로만 결과당 1회 이하):
+  · 게임/디지털: "데미지는 센데 쿨타임 관리 못하는 캐릭", "스킬은 좋은데 빌드 꼬인 챔피언", "공격은 풀인데 방어구가 없는 캐릭"
+  · 머니/소비: "월급은 들어오는데 자동결제로 다 빠져나가는 가계부", "통장은 두툼한데 카드값이 다 잡아먹는 패턴", "수입은 멀쩡한데 새는 구멍이 더 큰 구조"
+  · 직장/일 (학생·취준 제외): "야근은 풀로 뛰는데 성과 인정 못 받는 캐릭", "기획은 천재인데 마감 직전에 다 엎는 패턴"
+  · 연애/관계 (솔로 제외): "썸은 잘 타는데 본 게임 못 가는 패턴", "관심은 끌어도 손절이 빠른 사람"
+  · 영화/드라마: "주연인데 빌런 라인이 더 강한 캐릭", "시즌1엔 조연이었는데 시즌2에서 주연 점프하는 작품"
+  · 자동차 (백업, 1회 이하): "엔진은 좋은데 브레이크가 없는 팔자"
 tier.description: 3~5문장. 핵심 강점과 핵심 리스크를 대비시키되, 냉정하게.
 
 ────────────────────────────────
@@ -1419,7 +1426,7 @@ tier.description: 3~5문장. 핵심 강점과 핵심 리스크를 대비시키�
 
 ★ 문장 길이 변주(단조로움 방지):
 - 한 섹션 안에서 긴 문장(40자+)과 짧은 문장(15자 이하)을 반드시 섞는다.
-- 짧은 문장 연타 예시: "엔진은 좋아. 근데 브레이크가 없어. 이게 문제야."
+- 짧은 문장 연타 예시: "기본기는 탄탄해. 근데 응용을 못 해. 이게 문제야." 또는 "월급은 들어와. 근데 다 새 나가. 답이 없어."
 - 이런 짧은 연타를 10개 섹션 중 최소 3개에서 사용한다.
 
 ★ Z세대 표현 활용(자연스럽게, 억지스럽지 않게):
@@ -1654,7 +1661,7 @@ sections 개수는 반드시 10개.
 - 단순 카테고리명 금지 ("재물운", "연애 성향", "건강 주의사항" ❌)
 - 형식 옵션(10개 title에서 최소 3가지 형식을 섞어라):
   A) 반전형: "신중한 줄 알았는데 우유부단" / "돈 냄새는 기막힌데 주머니에 구멍"
-  B) 비유형: "수도관 터진 재물운" / "브레이크 없는 엔진"
+  B) 비유형: "쿨타임 안 도는 폭딜기" / "자동결제 줄줄 새는 통장" / "마감만 보면 엎는 기획서"
   C) 팩폭형: 짧은 선고. "네 연애, 매번 3개월인 이유" / "통장이 우는 구조"
   D) 질문형: "왜 맨날 같은 타입한테 꽂히는데?" / "돈이 어디로 새는지 알아?"
 - 10개 title의 어감이 비슷하면 실패.
@@ -1698,17 +1705,26 @@ sections 개수는 반드시 10개.
 2) 10개 섹션에서 같은 형식을 연속 2회 쓰지 않는다.
 3) 형식 옵션:
    - 직설형: "솔직히 이 사주 재물운은 좀 아파." 
-   - 대비형: "엔진은 좋은데 연료통에 구멍 났어."
+   - 대비형: "데미지는 센데 마나가 비었어." 또는 "월급은 두둑한데 통장이 비었어."
    - 질문형: "카드값 나올 때마다 한숨 나오지?" (전체 결과에서 1~2회만)
    - 장면형: "월요일 아침, 팀장이 갑자기 회의 잡았어."
    - 선언형: "이 사주는 혼자 일할 때 터지는 타입이야."
    - 데이터형: "오행에서 금(金)이 0이야. 이게 꽤 치명적인데."
 
-4) 은유 사전(선택적):
-   - 물리/기계: 브레이크, 엔진, 과열, 배터리, 누수
-   - 도시/생활: 출근길, 카드값, 마감, 알림 폭주
-   - 디지털: 버퍼링, 리셋, 알고리즘, 푸시 알림
-   - 게임: 쿨타임, 콤보, 메타, 너프, 패치
+4) 은유 사전 — 6개 카테고리 풀 (자동차는 백업용 결과당 1회 이하):
+   - 게임/디지털: 쿨타임, 콤보, 메타, 너프, 패치, 빌드, 스킬셋, 마나, 캐릭, 챔피언, 데미지, 방어구, 폭딜, 파티
+   - 머니/소비: 통장, 자동결제, 카드값, 월급, 가계부, 적금, 구독, 마이너스, 입금, 환급
+   - 직장/일 (학생·취준 입력 시 회피): 야근, KPI, 분기 마감, 기획서, 회의, 결재, 평가, 성과, 리뷰
+   - 연애/관계 (솔로 입력 시 회피): 썸, 손절, 환승, 잠수, 본 게임, 관심, 끌림, 미련
+   - 영화/드라마: 빌런, 주연, 조연, 시즌, 클라이맥스, 스핀오프, 결말, 캐릭터 점프
+   - 자동차 (백업): 엔진, 브레이크, 핸들, 연료 — 결과당 1회 이하
+
+[비유 카테고리 분산 강제]
+- tier.title의 비유 카테고리와 종합 섹션(섹션 10) 첫 문단의 비유 카테고리는 서로 달라야 한다.
+- 입력 상태 조건:
+  · 연애 상태가 "솔로"이면 연애/관계 비유 사용 금지
+  · 직업 상태가 "학생" 또는 "취업 준비 중"이면 직장/일 비유 사용 금지
+- 자동차 비유는 11개 문장(tier.title + 10 sections title)에서 합산 1회 이하.
 
 5) 금지: 병/정신질환, 외모/성적 비유, "천재/괴물/미친"
 6) 10개 후킹의 핵심 은유 명사 중복 금지.
@@ -1842,7 +1858,7 @@ sections 개수는 반드시 10개.
   · 동일한 비유/은유 (예: "멈추면 녹스는") — 최대 1회
   · "~하는 구조야/패턴이야" — 최대 2회
 - 각 섹션의 타이틀(title)에 같은 키워드가 2개 이상 중복 금지
-  ❌ "멈추면 녹스는 엔진" + "멈추면 녹스는 재물" + "멈추면 녹스는 커리어"
+  ❌ "쿨타임 못 도는 폭딜기" + "쿨타임 못 도는 재물" + "쿨타임 못 도는 커리어"
   ✅ 각 타이틀은 완전히 다른 비유/키워드 사용
 
 ■ 타이틀(title) 규칙
@@ -1913,8 +1929,8 @@ const TEASER_PROMPT = `[Role]
 }`;
 
 export const DEFAULT_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
+  "gemini-3-flash-preview",
+  "gemini-3.1-pro-preview",
 ];
 
 type GeminiSdkModel = {
@@ -2371,7 +2387,8 @@ ${serverScoreSummary}
 위 정보를 바탕으로 사주를 분석해주세요. 연애/직업 정보가 제공된 경우 해당 맥락을 결과에 반영하세요.
   `.trim();
 
-  const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
+  const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
+  const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;
   let lastError: { status?: number; apiStatus?: string; message?: string } | null = null;
 
   for (const model of models) {
@@ -2427,7 +2444,7 @@ ${serverScoreSummary}
             console.warn(`[개인사주 후처리] ${w}`);
           }
         }
-        return enforceNoLabelLeakAcrossResult(input, rewritten);
+        return enforceNoLabelLeakAcrossResult(input, dedupHanjaInResult(rewritten));
       } catch (error: any) {
         if (process.env.NODE_ENV !== "production") {
           console.warn("[ANALYSIS_DEBUG] Invalid JSON from model", { model, message: error?.message });
@@ -2503,7 +2520,8 @@ ${serverScoreSummary}
 위 점수/등급은 확정값이다. 텍스트 생성 시 이 값을 근거로 서술하되, 점수 자체를 변경하지 마라.
   `.trim();
 
-  const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
+  const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
+  const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;
   let lastError: { status?: number; apiStatus?: string; message?: string } | null = null;
 
   for (const model of models) {

@@ -1128,3 +1128,34 @@ function collectAllPunchlines(
 
   return punchlines;
 }
+
+/**
+ * 한자 병기 dedup: 한 텍스트(섹션 단위) 내에서 같은 한글-한자 용어가 반복될 때
+ * 첫 등장만 한자 병기 유지, 두 번째부터는 한글만 남김.
+ * 시각적 부담 완화 (외부 사용자 "어렵다" 피드백 대응).
+ * 섹션 단위로만 동작 — 섹션 간에는 독립적이라 첫 등장은 그대로 유지됨.
+ */
+export function dedupHanjaAnnotation(text: string): string {
+  if (!text) return text;
+  const seen = new Set<string>();
+  return text.replace(/([가-힣]+)\(([一-鿿]+)\)/g, (match, kor) => {
+    if (seen.has(kor)) return kor;
+    seen.add(kor);
+    return match;
+  });
+}
+
+/**
+ * 분석 결과 객체의 모든 텍스트 필드에 dedupHanjaAnnotation 적용.
+ * 섹션 단위로 독립 적용 (섹션마다 첫 등장은 한자 병기 유지).
+ */
+export function dedupHanjaInResult<T extends { tier?: any; sections?: any[]; coreFearAxisBlock?: string }>(result: T): T {
+  if (result.tier?.description) result.tier.description = dedupHanjaAnnotation(result.tier.description);
+  if (result.coreFearAxisBlock) result.coreFearAxisBlock = dedupHanjaAnnotation(result.coreFearAxisBlock);
+  if (Array.isArray(result.sections)) {
+    for (const s of result.sections) {
+      if (s?.content) s.content = dedupHanjaAnnotation(s.content);
+    }
+  }
+  return result;
+}

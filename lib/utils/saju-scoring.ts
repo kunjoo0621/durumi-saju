@@ -9,7 +9,7 @@ import {
 import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 11;
+export const SCORING_VERSION = 12;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;
@@ -260,7 +260,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (isSingang) 건강운 += 3;
   if (hasHap) 건강운 += 2;
   if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 건강운 += 2;
-  건강운 -= Math.round(deficientCount * 6 * defScale); // 결핍 원소별 -6 (v10: 시간미상 0.75 스케일링)
+  건강운 -= Math.round(deficientCount * 4 * defScale); // 결핍 원소별 -4 (v12: -6 → -4 완화. D 비중 7%→2.6% 데이터 기반)
   if (elem.max >= 4) 건강운 -= 6; // 편중
   if (elem.max >= 5) 건강운 -= 5; // 극편중 추가
   if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 건강운 -= 5;
