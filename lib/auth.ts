@@ -1,22 +1,68 @@
 import { type NextAuthOptions } from "next-auth";
 import KakaoProvider from "next-auth/providers/kakao";
-import CredentialsProvider from "next-auth/providers/credentials";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function upsertUserWithRetry(kakaoId: string, nickname: string | null): Promise<string> {
+type ReferrerData = {
+  referrer: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  landing_path: string | null;
+};
+
+// middleware가 저장한 dm_ref 쿠키를 읽어 referrer 정보 추출. 실패 시 모두 null.
+async function readReferrerCookie(): Promise<ReferrerData | null> {
+  try {
+    const cookieStore = await cookies();
+    const raw = cookieStore.get("dm_ref")?.value;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      referrer: typeof parsed.referrer === "string" ? parsed.referrer.slice(0, 200) : null,
+      utm_source: typeof parsed.utm_source === "string" ? parsed.utm_source.slice(0, 100) : null,
+      utm_medium: typeof parsed.utm_medium === "string" ? parsed.utm_medium.slice(0, 100) : null,
+      utm_campaign: typeof parsed.utm_campaign === "string" ? parsed.utm_campaign.slice(0, 100) : null,
+      landing_path: typeof parsed.landing_path === "string" ? parsed.landing_path.slice(0, 200) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function upsertUserWithRetry(
+  kakaoId: string,
+  nickname: string | null,
+  email: string | null,
+  referrer: ReferrerData | null = null,
+): Promise<{ id: string; created: boolean }> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    // 기존 사용자 여부 확인 (created 판별용)
+    const { data: existing } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("kakao_id", kakaoId)
+      .maybeSingle();
+
+    // 신규 가입자만 referrer 컬럼 채움. 기존 사용자는 referrer 덮어쓰지 않음 (첫 채널 보존)
+    const upsertPayload: Record<string, unknown> = { kakao_id: kakaoId, nickname, email };
+    if (!existing && referrer) {
+      if (referrer.referrer) upsertPayload.referrer = referrer.referrer;
+      if (referrer.utm_source) upsertPayload.utm_source = referrer.utm_source;
+      if (referrer.utm_medium) upsertPayload.utm_medium = referrer.utm_medium;
+      if (referrer.utm_campaign) upsertPayload.utm_campaign = referrer.utm_campaign;
+      if (referrer.landing_path) upsertPayload.landing_path = referrer.landing_path;
+    }
+
     const { data, error } = await supabaseAdmin
       .from("users")
-      .upsert(
-        { kakao_id: kakaoId, nickname },
-        { onConflict: "kakao_id" }
-      )
+      .upsert(upsertPayload, { onConflict: "kakao_id" })
       .select("id")
       .single();
 
-    if (!error && data?.id) return data.id;
+    if (!error && data?.id) return { id: data.id, created: !existing };
 
     if (attempt === 0) {
       console.warn(`[auth] upsert attempt 1 failed, retrying in 500ms:`, error?.message);
@@ -27,39 +73,24 @@ async function upsertUserWithRetry(kakaoId: string, nickname: string | null): Pr
   throw new Error(`[auth] Supabase user upsert failed for kakao_id=${kakaoId}`);
 }
 
+async function grantSignupBonusIfNeeded(userId: string, kakaoId: string) {
+  const { data, error } = await supabaseAdmin.rpc("grant_signup_bonus", { p_user_id: userId });
+  if (error) {
+    console.error(`[auth] signup_bonus RPC error (user=${userId}, kakao=${kakaoId}):`, error.message);
+    return;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row?.success) {
+    console.info(`[auth] signup_bonus granted: user=${userId} kakao=${kakaoId} +${row.bonus_amount}알 (잔고 ${row.new_balance})`);
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     KakaoProvider({
-      clientId: process.env.KAKAO_CLIENT_ID || "",
-      clientSecret: process.env.KAKAO_CLIENT_SECRET || "",
+      clientId: process.env.KAKAO_CLIENT_ID!,
+      clientSecret: process.env.KAKAO_CLIENT_SECRET!,
     }),
-    ...(process.env.REVIEW_ACCOUNT_EMAIL
-      ? [
-          CredentialsProvider({
-            name: "이메일",
-            credentials: {
-              email: { label: "이메일", type: "email" },
-              password: { label: "비밀번호", type: "password" },
-            },
-            async authorize(credentials) {
-              const email = process.env.REVIEW_ACCOUNT_EMAIL;
-              const password = process.env.REVIEW_ACCOUNT_PASSWORD;
-              if (!email || !password) return null;
-              if (credentials?.email !== email || credentials?.password !== password) return null;
-
-              const reviewKakaoId = `review-${email}`;
-              const userId = await upsertUserWithRetry(reviewKakaoId, "심사계정");
-
-              return {
-                id: reviewKakaoId,
-                name: "심사계정",
-                email,
-                supabaseId: userId,
-              };
-            },
-          }),
-        ]
-      : []),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -71,17 +102,7 @@ export const authOptions: NextAuthOptions = {
     error: "/auth/error",
   },
   callbacks: {
-    async jwt({ token, account, profile, user }) {
-      // Credentials 로그인 (심사용)
-      if (account?.provider === "credentials" && user) {
-        const u = user as { id: string; name?: string; email?: string; supabaseId?: string };
-        token.kakaoId = u.id;
-        token.name = u.name;
-        token.email = u.email;
-        token.supabaseUserId = u.supabaseId;
-        return token;
-      }
-
+    async jwt({ token, account, profile }) {
       if (account && profile) {
         const kakaoProfile = profile as {
           id?: string | number;
@@ -104,9 +125,17 @@ export const authOptions: NextAuthOptions = {
 
         const kakaoId = token.kakaoId as string | undefined;
         const nickname = (token.name as string) || null;
+        const email = (token.email as string) || null;
         if (kakaoId) {
-          const userId = await upsertUserWithRetry(kakaoId, nickname);
+          const referrer = await readReferrerCookie();
+          const { id: userId, created } = await upsertUserWithRetry(kakaoId, nickname, email, referrer);
           token.supabaseUserId = userId;
+          if (created) {
+            await grantSignupBonusIfNeeded(userId, kakaoId);
+            if (referrer) {
+              console.info(`[auth] referrer captured for new user ${userId}:`, referrer);
+            }
+          }
         }
       }
 
