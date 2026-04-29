@@ -152,13 +152,13 @@ export default async function DictDetailPage({ params }: Props) {
   };
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-background-primary">
       <script
+        id={`jsonld-${entry.category}-${entry.slug}`}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="min-h-screen flex flex-col bg-background-primary">
-        <Header showBack sticky />
+      <Header showBack sticky />
 
         <main className="flex-1 max-w-[640px] mx-auto w-full px-5 pt-2 pb-10">
           <div className="mb-6">
@@ -219,8 +219,7 @@ export default async function DictDetailPage({ params }: Props) {
           </p>
         </main>
 
-        <BusinessFooter />
-      </div>
-    </>
+      <BusinessFooter />
+    </div>
   );
 }

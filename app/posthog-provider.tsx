@@ -2,7 +2,7 @@
 
 import posthog from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useInputStore } from "@/store/useInputStore";
@@ -112,7 +112,10 @@ function PostHogIdentify() {
 export default function PostHogProvider({ children }: { children: React.ReactNode }) {
   return (
     <PHProvider client={posthog}>
-      <PostHogPageView />
+      {/* useSearchParams를 쓰는 PostHogPageView만 Suspense로 감싸 children이 streaming payload로 빠지지 않게 한다. */}
+      <Suspense fallback={null}>
+        <PostHogPageView />
+      </Suspense>
       <PostHogIdentify />
       {children}
     </PHProvider>
