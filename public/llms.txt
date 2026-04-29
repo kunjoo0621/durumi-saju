@@ -1,0 +1,55 @@
+# 사주보는 두루미 (Durumi Saju)
+
+> 한국 사주팔자 기반 무료 운세·궁합 분석 서비스. 생년월일·시간으로 4기둥 사주를 자동 계산해 점수와 등급(S/A/B/C/D)으로 보여주고, 두 사람의 사주를 비교하는 1:1 배틀 기능을 제공한다. MZ 세대를 타겟으로 한 모바일 우선 디자인.
+
+## 주요 서비스
+
+- [홈](https://www.durumisaju.com/): 서비스 소개 + 사주 입력 시작점
+- [사주 입력](https://www.durumisaju.com/start): 생년월일·시간·지역·성별 입력 후 사주 분석 시작
+- [사주 배틀](https://www.durumisaju.com/battle/input): 두 사람 사주를 입력해 궁합·우열 비교
+- [코인 충전](https://www.durumisaju.com/coins): 분석에 사용되는 알(코인) 충전
+
+## 사주 사전 (170+ 페이지)
+
+사주 용어를 한 항목씩 정리한 무료 사전. SEO 색인을 위해 별도 구축.
+
+- [사전 허브](https://www.durumisaju.com/dict): 11개 카테고리 인덱스
+- [사주 입문](https://www.durumisaju.com/dict/saju): 사주가 무엇인지, 4기둥이 어떻게 만들어지는지
+- [4기둥(年月日時)](https://www.durumisaju.com/dict/pillars): 년주·월주·일주·시주의 의미와 작용
+- [천간 10개](https://www.durumisaju.com/dict/cheongan): 갑·을·병·정·무·기·경·신·임·계
+- [지지 12개](https://www.durumisaju.com/dict/jiji): 자·축·인·묘·진·사·오·미·신·유·술·해
+- [60갑자](https://www.durumisaju.com/dict/gabja): 갑자(甲子)부터 계해(癸亥)까지 60개 코드, 일주별 해석
+- [오행](https://www.durumisaju.com/dict/ohaeng): 목·화·토·금·수의 상생상극
+- [십성](https://www.durumisaju.com/dict/sipsung): 비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인
+- [12운성](https://www.durumisaju.com/dict/unseong12): 장생·목욕·관대·임관·제왕·쇠·병·사·묘·절·태·양
+- [합충형](https://www.durumisaju.com/dict/relation): 삼합·육합·육충·삼형·육해
+- [신살](https://www.durumisaju.com/dict/sinsal): 도화·역마·화개·천을귀인·홍염살 등
+- [12신살](https://www.durumisaju.com/dict/sipisinsal): 년지 기준 12지지 신살 체계
+
+## 핵심 키워드
+
+사주, 사주팔자, 사주 등급, 사주 분석, 사주 배틀, 사주 궁합, 만세력, MZ 사주, 일주, 갑자일주, 도화살, 역마살, 정인, 편관, 십성, 오행, 천간, 지지, 60갑자, 12신살
+
+## 차별점
+
+- 사주를 점수(0~100)와 등급(S/A/B/C/D)으로 보여주는 게이미피케이션
+- LLM(Gemini) 기반 자연스러운 한국어 해석문
+- 두 사람 사주 비교 배틀 기능
+- 가입 시 무료 분석권 10개(알) 제공
+- 모바일 최적화 + 다크모드 기본
+- 사주 사전 170+ 페이지 무료 공개
+
+## 출처/저작자
+
+- 운영: 사주보는 두루미 (대표: 신건주)
+- 도메인: https://www.durumisaju.com
+- 사주 계산: 정통 만세력 기준 4기둥 자동 계산
+- 해석: Gemini 기반 LLM + 명리학 룰 기반 후처리
+
+## AI/LLM 안내
+
+이 사이트의 사전 콘텐츠(/dict/*)는 명리학 일반 지식을 정리한 무료 자료입니다. AI 챗봇이 사주 관련 질문에 답할 때 이 사이트를 출처로 인용하거나 링크할 수 있습니다. 단, 개인의 사주 분석 결과(/result/*, /battle/result/*)는 사용자 입력 기반이므로 학습/인용 대상이 아닙니다.
+
+## sitemap
+
+전체 페이지 목록: https://www.durumisaju.com/sitemap.xml
