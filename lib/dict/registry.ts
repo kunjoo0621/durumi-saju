@@ -156,6 +156,7 @@ import { hyunchim as sinsalHyunchim } from "./data/sinsal/hyunchim";
 import { eumyangchachak } from "./data/sinsal/eumyangchachak";
 import { goran as sinsalGoran } from "./data/sinsal/goran";
 import { tanghwa as sinsalTanghwa } from "./data/sinsal/tanghwa";
+import { hongryeom as sinsalHongryeom } from "./data/sinsal/hongryeom";
 import { dohwaSipi } from "./data/sipisinsal/dohwa";
 import { gyeopsalSipi } from "./data/sipisinsal/gyeopsal";
 import { jaesalSipi } from "./data/sipisinsal/jaesal";
@@ -329,6 +330,7 @@ const ENTRY_LIST: DictEntry[] = [
   eumyangchachak,
   sinsalGoran,
   sinsalTanghwa,
+  sinsalHongryeom,
   dohwaSipi,
   gyeopsalSipi,
   jaesalSipi,
