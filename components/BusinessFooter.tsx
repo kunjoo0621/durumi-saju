@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function BusinessFooter({
   footerClassName = "border-t border-white/[0.06] bg-[rgb(var(--c-dark-bg))]",
   innerClassName = "mx-auto max-w-[640px] px-5 sm:px-0 pt-10 pb-12 text-[13px] leading-[180%] text-[rgb(var(--c-text-muted))]",
@@ -8,7 +10,11 @@ export default function BusinessFooter({
   return (
     <footer className={footerClassName}>
       <div className={innerClassName}>
-        <div className="flex items-center gap-2 text-[13px]">
+        <div className="flex items-center gap-2 text-[13px] flex-wrap">
+          <Link href="/dict" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
+            사주 사전
+          </Link>
+          <span>·</span>
           <a href="/terms" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
             이용약관
           </a>

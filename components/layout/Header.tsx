@@ -82,9 +82,7 @@ export default function Header({
               <span>{balance !== null ? balance : "–"}</span>
             </Link>
           )}
-          {isLoggedIn ? (
-            <MenuDrawer />
-          ) : (
+          {!isLoggedIn && (
             <Link
               href="/login"
               className="text-[13px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 bg-background-secondary text-text-secondary hover:bg-background-secondary/80 transition-colors"
@@ -92,6 +90,7 @@ export default function Header({
               로그인
             </Link>
           )}
+          <MenuDrawer />
         </div>
       </div>
     </header>
