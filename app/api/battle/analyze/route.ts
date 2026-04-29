@@ -13,6 +13,7 @@ import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { calculateBattleInteraction } from "@/lib/utils/battle-interaction";
 import { normalizeGender } from "@/lib/utils/gender";
 import { hashToken, getTokensFromCookie, getDbExpiresAt } from "@/lib/guest-token";
+import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
 
 type BattleAnalyzeBody = {
@@ -59,6 +60,19 @@ function hasRequiredBattleInput(p: BattlePlayerInput): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    // 배틀은 LLM 비용이 커서 IP 기반 rate limit 필수 (분당 6회 / 시간당 30회)
+    const ip = getClientIp(request.headers);
+    const minuteLimit = checkRateLimit(`battle:${ip}:m`, 6, 60_000);
+    const hourLimit = checkRateLimit(`battle:${ip}:h`, 30, 60 * 60_000);
+    if (!minuteLimit.allowed || !hourLimit.allowed) {
+      console.warn("[RATE_LIMIT] /api/battle/analyze", { ip });
+      const retryAfter = Math.max(minuteLimit.retryAfter, hourLimit.retryAfter);
+      return NextResponse.json(
+        { error: "요청이 너무 많아. 잠시 후 다시 시도해줘." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
+
     const session = await getServerSession(authOptions);
     const userId = session?.user ? await getSupabaseUserId(session) : null;
     const guestTokens = await getTokensFromCookie();

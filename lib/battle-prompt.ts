@@ -702,7 +702,8 @@ async function runBattleAnalysisInner(opts: BattleAnalysisOpts, isRetry: boolean
     ? userInfo + "\n\n[⚠️ 재생성 주의] 이전 응답이 품질 기준 미달이었어. 특히: 묘(墓) 관련 표현을 전체 응답에서 2회 이내로 제한해. 시뮬레이션에서 한쪽만 당하지 않게 균형 맞춰. 이 규칙을 어기면 또 재생성해야 하니까 반드시 지켜."
     : userInfo;
 
-  const models = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) || DEFAULT_MODELS;
+  const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
+  const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;
 
   let lastError: { status?: number; apiStatus?: string; message?: string } | null = null;
 

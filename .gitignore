@@ -33,3 +33,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local agent/claude config (개인 설정, 커밋 금지)
+.agents/
+.claude/
+
+# 백업 파일 / 임시 빌드 로그 / 테스트 결과 덤프
+*.backup
+*.backup-*
+build_output.log
+test-result-*.json
