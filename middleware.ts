@@ -6,6 +6,23 @@ const PROTECTED_APIS = ["/api/profile", "/api/coins"];
 const REFERRER_COOKIE = "dm_ref";
 const REFERRER_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30일
 
+// User-Agent 문자열에서 인앱 브라우저/네이티브 앱 식별
+// referrer 헤더가 없는 모바일 트래픽 대부분은 카톡/인스타/페북 인앱 브라우저
+function detectAppFromUserAgent(ua: string): string | null {
+  if (!ua) return null;
+  // 우선순위 높은 한국 앱부터 매칭
+  if (/KAKAOTALK/i.test(ua)) return "kakaotalk_inapp";
+  if (/NAVER\(inapp/i.test(ua) || /NAVER\//i.test(ua)) return "naver_inapp";
+  if (/Instagram/i.test(ua)) return "instagram_inapp";
+  if (/FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return "facebook_inapp";
+  if (/Line\//i.test(ua)) return "line_inapp";
+  if (/DaumApps|Daum\//i.test(ua)) return "daum_inapp";
+  if (/Twitter|TwitterAndroid/i.test(ua)) return "twitter_inapp";
+  if (/TikTok|musical_ly/i.test(ua)) return "tiktok_inapp";
+  if (/Threads/i.test(ua)) return "threads_inapp";
+  return null; // 일반 모바일/PC 브라우저
+}
+
 // 첫 진입 시 referrer/UTM을 쿠키에 저장 (가입 시점에 lib/auth.ts에서 DB로 옮김)
 function captureReferrerCookie(request: NextRequest, response: NextResponse) {
   // 쿠키 이미 있으면 건드리지 않음 (첫 진입 정보 보존)
@@ -22,6 +39,12 @@ function captureReferrerCookie(request: NextRequest, response: NextResponse) {
     } catch {
       // invalid referer 헤더는 무시
     }
+  }
+
+  // referrer 헤더가 없으면 UA로 인앱 브라우저 추정
+  if (!externalReferrer) {
+    const ua = request.headers.get("user-agent") || "";
+    externalReferrer = detectAppFromUserAgent(ua);
   }
 
   const refData = {
@@ -102,5 +125,8 @@ export const config = {
     "/teaser",
     "/start",
     "/login",
+    "/dict",
+    "/dict/:path*",
+    "/battle/input",
   ],
 };
