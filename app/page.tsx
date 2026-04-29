@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CaretDown } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
+import EventSignupBanner from "@/components/EventSignupBanner";
 
 /* ─── scroll-reveal hook ─── */
 
@@ -211,12 +212,14 @@ function LandingPageInner() {
 
   return (
     <div className="min-h-screen bg-[rgb(var(--c-dark-bg))] text-white">
-      <Header
-        sticky
-        className={`shrink-0 z-[120] px-5 py-4 sticky top-0 transition-[background-color,backdrop-filter] duration-300 ${
-          isScrolled ? "bg-[rgb(var(--c-dark-bg))]" : "bg-transparent"
-        }`}
-      />
+      <div className="sticky top-0 z-[120]">
+        <Header
+          className={`shrink-0 px-5 py-4 transition-[background-color,backdrop-filter] duration-300 ${
+            isScrolled ? "bg-[rgb(var(--c-dark-bg))]" : "bg-transparent"
+          }`}
+        />
+        <EventSignupBanner />
+      </div>
 
       <main>
         {/* ── 섹션 1: 히어로 ── */}

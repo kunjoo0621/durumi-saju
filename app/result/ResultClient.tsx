@@ -26,8 +26,10 @@ const LOADING_STEPS = [
 
 const PENDING_ANALYSIS_STEPS = [
   { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: "해석을 작성하고 있어", delay: 5000 },
-  { message: "거의 다 됐어", delay: 18000 },
+  { message: "오행과 십성을 분석하고 있어", delay: 30000 },
+  { message: "해석을 작성하고 있어", delay: 75000 },
+  { message: "결과를 정리하고 있어", delay: 135000 },
+  { message: "거의 다 됐어", delay: 165000 },
 ];
 
 export default function ResultClient() {
@@ -362,8 +364,8 @@ export default function ResultClient() {
     return (
       <FullScreenLoading
         steps={PENDING_ANALYSIS_STEPS}
-        estimatedDuration={25000}
-        subMessage="보통 30초 정도 걸려. 잠시만 기다려줘"
+        estimatedDuration={180000}
+        subMessage="보통 3분 정도 걸려. 잠시만 기다려줘"
       />
     );
   }
