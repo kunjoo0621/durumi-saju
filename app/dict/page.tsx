@@ -69,8 +69,58 @@ export const metadata: Metadata = {
 };
 
 export default function DictHubPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${SITE_URL}/dict`,
+        url: `${SITE_URL}/dict`,
+        name: "사주 사전",
+        description:
+          "사주 입문부터 4기둥, 60갑자, 천간지지, 십성, 신살까지 11개 카테고리로 정리한 무료 사주 용어 사전.",
+        inLanguage: "ko-KR",
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "홈",
+            item: SITE_URL,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "사주 사전",
+            item: `${SITE_URL}/dict`,
+          },
+        ],
+      },
+      {
+        "@type": "ItemList",
+        name: "사주 사전 카테고리",
+        numberOfItems: CATEGORY_ORDER.length,
+        itemListElement: CATEGORY_ORDER.map((cat, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: DICT_CATEGORY_LABEL[cat],
+          url: `${SITE_URL}/dict/${cat}`,
+        })),
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background-primary">
+      <script
+        id="jsonld-dict-hub"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header showBack sticky />
 
       <main className="flex-1 max-w-[640px] mx-auto w-full px-5 pt-2 pb-10">

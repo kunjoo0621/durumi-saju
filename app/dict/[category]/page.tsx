@@ -83,8 +83,52 @@ export default async function DictCategoryPage({ params }: Props) {
   const desc = CATEGORY_DESCRIPTION[cat];
   const entries = getDictEntriesByCategory(cat);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${SITE_URL}/dict/${cat}`,
+        url: `${SITE_URL}/dict/${cat}`,
+        name: `${label} — 사주 사전`,
+        description: desc,
+        inLanguage: "ko-KR",
+        isPartOf: { "@id": `${SITE_URL}/#website` },
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "홈", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: "사주 사전", item: `${SITE_URL}/dict` },
+          { "@type": "ListItem", position: 3, name: label, item: `${SITE_URL}/dict/${cat}` },
+        ],
+      },
+      ...(entries.length > 0
+        ? [
+            {
+              "@type": "ItemList",
+              name: `${label} 항목 목록`,
+              numberOfItems: entries.length,
+              itemListElement: entries.map((e, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: e.name,
+                url: `${SITE_URL}/dict/${e.category}/${e.slug}`,
+              })),
+            },
+          ]
+        : []),
+    ],
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background-primary">
+      <script
+        id={`jsonld-dict-${cat}`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header showBack sticky />
 
       <main className="flex-1 max-w-[640px] mx-auto w-full px-5 pt-2 pb-10">
