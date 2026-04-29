@@ -53,17 +53,49 @@ export const viewport: Viewport = {
 
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: SITE_NAME,
-  description: DESCRIPTION,
-  url: SITE_URL,
-  applicationCategory: "EntertainmentApplication",
-  operatingSystem: "Web",
-  offers: {
-    "@type": "Offer",
-    price: "1000",
-    priceCurrency: "KRW",
-  },
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      alternateName: ["두루미사주", "Durumi Saju"],
+      url: SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+      },
+      description: DESCRIPTION,
+      sameAs: [
+        "https://www.instagram.com/durumi_saju/",
+        "https://blog.naver.com/durumi_log",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: DESCRIPTION,
+      inLanguage: "ko-KR",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    {
+      "@type": "WebApplication",
+      name: SITE_NAME,
+      description: DESCRIPTION,
+      url: SITE_URL,
+      applicationCategory: "EntertainmentApplication",
+      operatingSystem: "Web",
+      offers: {
+        "@type": "Offer",
+        price: "1000",
+        priceCurrency: "KRW",
+      },
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+  ],
 };
 
 export default function RootLayout({
