@@ -1,5 +1,7 @@
 export const SAJU_COST = 10;   // 사주 분석 = 10알
 export const BATTLE_COST = 20; // 배틀 = 20알
+export const PET_COMPAT_COST = 20;        // 반려동물 궁합 정상가 = 20알 (보호자+펫 2 entity 분석, 배틀과 동일 논리)
+export const PET_COMPAT_LAUNCH_COST = 10; // 출시 할인가 (기간 미표기 — 추후 조용히 정상가 복귀)
 
 export type CoinPackageId = 'basic' | 'popular' | 'value';
 
