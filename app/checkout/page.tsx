@@ -12,10 +12,11 @@ import { FullScreenLoading, ButtonSpinner } from "@/components/loading";
 import BusinessFooter from "@/components/BusinessFooter";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import Modal from "@/components/Modal";
-import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST, PET_COMPAT_LAUNCH_COST } from "@/lib/constants/coins";
+import { usePetCompatStore, hasPetCompatHydrated } from "@/store/usePetCompatStore";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 
-type CheckoutType = "analysis" | "battle";
+type CheckoutType = "analysis" | "battle" | "pet";
 
 const ELEMENT_TAG_COLORS: Record<string, { color: string; bg: string }> = {
   목: { color: "rgb(34 197 94)", bg: "rgb(34 197 94 / 0.12)" },
@@ -85,7 +86,9 @@ function CheckoutContent() {
 
   const checkoutType: CheckoutType = (searchParams?.get("type") as CheckoutType) || "analysis";
   const isBattle = checkoutType === "battle";
-  const eggCost = isBattle ? BATTLE_COST : SAJU_COST;
+  const isPet = checkoutType === "pet";
+  const eggCost = isPet ? PET_COMPAT_LAUNCH_COST : isBattle ? BATTLE_COST : SAJU_COST;
+  const petStore = usePetCompatStore();
 
   // 기존 checkout state
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +113,17 @@ function CheckoutContent() {
     (!process.env.NEXT_PUBLIC_PORTONE_STORE_ID && !process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY);
 
   const hasRequiredInput = useMemo(() => {
+    if (isPet) {
+      const { pet, owner } = petStore;
+      if (!pet.name?.trim() || !pet.species || !pet.birthTier) return false;
+      if (pet.birthTier === 1 && (!pet.birthDate || !pet.birthTime)) return false;
+      if (pet.birthTier === 2 && !pet.birthDate) return false;
+      if (pet.birthTier === 3 && !pet.birthYearEstimated) return false;
+      if (pet.birthTier === 4 && !pet.adoptionDate) return false;
+      if (!owner.name?.trim() || !owner.birthYear || !owner.birthMonth || !owner.birthDay || !owner.birthLocation || !owner.gender) return false;
+      if (!owner.unknownBirthTime && (!owner.birthHour || !owner.birthMinute)) return false;
+      return true;
+    }
     if (isBattle) {
       const { playerA, playerB, relationshipType } = battleStore;
       if (!playerA.name?.trim() || !playerA.birthYear || !playerA.birthMonth || !playerA.birthDay || !playerA.birthLocation || !playerA.gender) return false;
@@ -136,24 +150,25 @@ function CheckoutContent() {
       return false;
     }
     return true;
-  }, [inputs, battleStore, isBattle]);
+  }, [inputs, battleStore, petStore, isBattle, isPet]);
 
-  const redirectBack = isBattle ? "/battle/input" : "/start";
+  const redirectBack = isPet ? "/pet/input" : isBattle ? "/battle/input" : "/start";
 
   // store hydration 대기 후 입력 검증 실패 시 redirect
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    const checkBoth = () => {
-      if (hasInputHydrated() && hasBattleHydrated()) {
+    const checkAll = () => {
+      if (hasInputHydrated() && hasBattleHydrated() && hasPetCompatHydrated()) {
         setHydrated(true);
         return true;
       }
       return false;
     };
-    if (checkBoth()) return;
-    const unsub1 = useInputStore.persist.onFinishHydration(() => checkBoth());
-    const unsub2 = useBattleStore.persist.onFinishHydration(() => checkBoth());
-    return () => { unsub1(); unsub2(); };
+    if (checkAll()) return;
+    const unsub1 = useInputStore.persist.onFinishHydration(() => checkAll());
+    const unsub2 = useBattleStore.persist.onFinishHydration(() => checkAll());
+    const unsub3 = usePetCompatStore.persist.onFinishHydration(() => checkAll());
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   useEffect(() => {
@@ -275,9 +290,11 @@ function CheckoutContent() {
   }
 
   return <CheckoutForm
-    inputs={isBattle ? null : inputs}
+    inputs={isBattle || isPet ? null : inputs}
     battleStore={isBattle ? battleStore : null}
+    petStore={isPet ? petStore : null}
     isBattle={isBattle}
+    isPet={isPet}
     session={session}
     isAuthenticated={isAuthenticated}
     error={error}
@@ -296,7 +313,7 @@ function CheckoutContent() {
     setExistingResultId={setExistingResultId}
     showDuplicateModal={showDuplicateModal}
     setShowDuplicateModal={setShowDuplicateModal}
-    eggCost={isBattle ? BATTLE_COST : SAJU_COST}
+    eggCost={eggCost}
     coinBalance={coinBalance}
     showChargeSheet={showChargeSheet}
     setShowChargeSheet={setShowChargeSheet}
@@ -306,7 +323,7 @@ function CheckoutContent() {
 }
 
 function CheckoutForm({
-  inputs, battleStore, isBattle,
+  inputs, battleStore, petStore, isBattle, isPet,
   session, isAuthenticated, error, setError,
   paying, setPaying, confirming, setConfirming,
   sessionId, setSessionId,
@@ -346,6 +363,53 @@ function CheckoutForm({
     if (sessionId) return;
     const createSession = async () => {
       try {
+        // 펫: 별도 intake 엔드포인트 호출 (사주와 페이로드 형식 다름)
+        if (isPet) {
+          const { pet, owner } = petStore;
+          const petPayload = {
+            name: pet.name,
+            species: pet.species,
+            breed: pet.breed || undefined,
+            gender: pet.gender || undefined,
+            birthTier: pet.birthTier,
+            birthDate: pet.birthDate || undefined,
+            birthTime: pet.birthTime || undefined,
+            birthYearEstimated: pet.birthYearEstimated ? Number(pet.birthYearEstimated) : undefined,
+            birthMonthEstimated: pet.birthMonthEstimated ? Number(pet.birthMonthEstimated) : undefined,
+            adoptionDate: pet.adoptionDate || undefined,
+            calendarType: pet.calendarType || undefined,
+            adoptionRoute: pet.adoptionRoute || undefined,
+            neutered: pet.neutered === "yes" ? true : pet.neutered === "no" ? false : undefined,
+            coatColor: pet.coatColor || undefined,
+          };
+          const ownerPayload = {
+            name: owner.name,
+            birthYear: Number(owner.birthYear),
+            birthMonth: Number(owner.birthMonth),
+            birthDay: Number(owner.birthDay),
+            birthHour: owner.unknownBirthTime ? undefined : Number(owner.birthHour),
+            birthMinute: owner.unknownBirthTime ? undefined : Number(owner.birthMinute),
+            unknownBirthTime: owner.unknownBirthTime,
+            birthLocation: owner.birthLocation,
+            gender: owner.gender,
+            calendarType: owner.calendarType,
+          };
+          const res = await fetch("/api/pet-compat/intake/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pet: petPayload, owner: ownerPayload }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data?.error || "준비가 안 됐어.");
+          }
+          const data = await res.json();
+          const sid = typeof data?.sessionId === "string" ? data.sessionId : "";
+          if (!sid) throw new Error("연결이 안 됐어.");
+          setSessionId(sid);
+          return;
+        }
+
         const sessionBody = isBattle
           ? {
               name: battleStore.playerA.name,
@@ -402,7 +466,7 @@ function CheckoutForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
-          type: isBattle ? "battle" : "analysis",
+          type: isPet ? "pet" : isBattle ? "battle" : "analysis",
         }),
       });
 
@@ -428,7 +492,28 @@ function CheckoutForm({
         setBalance(data.balance);
       }
 
-      if (isBattle) {
+      if (isPet) {
+        // 펫 궁합: 알 차감 완료 → pet-compat/analyze 호출
+        setConfirming(true);
+        setPaying(false);
+
+        const analyzeRes = await fetch("/api/pet-compat/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId,
+            orderId: data.orderId,
+          }),
+        });
+        if (!analyzeRes.ok) {
+          const errData = await analyzeRes.json().catch(() => ({}));
+          throw new Error(errData?.error || "분석이 안 됐어. 다시 해볼까?");
+        }
+        const analyzeData = await analyzeRes.json();
+        sessionStorage.setItem("petCompatJustPaid", "1");
+        sessionStorage.removeItem("sajuOrderId");
+        router.replace(`/pet/result${analyzeData.resultId ? `?id=${analyzeData.resultId}` : ""}`);
+      } else if (isBattle) {
         // 배틀: 알 차감 완료 → battle/analyze 호출
         setConfirming(true);
         setPaying(false);

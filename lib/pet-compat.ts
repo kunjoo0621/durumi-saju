@@ -14,6 +14,8 @@ export type PetSpecies = "dog" | "cat";
 export type PetGender = "male" | "female" | "unknown";
 export type BirthTier = 1 | 2 | 3 | 4;
 
+export type PetCoatColor = "white" | "black" | "red" | "yellow" | "gray" | "mixed" | "other";
+
 export interface PetInput {
   name: string;
   species: PetSpecies;
@@ -28,6 +30,10 @@ export interface PetInput {
   adoptionDate?: string;
   calendarType?: "solar" | "lunar";
   adoptionRoute?: "purchase" | "rescue" | "gift" | "unknown";
+
+  // v0.5 — 사주 채점 보강 신호
+  neutered?: boolean;
+  coatColor?: PetCoatColor;
 }
 
 export interface OwnerInput {

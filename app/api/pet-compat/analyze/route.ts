@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
         adoption_date: pet.adoptionDate || null,
         calendar_type: pet.calendarType || null,
         adoption_route: pet.adoptionRoute || null,
+        neutered: typeof pet.neutered === "boolean" ? pet.neutered : null,
+        coat_color: pet.coatColor || null,
       })
       .select("id")
       .single();

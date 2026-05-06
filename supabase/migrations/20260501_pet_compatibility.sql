@@ -31,6 +31,18 @@ CREATE TABLE IF NOT EXISTS public.pet_profiles (
   -- 입양 경로 (fallback 분기 + 데이터 분석용)
   adoption_route TEXT CHECK (adoption_route IS NULL OR adoption_route IN ('purchase', 'rescue', 'gift', 'unknown')),
 
+  -- v0.5 추가: 사주 채점 보강 신호
+  neutered BOOLEAN,                                              -- 중성화 여부 (보험 표준 — 성격 변화 영향)
+  coat_color TEXT CHECK (coat_color IS NULL OR coat_color IN (
+    'white',    -- 흰 = 金
+    'black',    -- 검 = 水
+    'red',      -- 빨/주황 = 火
+    'yellow',   -- 노/황/갈 = 土
+    'gray',     -- 회/청회 = 木
+    'mixed',    -- 믹스
+    'other'
+  )),                                                            -- 한국 동물등록 표준 + 오행 매핑
+
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

@@ -228,6 +228,27 @@ export function extractPetCompatSignals(
 
 import { formatEnrichedSajuText } from "./utils/saju-enrichment";
 
+// v0.5: 털색 → 오행 매핑 (한국 동물등록 표준 색)
+const COAT_COLOR_TO_ELEMENT: Record<string, string> = {
+  white: "金 (금) — 결단력·정밀함",
+  black: "水 (수) — 지혜·숨김",
+  red: "火 (화) — 열정·즉흥",
+  yellow: "土 (토) — 안정·고집",
+  gray: "木 (목) — 성장·유연",
+  mixed: "(혼합 오행)",
+  other: "(기타)",
+};
+
+const COAT_COLOR_LABEL: Record<string, string> = {
+  white: "흰색",
+  black: "검정",
+  red: "빨강/주황",
+  yellow: "노랑/황색/갈색",
+  gray: "회색/청회색",
+  mixed: "믹스",
+  other: "기타",
+};
+
 export function buildPetSajuText(
   pet: PetInput,
   enriched: EnrichedSajuData | null,
@@ -238,13 +259,22 @@ export function buildPetSajuText(
     ? "戌(土) — 중화의 성격, 어디든 잘 어울림, 심성 안 변함 (세종의소리 칼럼)"
     : "寅(木) — 상향 의지, 천진난만, 정 끌어들임 (세종의소리 칼럼)";
 
+  // v0.5 보조 신호 라인
+  const extras: string[] = [];
+  if (pet.coatColor) {
+    extras.push(`털색: ${COAT_COLOR_LABEL[pet.coatColor]} → ${COAT_COLOR_TO_ELEMENT[pet.coatColor]}`);
+  }
+  if (typeof pet.neutered === "boolean") {
+    extras.push(`중성화: ${pet.neutered ? "완료 (호르몬 영향 약화 — 도화살·홍염살 해석 완화)" : "미완료 (원본 사주 신호 그대로)"}`);
+  }
+
   if (!enriched) {
     return `
 [펫 사주 — ${pet.name} (계산 불가)]
 ${note}
 종 본성: ${speciesNature}
 견종/묘종: ${pet.breed || "(미상/믹스)"}
-※ 사주 데이터 없음 — 종 본성과 일반 패턴만 참고
+${extras.length > 0 ? extras.join("\n") + "\n" : ""}※ 사주 데이터 없음 — 종 본성과 보조 신호만 참고
 `.trim();
   }
 
@@ -266,5 +296,6 @@ ${sajuBlock}
 [종/품종 본성]
 종 본성: ${speciesNature}
 ${pet.species === "dog" ? "견종" : "묘종"}: ${pet.breed || "(미상/믹스)"}
+${extras.length > 0 ? "\n[보조 신호]\n" + extras.join("\n") : ""}
 `.trim();
 }
