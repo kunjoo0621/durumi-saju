@@ -14,7 +14,10 @@ import { calculateSaju, enrichSajuData, formatEnrichedSajuText } from "@/lib/uti
 import { calculatePetEnrichedSaju, extractPetCompatSignals, buildPetSajuText } from "@/lib/pet-compat-saju";
 import { computePetCompatScores } from "@/lib/pet-compat-scoring";
 import { runPetCompatAnalysis } from "@/lib/pet-compat";
+import { generatePetIllustration } from "@/lib/pet-compat-illustration";
 import type { PetInput, OwnerInput } from "@/lib/pet-compat";
+
+const PHOTO_BUCKET = "pet-uploads";
 
 interface AnalyzeBody {
   sessionId: string;
@@ -91,18 +94,48 @@ export async function POST(request: NextRequest) {
     const signals = extractPetCompatSignals(ownerEnriched, petCalc.enriched, pet);
     const scores = computePetCompatScores(signals);
 
-    // 6. LLM 호출
-    const llmResult = await runPetCompatAnalysis({
-      owner,
-      pet,
-      ownerSajuText,
-      petSajuText,
-      precomputedScores: scores,
-    });
+    // 6. LLM 호출 + 일러스트 생성 병렬 실행 (사진 있을 때만)
+    //    LLM ~30s, 일러스트 ~5-10s — Promise.all로 동시 진행 → 추가 대기 0
+    //    일러스트 실패해도 분석은 계속 (illustration_url=null)
+
+    // 6-a. 사진 URL 준비 (Storage 경로 → service_role public URL)
+    let photoSignedUrl: string | null = null;
+    if (pet.photoPath) {
+      const { data: signed } = await supabaseAdmin.storage
+        .from(PHOTO_BUCKET)
+        .createSignedUrl(pet.photoPath, 60 * 10);  // 10분 (Gemini fetch 충분)
+      photoSignedUrl = signed?.signedUrl || null;
+    }
+
+    // 6-b. 분석 결과 ID 미리 생성 (일러스트 저장 경로용)
+    const provisionalResultId = crypto.randomUUID();
+
+    const [llmResult, illustrationResult] = await Promise.all([
+      runPetCompatAnalysis({
+        owner,
+        pet,
+        ownerSajuText,
+        petSajuText,
+        precomputedScores: scores,
+      }),
+      photoSignedUrl
+        ? generatePetIllustration({
+            photoUrl: photoSignedUrl,
+            petName: pet.name,
+            petSpecies: pet.species,
+            petBreed: pet.breed,
+            resultId: provisionalResultId,
+          })
+        : Promise.resolve({ ok: false as const, reason: "no photo" }),
+    ]);
 
     if (!llmResult.ok) {
       console.error("[PET_COMPAT] LLM failed", llmResult.error);
       return NextResponse.json({ error: "분석 중 오류가 발생했어. 다시 시도해줘." }, { status: 500 });
+    }
+
+    if (!illustrationResult.ok) {
+      console.warn("[PET_COMPAT] illustration skipped:", illustrationResult.reason);
     }
 
     // 7. DB 저장 — 펫 프로필
@@ -122,8 +155,6 @@ export async function POST(request: NextRequest) {
         adoption_date: pet.adoptionDate || null,
         calendar_type: pet.calendarType || null,
         adoption_route: pet.adoptionRoute || null,
-        neutered: typeof pet.neutered === "boolean" ? pet.neutered : null,
-        coat_color: pet.coatColor || null,
       })
       .select("id")
       .single();
@@ -135,10 +166,11 @@ export async function POST(request: NextRequest) {
 
     const petId = petProfileInsert.data.id;
 
-    // 8. DB 저장 — 궁합 결과
+    // 8. DB 저장 — 궁합 결과 (일러스트 URL 포함)
     const resultInsert = await supabaseAdmin
       .from("pet_compat_results")
       .insert({
+        id: provisionalResultId,         // 일러스트 저장 경로와 일치시킴
         user_id: userId,
         pet_id: petId,
         label_grade: llmResult.result.label.grade,
@@ -151,6 +183,8 @@ export async function POST(request: NextRequest) {
         full_result: llmResult.result,
         order_id: body.orderId || null,
         scoring_version: scores.scoringVersion,
+        illustration_key: illustrationResult.ok ? illustrationResult.illustrationPath : null,
+        illustration_url: illustrationResult.ok ? illustrationResult.illustrationUrl : null,
       })
       .select("id")
       .single();

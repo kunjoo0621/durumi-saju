@@ -379,8 +379,7 @@ function CheckoutForm({
             adoptionDate: pet.adoptionDate || undefined,
             calendarType: pet.calendarType || undefined,
             adoptionRoute: pet.adoptionRoute || undefined,
-            neutered: pet.neutered === "yes" ? true : pet.neutered === "no" ? false : undefined,
-            coatColor: pet.coatColor || undefined,
+            photoPath: pet.photoPath || undefined,
           };
           const ownerPayload = {
             name: owner.name,

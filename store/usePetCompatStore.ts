@@ -8,8 +8,6 @@ export type PetSpecies = "dog" | "cat";
 export type PetGender = "male" | "female" | "unknown" | "";
 export type BirthTier = 1 | 2 | 3 | 4;
 export type AdoptionRoute = "purchase" | "rescue" | "gift" | "unknown" | "";
-export type PetCoatColor = "white" | "black" | "red" | "yellow" | "gray" | "mixed" | "other" | "";
-export type NeuteredState = "yes" | "no" | "unknown" | "";
 
 // 보호자 입력 (사주 단일 분석과 동일 필드 — 재사용 가능)
 export interface PetCompatOwnerInput {
@@ -41,9 +39,9 @@ export interface PetCompatPetInput {
 
   adoptionRoute: AdoptionRoute;
 
-  // v0.5
-  neutered: NeuteredState;
-  coatColor: PetCoatColor;
+  // v0.6 — 사진 (옵션, AI 일러스트 변환용)
+  photoPath: string;             // Supabase Storage 경로 (pet-uploads 버킷 안)
+  photoUrl: string;              // 미리보기용 signed URL (1시간 유효)
 }
 
 export interface PetCompatState {
@@ -89,8 +87,8 @@ const emptyPet: PetCompatPetInput = {
   adoptionDate: "",
   calendarType: "",
   adoptionRoute: "",
-  neutered: "",
-  coatColor: "",
+  photoPath: "",
+  photoUrl: "",
 };
 
 const initialState = {

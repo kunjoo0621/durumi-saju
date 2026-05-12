@@ -14,8 +14,6 @@ export type PetSpecies = "dog" | "cat";
 export type PetGender = "male" | "female" | "unknown";
 export type BirthTier = 1 | 2 | 3 | 4;
 
-export type PetCoatColor = "white" | "black" | "red" | "yellow" | "gray" | "mixed" | "other";
-
 export interface PetInput {
   name: string;
   species: PetSpecies;
@@ -31,9 +29,8 @@ export interface PetInput {
   calendarType?: "solar" | "lunar";
   adoptionRoute?: "purchase" | "rescue" | "gift" | "unknown";
 
-  // v0.5 — 사주 채점 보강 신호
-  neutered?: boolean;
-  coatColor?: PetCoatColor;
+  // v0.6 — 사진 (옵션, Storage 경로)
+  photoPath?: string;
 }
 
 export interface OwnerInput {
@@ -188,8 +185,8 @@ export const PET_COMPAT_SYSTEM_PROMPT = `너는 '사주보는 두루미'의 반�
 ────────────────────────────────
 [등급 → 라벨 매핑 룰]
 
-서버가 결정한 grade에 맞춰 label.text를 골라라:
-- S: "운명의 짝꿍" / "사주가 맞춘 인연" 류 (변형 OK)
+서버가 결정한 grade에 맞춰 label.text를 골라라 ("운명" 단어 절대 금지):
+- S: "사주가 맞춘 인연" / "팔자가 보낸 인연" / "찰떡 인연" 류 (변형 OK)
 - A: "찰떡 같은 콤비" / "서로 좋아하지만 둘 다 정상은 아님" 류
 - B: "까칠한 룸메이트" / "밥 주는 사람과 귀여운 갑" / "사랑인 줄 알았는데 운영 계약" 류
 - C: "집안 실세와 월급 없는 운영진" 류
@@ -277,6 +274,16 @@ manual.spec 필드는 다음 형식: "[나이], [품종], [연주 12지](띠 한
 - 위로: "괜찮아", "잘 하고 있어"
 - 책임 면제: "네 잘못 아니야"
 - 가벼운 권유: "~해봐" (단, 처방의 "오늘 이렇게 해봐"는 OK)
+
+────────────────────────────────
+[절대 금지 단어 — 결과 어디에도 나오면 실패]
+- **"운명"** — 단어 자체 금지. "운명이다" / "운명적" / "운명의 짝꿍" 모두 금지.
+  대체 표현: "인연" / "사주가 맞춘 관계" / "팔자" / "사주가 멀리 본 만남"
+- "100%" / "절대" / "영원히" / "무조건" / "반드시"
+- "정답"
+
+★ label.text의 S등급 라벨도 "운명의 짝꿍"이 아닌 "사주가 맞춘 인연" 같은 변형으로.
+★ headline·petVerdict·ownerVerdict·finalLine 어디에도 "운명" 박지 마.
 `;
 
 // ────────────────────────────────────────────────────────

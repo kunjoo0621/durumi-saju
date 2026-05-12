@@ -76,6 +76,7 @@ export default async function SharePetCompatPage({
       rulerScore={data.ruler_score}
       loverScore={data.lover_score}
       conflictScore={data.conflict_score}
+      illustrationUrl={data.illustration_url || null}
     />
   );
 }

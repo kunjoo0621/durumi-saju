@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { Egg } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
-import { SAJU_COST, BATTLE_COST, PET_COMPAT_COST, PET_COMPAT_LAUNCH_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
 
 export default function MenuPage() {
@@ -171,39 +171,29 @@ export default function MenuPage() {
             </div>
           </button>
 
-          {/* 반려동물 궁합 카드 — 출시! */}
-          <button
-            type="button"
-            className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_0.2s_both] w-full text-left"
-            style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-            onClick={() => router.push("/pet/input")}
+          {/* 반려동물 궁합 카드 — 준비중 */}
+          <div
+            aria-disabled="true"
+            className="group relative bg-[#141414] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden opacity-60 cursor-not-allowed animate-[slideUp_0.5s_ease-out_0.2s_both] w-full text-left"
           >
             <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
-              style={{ background: 'rgba(52,211,153,0.08)' }} />
+              style={{ background: 'rgba(120,120,120,0.06)' }} />
 
             <div className="relative z-[2] flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold"
-                  style={{ background: 'rgba(52,211,153,0.08)', color: '#34D399' }}>
+                  style={{ background: 'rgba(160,160,160,0.10)', color: '#9CA3AF' }}>
                   반려동물 궁합
                 </span>
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold"
-                  style={{ background: 'rgba(52,211,153,0.18)', color: '#34D399' }}>
-                  NEW
+                  style={{ background: 'rgba(160,160,160,0.18)', color: '#9CA3AF' }}>
+                  준비중
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-white tracking-tight">반려동물 궁합 보기</h3>
-              <p className="text-sm text-gray-400 leading-relaxed mt-2">
-                우리 아이와 나의 사주<br/>궁합을 분석해줄게
+              <h3 className="text-xl font-bold text-zinc-300 tracking-tight">반려동물 궁합 보기</h3>
+              <p className="text-sm text-gray-500 leading-relaxed mt-2">
+                곧 만나요
               </p>
-              <div className="mt-3.5 flex items-center gap-2">
-                <span className="text-[13px] text-zinc-500 line-through">
-                  <Egg size={12} weight="fill" className="inline mr-0.5" />{PET_COMPAT_COST}알
-                </span>
-                <span className="text-lg font-bold flex items-center gap-1" style={{ color: '#34D399' }}>
-                  <Egg size={18} weight="fill" />{PET_COMPAT_LAUNCH_COST}알
-                </span>
-              </div>
             </div>
 
             <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
@@ -227,7 +217,7 @@ export default function MenuPage() {
                 <path d="M18 18l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#34D399" fillOpacity="0.25"/>
               </svg>
             </div>
-          </button>
+          </div>
         </section>
       </main>
 

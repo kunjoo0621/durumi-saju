@@ -63,8 +63,6 @@ export async function POST(request: NextRequest) {
       body.pet.birthTier,
       body.pet.birthDate || body.pet.adoptionDate || `${body.pet.birthYearEstimated}-${body.pet.birthMonthEstimated}`,
       body.pet.gender || "",
-      body.pet.coatColor || "",
-      body.pet.neutered === undefined ? "" : String(body.pet.neutered),
     ].join("|");
 
     const ownerKey = `${body.owner.birthYear}-${body.owner.birthMonth}-${body.owner.birthDay}-${body.owner.gender}`;

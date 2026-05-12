@@ -80,6 +80,26 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
+  // 반려동물 궁합 — 준비중 (직접 접근 차단)
+  // 로컬 개발(NODE_ENV=development)에서는 봉인 우회 — 운영은 그대로 차단
+  const petSealActive = process.env.NODE_ENV !== "development";
+  if (petSealActive) {
+    if (pathname === "/pet" || pathname.startsWith("/pet/")) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/menu";
+      return NextResponse.redirect(redirectUrl, 307);
+    }
+    if (pathname === "/checkout" && request.nextUrl.searchParams.get("type") === "pet") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/menu";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl, 307);
+    }
+    if (pathname.startsWith("/api/pet-compat")) {
+      return NextResponse.json({ error: "준비중입니다." }, { status: 503 });
+    }
+  }
+
   const isProtectedPage = PROTECTED_PAGES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const isProtectedApi = PROTECTED_APIS.some((path) => pathname.startsWith(path));
 
@@ -120,6 +140,11 @@ export const config = {
     "/api/profile/:path*",
     "/api/coins",
     "/api/coins/:path*",
+    // 반려동물 궁합 차단 (준비중)
+    "/pet",
+    "/pet/:path*",
+    "/api/pet-compat/:path*",
+    "/checkout",
     // 채널 추적용 진입 페이지 (referrer 캡처 대상)
     "/",
     "/teaser",

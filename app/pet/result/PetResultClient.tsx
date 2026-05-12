@@ -1,13 +1,15 @@
 "use client";
 
-// 펫 궁합 결과 페이지 — 토스 톤 + 두루미 정체성
-// emerald 테마, 사용설명서·4지표 게이지·시뮬·종합 한줄
+// 펫 궁합 결과 페이지 — 사주/배틀과 동일 디자인 토큰 사용
+// 등급 색은 GRADE_COLORS 표준 사용 (사주와 동일)
+// emerald는 펫 정체성 영역(VERDICT 카드 + 4지표 게이지 긍정 상태)에만 유지
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
+import { getGradeColor } from "@/lib/utils/grade-colors";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 
 interface ApiResponse {
@@ -35,14 +37,6 @@ interface ApiResponse {
     };
   };
 }
-
-const GRADE_THEME: Record<LabelGrade, { bg: string; text: string; ring: string; label: string }> = {
-  S: { bg: "bg-pink-500/12", text: "text-pink-400", ring: "ring-pink-500/30", label: "운명의 짝꿍" },
-  A: { bg: "bg-orange-500/12", text: "text-orange-400", ring: "ring-orange-500/30", label: "찰떡 콤비" },
-  B: { bg: "bg-emerald-500/12", text: "text-emerald-400", ring: "ring-emerald-500/30", label: "까칠한 룸메" },
-  C: { bg: "bg-cyan-500/12", text: "text-cyan-400", ring: "ring-cyan-500/30", label: "집안 실세" },
-  D: { bg: "bg-zinc-500/12", text: "text-zinc-400", ring: "ring-zinc-500/30", label: "사용설명서 다시" },
-};
 
 export default function PetResultClient() {
   const router = useRouter();
@@ -82,12 +76,12 @@ export default function PetResultClient() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center px-6">
-        <p className="text-zinc-400 text-[14px] mb-4">{error || "결과가 없어."}</p>
+      <div className="min-h-screen bg-background-primary flex flex-col items-center justify-center px-6">
+        <p className="text-body-2 text-text-secondary mb-4">{error || "결과가 없어."}</p>
         <button
           type="button"
           onClick={() => router.push("/pet/input")}
-          className="bg-emerald-500 text-black px-6 py-3 rounded-xl text-[14px] font-semibold"
+          className="btn-primary px-6 py-3 rounded-xl text-[14px] font-semibold"
         >
           다시 분석하기
         </button>
@@ -96,7 +90,7 @@ export default function PetResultClient() {
   }
 
   const result = data.full_result;
-  const theme = GRADE_THEME[data.label_grade];
+  const grade = getGradeColor(data.label_grade);
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/pet/result/share/${data.id}`;
@@ -109,44 +103,62 @@ export default function PetResultClient() {
         // ignore (user cancelled)
       }
     }
-    // fallback: clipboard
     await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => {});
     alert("공유 링크가 복사됐어");
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white pb-32">
+    <div className="min-h-screen bg-background-primary text-text-primary pb-32">
       <Header showBack sticky onBack={() => router.push("/menu")} />
 
       <main className="max-w-[640px] mx-auto px-5 pt-6 space-y-5">
         {/* HERO — 라벨 + 등급 + 헤드라인 + composite */}
         <section
-          className={`rounded-[28px] p-7 ${theme.bg} ring-1 ${theme.ring}`}
-          style={{ backdropFilter: "blur(20px)" }}
+          className="rounded-[28px] p-7"
+          style={{ background: grade.bg, boxShadow: `0 0 0 1px ${grade.glow}` }}
         >
           <div className="flex items-center gap-2 mb-4">
-            <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${theme.text} bg-black/30`}>
+            <span
+              className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
+              style={{ color: grade.text, background: "rgba(0,0,0,0.3)" }}
+            >
               {data.label_grade}등급
             </span>
-            <span className="text-[11px] text-zinc-500">{data.pet.name} × 너</span>
+            <span className="text-caption text-text-tertiary">{data.pet.name} × 너</span>
           </div>
-          <h1 className={`text-[26px] leading-[1.3] font-bold tracking-tight ${theme.text} mb-3 font-aggro`}>
+
+          {/* 일러스트 (있을 때만) */}
+          {data.illustration_url && (
+            <div className="mb-5 rounded-2xl overflow-hidden bg-background-tertiary/40">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={data.illustration_url}
+                alt={`${data.pet.name} 일러스트`}
+                className="w-full aspect-square object-cover"
+              />
+            </div>
+          )}
+
+          <h1
+            className="text-[26px] leading-[1.3] font-bold tracking-tight mb-3 font-aggro"
+            style={{ color: grade.text }}
+          >
             {data.label_text}
           </h1>
-          <p className="text-[15px] text-zinc-300 leading-relaxed mb-7">
+          <p className="text-body-1 text-text-secondary leading-relaxed mb-7">
             {`"${result.label.headline}"`}
           </p>
           <div className="flex items-end gap-3">
-            <div className={`text-[56px] leading-none font-bold ${theme.text} font-aggro`}>
+            <div className="text-[56px] leading-none font-bold font-aggro" style={{ color: grade.text }}>
               {data.composite_score}
             </div>
-            <div className="text-[13px] text-zinc-500 pb-2">/ 100점</div>
+            <div className="text-caption text-text-tertiary pb-2">/ 100점</div>
           </div>
         </section>
 
-        {/* 4지표 게이지 — 토스 스타일 */}
-        <section className="rounded-[24px] bg-[#141414] p-6">
-          <h2 className="text-[14px] font-semibold text-zinc-400 mb-5">관계 지표</h2>
+        {/* 4지표 게이지 */}
+        <section className="rounded-[24px] bg-background-tertiary p-6">
+          <h2 className="text-body-2 font-semibold text-text-secondary mb-5">관계 지표</h2>
           <div className="space-y-5">
             <Gauge icon="🐾" label="호흡 지수" desc="둘이 얼마나 동기화됐는지" value={data.sync_score} />
             <Gauge icon="👑" label="집안 실세 지수" desc={data.ruler_score >= 50 ? `${data.pet.name}가 우위` : "네가 우위"} value={data.ruler_score} />
@@ -156,10 +168,10 @@ export default function PetResultClient() {
         </section>
 
         {/* 사용설명서 — 펫 사양표 */}
-        <section className="rounded-[24px] bg-[#141414] p-6">
+        <section className="rounded-[24px] bg-background-tertiary p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[14px] font-semibold text-zinc-400">{data.pet.name} 사용설명서</h2>
-            <span className="text-[11px] text-zinc-600">PRODUCT MANUAL</span>
+            <h2 className="text-body-2 font-semibold text-text-secondary">{data.pet.name} 사용설명서</h2>
+            <span className="text-caption text-text-tertiary">PRODUCT MANUAL</span>
           </div>
           <div className="space-y-4">
             <ManualRow label="제품명" value={result.manual.name} />
@@ -173,79 +185,79 @@ export default function PetResultClient() {
         </section>
 
         {/* 보호자 판정 */}
-        <section className="rounded-[24px] bg-[#141414] p-6">
+        <section className="rounded-[24px] bg-background-tertiary p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-[18px]">📛</span>
-            <h2 className="text-[14px] font-semibold text-zinc-400">너에게 솔직히</h2>
+            <h2 className="text-body-2 font-semibold text-text-secondary">너에게 솔직히</h2>
           </div>
-          <p className="text-[15px] leading-[1.7] text-zinc-200 whitespace-pre-line">
+          <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
             {result.ownerVerdict}
           </p>
         </section>
 
         {/* 펫 판정 */}
-        <section className="rounded-[24px] bg-[#141414] p-6">
+        <section className="rounded-[24px] bg-background-tertiary p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-[18px]">🐾</span>
-            <h2 className="text-[14px] font-semibold text-zinc-400">{data.pet.name}에 대해</h2>
+            <h2 className="text-body-2 font-semibold text-text-secondary">{data.pet.name}에 대해</h2>
           </div>
-          <p className="text-[15px] leading-[1.7] text-zinc-200 whitespace-pre-line">
+          <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
             {result.petVerdict}
           </p>
         </section>
 
         {/* 시뮬레이션 3장면 */}
         <section className="space-y-3">
-          <h2 className="text-[14px] font-semibold text-zinc-400 px-1">이런 상황이라면</h2>
+          <h2 className="text-body-2 font-semibold text-text-secondary px-1">이런 상황이라면</h2>
           {result.simulations?.map((sim, idx) => (
-            <div key={idx} className="rounded-[20px] bg-[#141414] p-6">
-              <div className="text-[12px] font-semibold text-emerald-400 mb-2">📍 {sim.scene}</div>
-              <p className="text-[14.5px] leading-[1.7] text-zinc-200 whitespace-pre-line">
+            <div key={idx} className="rounded-[20px] bg-background-tertiary p-6">
+              <div className="text-caption font-semibold text-emerald-400 mb-2">📍 {sim.scene}</div>
+              <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
                 {sim.prediction}
               </p>
             </div>
           ))}
         </section>
 
-        {/* 종합 한 줄 — 공유 카드 */}
+        {/* 종합 한 줄 — 펫 정체성 (emerald) */}
         <section className="rounded-[28px] bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent ring-1 ring-emerald-500/30 p-7 text-center">
-          <div className="text-[11px] text-emerald-400 mb-4 tracking-widest">VERDICT</div>
-          <p className="text-[20px] leading-[1.5] font-bold text-white font-aggro">
+          <div className="text-caption text-emerald-400 mb-4 tracking-widest">VERDICT</div>
+          <p className="text-[20px] leading-[1.5] font-bold text-text-primary font-aggro">
             {`"${result.finalLine}"`}
           </p>
         </section>
 
         {/* 면책 (D등급만) */}
         {result.disclaimer && (
-          <section className="rounded-2xl bg-zinc-900/60 p-5 ring-1 ring-zinc-800">
-            <p className="text-[13px] text-zinc-400 leading-relaxed">
+          <section className="rounded-2xl bg-background-tertiary p-5">
+            <p className="text-body-2 text-text-secondary leading-relaxed">
               ※ {result.disclaimer}
             </p>
           </section>
         )}
 
-        <div className="text-center text-[11px] text-zinc-600 mt-6">
+        <div className="text-center text-caption text-text-tertiary mt-6">
           scoring v{data.scoring_version} · {new Date(data.created_at).toLocaleDateString("ko-KR")}
         </div>
       </main>
 
       {/* 하단 sticky 공유 버튼 */}
       <footer
-        className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent pt-8 pb-5 px-5"
+        className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background-primary via-background-primary to-transparent pt-8 pb-5 px-5"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
       >
         <div className="max-w-[640px] mx-auto flex gap-3">
           <button
             type="button"
             onClick={() => router.push("/pet/input")}
-            className="flex-1 h-[54px] rounded-xl bg-zinc-900 text-zinc-300 text-[15px] font-semibold border border-zinc-800 hover:bg-zinc-800 transition-colors"
+            className="btn-secondary flex-1 h-[54px] rounded-xl text-[15px] font-semibold"
           >
             다른 아이도 보기
           </button>
           <button
             type="button"
             onClick={handleShare}
-            className="flex-[1.5] h-[54px] rounded-xl bg-emerald-500 text-black text-[15px] font-bold hover:bg-emerald-400 transition-colors"
+            className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
           >
             결과 공유하기
           </button>
@@ -256,7 +268,7 @@ export default function PetResultClient() {
 }
 
 // ────────────────────────────────────────────────────────
-// 게이지 컴포넌트 (토스 스타일)
+// 게이지 컴포넌트 (4지표 — 펫 정체성 emerald 유지)
 // ────────────────────────────────────────────────────────
 
 interface GaugeProps {
@@ -264,12 +276,11 @@ interface GaugeProps {
   label: string;
   desc: string;
   value: number;
-  inverted?: boolean;       // true = 낮을수록 좋음
+  inverted?: boolean;
 }
 
 function Gauge({ icon, label, desc, value, inverted = false }: GaugeProps) {
   const displayValue = Math.max(0, Math.min(100, value));
-  // inverted = 낮을수록 좋음 → 색을 반대로 결정
   const tone = inverted ? 100 - displayValue : displayValue;
   const color = tone >= 70 ? "bg-emerald-500" : tone >= 45 ? "bg-amber-400" : "bg-rose-400";
 
@@ -279,13 +290,13 @@ function Gauge({ icon, label, desc, value, inverted = false }: GaugeProps) {
         <div className="flex items-center gap-2">
           <span className="text-[16px]">{icon}</span>
           <div>
-            <div className="text-[14px] text-zinc-200 font-semibold">{label}</div>
-            <div className="text-[11px] text-zinc-500 mt-0.5">{desc}</div>
+            <div className="text-body-1 text-text-primary font-semibold">{label}</div>
+            <div className="text-caption text-text-tertiary mt-0.5">{desc}</div>
           </div>
         </div>
-        <div className="text-[24px] font-bold text-white font-aggro tabular-nums">{displayValue}</div>
+        <div className="text-[24px] font-bold text-text-primary font-aggro tabular-nums">{displayValue}</div>
       </div>
-      <div className="h-2 bg-zinc-900 rounded-full overflow-hidden">
+      <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
         <div
           className={`h-full ${color} rounded-full transition-[width] duration-700 ease-out`}
           style={{ width: `${displayValue}%` }}
@@ -307,11 +318,11 @@ interface ManualRowProps {
 
 function ManualRow({ label, value, highlight }: ManualRowProps) {
   return (
-    <div className={`rounded-2xl p-4 ${highlight ? "bg-emerald-500/8 ring-1 ring-emerald-500/20" : "bg-black/30"}`}>
-      <div className={`text-[11px] font-semibold mb-1.5 tracking-wide ${highlight ? "text-emerald-400" : "text-zinc-500"}`}>
+    <div className={`rounded-2xl p-4 ${highlight ? "bg-emerald-500/8 ring-1 ring-emerald-500/20" : "bg-background-secondary"}`}>
+      <div className={`text-caption font-semibold mb-1.5 tracking-wide ${highlight ? "text-emerald-400" : "text-text-tertiary"}`}>
         {label}
       </div>
-      <div className={`text-[14.5px] leading-[1.6] ${highlight ? "text-zinc-100" : "text-zinc-200"}`}>
+      <div className="text-body-1 leading-[1.6] text-text-primary">
         {value}
       </div>
     </div>
