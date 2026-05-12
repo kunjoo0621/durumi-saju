@@ -9,7 +9,7 @@ import {
 import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 12;
+export const SCORING_VERSION = 16;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;
@@ -260,11 +260,12 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (isSingang) 건강운 += 3;
   if (hasHap) 건강운 += 2;
   if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 건강운 += 2;
-  건강운 -= Math.round(deficientCount * 4 * defScale); // 결핍 원소별 -4 (v12: -6 → -4 완화. D 비중 7%→2.6% 데이터 기반)
+  건강운 -= Math.round(deficientCount * 3 * defScale); // v16: -4 → -3 완화 (다른 카테고리 -2 대비 2배 격차 축소)
   if (elem.max >= 4) 건강운 -= 6; // 편중
-  if (elem.max >= 5) 건강운 -= 5; // 극편중 추가
+  if (elem.max >= 5) 건강운 -= 2; // v16: 극편중 추가 -5 → -2 (편중 -6 + 극편중 -2 = -8 통합)
+  // v16: 형 이중 페널티 단일화 — 편관+형 발동되면 그것만, 아니면 형살만
   if (hasStar(input.tenStars, "편관") && hasChungOrHyung) 건강운 -= 5;
-  if (hasHyung) 건강운 -= 4; // 형살: -3 → -4, 충: 건강운 제거 (v5 카테고리 특화)
+  else if (hasHyung) 건강운 -= 4;
   if (isSinyak) 건강운 -= 4;
   if (input.shinsalBadCount >= 2) 건강운 -= 3;
 
@@ -480,11 +481,10 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
   // 게이트 2: risk 상한 — 리스크가 극단적이면 등급 제한
   if (risk >= COMPOSITE_GRADE_CUTOFFS.A) { grade = capGrade(grade, "C"); }
 
-  // 게이트 3: 최저 카테고리 극단 낮음 → -1 등급 (B-2: ≤39)
-  const minScore = Math.min(...scoreValues);
-  if (minScore <= 39 && isAbove(grade, "D")) {
-    grade = lowerGrade(grade);
-  }
+  // v16: 게이트 3(최저 ≤39 → -1 등급) 제거.
+  // 사유: 양미현(직장 76 + 평균 53)이 건강 38 때문에 D 강등되는 케이스 발견.
+  // 한 카테고리 극단 낮음은 카테고리 자체로 보여주는 게 맞고, 종합 등급 강등은 부당.
+  // 게이트 1(D카테고리 5+→D, 3~4→C) + 게이트 2(risk≥80→C캡) 만으로 충분.
 
   // grade/composite 일관성 강제
   composite = clampCompositeToGrade(composite, grade);

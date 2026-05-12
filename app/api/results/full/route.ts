@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { buildInputHash, resolveSajuEnrichedData, type InputPayload } from "@/lib/analysis";
-import { calculateServerScoring, SCORING_VERSION } from "@/lib/utils/saju-scoring";
+import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
 import { parseJson5Loose } from "@/lib/json5Utils";
@@ -46,42 +45,10 @@ function buildResponse(data: any, access: "user" | "guest") {
   };
 }
 
-async function rescoreIfStale(parsedResult: any, data: any) {
-  const storedVersion = parsedResult?.scoringVersion ?? 0;
-  if (storedVersion < SCORING_VERSION && data.birth_date) {
-    try {
-      const [bY, bM, bD] = data.birth_date.split("-");
-      const timeParts = data.birth_time?.split(":") || [];
-      const refreshInput: InputPayload = {
-        name: data.name || "",
-        birthYear: bY || "",
-        birthMonth: bM || "",
-        birthDay: bD || "",
-        calendarType: (data.calendar_type as "solar" | "lunar") || "solar",
-        birthHour: timeParts[0] || "",
-        birthMinute: timeParts[1] || "",
-        birthLocation: data.region || "",
-        gender: data.gender || "",
-        relationshipStatus: data.relationship_status || "",
-        employmentStatus: data.employment_status || "",
-        coreFearAxis: (data.core_fear_axis || "") as InputPayload["coreFearAxis"],
-        unknownBirthTime: !data.birth_time,
-      };
-      const { enriched } = await resolveSajuEnrichedData(refreshInput);
-      const freshScoring = calculateServerScoring(enriched);
-      parsedResult.tier = { ...parsedResult.tier, ...freshScoring.tier };
-      parsedResult.scores = freshScoring.scores;
-      parsedResult.scoringVersion = SCORING_VERSION;
-      console.info("[SCORING_UPGRADE] results/full re-scored", {
-        storedVersion,
-        currentVersion: SCORING_VERSION,
-        oldGrade: parsedResult?.tier?.grade,
-        newGrade: freshScoring.tier.grade,
-      });
-    } catch (e) {
-      console.warn("[SCORING_UPGRADE] re-score failed, returning stale", e);
-    }
-  }
+async function rescoreIfStale(_parsedResult: any, _data: any) {
+  // freeze: 본문(saju_text)은 옛 LLM 출력 그대로라 점수만 v15로 덮어쓰면 본문-점수 미스매치 발생.
+  // 신규 분석은 payment/complete에서 v15로 산출되므로 결과 GET 시점 재계산은 끔.
+  return;
 }
 
 const RESULT_FIELDS =

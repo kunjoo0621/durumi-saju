@@ -568,7 +568,21 @@ export function findRelationships(branches: string[]): {
     }
   }
 
+  // 자형 판정용: 같은 글자가 두 개 이상 있어야 성립하므로 Set이 아닌 count 기준
+  const branchCount = branches.reduce<Record<string, number>>((acc, b) => {
+    acc[b] = (acc[b] ?? 0) + 1;
+    return acc;
+  }, {});
+
   for (const [group, name] of HYUNG) {
+    // 자형: group이 [X, X] 형태 — 같은 글자가 사주에 두 개 이상 있을 때만 성립
+    if (group.length === 2 && group[0] === group[1]) {
+      if ((branchCount[group[0]] ?? 0) >= 2) {
+        const label = group.map((x) => BRANCH_INFO[x].korean).join("");
+        result.hyung.push(`${label}형(${group.join("")}刑) ${name}`);
+      }
+      continue;
+    }
     if (group.length <= 2) {
       if (group.every((x) => branchSet.has(x))) {
         const label = group.map((x) => BRANCH_INFO[x].korean).join("");
@@ -684,11 +698,12 @@ const SAMHAP_GYEOPSAL: Record<SamhapGroup, string> = {
 const YANGIN_STEMS: Record<string, string> = {
   "甲": "卯", "丙": "午", "戊": "午", "庚": "酉", "壬": "子",
 };
+// 천을귀인: 자평 정통 — "갑무경 우양(甲戊庚 牛羊)·을기 서후(乙己 鼠猴)·병정 저계(丙丁 猪雞)·임계 토사(壬癸 兔蛇)·신 마호(辛 馬虎)"
 const CHUNEUL_STEMS: Record<string, string[]> = {
-  "甲": ["丑", "未"], "戊": ["丑", "未"],
+  "甲": ["丑", "未"], "戊": ["丑", "未"], "庚": ["丑", "未"],
   "乙": ["子", "申"], "己": ["子", "申"],
   "丙": ["亥", "酉"], "丁": ["亥", "酉"],
-  "庚": ["寅", "午"], "辛": ["寅", "午"],
+  "辛": ["寅", "午"],
   "壬": ["卯", "巳"], "癸": ["卯", "巳"],
 };
 const MUNCHANG_STEMS: Record<string, string> = {
@@ -710,18 +725,19 @@ const SAMHAP_JAESAL: Record<SamhapGroup, string> = {
 const SAMHAP_CHEONSAL: Record<SamhapGroup, string> = {
   "인오술": "丑", "사유축": "辰", "신자진": "未", "해묘미": "戌",
 };
+// 12신살에서 지살은 각 삼합 그룹의 생지(장생 자리). 인오술 화국의 생지=寅, 신자진 수국의 생지=申 등.
 const SAMHAP_JISAL: Record<SamhapGroup, string> = {
-  "인오술": "亥", "사유축": "寅", "신자진": "巳", "해묘미": "申",
+  "인오술": "寅", "사유축": "巳", "신자진": "申", "해묘미": "亥",
 };
+// 12신살에서 망신은 각 삼합 그룹의 록(건록) 자리. 인오술 록=巳(병화), 사유축 록=申(경금), 신자진 록=亥(임수), 해묘미 록=寅(갑목).
 const SAMHAP_MANGSIN: Record<SamhapGroup, string> = {
-  "인오술": "申", "사유축": "亥", "신자진": "寅", "해묘미": "巳",
+  "인오술": "巳", "사유축": "申", "신자진": "亥", "해묘미": "寅",
 };
 
-// ── 백호살 (육충 매핑) ──
-const BAEKHO_TABLE: Record<string, string> = {
-  "子": "午", "丑": "未", "寅": "申", "卯": "酉", "辰": "戌", "巳": "亥",
-  "午": "子", "未": "丑", "申": "寅", "酉": "卯", "戌": "辰", "亥": "巳",
-};
+// ── 백호살 — 60갑자 7종 일주 (4성 28수 백호 자리) ──
+// 표준 명리학: 일주(또는 시주·월주·년주)가 이 7개 중 하나일 때 백호 발동.
+// 모두 일지가 4고지(辰·戌·丑·未)이고 일간이 천을귀인 그룹과 짝을 이룸.
+const BAEKHO_PILLARS = new Set(["戊辰", "丁丑", "丙戌", "乙未", "甲辰", "癸丑", "壬戌"]);
 
 // ── 괴강살 — 일주 조합 ──
 const GOEGANG_PILLARS = new Set(["庚辰", "庚戌", "壬辰", "壬戌"]);
@@ -915,16 +931,25 @@ const SHINSAL_DEFS: ShinsalDef[] = [
     key: "mangsin", label: "망신살(亡身殺)", type: "bad", requiredPillars: 3,
     detect(ctx) { return makeSamhapMatch(this.key, this.label, this.type, ctx, SAMHAP_MANGSIN, "망신"); },
   },
-  // ── 백호살 (일지 육충) ──
+  // ── 백호살 — 60갑자 7종 일주(또는 다른 기둥)에 들 때 발동 ──
   {
     key: "baekho", label: "백호살(白虎殺)", type: "bad", requiredPillars: 3,
     detect(ctx) {
-      const target = BAEKHO_TABLE[ctx.dayBranch];
-      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      if (!ctx.allStems || ctx.allStems.length !== ctx.allBranches.length) return null;
+      const matchedPositions: PillarPosition[] = [];
+      const matchedPillars: string[] = [];
+      for (let i = 0; i < ctx.allBranches.length; i++) {
+        const pillar = ctx.allStems[i] + ctx.allBranches[i];
+        if (BAEKHO_PILLARS.has(pillar)) {
+          matchedPositions.push(PILLAR_POSITIONS[i]);
+          matchedPillars.push(pillar);
+        }
+      }
+      if (matchedPositions.length === 0) return null;
       return {
         key: this.key, label: this.label, type: this.type,
-        evidence: [`일지 ${ctx.dayBranch}(${branchKorean(ctx.dayBranch)}) → 백호 ${target}(${branchKorean(target)})`],
-        detectedAt: findBranchPositions(ctx.allBranches, target, 2),
+        evidence: [`백호 일주 ${matchedPillars.join("·")} 발견`],
+        detectedAt: matchedPositions,
       };
     },
   },
