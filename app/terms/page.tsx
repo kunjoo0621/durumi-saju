@@ -318,6 +318,23 @@ export default function TermsPage() {
               </h2>
               <p>본 약관은 2025년 1월 1일부터 시행합니다.</p>
             </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-3">
+                사업자 정보
+              </h2>
+              <ul className="space-y-1">
+                <li>상호: 두루미 원정대</li>
+                <li>대표자: 신건주</li>
+                <li>사업자등록번호: 801-02-03874</li>
+                <li>통신판매업 신고번호: 제 2026-용인수지-1950 호</li>
+                <li>업태/종목: 도매 및 소매업 / 전자상거래 소매업</li>
+                <li>주소: 경기 용인시 수지구 용구대로2790번길 7, 302호 S218</li>
+                <li>고객센터: 0502-1913-6990</li>
+                <li>이메일: kunjoo0621@gmail.com</li>
+                <li>호스팅 서비스 제공자: Vercel Inc.</li>
+              </ul>
+            </section>
           </div>
         </article>
       </main>

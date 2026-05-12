@@ -6,8 +6,8 @@ import { Egg } from "@phosphor-icons/react";
 import Modal from "@/components/Modal";
 import LoginForm from "@/components/LoginForm";
 
-// 가입 보너스 이벤트 마감 시각: 2026-05-02 00:00 KST = 2026-05-01 15:00 UTC
-const EVENT_END_TS = Date.UTC(2026, 4, 1, 15, 0, 0);
+// 가입 보너스 이벤트 마감 시각: 2026-06-01 00:00 KST = 2026-05-31 15:00 UTC (5월 말 연장)
+const EVENT_END_TS = Date.UTC(2026, 4, 31, 15, 0, 0);
 
 export default function EventSignupBanner() {
   const { data: session, status } = useSession();
@@ -39,7 +39,7 @@ export default function EventSignupBanner() {
             10알 무료
           </span>
           <span className="text-[13px] text-[rgb(var(--c-text-sub))]">
-            · 5/2 마감
+            · 5/31 마감
           </span>
         </div>
       </button>

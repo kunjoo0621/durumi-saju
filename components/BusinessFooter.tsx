@@ -32,6 +32,7 @@ export default function BusinessFooter({
           <div className="mt-2 text-[11px] leading-[180%] text-[rgb(var(--c-text-muted))]/60">
             <p>상호: 두루미 원정대 | 대표: 신건주</p>
             <p>사업자등록번호: 801-02-03874</p>
+            <p>통신판매업 신고번호: 제 2026-용인수지-1950 호</p>
             <p>업태: 도매 및 소매업 | 종목: 전자상거래 소매업</p>
             <p>주소: 경기 용인시 수지구 용구대로2790번길 7, 302호 S218</p>
             <p>고객센터: 0502-1913-6990 | 이메일: kunjoo0621@gmail.com</p>

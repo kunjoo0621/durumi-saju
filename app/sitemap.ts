@@ -13,6 +13,8 @@ const DICT_CATEGORIES: DictCategory[] = [
   "ohaeng",
   "sipsung",
   "unseong12",
+  "gangyak",
+  "yongshin",
   "relation",
   "sinsal",
   "sipisinsal",
