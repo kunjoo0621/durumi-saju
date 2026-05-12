@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "fs";
-import { getAllDictEntries } from "@/lib/dict/registry";
+import { getAllDictEntries } from "../lib/dict/registry";
 
 // 모든 등록된 entry 수집
 const entries = getAllDictEntries();
