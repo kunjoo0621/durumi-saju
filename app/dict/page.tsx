@@ -46,7 +46,7 @@ const CATEGORY_TAGLINE: Record<DictCategory, string> = {
 };
 
 const CATEGORY_TOTAL: Record<DictCategory, number> = {
-  saju: 11,
+  saju: 12,
   pillars: 4,
   cheongan: 10,
   jiji: 12,

@@ -220,6 +220,7 @@ import { eumyang as sajuEumyang } from "./data/saju/eumyang";
 import { jeolgi as sajuJeolgi } from "./data/saju/jeolgi";
 import { manseryok as sajuManseryok } from "./data/saju/manseryok";
 import { sajuPalja as sajuSajuPalja } from "./data/saju/saju-palja";
+import { grade as sajuGrade } from "./data/saju/grade";
 import type { DictCategory, DictEntry } from "./types";
 
 const ENTRY_LIST: DictEntry[] = [
@@ -445,6 +446,7 @@ const ENTRY_LIST: DictEntry[] = [
   sajuJeolgi,
   sajuManseryok,
   sajuSajuPalja,
+  sajuGrade,
 ];
 
 const ENTRY_MAP: Record<string, DictEntry> = Object.fromEntries(
