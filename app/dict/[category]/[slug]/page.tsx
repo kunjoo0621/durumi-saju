@@ -90,6 +90,21 @@ export default async function DictDetailPage({ params }: Props) {
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "DefinedTerm",
+        "@id": `${SITE_URL}${path}#term`,
+        name: entry.name,
+        alternateName: entry.hanja,
+        description: entry.meta.description,
+        termCode: entry.slug,
+        url: `${SITE_URL}${path}`,
+        inDefinedTermSet: {
+          "@type": "DefinedTermSet",
+          "@id": `${SITE_URL}/dict#termset`,
+          name: "사주 사전",
+          url: `${SITE_URL}/dict`,
+        },
+      },
+      {
         "@type": "Article",
         headline: entry.meta.title,
         description: entry.meta.description,
@@ -109,6 +124,7 @@ export default async function DictDetailPage({ params }: Props) {
           "@type": "WebPage",
           "@id": `${SITE_URL}${path}`,
         },
+        about: { "@id": `${SITE_URL}${path}#term` },
       },
       {
         "@type": "BreadcrumbList",

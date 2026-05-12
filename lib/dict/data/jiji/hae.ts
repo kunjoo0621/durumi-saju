@@ -70,6 +70,8 @@ export const hae: DictEntry = {
     },
   ],
   related: [
+    { category: "ohaeng", slug: "su", label: "수(水)", hint: "오행" },
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "cheongan", slug: "im", label: "임(壬)", hint: "양수" },
     { category: "jiji", slug: "ja", label: "자(子)", hint: "지지" },
     { category: "jiji", slug: "sa", label: "사(巳)", hint: "충" },

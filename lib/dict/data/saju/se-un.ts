@@ -66,7 +66,8 @@ export const seUn: DictEntry = {
     },
   ],
   related: [
-    { category: "saju", slug: "intro", label: "사주", hint: "입문" },
+    { category: "yongshin", slug: "yongshin", label: "용신", hint: "용신" },
+    { category: "yongshin", slug: "gisin", label: "기신", hint: "용신" },
     { category: "saju", slug: "dae-un", label: "대운", hint: "입문" },
     { category: "gabja", slug: "gapja", label: "60갑자", hint: "60갑자" },
     { category: "relation", slug: "jachuk-hap", label: "육합", hint: "합충형" },

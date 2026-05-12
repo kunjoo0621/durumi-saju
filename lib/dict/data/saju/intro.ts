@@ -66,9 +66,10 @@ export const intro: DictEntry = {
     },
   ],
   related: [
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
+    { category: "saju", slug: "shin-gang-shin-yak", label: "신강·신약", hint: "강약" },
+    { category: "yongshin", slug: "yongshin", label: "용신", hint: "용신" },
     { category: "pillars", slug: "ilju", label: "일주", hint: "기둥" },
-    { category: "cheongan", slug: "gap", label: "천간 갑", hint: "천간" },
-    { category: "jiji", slug: "ja", label: "지지 자", hint: "지지" },
     { category: "gabja", slug: "gapja", label: "갑자", hint: "60갑자" },
     { category: "ohaeng", slug: "mok", label: "목(木)", hint: "오행" },
   ],

@@ -12,6 +12,9 @@ export type DictCategory =
   | "ohaeng"
   | "sipsung"
   | "unseong12"
+  | "gangyak"
+  | "yongshin"
+  | "gyeokguk"
   | "relation"
   | "sinsal"
   | "sipisinsal";
@@ -25,6 +28,9 @@ export const DICT_CATEGORY_LABEL: Record<DictCategory, string> = {
   ohaeng: "오행",
   sipsung: "십성",
   unseong12: "12운성",
+  gangyak: "강약",
+  yongshin: "용신",
+  gyeokguk: "격국",
   relation: "합충형",
   sinsal: "신살",
   sipisinsal: "12신살",

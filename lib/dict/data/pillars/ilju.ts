@@ -67,6 +67,7 @@ export const ilju: DictEntry = {
     },
   ],
   related: [
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "saju", slug: "intro", label: "사주란?", hint: "입문" },
     { category: "gabja", slug: "gapja", label: "갑자일주", hint: "60갑자" },
     { category: "cheongan", slug: "gap", label: "천간 갑", hint: "천간" },

@@ -20,6 +20,9 @@ const CATEGORY_ORDER: DictCategory[] = [
   "ohaeng",
   "sipsung",
   "unseong12",
+  "gangyak",
+  "yongshin",
+  "gyeokguk",
   "relation",
   "sinsal",
   "sipisinsal",
@@ -34,23 +37,29 @@ const CATEGORY_TAGLINE: Record<DictCategory, string> = {
   ohaeng: "목·화·토·금·수 — 사주를 이루는 다섯 기운",
   sipsung: "비견·식신·정관… 일간 기준 10가지 별",
   unseong12: "장생부터 양까지 일간이 거치는 12단계 흐름",
+  gangyak: "신강·신약 8단계와 득령·득지·득시·득세 4득",
+  yongshin: "사주의 균형을 잡는 핵심 — 용신·희신·기신",
+  gyeokguk: "정관격·편관격… 자평 명리의 정격 8격 + 록인 2격",
   relation: "합·충·형·파·해 — 글자끼리의 작용 관계",
   sinsal: "도화살·역마살·화개살 등 살(殺)의 작용",
   sipisinsal: "년지 기준 12지지에 부여되는 12가지 별",
 };
 
 const CATEGORY_TOTAL: Record<DictCategory, number> = {
-  saju: 5,
+  saju: 11,
   pillars: 4,
   cheongan: 10,
   jiji: 12,
   gabja: 60,
-  ohaeng: 5,
-  sipsung: 10,
-  unseong12: 12,
-  relation: 20,
-  sinsal: 20,
-  sipisinsal: 12,
+  ohaeng: 9,
+  sipsung: 11,
+  unseong12: 13,
+  gangyak: 12,
+  yongshin: 5,
+  gyeokguk: 11,
+  relation: 29,
+  sinsal: 22,
+  sipisinsal: 13,
 };
 
 export const metadata: Metadata = {
@@ -73,12 +82,12 @@ export default function DictHubPage() {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "CollectionPage",
-        "@id": `${SITE_URL}/dict`,
+        "@type": ["CollectionPage", "DefinedTermSet"],
+        "@id": `${SITE_URL}/dict#termset`,
         url: `${SITE_URL}/dict`,
         name: "사주 사전",
         description:
-          "사주 입문부터 4기둥, 60갑자, 천간지지, 십성, 신살까지 11개 카테고리로 정리한 무료 사주 용어 사전.",
+          "사주 입문부터 4기둥, 60갑자, 천간지지, 십성, 강약·용신, 신살까지 13개 카테고리로 정리한 무료 사주 용어 사전.",
         inLanguage: "ko-KR",
         isPartOf: { "@id": `${SITE_URL}/#website` },
         publisher: { "@id": `${SITE_URL}/#organization` },

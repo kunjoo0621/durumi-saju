@@ -34,7 +34,7 @@ export const eulmi: DictEntry = {
     { label: "음양 구성", value: "음목 · 음토" },
     { label: "지장간", value: "기(己) · 정(丁) · 을(乙)" },
     { label: "공망", value: "진(辰) · 사(巳)" },
-    { label: "특수 일주", value: "백호살(白虎殺) 7일주 중 하나" },
+    { label: "특수 일주", value: "백호대살(白虎大殺) 7일주 중 하나" },
   ],
   body: {
     intro:

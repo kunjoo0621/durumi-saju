@@ -67,8 +67,9 @@ export const daeUn: DictEntry = {
     },
   ],
   related: [
-    { category: "saju", slug: "intro", label: "사주", hint: "입문" },
+    { category: "yongshin", slug: "yongshin", label: "용신", hint: "용신" },
     { category: "saju", slug: "se-un", label: "세운", hint: "입문" },
+    { category: "saju", slug: "shin-gang-shin-yak", label: "신강·신약", hint: "강약" },
     { category: "pillars", slug: "wolju", label: "월주", hint: "기둥" },
     { category: "gabja", slug: "gapja", label: "60갑자", hint: "60갑자" },
   ],

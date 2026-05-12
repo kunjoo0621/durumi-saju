@@ -21,7 +21,7 @@ export const ja: DictEntry = {
   },
   highlight: [
     { label: "오행", value: "수(水)" },
-    { label: "음양", value: "양(陽)" },
+    { label: "음양", value: "양(陽) · 체용 다름" },
     { label: "지장간", value: "계(癸) 단일" },
     { label: "시간·방위", value: "23~01시 · 정북(正北)" },
   ],
@@ -68,7 +68,8 @@ export const ja: DictEntry = {
     },
   ],
   related: [
-    { category: "ohaeng", slug: "mok", label: "수(水)", hint: "오행" },
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
+    { category: "ohaeng", slug: "su", label: "수(水)", hint: "오행" },
     { category: "gabja", slug: "gapja", label: "갑자", hint: "60갑자" },
     { category: "sinsal", slug: "dohwa", label: "도화살", hint: "신살" },
     { category: "cheongan", slug: "gap", label: "갑(甲)", hint: "천간" },

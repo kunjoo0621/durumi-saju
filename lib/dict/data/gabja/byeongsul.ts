@@ -34,6 +34,7 @@ export const byeongsul: DictEntry = {
     { label: "음양 구성", value: "양화 · 양토" },
     { label: "지장간", value: "무(戊)·신(辛)·정(丁)" },
     { label: "공망", value: "오(午) · 미(未)" },
+    { label: "특수 일주", value: "백호대살(白虎大殺) 7일주 중 하나" },
   ],
   body: {
     intro:

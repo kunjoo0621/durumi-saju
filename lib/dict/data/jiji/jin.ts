@@ -70,8 +70,9 @@ export const jin: DictEntry = {
     },
   ],
   related: [
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "cheongan", slug: "mu", label: "무(戊)", hint: "양토" },
-    { category: "ohaeng", slug: "mok", label: "토(土)", hint: "오행" },
+    { category: "ohaeng", slug: "to", label: "토(土)", hint: "오행" },
   ],
   updatedAt: "2026-04-28",
 };

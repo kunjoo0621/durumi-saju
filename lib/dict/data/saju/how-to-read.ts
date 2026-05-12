@@ -65,8 +65,9 @@ export const howToRead: DictEntry = {
     },
   ],
   related: [
-    { category: "saju", slug: "intro", label: "사주", hint: "입문" },
-    { category: "saju", slug: "shin-gang-shin-yak", label: "신강·신약", hint: "입문" },
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
+    { category: "saju", slug: "shin-gang-shin-yak", label: "신강·신약", hint: "강약" },
+    { category: "yongshin", slug: "yongshin", label: "용신", hint: "용신" },
     { category: "pillars", slug: "ilju", label: "일주", hint: "기둥" },
     { category: "ohaeng", slug: "mok", label: "오행 목", hint: "오행" },
   ],

@@ -70,9 +70,10 @@ export const sa: DictEntry = {
     },
   ],
   related: [
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "cheongan", slug: "byeong", label: "병(丙)", hint: "양화" },
     { category: "jiji", slug: "in", label: "인(寅)", hint: "역마" },
-    { category: "ohaeng", slug: "mok", label: "화(火)", hint: "오행" },
+    { category: "ohaeng", slug: "hwa", label: "화(火)", hint: "오행" },
   ],
   updatedAt: "2026-04-28",
 };

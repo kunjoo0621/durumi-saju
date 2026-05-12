@@ -70,6 +70,8 @@ export const yu: DictEntry = {
     },
   ],
   related: [
+    { category: "ohaeng", slug: "geum", label: "금(金)", hint: "오행" },
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "cheongan", slug: "sin", label: "신(辛)", hint: "음금" },
     { category: "sinsal", slug: "dohwa", label: "도화살", hint: "신살" },
     { category: "jiji", slug: "myo", label: "묘(卯)", hint: "충" },

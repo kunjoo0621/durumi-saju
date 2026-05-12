@@ -71,6 +71,7 @@ export const myo: DictEntry = {
     },
   ],
   related: [
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "cheongan", slug: "eul", label: "을(乙)", hint: "음목" },
     { category: "sinsal", slug: "dohwa", label: "도화살", hint: "신살" },
     { category: "ohaeng", slug: "mok", label: "목(木)", hint: "오행" },

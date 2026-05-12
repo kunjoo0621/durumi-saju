@@ -70,6 +70,8 @@ export const mi: DictEntry = {
     },
   ],
   related: [
+    { category: "ohaeng", slug: "to", label: "토(土)", hint: "오행" },
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "cheongan", slug: "gi", label: "기(己)", hint: "음토" },
     { category: "jiji", slug: "chuk", label: "축(丑)", hint: "충" },
   ],

@@ -70,6 +70,8 @@ export const sinJiji: DictEntry = {
     },
   ],
   related: [
+    { category: "ohaeng", slug: "geum", label: "금(金)", hint: "오행" },
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "cheongan", slug: "gyeong", label: "경(庚)", hint: "양금" },
     { category: "cheongan", slug: "sin", label: "신(辛)", hint: "음금" },
     { category: "jiji", slug: "in", label: "인(寅)", hint: "충" },

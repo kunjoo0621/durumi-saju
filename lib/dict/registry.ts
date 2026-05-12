@@ -169,6 +169,57 @@ import { banansalSipi } from "./data/sipisinsal/banansal";
 import { yeokmasalSipi } from "./data/sipisinsal/yeokmasal";
 import { yukhaesalSipi } from "./data/sipisinsal/yukhaesal";
 import { hwagaesalSipi } from "./data/sipisinsal/hwagaesal";
+import { ilgan as sajuIlgan } from "./data/saju/ilgan";
+import { jijanggan as sajuJijanggan } from "./data/saju/jijanggan";
+import { yongshin as yongshinYongshin } from "./data/yongshin/yongshin";
+import { eokbu as yongshinEokbu } from "./data/yongshin/eokbu";
+import { johu as yongshinJohu } from "./data/yongshin/johu";
+import { heesin as yongshinHeesin } from "./data/yongshin/heesin";
+import { gisin as yongshinGisin } from "./data/yongshin/gisin";
+import { deukryeong as gangyakDeukryeong } from "./data/gangyak/deukryeong";
+import { deukji as gangyakDeukji } from "./data/gangyak/deukji";
+import { deuksi as gangyakDeuksi } from "./data/gangyak/deuksi";
+import { deukse as gangyakDeukse } from "./data/gangyak/deukse";
+import { geukyak as gangyakGeukyak } from "./data/gangyak/geukyak";
+import { taeyak as gangyakTaeyak } from "./data/gangyak/taeyak";
+import { sinyak as gangyakSinyak } from "./data/gangyak/sinyak";
+import { junghwaSinyak as gangyakJunghwaSinyak } from "./data/gangyak/junghwa-sinyak";
+import { junghwaSingang as gangyakJunghwaSingang } from "./data/gangyak/junghwa-singang";
+import { singang as gangyakSingang } from "./data/gangyak/singang";
+import { taegang as gangyakTaegang } from "./data/gangyak/taegang";
+import { geukwang as gangyakGeukwang } from "./data/gangyak/geukwang";
+import { haemyomiSamhap } from "./data/relation/haemyomi-samhap";
+import { inmyojinBanghap } from "./data/relation/inmyojin-banghap";
+import { saomiBanghap } from "./data/relation/saomi-banghap";
+import { sinyusulBanghap } from "./data/relation/sinyusul-banghap";
+import { haejachukBanghap } from "./data/relation/haejachuk-banghap";
+import { gyeokgukIntro } from "./data/gyeokguk/intro";
+import { jeonggwanGyeok } from "./data/gyeokguk/jeonggwan-gyeok";
+import { pyeongwanGyeok } from "./data/gyeokguk/pyeongwan-gyeok";
+import { jeongjaeGyeok } from "./data/gyeokguk/jeongjae-gyeok";
+import { pyeonjaeGyeok } from "./data/gyeokguk/pyeonjae-gyeok";
+import { jeonginGyeok } from "./data/gyeokguk/jeongin-gyeok";
+import { pyeoninGyeok } from "./data/gyeokguk/pyeonin-gyeok";
+import { sikshinGyeok } from "./data/gyeokguk/sikshin-gyeok";
+import { sanggwanGyeok } from "./data/gyeokguk/sanggwan-gyeok";
+import { geonrokGyeok } from "./data/gyeokguk/geonrok-gyeok";
+import { yanginGyeok } from "./data/gyeokguk/yangin-gyeok";
+import { ohaengIntro } from "./data/ohaeng/intro";
+import { sipsungIntro } from "./data/sipsung/intro";
+import { unseong12Intro } from "./data/unseong12/intro";
+import { sinsalIntro } from "./data/sinsal/intro";
+import { sipisinsalIntro } from "./data/sipisinsal/intro";
+import { insinHyung } from "./data/relation/insin-hyung";
+import { chuksulmiHyung } from "./data/relation/chuksulmi-hyung";
+import { jamyoHyung } from "./data/relation/jamyo-hyung";
+import { jahyung } from "./data/relation/jahyung";
+import { sangsaeng as ohaengSangsaeng } from "./data/ohaeng/sangsaeng";
+import { sanggeuk as ohaengSanggeuk } from "./data/ohaeng/sanggeuk";
+import { bihwa as ohaengBihwa } from "./data/ohaeng/bihwa";
+import { eumyang as sajuEumyang } from "./data/saju/eumyang";
+import { jeolgi as sajuJeolgi } from "./data/saju/jeolgi";
+import { manseryok as sajuManseryok } from "./data/saju/manseryok";
+import { sajuPalja as sajuSajuPalja } from "./data/saju/saju-palja";
 import type { DictCategory, DictEntry } from "./types";
 
 const ENTRY_LIST: DictEntry[] = [
@@ -343,6 +394,57 @@ const ENTRY_LIST: DictEntry[] = [
   yeokmasalSipi,
   yukhaesalSipi,
   hwagaesalSipi,
+  sajuIlgan,
+  sajuJijanggan,
+  yongshinYongshin,
+  yongshinEokbu,
+  yongshinJohu,
+  yongshinHeesin,
+  yongshinGisin,
+  gangyakDeukryeong,
+  gangyakDeukji,
+  gangyakDeuksi,
+  gangyakDeukse,
+  gangyakGeukyak,
+  gangyakTaeyak,
+  gangyakSinyak,
+  gangyakJunghwaSinyak,
+  gangyakJunghwaSingang,
+  gangyakSingang,
+  gangyakTaegang,
+  gangyakGeukwang,
+  haemyomiSamhap,
+  inmyojinBanghap,
+  saomiBanghap,
+  sinyusulBanghap,
+  haejachukBanghap,
+  gyeokgukIntro,
+  jeonggwanGyeok,
+  pyeongwanGyeok,
+  jeongjaeGyeok,
+  pyeonjaeGyeok,
+  jeonginGyeok,
+  pyeoninGyeok,
+  sikshinGyeok,
+  sanggwanGyeok,
+  geonrokGyeok,
+  yanginGyeok,
+  ohaengIntro,
+  sipsungIntro,
+  unseong12Intro,
+  sinsalIntro,
+  sipisinsalIntro,
+  insinHyung,
+  chuksulmiHyung,
+  jamyoHyung,
+  jahyung,
+  ohaengSangsaeng,
+  ohaengSanggeuk,
+  ohaengBihwa,
+  sajuEumyang,
+  sajuJeolgi,
+  sajuManseryok,
+  sajuSajuPalja,
 ];
 
 const ENTRY_MAP: Record<string, DictEntry> = Object.fromEntries(

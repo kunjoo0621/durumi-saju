@@ -34,7 +34,7 @@ export const gapjin: DictEntry = {
     { label: "음양 구성", value: "양목 · 양토" },
     { label: "지장간", value: "무(戊) · 을(乙) · 계(癸)" },
     { label: "공망", value: "인(寅) · 묘(卯)" },
-    { label: "특수살", value: "백호살(白虎煞)" },
+    { label: "특수 일주", value: "백호대살(白虎大殺) 7일주 중 하나" },
   ],
   body: {
     intro:

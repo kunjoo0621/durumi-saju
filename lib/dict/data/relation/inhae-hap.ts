@@ -14,10 +14,10 @@ export const inhaeHap: DictEntry = {
   hero: {
     variant: "combination",
     leftLabel: "양목",
-    rightLabel: "양수",
+    rightLabel: "음수",
     orderLabel: "지지 6합 · 2번",
     left: { char: "인", hanja: "寅", element: "목", yinYang: "양" },
-    right: { char: "해", hanja: "亥", element: "수", yinYang: "양" },
+    right: { char: "해", hanja: "亥", element: "수", yinYang: "음" },
   },
   highlight: [
     { label: "한자", value: "寅亥合 (인과 해의 결합)" },
@@ -27,7 +27,7 @@ export const inhaeHap: DictEntry = {
   ],
   body: {
     intro:
-      "인해합(寅亥合)은 지지 6합 중 두 번째 합입니다. 양목 인(寅)과 양수 해(亥)가 결합하여 그 기운이 목(木)으로 변화합니다.",
+      "인해합(寅亥合)은 지지 6합 중 두 번째 합입니다. 양목 인(寅)과 음수 해(亥)가 결합하여 그 기운이 목(木)으로 변화합니다.",
     sections: [
       {
         heading: "인해합의 의미",
@@ -64,7 +64,7 @@ export const inhaeHap: DictEntry = {
   ],
   related: [
     { category: "jiji", slug: "in", label: "인(寅)", hint: "양목" },
-    { category: "jiji", slug: "hae", label: "해(亥)", hint: "양수" },
+    { category: "jiji", slug: "hae", label: "해(亥)", hint: "음수" },
     { category: "ohaeng", slug: "mok", label: "목(木)", hint: "오행" },
     { category: "relation", slug: "jachuk-hap", label: "자축합", hint: "지지 6합 1번" },
   ],

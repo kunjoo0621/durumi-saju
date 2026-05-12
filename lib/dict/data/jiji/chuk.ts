@@ -69,8 +69,9 @@ export const chuk: DictEntry = {
     },
   ],
   related: [
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "jiji", slug: "ja", label: "자(子)", hint: "지지" },
-    { category: "ohaeng", slug: "mok", label: "토(土)", hint: "오행" },
+    { category: "ohaeng", slug: "to", label: "토(土)", hint: "오행" },
     { category: "cheongan", slug: "gi", label: "기(己)", hint: "음토" },
   ],
   updatedAt: "2026-04-28",

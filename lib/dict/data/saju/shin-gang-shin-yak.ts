@@ -67,10 +67,12 @@ export const shinGangShinYak: DictEntry = {
     },
   ],
   related: [
-    { category: "saju", slug: "intro", label: "사주", hint: "입문" },
-    { category: "saju", slug: "how-to-read", label: "사주 보는 법", hint: "입문" },
+    { category: "gangyak", slug: "singang", label: "신강", hint: "8단계" },
+    { category: "gangyak", slug: "sinyak", label: "신약", hint: "8단계" },
+    { category: "gangyak", slug: "deukryeong", label: "득령", hint: "4득" },
+    { category: "yongshin", slug: "yongshin", label: "용신", hint: "용신" },
+    { category: "saju", slug: "ilgan", label: "일간", hint: "입문" },
     { category: "pillars", slug: "ilju", label: "일주", hint: "기둥" },
-    { category: "ohaeng", slug: "mok", label: "오행 목", hint: "오행" },
   ],
   updatedAt: "2026-04-29",
 };

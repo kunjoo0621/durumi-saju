@@ -34,6 +34,7 @@ export const gyechuk: DictEntry = {
     { label: "음양 구성", value: "음수 · 음토" },
     { label: "지장간", value: "기(己) · 계(癸) · 신(辛)" },
     { label: "공망", value: "인(寅) · 묘(卯)" },
+    { label: "특수 일주", value: "백호대살(白虎大殺) 7일주 중 하나" },
   ],
   body: {
     intro:
