@@ -105,9 +105,9 @@ export default function SharePetCompatClient({
           </section>
         )}
 
-        {/* 종합 한 줄 — 펫 정체성 emerald */}
-        <section className="rounded-[28px] bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent ring-1 ring-emerald-500/30 p-7 text-center">
-          <div className="text-caption text-emerald-400 mb-4 tracking-widest">VERDICT</div>
+        {/* 종합 한 줄 */}
+        <section className="rounded-[28px] bg-background-tertiary p-7 text-center">
+          <div className="text-caption text-text-tertiary mb-4 tracking-widest">VERDICT</div>
           <p className="text-[20px] leading-[1.5] font-bold text-text-primary font-aggro">
             {`"${result.finalLine}"`}
           </p>
@@ -159,19 +159,14 @@ export default function SharePetCompatClient({
   );
 }
 
-function Mini({ icon, label, value, inverted = false, highlight = false }: { icon: string; label: string; value: number; inverted?: boolean; highlight?: boolean }) {
-  const tone = inverted ? 100 - value : value;
-  const color = highlight ? "text-emerald-400"
-    : tone >= 70 ? "text-emerald-400"
-    : tone >= 45 ? "text-amber-400"
-    : "text-rose-400";
+function Mini({ icon, label, value, inverted: _inverted = false, highlight = false }: { icon: string; label: string; value: number; inverted?: boolean; highlight?: boolean }) {
   return (
-    <div className={`bg-background-secondary rounded-2xl p-4 ${highlight ? "ring-1 ring-emerald-500/30" : ""}`}>
+    <div className={`bg-background-secondary rounded-2xl p-4 ${highlight ? "ring-1 ring-white/15" : ""}`}>
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[14px]">{icon}</span>
         <span className="text-caption text-text-tertiary truncate">{label}</span>
       </div>
-      <div className={`text-[24px] font-bold tabular-nums ${color} font-aggro`}>{value}</div>
+      <div className={`text-[24px] font-bold tabular-nums font-aggro ${highlight ? "text-text-primary" : "text-text-secondary"}`}>{value}</div>
     </div>
   );
 }

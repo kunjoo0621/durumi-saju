@@ -3,11 +3,14 @@
 // 사주 분석의 SCORING_VERSION 패턴 따름.
 //
 // v1 (2026-05-03): 첫 버전. 사주 신호를 받아 4지표 + composite 계산.
+// v2 (2026-05-13): computeSync 페널티 diminishing returns 적용
+//   — 충+극 동시 발생 시 sync 18까지 추락하던 문제 완화.
+//   — 일지 페널티는 페어상 mutually exclusive (else-if), 일간 극과만 누적될 때 50% 적용.
 // 추후 실제 사주 enrichment 결과와 매핑 (현재는 minimal signals만 사용).
 
 import type { LabelGrade } from "./pet-compat";
 
-export const PET_COMPAT_SCORING_VERSION = 1;
+export const PET_COMPAT_SCORING_VERSION = 2;
 
 // ────────────────────────────────────────────────────────
 // 입력 신호 (사주 분석 결과에서 추출)
@@ -117,22 +120,33 @@ function clamp(n: number, min = 0, max = 100): number {
 function computeSync(s: PetCompatSignals): number {
   let score = 55;  // 기본 (B 중간)
 
-  // 일지 관계 (정통 명리 6합·삼합·방합·충·형·원진)
+  // 일지 보너스 — 합·삼합·방합 (페어 다르므로 누적 거의 없음, 안전하게 합산)
   if (s.dayBranchHap) score += 25;           // 6합 (자축·인해 등) — 강한 끌림
   if (s.dayBranchSamhap) score += 20;        // 삼합 (수국·목국 등) — 같은 의지
   if (s.dayBranchBanghap) score += 12;       // 방합 (동방·남방 등) — 같은 계절
-  if (s.dayBranchChung) score -= 25;         // 6충 — 정면 충돌
-  if (s.dayBranchHyeong) score -= 15;        // 형 — 스트레스 누적
-  if (s.dayBranchWonjin) score -= 12;        // 원진 — 미운 정 (보이지 않는 충돌)
 
-  // 일간 오행 관계
+  // 일지 페널티 — 충/형/원진은 페어 매트릭스상 mutually exclusive (else-if 명시)
+  // 일간 극과 동시 발생 가능 → diminishing returns로 누적 충격 완화
+  // (충 -25 + 극 -12 풀반영 시 base 55에서 sync 18까지 추락 → 사용자 충격)
+  const penalties: number[] = [];
+  if (s.dayBranchChung) penalties.push(25);             // 6충 — 정면 충돌
+  else if (s.dayBranchHyeong) penalties.push(15);       // 형 — 스트레스 누적
+  else if (s.dayBranchWonjin) penalties.push(12);       // 원진 — 미운 정
+
+  if (s.dayMasterRelation === "geuk_to_pet" || s.dayMasterRelation === "geuk_to_owner") {
+    penalties.push(12);                                  // 일간 오행 극
+  }
+
+  penalties.sort((a, b) => b - a);
+  for (let i = 0; i < penalties.length; i++) {
+    score -= penalties[i] * (i === 0 ? 1 : 0.5);         // 첫 번째 100%, 두 번째부터 50%
+  }
+
+  // 일간 오행 보너스 (극은 위 페널티에서 처리)
   switch (s.dayMasterRelation) {
     case "saeng_to_pet": score += 12; break;     // 보호자가 펫에게 에너지 줌
     case "saeng_to_owner": score += 12; break;   // 펫이 보호자에게 에너지 줌
     case "bihwa": score += 8; break;             // 같은 오행 (비화) — 친근
-    case "geuk_to_pet": score -= 12; break;      // 보호자가 펫을 극함 (펫 스트레스)
-    case "geuk_to_owner": score -= 12; break;    // 펫이 보호자를 극함 (보호자 부담)
-    case "none": break;
   }
 
   // 신강신약 균형

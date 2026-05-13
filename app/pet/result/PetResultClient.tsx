@@ -2,7 +2,7 @@
 
 // 펫 궁합 결과 페이지 — 사주/배틀과 동일 디자인 토큰 사용
 // 등급 색은 GRADE_COLORS 표준 사용 (사주와 동일)
-// emerald는 펫 정체성 영역(VERDICT 카드 + 4지표 게이지 긍정 상태)에만 유지
+// 톤 통일: emerald/rose 사용 금지. 게이지·강조는 단색(white opacity)으로 표현.
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -218,7 +218,7 @@ export default function PetResultClient() {
           <h2 className="text-body-2 font-semibold text-text-secondary px-1">이런 상황이라면</h2>
           {result.simulations?.map((sim, idx) => (
             <div key={idx} className="rounded-[20px] bg-background-tertiary p-6">
-              <div className="text-caption font-semibold text-emerald-400 mb-2">📍 {sim.scene}</div>
+              <div className="text-caption font-semibold text-text-tertiary mb-2 tracking-wide">📍 {sim.scene}</div>
               <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
                 {sim.prediction}
               </p>
@@ -239,9 +239,9 @@ export default function PetResultClient() {
           </section>
         )}
 
-        {/* 종합 한 줄 — 펫 정체성 (emerald) */}
-        <section className="rounded-[28px] bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent ring-1 ring-emerald-500/30 p-7 text-center">
-          <div className="text-caption text-emerald-400 mb-4 tracking-widest">VERDICT</div>
+        {/* 종합 한 줄 */}
+        <section className="rounded-[28px] bg-background-tertiary p-7 text-center">
+          <div className="text-caption text-text-tertiary mb-4 tracking-widest">VERDICT</div>
           <p className="text-[20px] leading-[1.5] font-bold text-text-primary font-aggro">
             {`"${result.finalLine}"`}
           </p>
@@ -288,7 +288,7 @@ export default function PetResultClient() {
 }
 
 // ────────────────────────────────────────────────────────
-// 게이지 컴포넌트 (4지표 — 펫 정체성 emerald 유지)
+// 게이지 컴포넌트 (4지표)
 // ────────────────────────────────────────────────────────
 
 interface GaugeProps {
@@ -299,10 +299,8 @@ interface GaugeProps {
   inverted?: boolean;
 }
 
-function Gauge({ icon, label, desc, value, inverted = false }: GaugeProps) {
+function Gauge({ icon, label, desc, value, inverted: _inverted = false }: GaugeProps) {
   const displayValue = Math.max(0, Math.min(100, value));
-  const tone = inverted ? 100 - displayValue : displayValue;
-  const color = tone >= 70 ? "bg-emerald-500" : tone >= 45 ? "bg-amber-400" : "bg-rose-400";
 
   return (
     <div>
@@ -318,7 +316,7 @@ function Gauge({ icon, label, desc, value, inverted = false }: GaugeProps) {
       </div>
       <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
         <div
-          className={`h-full ${color} rounded-full transition-[width] duration-700 ease-out`}
+          className="h-full bg-white/80 rounded-full transition-[width] duration-700 ease-out"
           style={{ width: `${displayValue}%` }}
         />
       </div>
@@ -382,7 +380,7 @@ function FlowBar({
   icon: string; label: string; desc: string; value: number; align: "left" | "right"; highlight: boolean;
 }) {
   const v = Math.max(0, Math.min(100, value));
-  const color = highlight ? "bg-emerald-500" : "bg-zinc-600";
+  const barColor = highlight ? "bg-white/85" : "bg-white/35";
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -393,11 +391,11 @@ function FlowBar({
             <div className="text-caption text-text-tertiary mt-0.5">{desc}</div>
           </div>
         </div>
-        <div className={`text-[22px] font-bold tabular-nums font-aggro ${highlight ? "text-emerald-400" : "text-text-primary"}`}>{v}</div>
+        <div className={`text-[22px] font-bold tabular-nums font-aggro ${highlight ? "text-text-primary" : "text-text-secondary"}`}>{v}</div>
       </div>
       <div className={`h-2 bg-background-secondary rounded-full overflow-hidden ${align === "right" ? "flex flex-row-reverse" : ""}`}>
         <div
-          className={`h-full ${color} rounded-full transition-[width] duration-700 ease-out`}
+          className={`h-full ${barColor} rounded-full transition-[width] duration-700 ease-out`}
           style={{ width: `${v}%` }}
         />
       </div>
@@ -417,8 +415,8 @@ interface ManualRowProps {
 
 function ManualRow({ label, value, highlight }: ManualRowProps) {
   return (
-    <div className={`rounded-2xl p-4 ${highlight ? "bg-emerald-500/8 ring-1 ring-emerald-500/20" : "bg-background-secondary"}`}>
-      <div className={`text-caption font-semibold mb-1.5 tracking-wide ${highlight ? "text-emerald-400" : "text-text-tertiary"}`}>
+    <div className={`rounded-2xl p-4 ${highlight ? "bg-background-secondary ring-1 ring-white/15" : "bg-background-secondary"}`}>
+      <div className={`text-caption font-semibold mb-1.5 tracking-wide ${highlight ? "text-text-primary" : "text-text-tertiary"}`}>
         {label}
       </div>
       <div className="text-body-1 leading-[1.6] text-text-primary">
