@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import { YEARLY_COST } from "@/lib/constants/coins";
 import { useCoinStore } from "@/store/useCoinStore";
+import { resolveSolarYear, formatIpchunLabel } from "@/lib/utils/ipchun";
 
 type PrimarySaju = {
   sourceResultId: string;
@@ -25,7 +26,10 @@ type PrimarySaju = {
   unknownBirthTime: boolean;
 };
 
-const TARGET_YEAR = new Date().getFullYear();
+// 입춘 기준 명리학 연도. 1/1~입춘 사이면 전년도 세운으로 자동 보정.
+const YEAR_RESOLUTION = resolveSolarYear(new Date());
+const TARGET_YEAR = YEAR_RESOLUTION.solarYear;
+const IPCHUN_LABEL = formatIpchunLabel(YEAR_RESOLUTION.ipchunDate);
 
 const CONFIRM_STEPS = [
   { message: "사주 데이터를 계산하고 있어", delay: 0 },
@@ -232,6 +236,16 @@ export default function YearlyEntryClient() {
             <p className="text-body-2 text-text-secondary">
               내 사주 위에 올해 세운이 얹혀 만든 한 해 한정 풀이
             </p>
+            {YEAR_RESOLUTION.beforeIpchun && (
+              <p className="text-[12px] text-text-tertiary pt-2 leading-relaxed">
+                명리학상 한 해의 시작은 입춘(立春).
+                <br />
+                {YEAR_RESOLUTION.gregorianYear}년 입춘 ({IPCHUN_LABEL}) 전이라
+                {" "}
+                <span className="text-text-secondary font-semibold">{TARGET_YEAR}년 세운</span>
+                으로 봅니다.
+              </p>
+            )}
           </div>
 
           {/* 본문 */}
