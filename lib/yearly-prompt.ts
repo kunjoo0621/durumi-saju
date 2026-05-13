@@ -26,6 +26,11 @@ import {
   buildYearlyLuckMetaBlock,
   type YearlyLuckMeta,
 } from "@/lib/utils/yearly-luck-meta";
+import {
+  calculateYearlyMonthlyFlow,
+  buildMonthlyFlowBlock,
+  type MonthlyEntry,
+} from "@/lib/utils/yearly-monthly";
 import type { FortuneResult } from "@/lib/utils/saju-fortune";
 
 /* ───────── 결과 타입 ───────── */
@@ -58,6 +63,7 @@ export type YearlyResult = {
     napumHanja?: string | null;
   };
   luckyMeta: YearlyLuckMeta | null;
+  monthlyFlow: MonthlyEntry[] | null;
   scoringVersion: number;
 };
 
@@ -154,9 +160,13 @@ const YEARLY_SYSTEM_PROMPT = `너는 '사주보는 두루미'의 올해의 운�
 
 [시기 명시 ★의무]
 - 모든 섹션에서 최소 1회 이상 "n월~m월" 시기 표현을 써라.
-- 정확한 월운 데이터는 제공되지 않으므로, 세운 천간지지 흐름 + 절기(節氣) 상식으로 추정해라.
-  · 봄(인묘진월/2~4월), 여름(사오미월/5~7월), 가을(신유술월/8~10월), 겨울(해자축월/11~1월)
-- 좋은 예: "2~3월은 천간 충돌이 강해서 큰 결제는 미뤄. 4월 들어 안정세야."
+- 컨텍스트에 [월별 흐름] 12개월 데이터가 제공된다. 각 월의 천간지지·십성·12운성·mood(강세/보통/주의/위기)를 활용해 정확한 시기 추정을 해라.
+  · "강세" 월에는 진행·확장·결정 권장
+  · "보통" 월에는 현상 유지·관찰
+  · "주의" 월에는 새로운 시작·큰 결제 회피
+  · "위기" 월에는 휴식·내실 다지기·새 인연/투자 금지
+- 종합(섹션 6)에서는 12개월 중 특히 인상적인 월(강세 2~3개 + 위기 1~2개)을 콕 짚어 행동 지침과 연결해라.
+- 좋은 예: "5월 정관운 강세에 계약 결정, 8월 정인운 강세에 자격증 도전. 7월 편관·12운성 절은 진행 멈추고 점검."
 - 나쁜 예: "올해 큰 돈은 조심해" (시기 미상)
 
 ────────────────────────────────
@@ -276,8 +286,9 @@ export function buildYearlyUserInfo(params: {
   tier: TierResult;
   scores: ServerScores;
   luckyMeta: YearlyLuckMeta | null;
+  monthlyFlow: MonthlyEntry[] | null;
 }): string {
-  const { input, sajuText, enriched, fortune, interaction, tier, scores, luckyMeta } = params;
+  const { input, sajuText, enriched, fortune, interaction, tier, scores, luckyMeta, monthlyFlow } = params;
   const sajuInfo = sajuText ? `\n사주팔자: ${sajuText}` : "";
   const shinsalBlock = buildShinsalBlock(enriched);
   const coreFearLabel = input.coreFearAxis && input.coreFearAxis in CORE_FEAR_LABELS
@@ -290,6 +301,7 @@ export function buildYearlyUserInfo(params: {
   const fortuneBlock = buildFortunePromptBlock(fortune, Number(input.birthYear));
   const yearlyContext = buildYearlyContextBlock(interaction);
   const luckyBlock = buildYearlyLuckMetaBlock(luckyMeta);
+  const monthlyBlock = buildMonthlyFlowBlock(monthlyFlow);
 
   return `
 이름: ${input.name}
@@ -304,6 +316,7 @@ export function buildYearlyUserInfo(params: {
 
 ${yearlyContext}
 ${luckyBlock}
+${monthlyBlock}
 
 [서버 계산 결과 — 원국 기준]
 ${scoreSummary}
@@ -346,6 +359,9 @@ export async function runYearlyAnalysis(
   // 3-1) 행운 메타 (용신 기반)
   const luckyMeta = calculateYearlyLuckMeta(enriched);
 
+  // 3-2) 월별 12개 흐름 (월운)
+  const monthlyFlow = await calculateYearlyMonthlyFlow(targetYear, enriched.dayMaster.stem);
+
   // 4) 점수/등급 (개인사주와 100% 동일 소스, 원국 기준)
   const { scores: serverScores, tier: serverTier } = calculateServerScoring(enriched);
 
@@ -359,6 +375,7 @@ export async function runYearlyAnalysis(
     tier: serverTier,
     scores: serverScores,
     luckyMeta,
+    monthlyFlow,
   });
 
   // 6) LLM 호출 (analyze와 동일 모델 fallback 체인)
@@ -415,6 +432,7 @@ export async function runYearlyAnalysis(
             napumHanja: interaction.napum?.hanja ?? null,
           },
           luckyMeta,
+          monthlyFlow,
           scoringVersion: SCORING_VERSION,
         };
         return result;

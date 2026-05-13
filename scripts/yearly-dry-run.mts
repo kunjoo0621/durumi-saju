@@ -98,6 +98,17 @@ async function main() {
   dump("yearlyMeta", full.yearlyMeta);
   dump("luckyMeta", full.luckyMeta);
 
+  console.log("\n========== monthlyFlow 12개 ==========");
+  if (full.monthlyFlow) {
+    for (const m of full.monthlyFlow) {
+      console.log(
+        `  ${String(m.month).padStart(2, " ")}월: ${m.pillarKorean}(${m.pillar}) ${m.tenStar.padEnd(4, " ")} 12운성 ${m.twelveStage.padEnd(3, " ")} → ${m.mood}`,
+      );
+    }
+  } else {
+    console.log("  (월별 데이터 없음)");
+  }
+
   console.log("\n========== sections ==========");
   for (let i = 0; i < full.sections.length; i++) {
     const s = full.sections[i];

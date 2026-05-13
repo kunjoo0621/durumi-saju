@@ -225,6 +225,11 @@ function YearlyResultBody({ result, onBack }: { result: YearlyResult; onBack: ()
           {/* 행운 메타 — 색/방위/숫자/아이템 */}
           {result.luckyMeta && <LuckyMetaCard meta={result.luckyMeta} />}
 
+          {/* 월별 흐름 캘린더 */}
+          {result.monthlyFlow && result.monthlyFlow.length === 12 && (
+            <MonthlyFlowCard monthly={result.monthlyFlow} />
+          )}
+
           {/* 5분야 점수 (원국 기준) */}
           <section className="space-y-4">
             <div className="flex items-baseline justify-between">
@@ -424,6 +429,121 @@ function LuckyMetaCard({ meta }: LuckyMetaCardProps) {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+/* ─────────── 월별 흐름 캘린더 ─────────── */
+
+type MonthlyFlowCardProps = {
+  monthly: NonNullable<YearlyResult["monthlyFlow"]>;
+};
+
+const MOOD_STYLE: Record<string, { bg: string; border: string; text: string; label: string }> = {
+  강세: { bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.40)", text: "#22C55E", label: "강세" },
+  보통: { bg: "rgba(148,163,184,0.10)", border: "rgba(148,163,184,0.30)", text: "#94A3B8", label: "보통" },
+  주의: { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.40)", text: "#F59E0B", label: "주의" },
+  위기: { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.45)", text: "#EF4444", label: "위기" },
+};
+
+function MonthlyFlowCard({ monthly }: MonthlyFlowCardProps) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const detail = selected !== null ? monthly.find((m) => m.month === selected) ?? null : null;
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-title-3 text-text-primary">월별 흐름</h2>
+        <span className="text-[12px] text-text-tertiary">
+          탭하면 자세히 보여줘
+        </span>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2.5">
+        {monthly.map((m) => {
+          const mood = MOOD_STYLE[m.mood] ?? MOOD_STYLE["보통"];
+          const isSelected = selected === m.month;
+          return (
+            <button
+              key={m.month}
+              type="button"
+              onClick={() => setSelected((cur) => (cur === m.month ? null : m.month))}
+              className="rounded-xl p-3 text-left transition-all active:scale-[0.97]"
+              style={{
+                background: mood.bg,
+                border: `1.5px solid ${isSelected ? mood.text : mood.border}`,
+                boxShadow: isSelected ? `0 0 0 3px ${mood.bg}` : undefined,
+              }}
+              aria-label={`${m.month}월 ${m.pillarKorean} ${m.tenStar} ${m.mood}`}
+            >
+              <div className="text-[11px] font-bold tracking-wide" style={{ color: mood.text }}>
+                {m.month}월
+              </div>
+              <div className="text-[15px] font-bold font-aggro text-text-primary mt-1 leading-tight">
+                {m.pillarKorean}
+              </div>
+              <div className="text-[10px] mt-1.5" style={{ color: mood.text }}>
+                {mood.label}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 선택된 월 상세 */}
+      {detail && (
+        <div
+          className="rounded-2xl bg-background-secondary border p-5 space-y-3"
+          style={{ borderColor: MOOD_STYLE[detail.mood].border }}
+        >
+          <div className="flex items-baseline justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[22px] font-bold font-aggro text-text-primary">
+                {detail.month}월
+              </span>
+              <span className="text-[14px] text-text-secondary">
+                {detail.pillarKorean}({detail.pillar})
+              </span>
+            </div>
+            <span
+              className="px-2.5 py-1 rounded-full text-[11px] font-bold"
+              style={{
+                background: MOOD_STYLE[detail.mood].bg,
+                color: MOOD_STYLE[detail.mood].text,
+              }}
+            >
+              {detail.mood}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-[13px]">
+            <div>
+              <div className="text-text-tertiary text-[11px]">십성</div>
+              <div className="text-text-primary font-semibold mt-0.5">{detail.tenStar}운</div>
+            </div>
+            <div>
+              <div className="text-text-tertiary text-[11px]">12운성</div>
+              <div className="text-text-primary font-semibold mt-0.5">{detail.twelveStage}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 범례 */}
+      <div className="flex items-center gap-3 flex-wrap pt-1">
+        {(["강세", "보통", "주의", "위기"] as const).map((mood) => {
+          const s = MOOD_STYLE[mood];
+          return (
+            <div key={mood} className="flex items-center gap-1.5">
+              <span
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ background: s.text }}
+                aria-hidden
+              />
+              <span className="text-[11px] text-text-tertiary">{s.label}</span>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
