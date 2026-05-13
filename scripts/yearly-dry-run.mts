@@ -33,7 +33,7 @@ const input = {
   birthHour: "16",     // 申시 = 15~17. 운영자 메모 상 시주 庚申. 16:00으로 가정.
   birthMinute: "00",
   birthLocation: "서울",
-  gender: "남자",
+  gender: "남성",
   relationshipStatus: "연애중",
   employmentStatus: "사업·프리랜서",
   coreFearAxis: "DISMISS" as const,
