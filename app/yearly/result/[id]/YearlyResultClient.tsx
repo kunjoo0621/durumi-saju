@@ -265,6 +265,7 @@ function YearlyResultBody({ result, onBack }: { result: YearlyResult; onBack: ()
 
           {/* 푸터 */}
           <div className="space-y-3 pt-4">
+            <ShareButton targetYear={result.yearlyMeta.targetYear} />
             <button
               onClick={() => router.push("/menu")}
               className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
@@ -545,5 +546,53 @@ function MonthlyFlowCard({ monthly }: MonthlyFlowCardProps) {
         })}
       </div>
     </section>
+  );
+}
+
+/* ─────────── 공유 버튼 ─────────── */
+
+type ShareButtonProps = {
+  targetYear: number;
+};
+
+function ShareButton({ targetYear }: ShareButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.origin + "/yearly" : "";
+    const text = `${targetYear}년 내 사주 운세 풀이 — 사주보는 두루미`;
+
+    // Web Share API 지원 (모바일 Safari·Chrome) → 시스템 공유 시트 (카카오톡 포함)
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share({
+          title: "사주보는 두루미 — 올해의 운세",
+          text,
+          url,
+        });
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+
+    // Fallback: URL 클립보드 복사
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2_000);
+    } catch {
+      window.prompt("URL을 복사해 친구에게 보내줘", url);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleShare}
+      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold relative"
+      aria-label="결과 공유하기"
+    >
+      {copied ? "링크 복사됨!" : "친구에게 공유하기"}
+    </button>
   );
 }
