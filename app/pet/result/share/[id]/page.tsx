@@ -75,6 +75,7 @@ export default async function SharePetCompatPage({
       syncScore={data.sync_score}
       rulerScore={data.ruler_score}
       loverScore={data.lover_score}
+      loyaltyScore={(data as any).loyalty_score ?? 50}
       conflictScore={data.conflict_score}
       illustrationUrl={data.illustration_url || null}
     />

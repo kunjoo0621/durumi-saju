@@ -21,6 +21,7 @@ interface ApiResponse {
     sync_score: number;
     ruler_score: number;
     lover_score: number;
+    loyalty_score: number;
     conflict_score: number;
     illustration_key: string | null;
     illustration_url: string | null;
@@ -162,10 +163,16 @@ export default function PetResultClient() {
           <div className="space-y-5">
             <Gauge icon="🐾" label="호흡 지수" desc="둘이 얼마나 동기화됐는지" value={data.sync_score} />
             <Gauge icon="👑" label="집안 실세 지수" desc={data.ruler_score >= 50 ? `${data.pet.name}가 우위` : "네가 우위"} value={data.ruler_score} />
-            <Gauge icon="🐶" label="랜선집사 지수" desc="네가 얘한테 미친 정도" value={data.lover_score} />
             <Gauge icon="⚡" label="사주 어긋남" desc="어디서 부딪히는지" value={data.conflict_score} inverted />
           </div>
         </section>
+
+        {/* 양방향 정 흐름 — 사랑 vs 충성 (v0.8) */}
+        <AffectionFlow
+          lover={data.lover_score}
+          loyalty={data.loyalty_score}
+          petName={data.pet.name}
+        />
 
         {/* 사용설명서 — 펫 사양표 */}
         <section className="rounded-[24px] bg-background-tertiary p-6">
@@ -218,6 +225,19 @@ export default function PetResultClient() {
             </div>
           ))}
         </section>
+
+        {/* 관계 시간성 — 펫 12운성 + 보호자 대운 (v0.8) */}
+        {result.futureLine && (
+          <section className="rounded-[24px] bg-background-tertiary p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-body-2 font-semibold text-text-secondary">📍 앞으로의 너희</h2>
+              <span className="text-caption text-text-tertiary">RELATIONSHIP TIMELINE</span>
+            </div>
+            <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
+              {result.futureLine}
+            </p>
+          </section>
+        )}
 
         {/* 종합 한 줄 — 펫 정체성 (emerald) */}
         <section className="rounded-[28px] bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent ring-1 ring-emerald-500/30 p-7 text-center">
@@ -300,6 +320,85 @@ function Gauge({ icon, label, desc, value, inverted = false }: GaugeProps) {
         <div
           className={`h-full ${color} rounded-full transition-[width] duration-700 ease-out`}
           style={{ width: `${displayValue}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────
+// 양방향 정 흐름 — 사랑(보호자) vs 충성(펫) 대비 (v0.8)
+// ────────────────────────────────────────────────────────
+
+function AffectionFlow({ lover, loyalty, petName }: { lover: number; loyalty: number; petName: string }) {
+  const gap = lover - loyalty;
+  const absGap = Math.abs(gap);
+
+  let verdict: string;
+  if (absGap <= 12) verdict = "양쪽이 비슷하게 빠져있어";
+  else if (gap > 0 && absGap < 30) verdict = `네가 조금 더 매달리는 중`;
+  else if (gap > 0) verdict = `네가 일방적으로 매달리는 중`;
+  else if (absGap < 30) verdict = `${petName}가 조금 더 의지하는 중`;
+  else verdict = `${petName}가 너 없으면 안 되는 중`;
+
+  return (
+    <section className="rounded-[24px] bg-background-tertiary p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-body-2 font-semibold text-text-secondary">사랑의 방향</h2>
+        <span className="text-caption text-text-tertiary">AFFECTION FLOW</span>
+      </div>
+
+      <div className="space-y-4">
+        <FlowBar
+          icon="🐶"
+          label="너의 사랑"
+          desc={`${petName}한테 매달리는 정도`}
+          value={lover}
+          align="left"
+          highlight={gap > 5}
+        />
+        <FlowBar
+          icon="🐾"
+          label={`${petName}의 충성`}
+          desc={`너에게 의지하는 정도`}
+          value={loyalty}
+          align="right"
+          highlight={gap < -5}
+        />
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-zinc-800/60">
+        <p className="text-body-1 text-text-primary text-center font-semibold">
+          {verdict}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function FlowBar({
+  icon, label, desc, value, align, highlight,
+}: {
+  icon: string; label: string; desc: string; value: number; align: "left" | "right"; highlight: boolean;
+}) {
+  const v = Math.max(0, Math.min(100, value));
+  const color = highlight ? "bg-emerald-500" : "bg-zinc-600";
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[16px]">{icon}</span>
+          <div>
+            <div className="text-body-1 text-text-primary font-semibold">{label}</div>
+            <div className="text-caption text-text-tertiary mt-0.5">{desc}</div>
+          </div>
+        </div>
+        <div className={`text-[22px] font-bold tabular-nums font-aggro ${highlight ? "text-emerald-400" : "text-text-primary"}`}>{v}</div>
+      </div>
+      <div className={`h-2 bg-background-secondary rounded-full overflow-hidden ${align === "right" ? "flex flex-row-reverse" : ""}`}>
+        <div
+          className={`h-full ${color} rounded-full transition-[width] duration-700 ease-out`}
+          style={{ width: `${v}%` }}
         />
       </div>
     </div>

@@ -11,6 +11,8 @@ import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { calculateSaju, enrichSajuData, formatEnrichedSajuText } from "@/lib/utils/saju";
+import { calculateFortune } from "@/lib/utils/saju-fortune";
+import { buildFortunePromptBlock } from "@/lib/analysis";
 import { calculatePetEnrichedSaju, extractPetCompatSignals, buildPetSajuText } from "@/lib/pet-compat-saju";
 import { computePetCompatScores } from "@/lib/pet-compat-scoring";
 import { runPetCompatAnalysis } from "@/lib/pet-compat";
@@ -84,7 +86,28 @@ export async function POST(request: NextRequest) {
     }
 
     const ownerEnriched = enrichSajuData(ownerSajuData, { isTimeUnknown: Boolean(owner.unknownBirthTime) });
-    const ownerSajuText = formatEnrichedSajuText(ownerEnriched);
+    let ownerSajuText = formatEnrichedSajuText(ownerEnriched);
+
+    // 보호자 대운/세운 추가 (관계 시간성 카피 생성용)
+    try {
+      const fortune = await calculateFortune({
+        birthYear: Number(owner.birthYear),
+        birthMonth: Number(owner.birthMonth),
+        birthDay: Number(owner.birthDay),
+        birthHour: owner.unknownBirthTime ? undefined : Number(owner.birthHour || 12),
+        birthMinute: owner.unknownBirthTime ? undefined : Number(owner.birthMinute || 0),
+        gender: owner.gender,
+        birthLocation: owner.birthLocation,
+        yearPillar: ownerSajuData.year.heavenlyStem + ownerSajuData.year.earthlyBranch,
+        monthPillar: ownerSajuData.month.heavenlyStem + ownerSajuData.month.earthlyBranch,
+        dayPillar: ownerSajuData.day.heavenlyStem + ownerSajuData.day.earthlyBranch,
+        dayMasterStem: ownerSajuData.day.heavenlyStem,
+      } as any);
+      const fortuneBlock = buildFortunePromptBlock(fortune, Number(owner.birthYear));
+      if (fortuneBlock) ownerSajuText += fortuneBlock;
+    } catch (e) {
+      console.warn("[PET_COMPAT] owner fortune calc failed (시간성 카피 약화):", (e as any)?.message);
+    }
 
     // 4. 펫 사주 계산
     const petCalc = await calculatePetEnrichedSaju(pet);
@@ -179,6 +202,7 @@ export async function POST(request: NextRequest) {
         sync_score: scores.sync,
         ruler_score: scores.ruler,
         lover_score: scores.lover,
+        loyalty_score: scores.loyalty,
         conflict_score: scores.conflict,
         full_result: llmResult.result,
         order_id: body.orderId || null,

@@ -9,7 +9,7 @@ export const getSharedPetCompat = cache(async (id: string) => {
     .from("pet_compat_results")
     .select(`
       id, label_grade, label_text, composite_score,
-      sync_score, ruler_score, lover_score, conflict_score,
+      sync_score, ruler_score, lover_score, loyalty_score, conflict_score,
       illustration_key, illustration_url,
       full_result, scoring_version, created_at,
       pet:pet_profiles (id, name, species, breed)

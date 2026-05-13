@@ -18,13 +18,14 @@ interface Props {
   syncScore: number;
   rulerScore: number;
   loverScore: number;
+  loyaltyScore: number;
   conflictScore: number;
   illustrationUrl: string | null;
 }
 
 export default function SharePetCompatClient({
   result, petName, petSpecies, compositeScore, labelGrade, labelText,
-  syncScore, rulerScore, loverScore, conflictScore, illustrationUrl,
+  syncScore, rulerScore, loverScore, loyaltyScore, conflictScore, illustrationUrl,
 }: Props) {
   const router = useRouter();
   const grade = getGradeColor(labelGrade);
@@ -79,16 +80,30 @@ export default function SharePetCompatClient({
           </div>
         </section>
 
-        {/* 4지표 — 압축 표시 */}
+        {/* 5지표 — 압축 표시 */}
         <section className="rounded-[24px] bg-background-tertiary p-6">
           <h2 className="text-body-2 font-semibold text-text-secondary mb-5">관계 지표</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <Mini icon="🐾" label="호흡" value={syncScore} />
             <Mini icon="👑" label="실세" value={rulerScore} />
-            <Mini icon="🐶" label="집사" value={loverScore} />
             <Mini icon="⚡" label="어긋남" value={conflictScore} inverted />
+            <Mini icon="🐶" label="너의 사랑" value={loverScore} highlight={loverScore > loyaltyScore + 5} />
+            <Mini icon="🐾" label={`${petName} 충성`} value={loyaltyScore} highlight={loyaltyScore > loverScore + 5} />
           </div>
         </section>
+
+        {/* 관계 시간성 (v0.8) */}
+        {result.futureLine && (
+          <section className="rounded-[24px] bg-background-tertiary p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-body-2 font-semibold text-text-secondary">📍 앞으로의 너희</h2>
+              <span className="text-caption text-text-tertiary">RELATIONSHIP TIMELINE</span>
+            </div>
+            <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
+              {result.futureLine}
+            </p>
+          </section>
+        )}
 
         {/* 종합 한 줄 — 펫 정체성 emerald */}
         <section className="rounded-[28px] bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent ring-1 ring-emerald-500/30 p-7 text-center">
@@ -144,16 +159,19 @@ export default function SharePetCompatClient({
   );
 }
 
-function Mini({ icon, label, value, inverted = false }: { icon: string; label: string; value: number; inverted?: boolean }) {
+function Mini({ icon, label, value, inverted = false, highlight = false }: { icon: string; label: string; value: number; inverted?: boolean; highlight?: boolean }) {
   const tone = inverted ? 100 - value : value;
-  const color = tone >= 70 ? "text-emerald-400" : tone >= 45 ? "text-amber-400" : "text-rose-400";
+  const color = highlight ? "text-emerald-400"
+    : tone >= 70 ? "text-emerald-400"
+    : tone >= 45 ? "text-amber-400"
+    : "text-rose-400";
   return (
-    <div className="bg-background-secondary rounded-2xl p-4">
+    <div className={`bg-background-secondary rounded-2xl p-4 ${highlight ? "ring-1 ring-emerald-500/30" : ""}`}>
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[14px]">{icon}</span>
-        <span className="text-caption text-text-tertiary">{label}</span>
+        <span className="text-caption text-text-tertiary truncate">{label}</span>
       </div>
-      <div className={`text-[28px] font-bold tabular-nums ${color} font-aggro`}>{value}</div>
+      <div className={`text-[24px] font-bold tabular-nums ${color} font-aggro`}>{value}</div>
     </div>
   );
 }

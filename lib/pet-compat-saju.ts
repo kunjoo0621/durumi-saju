@@ -99,6 +99,7 @@ function strengthToTier(level: string): Strength {
 }
 
 // 십성 배열에서 그룹별 개수 집계
+// tenStars 요소 형식: "정인(正印)", "식신(食神)" 같이 한자 병기 — startsWith로 매칭
 function countTenStarGroups(tenStars: string[]): {
   inseong: number;     // 정인 + 편인
   sikSang: number;     // 식신 + 상관
@@ -108,11 +109,11 @@ function countTenStarGroups(tenStars: string[]): {
 } {
   const counts = { inseong: 0, sikSang: 0, bigeob: 0, jaesong: 0, gwanseong: 0 };
   for (const ts of tenStars) {
-    if (ts === "정인" || ts === "편인") counts.inseong++;
-    else if (ts === "식신" || ts === "상관") counts.sikSang++;
-    else if (ts === "비견" || ts === "겁재") counts.bigeob++;
-    else if (ts === "정재" || ts === "편재") counts.jaesong++;
-    else if (ts === "정관" || ts === "편관") counts.gwanseong++;
+    if (ts.startsWith("정인") || ts.startsWith("편인")) counts.inseong++;
+    else if (ts.startsWith("식신") || ts.startsWith("상관")) counts.sikSang++;
+    else if (ts.startsWith("비견") || ts.startsWith("겁재")) counts.bigeob++;
+    else if (ts.startsWith("정재") || ts.startsWith("편재")) counts.jaesong++;
+    else if (ts.startsWith("정관") || ts.startsWith("편관")) counts.gwanseong++;
   }
   return counts;
 }
@@ -127,7 +128,10 @@ function getYearBranchHanja(pillars: { year: string }): string {
   return pillars.year.length >= 2 ? pillars.year.slice(1, 2) : "";
 }
 
-// 양쪽 일지 합/충/형 검출 (간단 룰)
+// ────────────────────────────────────────────────────────
+// 12지 관계 매트릭스 (정통 명리)
+// ────────────────────────────────────────────────────────
+
 const HAP_PAIRS: [string, string][] = [
   ["子", "丑"], ["寅", "亥"], ["卯", "戌"], ["辰", "酉"], ["巳", "申"], ["午", "未"],
 ];
@@ -138,29 +142,75 @@ const HYUNG_GROUPS: string[][] = [
   ["寅", "巳", "申"],   // 인사신 삼형
   ["丑", "戌", "未"],   // 축술미 삼형
   ["子", "卯"],         // 자묘 무례지형
-  ["辰"], ["午"], ["酉"], ["亥"],  // 자형 (같은 글자 만나면)
+  ["辰"], ["午"], ["酉"], ["亥"],  // 자형 (같은 글자)
+];
+const WONJIN_PAIRS: [string, string][] = [
+  ["子", "未"], ["丑", "午"], ["寅", "酉"], ["卯", "申"], ["辰", "亥"], ["巳", "戌"],
+];
+const SAMHAP_GROUPS: string[][] = [
+  ["申", "子", "辰"],   // 수국
+  ["亥", "卯", "未"],   // 목국
+  ["寅", "午", "戌"],   // 화국
+  ["巳", "酉", "丑"],   // 금국
+];
+const BANGHAP_GROUPS: string[][] = [
+  ["寅", "卯", "辰"],   // 동방 목
+  ["巳", "午", "未"],   // 남방 화
+  ["申", "酉", "戌"],   // 서방 금
+  ["亥", "子", "丑"],   // 북방 수
 ];
 
-function dayBranchRelation(a: string, b: string): { hap: boolean; chung: boolean; hyung: boolean } {
-  if (!a || !b) return { hap: false, chung: false, hyung: false };
-  const hap = HAP_PAIRS.some(([x, y]) => (x === a && y === b) || (y === a && x === b));
-  const chung = CHUNG_PAIRS.some(([x, y]) => (x === a && y === b) || (y === a && x === b));
-  let hyung = false;
+function pairIn(pairs: [string, string][], a: string, b: string): boolean {
+  return pairs.some(([x, y]) => (x === a && y === b) || (y === a && x === b));
+}
+function inSameGroup(groups: string[][], a: string, b: string): boolean {
+  if (!a || !b || a === b) return false;
+  return groups.some((g) => g.includes(a) && g.includes(b));
+}
+function isHyung(a: string, b: string): boolean {
+  if (!a || !b) return false;
   for (const group of HYUNG_GROUPS) {
-    if (group.length === 1 && a === b && a === group[0]) { hyung = true; break; }
-    if (group.length > 1 && group.includes(a) && group.includes(b) && a !== b) { hyung = true; break; }
+    if (group.length === 1 && a === b && a === group[0]) return true;
+    if (group.length > 1 && group.includes(a) && group.includes(b) && a !== b) return true;
   }
-  return { hap, chung, hyung };
+  return false;
 }
 
-// 도화살 / 홍염살 보유 검출 (shinsal에서)
-function hasDohwa(shinsal: any): boolean {
+// ────────────────────────────────────────────────────────
+// 일간 오행 관계 (생조·상극·비화)
+// 목→화, 화→토, 토→금, 금→수, 수→목 (生)
+// 목↔토, 토↔수, 수↔화, 화↔금, 금↔목 (剋)
+// ────────────────────────────────────────────────────────
+
+const SAENG_MAP: Record<string, string> = {
+  목: "화", 화: "토", 토: "금", 금: "수", 수: "목",
+};
+const GEUK_MAP: Record<string, string> = {
+  목: "토", 토: "수", 수: "화", 화: "금", 금: "목",
+};
+
+import type { OhaengRelation } from "./pet-compat-scoring";
+
+function getOhaengRelation(ownerElement: string, petElement: string): OhaengRelation {
+  if (!ownerElement || !petElement) return "none";
+  if (ownerElement === petElement) return "bihwa";
+  if (SAENG_MAP[ownerElement] === petElement) return "saeng_to_pet";   // 보호자가 펫을 생함
+  if (SAENG_MAP[petElement] === ownerElement) return "saeng_to_owner"; // 펫이 보호자를 생함
+  if (GEUK_MAP[ownerElement] === petElement) return "geuk_to_pet";     // 보호자가 펫을 극함
+  if (GEUK_MAP[petElement] === ownerElement) return "geuk_to_owner";   // 펫이 보호자를 극함
+  return "none";
+}
+
+// ────────────────────────────────────────────────────────
+// 신살 검출 (도화·홍염·역마·천을귀인)
+// ────────────────────────────────────────────────────────
+
+function hasShinsalKey(shinsal: any, keyword: string): boolean {
   if (!shinsal) return false;
-  // shinsal 구조에 따라 도화/홍염 키 확인
   const keys = Object.keys(shinsal);
-  return keys.some(k =>
-    k.includes("도화") || k.includes("홍염") ||
-    (typeof shinsal[k] === "string" && (shinsal[k].includes("도화") || shinsal[k].includes("홍염")))
+  return keys.some((k) =>
+    k.includes(keyword) ||
+    (typeof shinsal[k] === "string" && shinsal[k].includes(keyword))
   );
 }
 
@@ -176,6 +226,7 @@ export function extractPetCompatSignals(
   const ownerCounts = countTenStarGroups(ownerEnriched.tenStars);
   const ownerStrength = strengthToTier(ownerEnriched.strength?.result || "중화신강");
   const ownerDayBranch = getDayBranchHanja(ownerEnriched.pillars);
+  const ownerDayMasterElement = ownerEnriched.dayMaster?.element || "";
 
   // 펫 사주 미계산 시 — fallback (균형 + 일반 기본값)
   if (!petEnriched) {
@@ -184,40 +235,83 @@ export function extractPetCompatSignals(
       ownerInseong: ownerCounts.inseong,
       ownerSikSang: ownerCounts.sikSang,
       ownerBigeob: ownerCounts.bigeob,
+      ownerJaeseong: ownerCounts.jaesong,
+      ownerGwanseong: ownerCounts.gwanseong,
       ownerDayBranch,
+      ownerDayMasterElement,
       petStrength: "balanced",
+      petInseong: 0,
+      petSikSang: 0,
+      petBigeob: 0,
+      petJaeseong: 0,
+      petGwanseong: 0,
       petDayBranch: "",
       petYearBranch: "",
+      petDayMasterElement: "",
       petHasDohwa: false,
+      petHasYeokma: false,
+      petHasCheonEulGwiin: false,
+      petTwelveStage: "",
       petBirthTier: pet.birthTier,
       dayBranchHap: false,
+      dayBranchSamhap: false,
+      dayBranchBanghap: false,
       dayBranchChung: false,
       dayBranchHyeong: false,
+      dayBranchWonjin: false,
+      dayMasterRelation: "none",
+      yearBranchHap: false,
+      yearBranchChung: false,
       petSpecies: pet.species,
     };
   }
 
+  const petCounts = countTenStarGroups(petEnriched.tenStars);
   const petStrength = strengthToTier(petEnriched.strength?.result || "중화신강");
   const petDayBranch = getDayBranchHanja(petEnriched.pillars);
   const petYearBranch = getYearBranchHanja(petEnriched.pillars);
-  const petHasDohwa = hasDohwa(petEnriched.shinsal);
+  const petDayMasterElement = petEnriched.dayMaster?.element || "";
 
-  const relation = dayBranchRelation(ownerDayBranch, petDayBranch);
+  const ownerYearBranch = getYearBranchHanja(ownerEnriched.pillars);
 
   return {
     ownerStrength,
     ownerInseong: ownerCounts.inseong,
     ownerSikSang: ownerCounts.sikSang,
     ownerBigeob: ownerCounts.bigeob,
+    ownerJaeseong: ownerCounts.jaesong,
+    ownerGwanseong: ownerCounts.gwanseong,
     ownerDayBranch,
+    ownerDayMasterElement,
+
     petStrength,
+    petInseong: petCounts.inseong,
+    petSikSang: petCounts.sikSang,
+    petBigeob: petCounts.bigeob,
+    petJaeseong: petCounts.jaesong,
+    petGwanseong: petCounts.gwanseong,
     petDayBranch,
     petYearBranch,
-    petHasDohwa,
+    petDayMasterElement,
+    petHasDohwa: hasShinsalKey(petEnriched.shinsal, "도화") || hasShinsalKey(petEnriched.shinsal, "홍염"),
+    petHasYeokma: hasShinsalKey(petEnriched.shinsal, "역마"),
+    petHasCheonEulGwiin: hasShinsalKey(petEnriched.shinsal, "천을"),
+    petTwelveStage: petEnriched.twelveStages?.day?.korean || "",
     petBirthTier: pet.birthTier,
-    dayBranchHap: relation.hap,
-    dayBranchChung: relation.chung,
-    dayBranchHyeong: relation.hyung,
+
+    // 관계 신호 — 일지 기준
+    dayBranchHap: pairIn(HAP_PAIRS, ownerDayBranch, petDayBranch),
+    dayBranchSamhap: inSameGroup(SAMHAP_GROUPS, ownerDayBranch, petDayBranch),
+    dayBranchBanghap: inSameGroup(BANGHAP_GROUPS, ownerDayBranch, petDayBranch),
+    dayBranchChung: pairIn(CHUNG_PAIRS, ownerDayBranch, petDayBranch),
+    dayBranchHyeong: isHyung(ownerDayBranch, petDayBranch),
+    dayBranchWonjin: pairIn(WONJIN_PAIRS, ownerDayBranch, petDayBranch),
+    dayMasterRelation: getOhaengRelation(ownerDayMasterElement, petDayMasterElement),
+
+    // 연지(띠) 신호
+    yearBranchHap: pairIn(HAP_PAIRS, ownerYearBranch, petYearBranch),
+    yearBranchChung: pairIn(CHUNG_PAIRS, ownerYearBranch, petYearBranch),
+
     petSpecies: pet.species,
   };
 }

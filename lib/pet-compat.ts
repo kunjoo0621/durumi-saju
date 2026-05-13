@@ -62,6 +62,7 @@ export interface PetCompatScores {
   sync: number;
   ruler: number;
   lover: number;
+  loyalty: number;          // v0.8 — 펫 → 보호자 따름·의지
   conflict: number;
 }
 
@@ -91,6 +92,7 @@ export interface PetCompatResult {
     prediction: string;
   }>;
 
+  futureLine: string;          // v0.8 — 관계의 시간성 (펫 12운성 + 보호자 대운으로 미래 3~5년)
   finalLine: string;
   disclaimer?: string;
 }
@@ -103,7 +105,9 @@ export const PET_COMPAT_SYSTEM_PROMPT = `너는 '사주보는 두루미'의 반�
 이 서비스의 정체성: "위로하는 펫 점집"이 아니라 "만세력 데이터로 너와 네 동물의 상성을 채점하는 리포트".
 보호자에게는 위로 없이 직설. 펫에게는 비판이 아니라 사랑의 변형 — 귀엽게 놀리기.
 
-★ 중요: 점수(composite/sync/ruler/lover/conflict)와 등급(grade)은 서버에서 이미 계산되어 입력으로 주어진다. 너는 이 점수를 절대 바꾸지 마. JSON 출력 시 입력받은 점수를 그대로 옮겨라. 너의 일은 라벨/표현/시각화 텍스트 생성만.
+★ 중요: 점수(composite/sync/ruler/lover/conflict), 등급(grade), **라벨 텍스트(labelText)**는 서버에서 이미 계산되어 입력으로 주어진다.
+너는 이 값들을 절대 바꾸지 마. JSON 출력 시 그대로 옮겨라.
+너의 일은 헤드라인/사용설명서/판정/시뮬레이션/종합한줄 등 텍스트 생성만.
 
 ────────────────────────────────
 [톤 분리 — 가장 중요]
@@ -205,6 +209,32 @@ manual.spec 필드는 다음 형식: "[나이], [품종], [연주 12지](띠 한
 - "0세, 시고르자브종, (띠 미상, 가족 된 날 기준)"
 
 ────────────────────────────────
+[📍 미래 카피 (futureLine) — 관계의 시간성]
+
+펫 12운성 + 보호자 현재 대운/세운 데이터를 활용해 3~5년 후 카피 작성.
+
+★ 형식: 3~4문장
+- 1문장: 지금 시점 (펫 12운성 상태 + 보호자 대운 키워드)
+- 2문장: 2~3년 후 변화
+- 3문장: 가슴 후벼파는 한 줄 (Bittersweet truth — 펫 수명 자각 + 책임감)
+
+★ 톤
+- 감상적이되 우울하지 않게
+- 보호자가 "지금 더 잘해야겠다" 마음 들게
+- 의료/병/죽음 직접 언급 금지 (간접만)
+- "함께한 시간" / "옆에 있을 시간" 같은 표현 권장
+
+★ 예시 (참고만, 그대로 X)
+"지금 쭈는 12운성 묘(墓)에 들어와 있어. 노년 안정기지만 너에게 더 의지하는 때야.
+3년 후 너는 새 대운으로 들어가 변화가 와. 그때 쭈가 너의 안식처가 돼.
+함께한 시간이 길수록 너희만의 언어가 깊어진다. 지금 보내는 하루가 그 언어의 한 마디야."
+
+★ 금지
+- "쭈가 곧 죽어" / "이별 준비" 같은 직접 표현
+- "수명" / "병" 직접 언급
+- 과장된 신파
+
+────────────────────────────────
 [시뮬레이션 변형 룰 — 단조로움 방지]
 
 3개 시뮬레이션의 도입부를 모두 다른 구조로 시작하라:
@@ -220,7 +250,7 @@ manual.spec 필드는 다음 형식: "[나이], [품종], [연주 12지](띠 한
 {
   "label": {
     "grade": "S"|"A"|"B"|"C"|"D",     // 입력값 그대로
-    "text": string,                    // 등급에 맞는 라벨 (위 룰 따름)
+    "text": string,                    // 입력값 그대로 (서버 결정 labelText)
     "headline": string                 // 한 줄 진단 (25~40자, viral 패턴 1개 이상)
   },
   "scores": {                          // ★ 입력값 그대로 옮길 것. 절대 변경 금지.
@@ -228,6 +258,7 @@ manual.spec 필드는 다음 형식: "[나이], [품종], [연주 12지](띠 한
     "sync": number,
     "ruler": number,
     "lover": number,
+    "loyalty": number,
     "conflict": number
   },
   "manual": {
@@ -246,6 +277,7 @@ manual.spec 필드는 다음 형식: "[나이], [품종], [연주 12지](띠 한
     { "scene": "...", "prediction": string },
     { "scene": "...", "prediction": string }
   ],
+  "futureLine": string,                // 관계의 시간성 (3~4문장, 펫 12운성 + 보호자 대운 기반)
   "finalLine": string,                 // 종합 한 줄 (25~50자, 공유용)
   "disclaimer": string                 // D등급일 때만 (다른 등급은 빈 문자열)
 }
@@ -331,16 +363,24 @@ ${ownerSajuText}
 [반려동물 사주 (만세력)]
 ${petSajuText}
 
-[★ 서버 결정 점수 — 절대 변경 금지, JSON에 그대로 옮겨라]
+[★ 서버 결정값 — 절대 변경 금지, JSON에 그대로 옮겨라]
 - composite: ${precomputedScores.composite}
 - sync (🐾 호흡): ${precomputedScores.sync}
-- ruler (👑 집안 실세): ${precomputedScores.ruler}
-- lover (🐶 랜선집사): ${precomputedScores.lover}
+- ruler (👑 집안 실세, 50=동등 100=펫압도): ${precomputedScores.ruler}
+- lover (🐶 보호자 → 펫 사랑): ${precomputedScores.lover}
+- loyalty (🐾 펫 → 보호자 충성): ${precomputedScores.loyalty}
 - conflict (⚡ 사주 어긋남): ${precomputedScores.conflict}
 - grade: ${precomputedScores.grade}
+- labelText: "${precomputedScores.labelText}"
+
+★ 양방향 정 흐름 (lover vs loyalty)
+- lover - loyalty 차이가 양수면 보호자가 더 매달림 → 보호자 판정/사용설명서/시뮬에 "네가 더 빠져있다" 톤
+- 음수면 펫이 더 의지함 → "쭈가 너 없으면 안 된다" 톤
+- 차이 작으면 → "양쪽이 비슷하게 빠진다" 톤
 
 위 입력값을 100% 반영해서 시스템 프롬프트의 JSON 스키마에 맞춰 결과만 출력해.
-점수는 위 값 그대로 옮기고, 너는 라벨/표현/시각화만 생성한다.
+점수·등급·라벨은 위 값 그대로 옮기고, 너는 헤드라인/사용설명서/판정/시뮬/종합 등 텍스트만 생성한다.
+헤드라인은 labelText를 부연 설명하는 25~40자 한 줄로 만들어라.
 `.trim();
 }
 
@@ -369,15 +409,17 @@ export async function runPetCompatAnalysis(
   try {
     const parsed = JSON.parse(result.text) as PetCompatResult;
 
-    // ★ 안전장치: LLM이 점수 바꿨으면 강제 덮어쓰기
+    // ★ 안전장치: LLM이 서버 결정값 바꿨으면 강제 덮어쓰기
     parsed.scores = {
       composite: input.precomputedScores.composite,
       sync: input.precomputedScores.sync,
       ruler: input.precomputedScores.ruler,
       lover: input.precomputedScores.lover,
+      loyalty: input.precomputedScores.loyalty,
       conflict: input.precomputedScores.conflict,
     };
     parsed.label.grade = input.precomputedScores.grade;
+    parsed.label.text = input.precomputedScores.labelText;
 
     return { ok: true, result: parsed, rawText: result.text };
   } catch (err: any) {
