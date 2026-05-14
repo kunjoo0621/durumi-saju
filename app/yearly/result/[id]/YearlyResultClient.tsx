@@ -162,12 +162,22 @@ export default function YearlyResultClient({ resultId }: Props) {
     );
   }
 
-  return <YearlyResultBody result={result} onBack={() => router.push("/menu")} />;
+  return <YearlyResultBody result={result} onBack={() => router.push("/menu")} resultId={resultId} />;
 }
 
 /* ─────────── 결과 본문 — 토스 톤 ─────────── */
 
-export function YearlyResultBody({ result, onBack }: { result: YearlyResult; onBack: () => void }) {
+export function YearlyResultBody({
+  result,
+  onBack,
+  resultId,
+  shareMode,
+}: {
+  result: YearlyResult;
+  onBack: () => void;
+  resultId?: string;
+  shareMode?: boolean;
+}) {
   const router = useRouter();
 
   return (
@@ -203,6 +213,8 @@ export function YearlyResultBody({ result, onBack }: { result: YearlyResult; onB
           <FooterSection
             targetYear={result.yearlyMeta.targetYear}
             onMenu={() => router.push("/menu")}
+            resultId={resultId}
+            shareMode={shareMode}
           />
         </div>
       </main>
@@ -668,13 +680,31 @@ function DetailSection({ sections, targetYear }: { sections: YearlyResult["secti
 function FooterSection({
   targetYear,
   onMenu,
+  resultId,
+  shareMode,
 }: {
   targetYear: number;
   onMenu: () => void;
+  resultId?: string;
+  shareMode?: boolean;
 }) {
+  // share 페이지: 공유 버튼 대신 "나도 운세 보기" CTA로 yearly 진입 유도
+  if (shareMode) {
+    return (
+      <section className="space-y-3 pt-6">
+        <a
+          href="/yearly"
+          className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold flex items-center justify-center"
+        >
+          나도 {targetYear}년 운세 보기
+        </a>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-3 pt-6">
-      <ShareButton targetYear={targetYear} />
+      {resultId && <ShareButton targetYear={targetYear} resultId={resultId} />}
       <button
         onClick={onMenu}
         className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
@@ -689,13 +719,16 @@ function FooterSection({
 
 type ShareButtonProps = {
   targetYear: number;
+  resultId: string;
 };
 
-function ShareButton({ targetYear }: ShareButtonProps) {
+function ShareButton({ targetYear, resultId }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
-    const url = typeof window !== "undefined" ? window.location.origin + "/yearly" : "";
+    const url = typeof window !== "undefined"
+      ? `${window.location.origin}/yearly/result/share/${resultId}`
+      : "";
     const text = `${targetYear}년 내 사주 운세 풀이 — 사주보는 두루미`;
 
     // Web Share API 지원 (모바일 Safari·Chrome) → 시스템 공유 시트 (카카오톡 포함)
