@@ -33,8 +33,8 @@ const IPCHUN_LABEL = formatIpchunLabel(YEAR_RESOLUTION.ipchunDate);
 
 const CONFIRM_STEPS = [
   { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: "올해 세운과 원국 상호작용을 분석하고 있어", delay: 8_000 },
-  { message: "올해 흐름을 작성하고 있어", delay: 25_000 },
+  { message: `${TARGET_YEAR}년 세운과 원국 상호작용을 분석하고 있어`, delay: 8_000 },
+  { message: `${TARGET_YEAR}년의 흐름을 작성하고 있어`, delay: 25_000 },
   { message: "결과를 정리하고 있어", delay: 50_000 },
 ];
 
@@ -234,7 +234,7 @@ export default function YearlyEntryClient() {
               {TARGET_YEAR}년 운세
             </h1>
             <p className="text-body-2 text-text-secondary">
-              내 사주 위에 올해 세운이 얹혀 만든 한 해 한정 풀이
+              내 사주 위에 {TARGET_YEAR}년 세운이 얹힌 한 해 풀이
             </p>
             {YEAR_RESOLUTION.beforeIpchun && (
               <p className="text-[12px] text-text-tertiary pt-2 leading-relaxed">
@@ -252,7 +252,7 @@ export default function YearlyEntryClient() {
           {!isAuthenticated && status !== "loading" ? (
             <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 text-center space-y-4">
               <p className="text-body-2 text-text-secondary">
-                로그인하면 본인 사주를 바탕으로 올해 운세를 풀어줘.
+                로그인하면 본인 사주를 바탕으로 {TARGET_YEAR}년 운세를 풀어줘.
               </p>
               <button
                 onClick={() => signIn("kakao", { callbackUrl: "/yearly" })}
@@ -276,7 +276,7 @@ export default function YearlyEntryClient() {
           ) : !primary ? (
             <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 text-center space-y-4">
               <p className="text-body-2 text-text-secondary">
-                올해의 운세는 본인 사주를 기반으로 풀어줘.
+                {TARGET_YEAR}년 운세는 본인 사주를 기반으로 풀어줘.
                 <br />
                 먼저 내 사주를 한 번 봐야 해.
               </p>
