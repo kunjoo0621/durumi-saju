@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
-import {
-  Warning,
-  Sun,
-  Cloud,
-  CloudRain,
-  CloudLightning,
-} from "@phosphor-icons/react";
+import { Warning } from "@phosphor-icons/react";
 import SectionList from "@/components/result/SectionList";
 import type { YearlyResult } from "@/lib/yearly-prompt";
 
@@ -171,293 +165,277 @@ export default function YearlyResultClient({ resultId }: Props) {
   return <YearlyResultBody result={result} onBack={() => router.push("/menu")} />;
 }
 
-/* ─────────── 결과 본문 ─────────── */
+/* ─────────── 결과 본문 — 토스 톤 ─────────── */
 
 export function YearlyResultBody({ result, onBack }: { result: YearlyResult; onBack: () => void }) {
   const router = useRouter();
-  const totalChars = useMemo(
-    () => result.sections.reduce((s, sec) => s + sec.content.length, 0),
-    [result.sections],
-  );
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
       <Header showBack sticky onBack={onBack} />
 
       <main className="flex-1 px-5 pb-20">
-        <div className="max-w-[640px] mx-auto pt-8 space-y-8 durumi-stagger">
-          {/* Hero 시그니처 카드 — 토스풍 */}
-          <HeroCard
+        <div className="max-w-[640px] mx-auto pt-6 space-y-4 durumi-stagger">
+          {/* 1. 올해 운세 — Hero (타이틀·한해 weather·키워드·사주메타·행운·전망) */}
+          <YearOverviewSection
             targetYear={result.yearlyMeta.targetYear}
-            title={result.tier.title}
-            pillarKorean={result.yearlyMeta.pillarKorean}
-            tenStar={result.yearlyMeta.tenStar}
-            twelveStage={result.yearlyMeta.twelveStage}
-            napumKorean={result.yearlyMeta.napumKorean}
+            tier={result.tier}
+            yearlyMeta={result.yearlyMeta}
+            monthly={result.monthlyFlow}
             keywords={result.yearlyKeywords}
+            luckyMeta={result.luckyMeta}
           />
 
-          {/* 프롤로그 — tier description */}
-          <section className="rounded-3xl bg-background-secondary px-8 py-9">
-            <div className="text-[11px] font-semibold tracking-[0.08em] text-text-tertiary uppercase mb-4">
-              한 줄 프롤로그
-            </div>
-            <p className="text-body-1 text-text-primary leading-relaxed whitespace-pre-line">
-              {result.tier.description}
-            </p>
-          </section>
-
-          {/* 행운 메타 — 색/방위/숫자/아이템 */}
-          {result.luckyMeta && (
-            <LuckyMetaCard meta={result.luckyMeta} targetYear={result.yearlyMeta.targetYear} />
-          )}
-
-          {/* 월별 흐름 */}
+          {/* 2. 월별 흐름 */}
           {result.monthlyFlow && result.monthlyFlow.length === 12 && (
-            <MonthlyFlowCard
+            <MonthlyFlowSection
               monthly={result.monthlyFlow}
               hints={result.monthlyHints}
               bigEvents={result.yearlyBigEvents}
+              targetYear={result.yearlyMeta.targetYear}
             />
           )}
 
-          {/* 섹션 6개 — 아코디언 */}
-          <section className="space-y-4 pt-3">
-            <h2 className="text-title-3 text-text-primary px-1">{result.yearlyMeta.targetYear}년의 흐름</h2>
-            <SectionList sections={result.sections} initialExpandedCount={1} />
-          </section>
+          {/* 4. 상세 풀이 — 6섹션 아코디언 */}
+          <DetailSection sections={result.sections} targetYear={result.yearlyMeta.targetYear} />
 
-          {/* 푸터 */}
-          <div className="space-y-3 pt-6">
-            <ShareButton targetYear={result.yearlyMeta.targetYear} />
-            <button
-              onClick={() => router.push("/menu")}
-              className="btn-secondary w-full h-[54px] rounded-2xl text-[15px] font-semibold"
-            >
-              메뉴로 가기
-            </button>
-            <p className="text-caption text-text-tertiary text-center pt-6">
-              이 분석은 AI를 활용한 참고 자료입니다.
-              <br />
-              실제 운명은 당신의 선택과 노력에 달려있습니다.
-            </p>
-            <p className="text-[11px] text-text-tertiary text-center opacity-40">
-              총 {totalChars.toLocaleString()}자
-            </p>
-          </div>
+          {/* 5. 푸터 — 공유 + 메뉴 */}
+          <FooterSection
+            targetYear={result.yearlyMeta.targetYear}
+            onMenu={() => router.push("/menu")}
+          />
         </div>
       </main>
     </div>
   );
 }
 
-/* ─────────── Hero 시그니처 카드 (토스풍) ─────────── */
+/* ─────────── 1. 올해 운세 — Hero + 행운 벤토 그리드 ─────────── */
 
-type HeroCardProps = {
+const GRADE_STYLE: Record<string, { bg: string; text: string }> = {
+  S: { bg: "bg-primary-rank-s/15",  text: "text-primary-rank-s" },
+  A: { bg: "bg-saju-wood/15",       text: "text-saju-wood-muted" },
+  B: { bg: "bg-saju-wood/15",       text: "text-saju-wood-muted" },
+  C: { bg: "bg-saju-earth/15",      text: "text-saju-earth-muted" },
+  D: { bg: "bg-background-tertiary", text: "text-text-secondary" },
+};
+
+// 한 해 weather 매핑 — 12개월 dominant mood 기반
+const YEAR_WEATHER: Record<string, { icon: string; label: string; color: string }> = {
+  강세: { icon: "/icons/weather/sun.svg",    label: "맑은 한 해",   color: "text-text-primary" },
+  보통: { icon: "/icons/weather/cloud.svg",  label: "흐림 우세",   color: "text-text-secondary" },
+  주의: { icon: "/icons/weather/rain.svg",   label: "비 자주",     color: "text-saju-earth-muted" },
+  위기: { icon: "/icons/weather/thunder.svg",label: "변동 큰 한 해", color: "text-saju-fire" },
+};
+
+function YearOverviewSection({
+  targetYear,
+  tier,
+  yearlyMeta,
+  monthly,
+  keywords,
+  luckyMeta,
+}: {
   targetYear: number;
-  title: string;
+  tier: YearlyResult["tier"];
+  yearlyMeta: YearlyResult["yearlyMeta"];
+  monthly: YearlyResult["monthlyFlow"] | null;
+  keywords?: string[] | null;
+  luckyMeta?: YearlyResult["luckyMeta"] | null;
+}) {
+  // 한 해 weather — 12개월 mood 분포 기반 임계값 판정
+  // 단순 max 카운트는 강세 4 / 보통 4 / 주의 2 / 위기 2 패턴(LLM 자연 분포)이 거의 모두
+  // "맑은 한 해"로 떨어지는 문제가 있어, 과반 임계값으로 결정.
+  const yearWeather = useMemo(() => {
+    if (!monthly || monthly.length === 0) return null;
+    const counts: Record<string, number> = { 강세: 0, 보통: 0, 주의: 0, 위기: 0 };
+    monthly.forEach((m) => {
+      counts[m.mood] = (counts[m.mood] ?? 0) + 1;
+    });
+    let dominant: string;
+    if (counts.강세 >= 6) dominant = "강세";
+    else if (counts.위기 >= 4) dominant = "위기";
+    else if (counts.주의 >= 4) dominant = "주의";
+    else dominant = "보통";
+    return YEAR_WEATHER[dominant] ?? YEAR_WEATHER["보통"];
+  }, [monthly]);
+
+  return (
+    <HeroBlock
+      targetYear={targetYear}
+      tier={tier}
+      pillarKorean={yearlyMeta.pillarKorean}
+      tenStar={yearlyMeta.tenStar}
+      twelveStage={yearlyMeta.twelveStage}
+      keywords={keywords}
+      luckyMeta={luckyMeta}
+      yearWeather={yearWeather}
+    />
+  );
+}
+
+/* Hero 블록 — 토스 톤
+ *
+ * 위계:
+ *   "2026년 운세"             ← 작은 라벨 + 등급 chip
+ *   {tier.title}              ← 진짜 hero (24px font-bold)
+ *   {tier.description}        ← 본문 (15px)
+ *   [keywords chips]
+ *   {사주 메타 한 줄}
+ */
+function HeroBlock({
+  targetYear,
+  tier,
+  pillarKorean,
+  tenStar,
+  twelveStage,
+  keywords,
+  luckyMeta,
+  yearWeather,
+}: {
+  targetYear: number;
+  tier: YearlyResult["tier"];
   pillarKorean: string;
   tenStar: string;
   twelveStage: string;
-  napumKorean?: string | null;
   keywords?: string[] | null;
-};
+  luckyMeta?: YearlyResult["luckyMeta"] | null;
+  yearWeather: { icon: string; label: string; color: string } | null;
+}) {
 
-function HeroCard({ targetYear, title, pillarKorean, tenStar, twelveStage, napumKorean, keywords }: HeroCardProps) {
+  // 활동 카테고리 item 동적 추출 (행운 정보용)
+  const activityPrimary = luckyMeta
+    ? (
+        luckyMeta.items.find((item) => /운동|산책|요가|수영|여행|등산|호흡|명상|유산소|이동/.test(item)) ??
+        luckyMeta.items[2] ??
+        luckyMeta.items[0]
+      )?.split("·")[0].trim() ?? ""
+    : "";
+
+  // 좌상단 glow — 올해 컬러(luckyMeta.color.primary)를 미세 tint로
+  const glowHex = luckyMeta?.color.primary ?? "#FFFFFF";
+
   return (
-    <section
-      className="relative rounded-3xl px-8 pt-10 pb-10 space-y-10 overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(135deg, rgb(28, 26, 32) 0%, rgb(20, 21, 26) 60%, rgb(18, 19, 24) 100%)",
-      }}
-    >
-      {/* 우상단 거대 연도 워터마크 (distinctive 시그니처) */}
-      <div
-        className="absolute -top-4 -right-3 text-[150px] font-black font-aggro leading-none pointer-events-none select-none tabular-nums"
-        style={{
-          color: "rgba(255, 62, 92, 0.06)",
-          letterSpacing: "-0.06em",
-        }}
-        aria-hidden
-      >
-        {targetYear}
-      </div>
-
-      <div className="relative space-y-10">
-        {/* 상단 메타 라인 */}
-        <div className="space-y-2">
-          <div className="text-[11px] font-semibold tracking-[0.12em] text-text-tertiary uppercase">
-            {targetYear} 운세
-          </div>
-          <div className="text-[14px] text-text-secondary">
-            {pillarKorean}년 · {tenStar}운
-          </div>
-        </div>
-
-        {/* 큰 헤드라인 */}
-        <h1 className="text-[30px] font-bold font-aggro text-text-primary leading-[1.35] tracking-[-0.01em]">
-          {title}
-        </h1>
-
-        {/* 올해의 키워드 3개 — 큰 chip */}
-        {keywords && keywords.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            {keywords.map((k, i) => (
-              <KeywordPill key={i} label={k} index={i} />
-            ))}
-          </div>
-        )}
-
-        {/* 하단 메타 — 작은 chip */}
-        <div className="flex items-center gap-2 flex-wrap pt-6 border-t border-white/5 -mx-8 px-8">
-          <MetaChip label={`12운성 ${twelveStage}`} />
-          {napumKorean && <MetaChip label={`납음 ${napumKorean}`} subtle />}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function KeywordPill({ label, index }: { label: string; index: number }) {
-  // 첫 키워드 강조, 나머지는 보조
-  const isPrimary = index === 0;
-  return (
-    <span
-      className={
-        isPrimary
-          ? "inline-flex items-center px-4 py-2 rounded-full text-[15px] font-bold text-text-primary bg-white/[0.08]"
-          : "inline-flex items-center px-4 py-2 rounded-full text-[14px] font-semibold text-text-secondary bg-white/[0.04]"
-      }
-    >
-      {label}
-    </span>
-  );
-}
-
-function MetaChip({ label, subtle = false }: { label: string; subtle?: boolean }) {
-  return (
-    <span
-      className={
-        subtle
-          ? "inline-flex items-center px-2.5 py-1 rounded-full text-[11px] text-text-tertiary bg-white/[0.03]"
-          : "inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium text-text-secondary bg-white/[0.05]"
-      }
-    >
-      {label}
-    </span>
-  );
-}
-
-/* ─────────── 행운 메타 카드 ─────────── */
-
-type LuckyMetaCardProps = {
-  meta: NonNullable<YearlyResult["luckyMeta"]>;
-  targetYear: number;
-};
-
-function LuckyMetaCard({ meta, targetYear }: LuckyMetaCardProps) {
-  return (
-    <section className="space-y-4">
-      <div className="flex items-baseline justify-between px-1">
-        <h2 className="text-title-3 text-text-primary">{targetYear}년의 행운</h2>
-        <span className="text-[12px] text-text-tertiary">
-          용신 {meta.yongshin}
+    <div className="rounded-3xl p-6 relative overflow-hidden bg-background-secondary">
+      {/* 라벨 + 한 해 weather chip (등급 대신 일기예보 컨셉) */}
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <span className="text-[13px] font-semibold text-text-tertiary tabular-nums">
+          {targetYear}년 운세
         </span>
-      </div>
-
-      <div className="rounded-3xl border border-white/[0.06] divide-y divide-white/5">
-        {/* 색 */}
-        <div className="flex items-center justify-between px-7 py-5">
-          <span className="text-[13px] text-text-tertiary">색</span>
-          <div className="flex items-center gap-2">
-            <span
-              className="w-3 h-3 rounded-full"
-              style={{ background: meta.color.primary }}
+        {yearWeather && (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-background-tertiary shrink-0">
+            <img
+              src={yearWeather.icon}
+              alt=""
               aria-hidden
+              style={{ width: "20px", height: "20px" }}
             />
-            <span className="text-[14px] text-text-primary font-medium">{meta.color.korean}</span>
-          </div>
-        </div>
-
-        {/* 방위 */}
-        <div className="flex items-center justify-between px-7 py-5">
-          <span className="text-[13px] text-text-tertiary">방위</span>
-          <span className="text-[14px] text-text-primary font-medium">
-            {meta.direction.korean}
-          </span>
-        </div>
-
-        {/* 숫자 */}
-        <div className="flex items-center justify-between px-7 py-5">
-          <span className="text-[13px] text-text-tertiary">숫자</span>
-          <span className="text-[14px] text-text-primary font-medium tabular-nums">
-            {meta.numbers.join(", ")}
-          </span>
-        </div>
-
-        {/* 아이템 */}
-        <div className="flex items-start justify-between px-7 py-5 gap-6">
-          <span className="text-[13px] text-text-tertiary shrink-0">아이템</span>
-          <span className="text-[14px] text-text-primary text-right leading-relaxed">
-            {meta.items.slice(0, 3).join(" · ")}
-          </span>
-        </div>
-
-        {/* 회피 */}
-        {(meta.avoidColor || meta.avoidDirection) && (
-          <div className="flex items-center justify-between px-7 py-5">
-            <span className="text-[13px] text-text-tertiary">피할 것</span>
-            <span className="text-[14px] text-text-primary font-medium">
-              {meta.avoidColor && <>{meta.avoidColor.korean}</>}
-              {meta.avoidColor && meta.avoidDirection && <span className="text-text-tertiary"> · </span>}
-              {meta.avoidDirection && <>{meta.avoidDirection.korean}</>}
+            <span className={`text-[12px] font-semibold ${yearWeather.color}`}>
+              {yearWeather.label}
             </span>
           </div>
         )}
       </div>
-    </section>
+
+      {/* tier.title — 진짜 hero (어그로체 미디움) */}
+      <h1 className="text-[24px] font-aggro text-text-primary leading-[1.35] tracking-[-0.01em] mb-4">
+        {tier.title}
+      </h1>
+
+      {/* tier.description */}
+      <p className="text-[14.5px] text-text-secondary leading-[1.75] whitespace-pre-line mb-5">
+        {tier.description}
+      </p>
+
+      {/* 키워드 chip — 첫 키워드만 weight/contrast 로 강조 (브랜드 컬러 X) */}
+      {keywords && keywords.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {keywords.map((k, i) => (
+            <span
+              key={i}
+              className={
+                i === 0
+                  ? "inline-flex items-center px-3 py-1.5 rounded-full bg-background-tertiary text-[13px] font-semibold text-text-primary"
+                  : "inline-flex items-center px-3 py-1.5 rounded-full bg-background-tertiary text-[13px] font-medium text-text-secondary"
+              }
+            >
+              {k}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* 사주 메타 grid (라벨/값) */}
+      <div className="grid grid-cols-3 gap-x-2 pt-4 border-t border-white/5">
+        <div>
+          <div className="text-[10px] text-text-tertiary tracking-wide">올해의 기운</div>
+          <div className="text-[13px] font-semibold text-text-primary mt-1">{pillarKorean}년</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-text-tertiary tracking-wide">올해의 별</div>
+          <div className="text-[13px] font-semibold text-text-primary mt-1">{tenStar}운</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-text-tertiary tracking-wide">12운성</div>
+          <div className="text-[13px] font-semibold text-text-primary mt-1">{twelveStage}</div>
+        </div>
+      </div>
+
+      {/* 행운 grid (luckyMeta 있을 때만) — 사주메타와 사이 mt-6 여백 */}
+      {luckyMeta && (
+        <div className="grid grid-cols-3 gap-x-2 mt-6">
+          <div>
+            <div className="text-[10px] text-text-tertiary tracking-wide">올해의 컬러</div>
+            <div className="text-[13px] font-semibold text-text-primary mt-1 truncate">
+              {luckyMeta.color.korean}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-text-tertiary tracking-wide">올해의 숫자</div>
+            <div className="text-[13px] font-semibold text-text-primary mt-1 tabular-nums">
+              {luckyMeta.numbers.join(", ")}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-text-tertiary tracking-wide">올해의 활동</div>
+            <div className="text-[13px] font-semibold text-text-primary mt-1 truncate">
+              {activityPrimary}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-/* ─────────── 월별 흐름 캘린더 ─────────── */
 
-type MonthlyFlowCardProps = {
+
+/* ─────────── 4. 월별 흐름 ─────────── */
+
+const MOOD_STYLE: Record<string, { label: string; color: string; bg: string; bar: string; icon: string }> = {
+  강세: { label: "맑음",     color: "text-saju-wood-muted",  bg: "bg-saju-wood/10",  bar: "rgb(110, 185, 130)", icon: "/icons/weather/sun.svg" },
+  보통: { label: "흐림",     color: "text-text-secondary",   bg: "bg-white/5",       bar: "rgb(120, 122, 130)", icon: "/icons/weather/cloud.svg" },
+  주의: { label: "비 예보",   color: "text-saju-earth-muted", bg: "bg-saju-earth/10", bar: "rgb(195, 170, 90)",  icon: "/icons/weather/rain.svg" },
+  위기: { label: "폭풍 주의", color: "text-saju-fire",        bg: "bg-saju-fire/10",  bar: "rgb(239, 68, 68)",   icon: "/icons/weather/thunder.svg" },
+};
+
+const BIG_EVENT_STYLE: Record<string, { label: string; ring: string; border: string; chipBg: string; chipText: string }> = {
+  위기: { label: "주의", ring: "ring-saju-fire/30",  border: "border-saju-fire/40",  chipBg: "bg-saju-fire/15",  chipText: "text-saju-fire" },
+  기회: { label: "기회", ring: "ring-saju-wood/30",  border: "border-saju-wood/40",  chipBg: "bg-saju-wood/15",  chipText: "text-saju-wood-muted" },
+  결정: { label: "결정", ring: "ring-saju-wood/30", border: "border-saju-wood/40", chipBg: "bg-saju-wood/15", chipText: "text-saju-wood-muted" },
+};
+
+function MonthlyFlowSection({
+  monthly,
+  hints,
+  bigEvents,
+  targetYear,
+}: {
   monthly: NonNullable<YearlyResult["monthlyFlow"]>;
   hints: YearlyResult["monthlyHints"];
   bigEvents?: YearlyResult["yearlyBigEvents"];
-};
-
-const MOOD_STYLE: Record<string, { dot: string; label: string; score: number }> = {
-  강세: { dot: "#22C55E", label: "강세", score: 80 },
-  보통: { dot: "#94A3B8", label: "보통", score: 55 },
-  주의: { dot: "#F59E0B", label: "주의", score: 35 },
-  위기: { dot: "#EF4444", label: "위기", score: 18 },
-};
-
-const BIG_EVENT_TONE: Record<string, { label: string; bg: string; border: string; text: string; alertLabel: string }> = {
-  위기: { label: "위기", bg: "rgba(239, 68, 68, 0.10)", border: "rgba(239, 68, 68, 0.30)", text: "#FCA5A5", alertLabel: "주의보" },
-  기회: { label: "기회", bg: "rgba(34, 197, 94, 0.10)", border: "rgba(34, 197, 94, 0.30)", text: "#86EFAC", alertLabel: "맑음 예보" },
-  결정: { label: "결정", bg: "rgba(168, 85, 247, 0.10)", border: "rgba(168, 85, 247, 0.30)", text: "#D8B4FE", alertLabel: "전환점" },
-};
-
-// mood → 일기예보 라벨
-const MOOD_WEATHER_LABEL: Record<string, string> = {
-  강세: "맑음",
-  보통: "흐림",
-  주의: "비 예보",
-  위기: "폭풍 주의",
-};
-
-const QUARTERS = [
-  { label: "봄", months: [1, 2, 3], color: "rgba(134, 239, 172, 0.65)" },
-  { label: "여름", months: [4, 5, 6], color: "rgba(252, 165, 165, 0.65)" },
-  { label: "가을", months: [7, 8, 9], color: "rgba(253, 224, 71, 0.65)" },
-  { label: "겨울", months: [10, 11, 12], color: "rgba(147, 197, 253, 0.65)" },
-] as const;
-
-function MonthlyFlowCard({ monthly, hints, bigEvents }: MonthlyFlowCardProps) {
-  // 빅 이벤트 월 → 정보 lookup (badge 표시용)
+  targetYear: number;
+}) {
   const bigEventMap = useMemo(() => {
     const m = new Map<number, NonNullable<YearlyResult["yearlyBigEvents"]>[number]>();
     (bigEvents ?? []).forEach((e) => m.set(e.month, e));
@@ -465,160 +443,245 @@ function MonthlyFlowCard({ monthly, hints, bigEvents }: MonthlyFlowCardProps) {
   }, [bigEvents]);
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-baseline justify-between px-1">
-        <h2 className="text-title-3 text-text-primary">한 해 예보</h2>
-        <span className="text-[12px] text-text-tertiary">월별 흐름 12편</span>
+    <section className="rounded-3xl bg-background-secondary p-6">
+      {/* 단일 헤더 */}
+      <div className="mb-5">
+        <h2 className="text-[18px] font-bold text-text-primary">{targetYear}년, 한 해 무드</h2>
       </div>
 
-      {/* 분기 4그룹 */}
-      <div className="space-y-8">
-        {QUARTERS.map((q) => (
-          <div key={q.label} className="space-y-3">
-            {/* 분기 헤더 */}
-            <div className="flex items-baseline gap-2 px-1">
-              <span
-                className="text-[12px] font-bold tracking-[0.12em]"
-                style={{ color: q.color }}
-              >
-                {q.label.toUpperCase()}
-              </span>
-              <span className="text-[10px] text-text-tertiary tabular-nums">
-                {q.months[0]}–{q.months[2]}월
-              </span>
-            </div>
-
-            {/* 분기 안의 3개월 카드 */}
-            <div className="space-y-2.5">
-              {q.months.map((monthNum) => {
-                const i = monthNum - 1;
-                const m = monthly[i];
-                if (!m) return null;
-                const moodInfo = MOOD_STYLE[m.mood] ?? MOOD_STYLE["보통"];
-                const bigEvent = bigEventMap.get(monthNum);
-                const rawHint = hints?.[i] ?? `${m.tenStar}운 · ${m.twelveStage}`;
-                const hint = rawHint.replace(/^\s*\d+\s*월\s*[:：]\s*/, "").trim();
-                return (
-                  <ForecastMonthCard
-                    key={monthNum}
-                    month={monthNum}
-                    pillarKorean={m.pillarKorean}
-                    tenStar={m.tenStar}
-                    twelveStage={m.twelveStage}
-                    mood={m.mood}
-                    moodColor={moodInfo.dot}
-                    hint={hint}
-                    bigEvent={bigEvent}
-                  />
-                );
-              })}
-            </div>
+      {/* 12개월 가로 스크롤 — 미리보기 (시간별 row 톤) */}
+      <div className="relative -mx-6">
+        <div
+          className="overflow-x-auto scrollbar-hide px-6"
+          style={{ scrollSnapType: "x mandatory" }}
+        >
+          <div className="flex gap-2" style={{ width: "max-content" }}>
+            {monthly.map((m, i) => {
+              const monthNum = i + 1;
+              const event = bigEventMap.get(monthNum);
+              return (
+                <MonthQuickCell
+                  key={monthNum}
+                  month={monthNum}
+                  mood={m.mood}
+                  bigEventTone={event?.tone}
+                />
+              );
+            })}
           </div>
-        ))}
+        </div>
+        {/* 우측 fade — 카드 우측 가장자리 (스크롤 affordance) */}
+        <div
+          className="pointer-events-none absolute top-0 bottom-0 right-0 w-14"
+          style={{
+            background:
+              "linear-gradient(to left, rgb(var(--bg-secondary)) 0%, rgba(20, 20, 20, 0) 100%)",
+          }}
+          aria-hidden
+        />
+      </div>
+
+      {/* 12개월 디테일 — 같은 카드 안 풀이 (10일간 row 톤) */}
+      <div className="mt-6 pt-5 border-t border-white/5">
+        <div className="divide-y divide-white/5">
+          {monthly.map((m, i) => {
+            const monthNum = i + 1;
+            const bigEvent = bigEventMap.get(monthNum);
+            const rawHint = hints?.[i] ?? `${m.tenStar}운 · ${m.twelveStage}`;
+            const hint = rawHint.replace(/^\s*\d+\s*월\s*[:：]\s*/, "").trim();
+            return (
+              <MonthRow
+                key={monthNum}
+                month={monthNum}
+                pillarKorean={m.pillarKorean}
+                tenStar={m.tenStar}
+                twelveStage={m.twelveStage}
+                mood={m.mood}
+                hint={hint}
+                bigEvent={bigEvent}
+              />
+            );
+          })}
+        </div>
       </div>
     </section>
   );
 }
 
-/* ─────────── 일기예보 풀카드 (한 달) ─────────── */
-
-type ForecastMonthCardProps = {
+/* 시간별 셀 — 빅이벤트는 tone 컬러 카드로 시그니처 강화
+ * 월 번호는 font-aggro로 Hero 타이포 패밀리 통일
+ */
+function MonthQuickCell({
+  month,
+  mood,
+  bigEventTone,
+}: {
   month: number;
-  pillarKorean: string;
-  tenStar: string;
-  twelveStage: string;
   mood: string;
-  moodColor: string;
-  hint: string;
-  bigEvent?: NonNullable<YearlyResult["yearlyBigEvents"]>[number];
-};
+  bigEventTone?: "위기" | "기회" | "결정";
+}) {
+  const moodInfo = MOOD_STYLE[mood] ?? MOOD_STYLE["보통"];
+  const eventStyle = bigEventTone ? BIG_EVENT_STYLE[bigEventTone] : null;
 
-function ForecastMonthCard({
+  return (
+    <div
+      className={`shrink-0 rounded-xl py-3 flex flex-col items-center justify-center gap-1.5 ${
+        eventStyle
+          ? `${eventStyle.chipBg} ring-1 ${eventStyle.ring}`
+          : ""
+      }`}
+      style={{ width: "72px", scrollSnapAlign: "start" }}
+    >
+      <span
+        className={`font-aggro tabular-nums whitespace-nowrap ${
+          eventStyle ? eventStyle.chipText : "text-text-secondary"
+        }`}
+        style={{ fontSize: "14px" }}
+      >
+        {month}월
+      </span>
+      <img
+        src={moodInfo.icon}
+        alt=""
+        aria-hidden
+        style={{ width: "52px", height: "52px" }}
+      />
+      <span className={`text-[11px] font-semibold ${moodInfo.color} whitespace-nowrap`}>
+        {moodInfo.label}
+      </span>
+    </div>
+  );
+}
+
+/* 월 상세 row — iOS Weather 10일간 row 톤
+ *
+ * 레이아웃: [월] [아이콘] [사주메타 ............] [mood 라벨] [특보 chip]
+ *           ↑ 하단: hint (full width)
+ *           ↑ 빅 이벤트면 추가 블록 (라벨 + 설명, 색상 좌측 바)
+ */
+function MonthRow({
   month,
   pillarKorean,
   tenStar,
   twelveStage,
   mood,
-  moodColor,
   hint,
   bigEvent,
-}: ForecastMonthCardProps) {
-  const weatherLabel = MOOD_WEATHER_LABEL[mood] ?? "보통";
-  const Icon =
-    mood === "강세" ? Sun :
-    mood === "주의" ? CloudRain :
-    mood === "위기" ? CloudLightning :
-    Cloud;
-  const weight = mood === "보통" ? "duotone" : "fill";
-
-  // 빅 이벤트 — tone에 따른 강조 색
-  const eventTone = bigEvent ? BIG_EVENT_TONE[bigEvent.tone] : null;
-  const isHotspot = !!bigEvent;
+}: {
+  month: number;
+  pillarKorean: string;
+  tenStar: string;
+  twelveStage: string;
+  mood: string;
+  hint: string;
+  bigEvent?: NonNullable<YearlyResult["yearlyBigEvents"]>[number];
+}) {
+  const moodInfo = MOOD_STYLE[mood] ?? MOOD_STYLE["보통"];
+  const eventStyle = bigEvent ? BIG_EVENT_STYLE[bigEvent.tone] : null;
 
   return (
-    <article
-      className={`relative rounded-3xl overflow-hidden ${
-        isHotspot ? "bg-background-secondary" : ""
-      }`}
-      style={
-        isHotspot
-          ? { border: `1px solid ${eventTone?.border ?? "rgba(255,255,255,0.08)"}` }
-          : { border: "1px solid rgba(255,255,255,0.06)" }
-      }
-      aria-label={`${month}월 ${weatherLabel} ${tenStar}운${bigEvent ? ` — ${eventTone?.alertLabel}: ${bigEvent.label}` : ""}`}
-    >
-      <div className="px-6 py-5">
-        {/* 상단: 월·아이콘·mood 라벨 */}
-        <div className="flex items-start justify-between gap-4 mb-4">
-          {/* 좌측: 월 + 천간지지 */}
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-[26px] font-bold font-aggro text-text-primary leading-none tabular-nums">
-                {month}월
-              </span>
-              {bigEvent && eventTone && (
-                <span
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold"
-                  style={{
-                    background: eventTone.bg,
-                    color: eventTone.text,
-                    border: `1px solid ${eventTone.border}`,
-                  }}
-                >
-                  {eventTone.alertLabel}
-                </span>
-              )}
-            </div>
-            <div className="text-[12px] text-text-tertiary mt-1.5">
-              {pillarKorean} · {tenStar}운 · {twelveStage}
-            </div>
-          </div>
+    <article className="relative py-3.5 first:pt-3 last:pb-2">
+      {/* 빅 이벤트 좌측 컬러 바 — 카드 박스 없이 막대만 */}
+      {bigEvent && eventStyle && (
+        <div
+          className={`absolute top-3.5 bottom-3.5 -left-3 w-1 rounded-full ${eventStyle.chipBg.replace(
+            "/15",
+            "/60",
+          )}`}
+          aria-hidden
+        />
+      )}
 
-          {/* 우측: 큰 weather 아이콘 + mood 라벨 */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Icon size={32} weight={weight} color={moodColor} aria-hidden />
-            <span
-              className="text-[13px] font-semibold tabular-nums"
-              style={{ color: moodColor }}
-            >
-              {weatherLabel}
-            </span>
-          </div>
+      {/* 상단: 좌측 (월 + 아이콘 가로) / 우측 (chip + mood) — 모두 vertical center */}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            className="font-aggro text-text-primary tabular-nums whitespace-nowrap leading-none"
+            style={{ fontSize: "18px", letterSpacing: "-0.01em" }}
+          >
+            {month}월
+          </span>
+          <img
+            src={moodInfo.icon}
+            alt=""
+            aria-hidden
+            className="block"
+            style={{ width: "44px", height: "44px" }}
+          />
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {bigEvent && eventStyle && (
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${eventStyle.chipBg} ${eventStyle.chipText}`}
+            >
+              {eventStyle.label}
+            </span>
+          )}
+          <span className={`text-[13px] font-semibold ${moodInfo.color}`}>
+            {moodInfo.label}
+          </span>
+        </div>
+      </div>
 
-        {/* 한 줄 hint */}
-        <p className="text-[15px] text-text-primary leading-relaxed font-medium">
-          {hint}
-        </p>
+      {/* hint — 본문 (흰색, 큰 사이즈) */}
+      <p className="text-[15.5px] text-text-primary leading-relaxed font-medium">
+        {hint}
+      </p>
 
-        {/* 빅 이벤트 설명 (있을 때만) */}
-        {bigEvent && (
-          <p className="text-[13px] text-text-secondary leading-relaxed mt-3 pt-3 border-t border-white/[0.06]">
+      {/* 사주 메타 — 본문 아래 (작은 캡션) */}
+      <p className="text-[12px] text-text-tertiary mt-1.5">
+        {pillarKorean} · {tenStar}운 · {twelveStage}
+      </p>
+
+      {/* 빅 이벤트 — tone 컬러 박스로 묶음 (라벨 + 설명) */}
+      {bigEvent && eventStyle && (
+        <div className={`mt-3 rounded-xl px-4 py-3 ${eventStyle.chipBg}`}>
+          <div className={`text-[13px] font-bold ${eventStyle.chipText} mb-1.5`}>
+            {bigEvent.label}
+          </div>
+          <p className="text-[14px] text-text-primary leading-relaxed">
             {bigEvent.description}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </article>
+  );
+}
+
+
+/* ─────────── 5. 상세 풀이 — 6섹션 아코디언 ─────────── */
+
+function DetailSection({ sections, targetYear }: { sections: YearlyResult["sections"]; targetYear: number }) {
+  return (
+    <section className="space-y-3 pt-2">
+      <div className="flex items-baseline justify-between px-1">
+        <h2 className="text-[18px] font-bold text-text-primary">{targetYear}년 상세 풀이</h2>
+        <span className="text-[12px] text-text-tertiary">6편</span>
+      </div>
+      <SectionList sections={sections} initialExpandedCount={1} />
+    </section>
+  );
+}
+
+/* ─────────── 6. 푸터 ─────────── */
+
+function FooterSection({
+  targetYear,
+  onMenu,
+}: {
+  targetYear: number;
+  onMenu: () => void;
+}) {
+  return (
+    <section className="space-y-3 pt-6">
+      <ShareButton targetYear={targetYear} />
+      <button
+        onClick={onMenu}
+        className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+      >
+        메뉴로 가기
+      </button>
+    </section>
   );
 }
 
@@ -669,3 +732,5 @@ function ShareButton({ targetYear }: ShareButtonProps) {
     </button>
   );
 }
+
+

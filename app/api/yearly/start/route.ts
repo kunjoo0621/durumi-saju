@@ -83,11 +83,36 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existingUnlock.data?.result_id) {
+      const existingResultId = existingUnlock.data.result_id;
+
+      // 기존 row가 실패 상태(_error)면 재사용 시 "알만 빠지고 결과 없음" 발생.
+      // full_json/teaser_json을 null로 리셋해 pending 상태로 되돌리고, 클라이언트가
+      // /api/yearly/analyze 호출해 재분석하도록 흐름을 다시 태운다.
+      // (saju 핫픽스 6d4a822와 동일 패턴)
+      const { data: existingResult } = await supabaseAdmin
+        .from("yearly_results")
+        .select("full_json")
+        .eq("id", existingResultId)
+        .maybeSingle();
+
+      if ((existingResult?.full_json as any)?._error) {
+        await supabaseAdmin
+          .from("yearly_results")
+          .update({ full_json: null, teaser_json: null })
+          .eq("id", existingResultId);
+        await markSessionConsumed(body.sessionId, userId);
+        return NextResponse.json({
+          ok: true,
+          resultId: existingResultId,
+          pending: true,
+        });
+      }
+
       await markSessionConsumed(body.sessionId, userId);
       return NextResponse.json({
         ok: true,
         reused: true,
-        resultId: existingUnlock.data.result_id,
+        resultId: existingResultId,
       });
     }
 

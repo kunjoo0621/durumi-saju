@@ -15,7 +15,6 @@ import {
 } from "@/lib/utils/saju-scoring";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { normalizeScores, type AnalysisScores } from "@/lib/resultSchema";
-import { CORE_FEAR_LABELS, type CoreFearAxis } from "@/lib/analysis";
 import {
   calculateYearlyInteraction,
   buildYearlyContextBlock,
@@ -221,6 +220,17 @@ const YEARLY_SYSTEM_PROMPT = `너는 '사주보는 두루미'의 올해의 운�
   · 화개살·홍염살·도화살: 세운 지지와 만나면 어떤 영역에서 발현되는지
 - 신살을 단순 나열 X. 본문에 캐릭터처럼 등장시켜라 ("천덕귀인이 받쳐줘서~", "겁살이 깨어나는 시기는~").
 
+[용신·기신 정확성 ★엄수]
+- 용신·기신은 컨텍스트에 명시된 값만 사용. "신약 → 인성 보강" 같이 너 스스로 추론해서 용신을 결정하지 마라.
+- 행운 컬러/숫자/활동/방향 추천은 반드시 명시된 용신(또는 희신) 오행에 매핑. 기신 오행을 용신으로 착각해 추천하면 사주가 완전히 어긋남.
+- "결핍된 오행을 채워야 한다"는 일반 직관도 위험. 신약 사주에서 결핍 오행이 기신이면 보강이 오히려 독.
+- 본문에서 "~ 용신인 너에게" 식으로 단정할 때 반드시 컨텍스트 용신과 일치 확인.
+
+[라이프 컨텍스트 격리 ★엄수]
+- input의 employmentStatus(직장인·취업 준비 중·학생·사업 등)는 [직장] 섹션에서만 활용.
+- [재물]·[연애]·[건강]·[결정 타이밍] 섹션에서 "취준생이라"·"직장인이라"·"학생이라" 같은 라이프 라벨링 단정 금지. 한 라이프 컨텍스트가 5섹션 전체 톤을 좌우하면 카테고리별 시각 균형이 무너진다.
+- 다른 섹션은 사주 흐름 자체로 풀어라. 굳이 직업 상태를 인용해야 한다면 한 번만, 부드럽게.
+
 [납음(納音) 본문 활용 ★의무 1회 이상]
 - 컨텍스트에 제공되는 납음(예: 천하수·검봉금·복등화)을 최소 1개 섹션에서 본문 비유로 활용해라.
 - 시그니처 비유 예시:
@@ -229,6 +239,8 @@ const YEARLY_SYSTEM_PROMPT = `너는 '사주보는 두루미'의 올해의 운�
   · 노중화(爐中火) = "화로 속 불 — 자기 그릇 안에서만 타오르는 열기"
   · 대해수(大海水) = "바닷물 — 깊고 넓어 흐름을 거스를 수 없음"
 - "그 사람의 올해는 [납음 비유] 같다" 식으로 한 문단 안에 자연스럽게.
+- ★주의: 납음은 "올해(세운)"의 색채일 뿐 사용자 일주의 기운이 아니다.
+  "너는 [납음]의 기운을 가진" 같이 사용자를 주어로 두지 마라. 항상 "올해는 [납음] 같다" / "병오년은 [납음]의 흐름이야" 식으로 세운을 주어로.
 
 [시그니처 표현 — 재미를 위한 캐릭터화 ★강화]
 - 각 섹션마다 **SNS에 캡쳐해서 올리고 싶은 1줄 시그니처**를 반드시 1개 이상 포함해라.
@@ -278,7 +290,7 @@ const YEARLY_SYSTEM_PROMPT = `너는 '사주보는 두루미'의 올해의 운�
 
 ────────────────────────────────
 [★★★ 헤드라인·title·hint 톤 — 재미의 핵심]
-- tier.title (헤드라인), 각 섹션 title, monthlyHints 모두 동일 톤 규칙 적용.
+- tier.title (헤드라인), tier.description, 각 섹션 title, monthlyHints 모두 동일 톤 규칙 적용 (반말 + 친근 호명, 존댓말 어미 금지).
 - **일상 비유 명사구 강제**. 사주 용어(십성·오행·12운성·합충형 한자)로 title 만들지 마라.
 - 좋은 예 (캡쳐욕 자극):
   · "월급보다 사이드가 더 큰 해"
@@ -361,7 +373,7 @@ section[5] icon "🎯" (카테고리: 종합·결정 타이밍)
     "percentileRank": (서버 확정값 그대로),
     "topPercent": (서버 확정값 그대로),
     "title": "한 해를 한 줄로 요약한 일상 비유 명사구 12~20자 (★ 한자·사주 용어 금지, 야근하는 직장인 사주 같은 톤)",
-    "description": "올해의 핵심 강점과 리스크 3~5문장"
+    "description": "올해의 핵심 강점과 리스크 3~5문장 (★ 반말 + 친근 호명, 'OO야' 호명 1회 권장, '~입니다' '~합니다' 어미 금지)"
   },
   "scores": (서버 확정 원국 5분야 그대로 — v1.0),
   "sections": [
@@ -458,9 +470,6 @@ export function buildYearlyUserInfo(params: {
   const { input, sajuText, enriched, fortune, interaction, tier, scores, luckyMeta, monthlyFlow } = params;
   const sajuInfo = sajuText ? `\n사주팔자: ${sajuText}` : "";
   const shinsalBlock = buildShinsalBlock(enriched);
-  const coreFearLabel = input.coreFearAxis && input.coreFearAxis in CORE_FEAR_LABELS
-    ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
-    : "미선택";
   const currentYear = new Date().getFullYear();
   const koreanAge = currentYear - Number(input.birthYear) + 1;
   const internationalAge = currentYear - Number(input.birthYear);
@@ -478,8 +487,7 @@ export function buildYearlyUserInfo(params: {
 현재 나이: 만 ${internationalAge}세 (한국 나이 ${koreanAge}세) — ${currentYear}년 기준
 성별: ${input.gender}
 연애/결혼 상태: ${input.relationshipStatus}
-직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}${shinsalBlock}
-요즘 1등 이슈: ${coreFearLabel}${fortuneBlock}
+직업/직장 상태: ${input.employmentStatus || "미제공"}${sajuInfo}${shinsalBlock}${fortuneBlock}
 
 ${yearlyContext}
 ${luckyBlock}
