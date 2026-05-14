@@ -13,8 +13,8 @@ const TARGET_YEAR = resolveSolarYear(new Date()).solarYear;
 
 const CONFIRM_STEPS = [
   { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: `그 해의 세운 흐름을 분석하고 있어`, delay: 20_000 },
-  { message: "결과를 정리하고 있어", delay: 60_000 },
+  { message: `그 해의 세운 흐름을 분석하고 있어`, delay: 40_000 },
+  { message: "결과를 정리하고 있어", delay: 120_000 },
 ];
 
 export default function YearlyInputPage() {
@@ -98,8 +98,8 @@ export default function YearlyInputPage() {
     return (
       <FullScreenLoading
         steps={CONFIRM_STEPS}
-        estimatedDuration={90000}
-        subMessage="보통 1분 30초 정도 걸려"
+        estimatedDuration={180000}
+        subMessage="보통 3분 정도 걸려"
       />
     );
   }

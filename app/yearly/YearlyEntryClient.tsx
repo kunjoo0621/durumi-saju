@@ -33,9 +33,9 @@ const IPCHUN_LABEL = formatIpchunLabel(YEAR_RESOLUTION.ipchunDate);
 
 const CONFIRM_STEPS = [
   { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: `${TARGET_YEAR}년 세운과 원국 상호작용을 분석하고 있어`, delay: 8_000 },
-  { message: `${TARGET_YEAR}년의 흐름을 작성하고 있어`, delay: 25_000 },
-  { message: "결과를 정리하고 있어", delay: 50_000 },
+  { message: `${TARGET_YEAR}년 세운과 원국 상호작용을 분석하고 있어`, delay: 16_000 },
+  { message: `${TARGET_YEAR}년의 흐름을 작성하고 있어`, delay: 50_000 },
+  { message: "결과를 정리하고 있어", delay: 100_000 },
 ];
 
 export default function YearlyEntryClient() {
@@ -218,8 +218,8 @@ export default function YearlyEntryClient() {
     return (
       <FullScreenLoading
         steps={CONFIRM_STEPS}
-        estimatedDuration={90000}
-        subMessage="보통 1분 30초 정도 걸려"
+        estimatedDuration={180000}
+        subMessage="보통 3분 정도 걸려"
       />
     );
   }
