@@ -96,6 +96,26 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if ((existingResult?.full_json as any)?._error) {
+        // 실패 row 재시도는 무료가 아니라 재결제 — saju spend route와 동일 정책.
+        // 1차 분석 실패 후 환불(+10)을 이미 받았으므로 재시도는 신규 결제로 처리.
+        const retrySpend = await supabaseAdmin.rpc("spend_coins", {
+          p_user_id: userId,
+          p_amount: YEARLY_COST,
+          p_reference_id: body.sessionId,
+        });
+        if (retrySpend.error) {
+          console.error("[YEARLY_START] retry spend rpc", retrySpend.error.message);
+          return NextResponse.json({ error: "알 차감 중 오류가 발생했습니다." }, { status: 500 });
+        }
+        const retryResult = Array.isArray(retrySpend.data) ? retrySpend.data[0] : retrySpend.data;
+        if (!retryResult?.success) {
+          return NextResponse.json({
+            insufficient: true,
+            balance: retryResult?.new_balance ?? 0,
+            required: YEARLY_COST,
+          });
+        }
+
         await supabaseAdmin
           .from("yearly_results")
           .update({ full_json: null, teaser_json: null })
@@ -104,6 +124,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           ok: true,
           resultId: existingResultId,
+          balance: retryResult.new_balance,
           pending: true,
         });
       }

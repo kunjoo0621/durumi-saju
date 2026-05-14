@@ -8,9 +8,13 @@ import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
 import { SAJU_COST, BATTLE_COST, YEARLY_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
+import { resolveSolarYear } from "@/lib/utils/ipchun";
 
 const YEARLY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_YEARLY === "1";
-const CURRENT_YEAR = new Date().getFullYear();
+
+// 메뉴 카드 "{N}년 내 운세" 표기는 yearly 분석과 일관되어야 함 — 입춘 기준.
+// 그레고리력 1/1~입춘 전 사이에는 전년도 세운이 적용되므로 메뉴도 동일 표기.
+const CURRENT_YEAR = resolveSolarYear(new Date()).solarYear;
 
 export default function MenuPage() {
   const router = useRouter();
