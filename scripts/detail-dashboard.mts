@@ -58,6 +58,18 @@ function visualWidth(s: string): number {
 function padR(s: string, n: number) { return s + " ".repeat(Math.max(0, n - visualWidth(s))); }
 function padL(s: string, n: number) { return " ".repeat(Math.max(0, n - visualWidth(s))) + s; }
 
+function classifyChannel(referrer: string | null, utm_source: string | null): { short: string; color: string } {
+  if (utm_source) return { short: `utm:${utm_source}`.slice(0, 12), color: c.yellow };
+  if (!referrer) return { short: "unknown", color: c.gray };
+  const r = referrer.toLowerCase();
+  if (r.includes("kakaotalk")) return { short: "카톡", color: c.yellow };
+  if (r.includes("google")) return { short: "구글", color: c.cyan };
+  if (r.includes("naver")) return { short: "네이버", color: c.green };
+  if (r.includes("instagram")) return { short: "인스타", color: c.magenta };
+  if (r.includes("twitter") || r.includes("x.com")) return { short: "X", color: c.cyan };
+  return { short: referrer.slice(0, 12), color: c.gray };
+}
+
 function ageGroup(birth: string | null): string {
   if (!birth) return "?";
   const y = parseInt(birth.slice(0, 4));
@@ -229,15 +241,23 @@ async function main() {
   // 10. 전체 분석 리스트 (가장 마지막)
   // 가입자 닉네임 가져오기
   const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))] as string[];
-  const userMap = new Map<string, { nickname: string | null; kakao_id: string | null }>();
+  const userMap = new Map<string, { nickname: string | null; kakao_id: string | null; referrer: string | null; utm_source: string | null; landing_path: string | null }>();
   if (userIds.length > 0) {
-    const { data: users } = await sb.from("users").select("id, nickname, kakao_id").in("id", userIds);
-    for (const u of users ?? []) userMap.set(u.id, { nickname: u.nickname, kakao_id: u.kakao_id });
+    const { data: users } = await sb.from("users").select("id, nickname, kakao_id, referrer, utm_source, landing_path").in("id", userIds);
+    for (const u of users ?? []) {
+      userMap.set(u.id, {
+        nickname: u.nickname,
+        kakao_id: u.kakao_id,
+        referrer: u.referrer,
+        utm_source: u.utm_source,
+        landing_path: u.landing_path,
+      });
+    }
   }
 
   section(`📋  전체 분석 리스트  ${c.dim}(${rows.length}건, 최신순)${c.reset}`);
   const head =
-    `${padR("시각", 13)} ${padR("등급", 5)} ${padR("점수", 5)} ${padR("가입자", 14)} ${padR("분석대상", 14)} ${padR("생년월일", 12)} ${padR("성", 4)} ${padR("지역", 6)} ${padR("건강", 5)} ${padR("대인", 5)} ${padR("연애", 5)} ${padR("재물", 5)} ${padR("직장", 5)}`;
+    `${padR("시각", 13)} ${padR("등급", 5)} ${padR("점수", 5)} ${padR("유입", 10)} ${padR("가입자", 14)} ${padR("분석대상", 14)} ${padR("생년월일", 12)} ${padR("성", 4)} ${padR("지역", 6)} ${padR("건강", 5)} ${padR("대인", 5)} ${padR("연애", 5)} ${padR("재물", 5)} ${padR("직장", 5)}`;
   console.log("  " + c.dim + head + c.reset);
   console.log("  " + c.dim + "─".repeat(visualWidth(head)) + c.reset);
 
@@ -253,6 +273,7 @@ async function main() {
     const u = r.user_id ? userMap.get(r.user_id) : null;
     const nick = u?.nickname ?? (r.user_id ? "(없음)" : "게스트");
     const member = r.user_id ? c.green + "●" : c.dim + "○";
+    const channel = classifyChannel(u?.referrer ?? null, u?.utm_source ?? null);
 
     const ts = (() => {
       const d = new Date(new Date(r.created_at!).getTime() + 9 * 3600_000);
@@ -270,7 +291,7 @@ async function main() {
     };
 
     console.log(
-      `  ${padR(ts, 13)} ${padR(status, 5 + (isError ? c.red.length + c.reset.length : isPending ? c.yellow.length + c.reset.length : gradeColor.length + c.bold.length + c.reset.length))} ${padR(score, 5 + (gradeColor.length + c.reset.length))} ${member} ${padR(nick.slice(0, 12), 13)} ${padR((r.name ?? "—").slice(0, 12), 14)} ${padR(r.birth_date ?? "—", 12)} ${padR(gen, 4 + (r.gender ? c.blue.length + c.reset.length : c.dim.length + c.reset.length))} ${padR((r.region ?? "—").slice(0, 6), 6)} ${padR(fmtScore(sc.건강운), 5 + 9)} ${padR(fmtScore(sc.대인운), 5 + 9)} ${padR(fmtScore(sc.연애운), 5 + 9)} ${padR(fmtScore(sc.재물운), 5 + 9)} ${padR(fmtScore(sc.직장운), 5 + 9)}`,
+      `  ${padR(ts, 13)} ${padR(status, 5 + (isError ? c.red.length + c.reset.length : isPending ? c.yellow.length + c.reset.length : gradeColor.length + c.bold.length + c.reset.length))} ${padR(score, 5 + (gradeColor.length + c.reset.length))} ${channel.color}${padR(channel.short, 10)}${c.reset} ${member} ${padR(nick.slice(0, 12), 13)} ${padR((r.name ?? "—").slice(0, 12), 14)} ${padR(r.birth_date ?? "—", 12)} ${padR(gen, 4 + (r.gender ? c.blue.length + c.reset.length : c.dim.length + c.reset.length))} ${padR((r.region ?? "—").slice(0, 6), 6)} ${padR(fmtScore(sc.건강운), 5 + 9)} ${padR(fmtScore(sc.대인운), 5 + 9)} ${padR(fmtScore(sc.연애운), 5 + 9)} ${padR(fmtScore(sc.재물운), 5 + 9)} ${padR(fmtScore(sc.직장운), 5 + 9)}`,
     );
   }
 
