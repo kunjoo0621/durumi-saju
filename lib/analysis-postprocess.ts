@@ -312,6 +312,23 @@ function detectStructuralRepetition(
 // ─── 이름 변형 교정 ─────────────────────────────────────────
 //
 // Gemini가 이름을 1글자 변형하는 현상 교정 (예: 김채연 → 김채현)
+//
+// 사이드이펙트 가드: 이름이 사주 한글 용어와 1글자 차이일 때
+// (예: 이름 "경니" vs 일간 "경금") 본문의 사주 용어가 이름으로 잘못
+// 치환되는 사고 방지. 화이트리스트 + 한자 부연 패턴 두 단계로 보호.
+const SAJU_TERMS_KO = new Set([
+  // 천간 음양오행
+  "갑목", "을목", "병화", "정화", "무토", "기토", "경금", "신금", "임수", "계수",
+  // 지지 음양오행
+  "자수", "축토", "인목", "묘목", "진토", "사화", "오화", "미토", "유금", "술토", "해수",
+  // 십성 (한자 병기 누락 시 대비)
+  "비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인",
+]);
+
+function isFollowedByHanjaParen(jsonStr: string, token: string): boolean {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(escaped + "\\([\\u4E00-\\u9FFF]").test(jsonStr);
+}
 
 function fixNameVariationsGeneric<T>(
   result: T,
@@ -327,6 +344,9 @@ function fixNameVariationsGeneric<T>(
 
   for (const token of allTokens) {
     if (validNames.includes(token)) continue;
+    // 사주 용어 보호: 화이트리스트 또는 한자 부연(예: "경금(庚)") 따라오면 skip
+    if (SAJU_TERMS_KO.has(token)) continue;
+    if (isFollowedByHanjaParen(jsonStr, token)) continue;
     for (const name of validNames) {
       if (token.length !== name.length) continue;
       let diff = 0;
