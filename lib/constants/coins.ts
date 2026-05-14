@@ -1,6 +1,6 @@
 export const SAJU_COST = 10;   // 사주 분석 = 10알
 export const BATTLE_COST = 20; // 배틀 = 20알
-export const YEARLY_COST = 8;  // 올해의 운세(세운) = 8알 (개인사주보다 분량 적지만 매년 재분석 가능)
+export const YEARLY_COST = 10; // 올해의 운세(세운) = 10알 (개인사주와 동일 — 5,800~7,500자 분량)
 
 export type CoinPackageId = 'basic' | 'popular' | 'value';
 

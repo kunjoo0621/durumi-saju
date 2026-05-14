@@ -38,6 +38,13 @@ create unique index if not exists yearly_results_user_input_year_unique
   on public.yearly_results (user_id, input_hash, target_year)
   where user_id is not null;
 
+-- upsert ON CONFLICT 지원용 full unique constraint (Supabase JS upsert는 partial index 인식 못 함)
+alter table public.yearly_results
+  drop constraint if exists yearly_results_user_input_year_uq;
+alter table public.yearly_results
+  add constraint yearly_results_user_input_year_uq
+  unique (user_id, input_hash, target_year);
+
 -- 게스트: 같은 input×해×토큰 1건
 create unique index if not exists yearly_results_guest_input_year_unique
   on public.yearly_results (guest_token_hash, input_hash, target_year)
@@ -75,3 +82,8 @@ alter table public.yearly_results
 alter table public.yearly_results
   add constraint yearly_results_owner_check
   check (user_id is not null or guest_token_hash is not null);
+
+-- RLS 활성화 — service role(supabaseAdmin)만 access. anon/auth key는 모두 거부.
+-- 우리 API는 전부 supabaseAdmin 사용이라 정상 동작.
+alter table public.yearly_results enable row level security;
+alter table public.yearly_result_unlocks enable row level security;

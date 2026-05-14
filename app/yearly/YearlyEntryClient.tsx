@@ -218,7 +218,8 @@ export default function YearlyEntryClient() {
     return (
       <FullScreenLoading
         steps={CONFIRM_STEPS}
-        subMessage="최대 1분 정도 걸려"
+        estimatedDuration={90000}
+        subMessage="보통 1분 30초 정도 걸려"
       />
     );
   }
@@ -252,13 +253,21 @@ export default function YearlyEntryClient() {
           {!isAuthenticated && status !== "loading" ? (
             <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 text-center space-y-4">
               <p className="text-body-2 text-text-secondary">
-                로그인하면 본인 사주를 바탕으로 {TARGET_YEAR}년 운세를 풀어줘.
+                {TARGET_YEAR}년 한 해 운세만 빠르게 풀어볼 수 있어.
+                <br />
+                대표사주가 있으면 그걸로 풀이해.
               </p>
               <button
-                onClick={() => signIn("kakao", { callbackUrl: "/yearly" })}
+                onClick={() => router.push("/yearly/input")}
                 className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
               >
-                카카오로 로그인
+                {TARGET_YEAR}년 운세만 보기
+              </button>
+              <button
+                onClick={() => signIn("kakao", { callbackUrl: "/yearly" })}
+                className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                카카오로 로그인해서 대표사주로 풀이
               </button>
             </div>
           ) : primaryLoading ? (
@@ -278,13 +287,19 @@ export default function YearlyEntryClient() {
               <p className="text-body-2 text-text-secondary">
                 {TARGET_YEAR}년 운세는 본인 사주를 기반으로 풀어줘.
                 <br />
-                먼저 내 사주를 한 번 봐야 해.
+                대표사주가 있으면 그걸로 풀고, 없으면 입력해서 바로 볼 수 있어.
               </p>
               <button
-                onClick={() => router.push("/start")}
+                onClick={() => router.push("/yearly/input")}
                 className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
               >
-                내 사주 보러 가기
+                {TARGET_YEAR}년 운세만 보기
+              </button>
+              <button
+                onClick={() => router.push("/start")}
+                className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                내 사주부터 보고 풀이
               </button>
             </div>
           ) : (
@@ -329,6 +344,12 @@ export default function YearlyEntryClient() {
                 >
                   {paying ? "준비 중…" : `${TARGET_YEAR}년 운세 분석 시작`}
                 </button>
+                <button
+                  onClick={() => router.push("/yearly/input")}
+                  className="btn-secondary w-full h-[48px] rounded-xl text-[14px] font-semibold"
+                >
+                  다른 사주로 진행
+                </button>
                 {balance !== null && balance < YEARLY_COST && (
                   <button
                     onClick={() => router.push("/coins/charge")}
@@ -338,12 +359,6 @@ export default function YearlyEntryClient() {
                   </button>
                 )}
               </div>
-
-              <p className="text-caption text-text-tertiary text-center">
-                이 분석은 AI를 활용한 참고 자료입니다.
-                <br />
-                실제 운명은 당신의 선택과 노력에 달려있습니다.
-              </p>
             </>
           )}
         </div>

@@ -2,13 +2,15 @@ import posthog from "posthog-js";
 
 type SpendType = "analysis" | "battle";
 
+export type FormName = "start" | "battle" | "yearly";
+
 /** 폼 스텝 진행 */
-export function trackFormStep(form: "start" | "battle", step: number, stepName: string) {
+export function trackFormStep(form: FormName, step: number, stepName: string) {
   posthog.capture("form_step", { form, step, step_name: stepName });
 }
 
 /** 폼 완료 (제출) */
-export function trackFormComplete(form: "start" | "battle") {
+export function trackFormComplete(form: FormName) {
   posthog.capture("form_complete", { form });
 }
 
