@@ -376,21 +376,46 @@ async function main() {
   // ── 6. 분석 로그 (24h, 최근 8건) ─────────────
   const { data: recentResults } = await sb
     .from("saju_results")
-    .select("name, birth_date, gender, region, user_id, created_at")
+    .select("name, birth_date, gender, region, user_id, created_at, full_json")
     .gte("created_at", H24)
     .order("created_at", { ascending: false })
     .limit(8);
+
+  const recentResultUserIds = [...new Set((recentResults ?? []).map((r) => r.user_id).filter(Boolean))] as string[];
+  const resultUserMap = new Map<string, { referrer: string | null; utm_source: string | null; landing_path: string | null }>();
+  if (recentResultUserIds.length > 0) {
+    const { data: resultUsers } = await sb
+      .from("users")
+      .select("id, referrer, utm_source, landing_path")
+      .in("id", recentResultUserIds);
+    for (const u of resultUsers ?? []) {
+      resultUserMap.set(u.id, {
+        referrer: u.referrer,
+        utm_source: u.utm_source,
+        landing_path: u.landing_path,
+      });
+    }
+  }
 
   section(`🔮  사주 분석 로그  ${c.dim}(최근 ${recentResults?.length ?? 0}건)${c.reset}`);
   if (!recentResults || recentResults.length === 0) {
     console.log("  " + c.dim + "(아직 없음)" + c.reset);
   } else {
+    const head = `${padR("시각", 14)} ${padR("등급", 5)} ${padR("점수", 5)} ${padR("이름", 10)} ${padR("생년월일", 12)} ${padR("성", 4)} ${padR("지역", 6)} ${padR("유입", 10)} ${padR("랜딩", 14)}`;
+    console.log("  " + c.dim + head + c.reset);
+    console.log("  " + c.dim + "─".repeat(visualWidth(head)) + c.reset);
     for (const r of recentResults) {
       const member = r.user_id ? `${c.green}●${c.reset}` : `${c.dim}○${c.reset}`;
       const name = r.name ?? "—";
       const gender = r.gender === "남성" ? `${c.blue}♂${c.reset}` : r.gender === "여성" ? `${c.magenta}♀${c.reset}` : "·";
+      const u = r.user_id ? resultUserMap.get(r.user_id) : null;
+      const ch = classifyChannel(u?.referrer ?? null, u?.utm_source ?? null);
+      const landing = (u?.landing_path ?? "—").slice(0, 12);
+      const fj = r.full_json as any;
+      const grade = fj?._error ? "ERR" : fj?.tier?.grade ?? (!fj ? "..." : "—");
+      const score = fj?._error || !fj ? "—" : typeof fj?.tier?.composite === "number" ? String(fj.tier.composite) : "—";
       console.log(
-        `  ${padR(fmtHM(r.created_at), 14)} ${member}  ${padR(name, 10)} ${padR(r.birth_date ?? "—", 12)} ${gender}  ${c.dim}${r.region ?? "—"}${c.reset}`,
+        `  ${padR(fmtHM(r.created_at), 14)} ${padR(grade, 5)} ${padL(score, 5)} ${member}  ${padR(name, 10)} ${padR(r.birth_date ?? "—", 12)} ${gender}  ${c.dim}${padR(r.region ?? "—", 6)}${c.reset} ${ch.color}${padR(ch.short, 10)}${c.reset} ${c.dim}${padR(landing, 14)}${c.reset}`,
       );
     }
   }
