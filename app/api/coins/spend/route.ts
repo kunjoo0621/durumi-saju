@@ -125,13 +125,37 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (existingUnlock.data?.result_id) {
-        // 기존 결과가 있으면 항상 재사용 (scoring은 results/full에서 on-the-fly 업그레이드)
-        // pending row로 덮어쓰면 기존 분석 데이터가 파괴되므로 reuse 처리
+        const existingResultId = existingUnlock.data.result_id;
+
+        // 기존 row가 실패 상태(_error)면 재사용 시 "알만 빠지고 결과 없음" 발생.
+        // full_json을 null로 리셋해 pending 상태로 되돌리고, 클라이언트가
+        // /api/results/analyze 호출해 재분석하도록 흐름을 다시 태운다.
+        const { data: existingResult } = await supabaseAdmin
+          .from("saju_results")
+          .select("full_json")
+          .eq("id", existingResultId)
+          .maybeSingle();
+
+        if ((existingResult?.full_json as any)?._error) {
+          await supabaseAdmin
+            .from("saju_results")
+            .update({ full_json: null, teaser_json: null, saju_text: null })
+            .eq("id", existingResultId);
+          await markSessionConsumed(body.sessionId, userId);
+          return NextResponse.json({
+            ok: true,
+            resultId: existingResultId,
+            balance: spendResult.new_balance,
+            pending: true,
+          });
+        }
+
+        // 정상 결과 — 재사용 (scoring은 results/full에서 on-the-fly 업그레이드)
         await markSessionConsumed(body.sessionId, userId);
         return NextResponse.json({
           ok: true,
           reused: true,
-          resultId: existingUnlock.data.result_id,
+          resultId: existingResultId,
           balance: spendResult.new_balance,
         });
       }
