@@ -779,6 +779,19 @@ function checkShouldRetry(result: BattleLlmAnalysis, warnings: string[]): boolea
 //
 // Gemini가 "김채연" → "김채현" 같이 1글자 변형하는 현상 교정.
 // 동일 성씨 + 1자 차이면 원래 이름으로 치환.
+//
+// 사이드이펙트 가드: 이름이 사주 한글 용어와 1글자 차이일 때
+// 본문의 사주 용어가 이름으로 잘못 치환되는 사고 방지.
+const SAJU_TERMS_KO_BATTLE = new Set([
+  "갑목", "을목", "병화", "정화", "무토", "기토", "경금", "신금", "임수", "계수",
+  "자수", "축토", "인목", "묘목", "진토", "사화", "오화", "미토", "유금", "술토", "해수",
+  "비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인",
+]);
+
+function isFollowedByHanjaParenBattle(jsonStr: string, token: string): boolean {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(escaped + "\\([\\u4E00-\\u9FFF]").test(jsonStr);
+}
 
 function fixNameVariations(
   result: BattleLlmAnalysis,
@@ -797,6 +810,9 @@ function fixNameVariations(
 
   for (const token of allTokens) {
     if (validNames.includes(token)) continue;
+    // 사주 용어 보호: 화이트리스트 또는 한자 부연(예: "경금(庚)") 따라오면 skip
+    if (SAJU_TERMS_KO_BATTLE.has(token)) continue;
+    if (isFollowedByHanjaParenBattle(jsonStr, token)) continue;
 
     for (const name of validNames) {
       if (token.length !== name.length) continue;
