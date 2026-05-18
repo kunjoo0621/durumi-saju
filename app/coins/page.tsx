@@ -58,7 +58,11 @@ export default function CoinsPage() {
     customerName: session?.user?.name || undefined,
     onSuccess: (data) => {
       setBalance(data.balance);
-      setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
+      if (data.alreadyCharged) {
+        setToast("이미 처리된 결제예요. 잔액을 확인해주세요.");
+      } else {
+        setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
+      }
       fetchHistory();
     },
   });
@@ -182,7 +186,11 @@ export default function CoinsPage() {
         }
 
         // pendingSpend 없으면 일반 충전 완료
-        setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
+        if (data.alreadyCharged) {
+          setToast("이미 처리된 결제예요. 잔액을 확인해주세요.");
+        } else {
+          setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
+        }
         fetchHistory();
       })
       .catch((err) => {
