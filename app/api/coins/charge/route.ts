@@ -121,11 +121,15 @@ export async function POST(request: NextRequest) {
     }
 
     const result = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
+    // RPC 멱등 가드가 발동하면 charged=0, bonus=0을 반환 (잔액은 현재값).
+    // 정상 첫 호출은 charged>0. 이 둘로 멱등 여부를 판정.
+    const alreadyCharged = result?.charged === 0 && result?.bonus === 0;
     return NextResponse.json({
       ok: true,
       balance: result?.new_balance ?? 0,
       charged: result?.charged ?? pkg.coinAmount,
       bonus: result?.bonus ?? pkg.bonusAmount,
+      alreadyCharged,
     });
   } catch (error: any) {
     console.error("[CHARGE] error", error?.message);

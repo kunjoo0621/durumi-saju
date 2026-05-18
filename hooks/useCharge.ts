@@ -7,7 +7,7 @@ import { getPaymentConfig, type CoinPackage } from "@/lib/constants/coins";
 interface UseChargeOptions {
   customerName?: string;
   redirectPath?: string;
-  onSuccess: (data: { balance: number; charged: number; bonus: number }) => void;
+  onSuccess: (data: { balance: number; charged: number; bonus: number; alreadyCharged?: boolean }) => void;
   onError?: (message: string) => void;
 }
 
