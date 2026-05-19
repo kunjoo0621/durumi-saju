@@ -52,11 +52,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `${SITE_URL}${path}`,
       siteName: "사주보는 두루미",
       locale: "ko_KR",
+      images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: entry.name }],
+      publishedTime: entry.updatedAt,
+      modifiedTime: entry.updatedAt,
     },
     twitter: {
       card: "summary_large_image",
       title: entry.meta.title,
       description: entry.meta.description,
+      images: [`${SITE_URL}/og-image.png`],
     },
   };
 }
@@ -108,6 +112,7 @@ export default async function DictDetailPage({ params }: Props) {
         "@type": "Article",
         headline: entry.meta.title,
         description: entry.meta.description,
+        image: `${SITE_URL}/og-image.png`,
         datePublished: entry.updatedAt,
         dateModified: entry.updatedAt,
         inLanguage: "ko-KR",
@@ -119,6 +124,10 @@ export default async function DictDetailPage({ params }: Props) {
         publisher: {
           "@type": "Organization",
           name: "사주보는 두루미",
+          logo: {
+            "@type": "ImageObject",
+            url: `${SITE_URL}/og-image.png`,
+          },
         },
         mainEntityOfPage: {
           "@type": "WebPage",
