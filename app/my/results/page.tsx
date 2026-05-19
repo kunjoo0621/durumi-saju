@@ -666,7 +666,7 @@ export default function MyResultsPage() {
                               className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
                               style={{ background: gc?.bg || "#2D231B" }}
                             >
-                              <Image src={badgeSrc} alt={`${y.grade}등급`} width={30} height={30} />
+                              <Image src={badgeSrc} alt={`${safeDisplayGrade(y.grade)}등급`} width={30} height={30} />
                             </div>
                           ) : (
                             <div className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0 bg-white/5">
