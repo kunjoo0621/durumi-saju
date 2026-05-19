@@ -56,9 +56,9 @@ const CATEGORY_TOTAL: Record<DictCategory, number> = {
   unseong12: 13,
   gangyak: 12,
   yongshin: 5,
-  gyeokguk: 11,
+  gyeokguk: 12,
   relation: 29,
-  sinsal: 22,
+  sinsal: 23,
   sipisinsal: 13,
 };
 

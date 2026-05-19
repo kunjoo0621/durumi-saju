@@ -103,4 +103,5 @@ export const iljuGrade: DictEntry = {
     { category: "unseong12", slug: "jangsaeng", label: "장생", hint: "12운성" },
   ],
   updatedAt: "2026-05-19",
+  isOverview: true,
 };

@@ -190,73 +190,83 @@ export default async function DictCategoryPage({ params }: Props) {
                 다른 카테고리 보러가기
               </Link>
             </div>
-          ) : cat === "gabja" ? (
-            <>
-              {entries
-                .filter((e) => e.hero.variant !== "combination")
-                .map((e) => (
-                  <Link
-                    key={e.slug}
-                    href={`/dict/${e.category}/${e.slug}`}
-                    className="block rounded-2xl bg-background-secondary border border-white/[0.10] hover:border-white/[0.18] hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors px-5 py-4 mb-6"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-[19px] font-aggro text-text-primary">
-                            {e.name}
-                          </span>
-                          <span className="text-[13px] text-text-tertiary">
-                            {e.hanja}
-                          </span>
-                        </div>
-                        <p className="text-[13px] text-text-secondary leading-[1.5] line-clamp-2">
-                          {e.tagline}
-                        </p>
-                      </div>
-                      <CaretRight
-                        size={16}
-                        weight="bold"
-                        className="text-text-tertiary shrink-0"
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </Link>
-                ))}
-              <GabjaHubGrid entries={entries} />
-            </>
           ) : (
-            <div className="space-y-2">
-              {entries.map((e) => (
-                <Link
-                  key={e.slug}
-                  href={`/dict/${e.category}/${e.slug}`}
-                  className="block rounded-2xl bg-background-secondary border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors px-5 py-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-[19px] font-aggro text-text-primary">
-                          {e.name}
-                        </span>
-                        <span className="text-[13px] text-text-tertiary">
-                          {e.hanja}
-                        </span>
-                      </div>
-                      <p className="text-[13px] text-text-secondary leading-[1.5] line-clamp-2">
-                        {e.tagline}
-                      </p>
+            (() => {
+              const overviewEntries = entries.filter((e) => e.isOverview);
+              const itemEntries = entries.filter((e) => !e.isOverview);
+              return (
+                <>
+                  {overviewEntries.length > 0 && (
+                    <div className="space-y-2 mb-6">
+                      {overviewEntries.map((e) => (
+                        <Link
+                          key={e.slug}
+                          href={`/dict/${e.category}/${e.slug}`}
+                          className="block rounded-2xl bg-background-secondary border border-white/[0.10] hover:border-white/[0.18] hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors px-5 py-4"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-2 mb-1">
+                                <span className="text-[19px] font-aggro text-text-primary">
+                                  {e.name}
+                                </span>
+                                <span className="text-[13px] text-text-tertiary">
+                                  {e.hanja}
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-text-secondary leading-[1.5] line-clamp-2">
+                                {e.tagline}
+                              </p>
+                            </div>
+                            <CaretRight
+                              size={16}
+                              weight="bold"
+                              className="text-text-tertiary shrink-0"
+                              aria-hidden="true"
+                            />
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    <CaretRight
-                      size={16}
-                      weight="bold"
-                      className="text-text-tertiary shrink-0"
-                      aria-hidden="true"
-                    />
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  )}
+                  {cat === "gabja" ? (
+                    <GabjaHubGrid entries={itemEntries} />
+                  ) : (
+                    <div className="space-y-2">
+                      {itemEntries.map((e) => (
+                        <Link
+                          key={e.slug}
+                          href={`/dict/${e.category}/${e.slug}`}
+                          className="block rounded-2xl bg-background-secondary border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors px-5 py-4"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-2 mb-1">
+                                <span className="text-[19px] font-aggro text-text-primary">
+                                  {e.name}
+                                </span>
+                                <span className="text-[13px] text-text-tertiary">
+                                  {e.hanja}
+                                </span>
+                              </div>
+                              <p className="text-[13px] text-text-secondary leading-[1.5] line-clamp-2">
+                                {e.tagline}
+                              </p>
+                            </div>
+                            <CaretRight
+                              size={16}
+                              weight="bold"
+                              className="text-text-tertiary shrink-0"
+                              aria-hidden="true"
+                            />
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()
           )}
         </section>
       </main>
