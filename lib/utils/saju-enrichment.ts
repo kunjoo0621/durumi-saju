@@ -270,26 +270,26 @@ export function determineYongshin(
 ): YongshinResult {
   const isStrong = STRONG_LEVELS.has(strength.result);
 
+  // 일간 기준 십성 오행 (전 분기 공유)
+  const gwansung = findElementThatControls(dayMasterElement)!;
+  const siksang = GENERATES[dayMasterElement];
+  const jaesung = CONTROLS[dayMasterElement];
+  const insung = findElementThatGenerates(dayMasterElement)!;
+  const bigeop = dayMasterElement;
+
   // ── 억부용신 ──
   let eokbu: KoreanElement;
   let eokbuReason: string;
 
   if (isStrong) {
-    // 신강: 관성(일간을 극하는 오행) / 식상(일간이 생하는 오행) / 재성(일간이 극하는 오행) 중 최저
-    const gwansung = findElementThatControls(dayMasterElement)!;   // 금 for 목
-    const siksang = GENERATES[dayMasterElement];                    // 화 for 목
-    const jaesung = CONTROLS[dayMasterElement];                     // 토 for 목
-
+    // 신강: 관성/식상/재성 중 분포 최저. 동률 시 관성>식상>재성
     const candidates: { element: KoreanElement; label: string }[] = [
       { element: gwansung, label: "관성" },
       { element: siksang, label: "식상" },
       { element: jaesung, label: "재성" },
     ];
-
-    // 오행분포에서 비율이 가장 낮은 것 선택 (동률 시 관성>식상>재성 — 배열 순서 유지)
     candidates.sort((a, b) => (elementDist[a.element] || 0) - (elementDist[b.element] || 0));
     const lowest = elementDist[candidates[0].element] || 0;
-    // 동률인 후보들 중 우선순위(원래 배열 순서)가 가장 높은 것
     const priority = ["관성", "식상", "재성"];
     const tied = candidates.filter(c => (elementDist[c.element] || 0) === lowest);
     tied.sort((a, b) => priority.indexOf(a.label) - priority.indexOf(b.label));
@@ -297,15 +297,11 @@ export function determineYongshin(
     eokbu = tied[0].element;
     eokbuReason = `${strength.result} → ${tied[0].label}(${eokbu}) 보강`;
   } else {
-    // 신약: 인성(일간을 생하는 오행) / 비겁(같은 오행) 중 최저
-    const insung = findElementThatGenerates(dayMasterElement)!;   // 수 for 목
-    const bigeop = dayMasterElement;                               // 목 for 목
-
+    // 신약: 인성/비겁 중 분포 최저. 동률 시 인성>비겁
     const candidates: { element: KoreanElement; label: string }[] = [
       { element: insung, label: "인성" },
       { element: bigeop, label: "비겁" },
     ];
-
     candidates.sort((a, b) => (elementDist[a.element] || 0) - (elementDist[b.element] || 0));
     const lowest = elementDist[candidates[0].element] || 0;
     const priority = ["인성", "비겁"];
@@ -330,30 +326,24 @@ export function determineYongshin(
   }
 
   // ── 기신 / 희신 ──
-  // 기신: 용신을 극하는 오행 (단순 정의 유지)
-  const gisin = findElementThatControls(eokbu)!;
-
   // 희신: 자평 정통 매핑. 단순 "용신을 생하는 오행"으로 잡으면
   // 신강+식상/재성 용신 케이스에서 비겁이 희신으로 잡혀 자기모순.
   // 격국 사전(lib/dict/data/gyeokguk/*)의 정통 매핑과 일치시킨다.
-  //   신강 + 관성 용신 → 희신 = 재성 (재생관)
-  //   신강 + 식상 용신 → 희신 = 재성 (식상생재)
-  //   신강 + 재성 용신 → 희신 = 식상 (식상생재)
-  //   신약 + 인성 용신 → 희신 = 관성 (관인상생)
-  //   신약 + 비겁 용신 → 희신 = 인성 (인성생비겁)
-  const gwansungOfDay = findElementThatControls(dayMasterElement)!;
-  const siksangOfDay = GENERATES[dayMasterElement];
-  const jaesungOfDay = CONTROLS[dayMasterElement];
-  const insungOfDay = findElementThatGenerates(dayMasterElement)!;
+  //   신강 + 관성 → 재성 (재생관)
+  //   신강 + 식상 → 재성 (식상생재)
+  //   신강 + 재성 → 식상 (식상생재)
+  //   신약 + 인성 → 관성 (관인상생)
+  //   신약 + 비겁 → 인성 (인성생비겁)
+  const gisin = findElementThatControls(eokbu)!;
 
   let heesin: KoreanElement;
   if (isStrong) {
-    if (eokbu === gwansungOfDay) heesin = jaesungOfDay;       // 관성 → 재성(재생관)
-    else if (eokbu === siksangOfDay) heesin = jaesungOfDay;   // 식상 → 재성(식상생재)
-    else heesin = siksangOfDay;                                // 재성 → 식상(식상생재)
+    if (eokbu === gwansung) heesin = jaesung;
+    else if (eokbu === siksang) heesin = jaesung;
+    else heesin = siksang;
   } else {
-    if (eokbu === insungOfDay) heesin = gwansungOfDay;        // 인성 → 관성(관인상생)
-    else heesin = insungOfDay;                                 // 비겁 → 인성(인성생비겁)
+    if (eokbu === insung) heesin = gwansung;
+    else heesin = insung;
   }
 
   return { eokbu, eokbuReason, johu, johuReason, gisin, heesin };
