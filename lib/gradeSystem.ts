@@ -9,21 +9,23 @@ export type GradeCutoffs = {
   D: number;
 };
 
+// 2026-05-19 옵션 18 컷 조정 (D 4% → C 10.4%, B 47% → 43.2%로 균형화).
+// 라벨 격상(SS/S/A/B/C)과 동시 적용. DB 저장값은 여전히 S/A/B/C/D.
 export const COMPOSITE_GRADE_CUTOFFS: GradeCutoffs = {
-  S: 86,
+  S: 85,
   A: 80,
-  B: 69,
-  C: 45,
+  B: 70,
+  C: 52,
   D: 0,
 };
 
 /** 각 등급의 composite 상한 (해당 등급 내 최대값) */
 export const GRADE_MAX: Record<GradeLabel, number> = {
   S: 100,
-  A: COMPOSITE_GRADE_CUTOFFS.S - 1,  // 85
+  A: COMPOSITE_GRADE_CUTOFFS.S - 1,  // 84
   B: COMPOSITE_GRADE_CUTOFFS.A - 1,  // 79
-  C: COMPOSITE_GRADE_CUTOFFS.B - 1,  // 68
-  D: COMPOSITE_GRADE_CUTOFFS.C - 1,  // 44
+  C: COMPOSITE_GRADE_CUTOFFS.B - 1,  // 69
+  D: COMPOSITE_GRADE_CUTOFFS.C - 1,  // 51
 };
 
 export function clampValue(value: number, min: number, max: number) {
@@ -45,12 +47,14 @@ export function gradeFromComposite(value: number, cutoffs: GradeCutoffs = COMPOS
   return "D";
 }
 
+// 옵션 18 컷 (S85/A80/B70/C52) + 536명 unique 실측 누적 분포 기반.
+// D 10.4% / C 43.2% / B 26.4% / A 12.5% / S 7.4%.
 const PERCENTILE_PIECEWISE = [
-  { min: 0, max: 45, start: 5, end: 30 },   // D ~5%
-  { min: 45, max: 69, start: 30, end: 61 },  // C ~39%
-  { min: 69, max: 80, start: 61, end: 88 },  // B ~39%
-  { min: 80, max: 86, start: 88, end: 95 },  // A ~12%
-  { min: 86, max: 100, start: 95, end: 99 }, // S ~5%
+  { min: 0, max: 52, start: 1, end: 10 },    // D ~10%
+  { min: 52, max: 70, start: 10, end: 54 },  // C ~43%
+  { min: 70, max: 80, start: 54, end: 80 },  // B ~26%
+  { min: 80, max: 85, start: 80, end: 93 },  // A ~13%
+  { min: 85, max: 100, start: 93, end: 99 }, // S ~7%
 ];
 
 export function percentileRankFromComposite(value: number) {
