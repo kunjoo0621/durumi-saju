@@ -9,6 +9,7 @@ import Image from "next/image";
 import Header from "@/components/layout/Header";
 import { useStoreActions } from "@/store/useInputStore";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
 import type { BattleListItem } from "@/types/battle";
 import { FullScreenLoading, InlineLoading } from "@/components/loading";
 import Modal from "@/components/Modal";
@@ -507,7 +508,7 @@ export default function MyResultsPage() {
                             >
                               <Image
                                 src={badgeSrc}
-                                alt={`${item.grade}등급`}
+                                alt={`${safeDisplayGrade(item.grade)}등급`}
                                 width={30}
                                 height={30}
                               />
@@ -530,7 +531,7 @@ export default function MyResultsPage() {
                                   className="text-[13px] font-semibold whitespace-nowrap shrink-0"
                                   style={{ color: gc?.text || "#D0A070" }}
                                 >
-                                  {item.grade}등급{item.score != null ? ` · ${item.score}점` : ""}
+                                  {safeDisplayGrade(item.grade)}등급{item.score != null ? ` · ${item.score}점` : ""}
                                 </span>
                               )}
                             </div>
@@ -665,7 +666,7 @@ export default function MyResultsPage() {
                               className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
                               style={{ background: gc?.bg || "#2D231B" }}
                             >
-                              <Image src={badgeSrc} alt={`${y.grade}등급`} width={30} height={30} />
+                              <Image src={badgeSrc} alt={`${safeDisplayGrade(y.grade)}등급`} width={30} height={30} />
                             </div>
                           ) : (
                             <div className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0 bg-white/5">
@@ -817,13 +818,13 @@ export default function MyResultsPage() {
                               className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center"
                               style={{ background: gcA.bg }}
                             >
-                              <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={30} height={30} />
+                              <Image src={badgeA} alt={`${safeDisplayGrade(b.player_a_grade)}등급`} width={30} height={30} />
                             </div>
                             <div
                               className="absolute -right-1.5 -bottom-1.5 w-[28px] h-[28px] rounded-[8px] flex items-center justify-center ring-2 ring-[#141414]"
                               style={{ background: gcB.bg }}
                             >
-                              <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={16} height={16} />
+                              <Image src={badgeB} alt={`${safeDisplayGrade(b.player_b_grade)}등급`} width={16} height={16} />
                             </div>
                           </div>
 

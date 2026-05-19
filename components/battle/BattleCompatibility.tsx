@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Heart, UsersThree, Briefcase, House, Handshake, CaretDown } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import type { BattleLlmAnalysis, RelationshipType } from "@/types/battle";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 type Props = {
   chemistry: BattleLlmAnalysis["chemistry"];
@@ -96,10 +97,10 @@ function SectionCard({
           <div className="overflow-hidden">
             <div className="px-6 pb-6 pt-4">
               {punchline && (
-                <p className="text-[16px] font-semibold text-white leading-[1.6] mb-3">{punchline}</p>
+                <p className="text-[16px] font-semibold text-white leading-[1.6] mb-3">{transformGradeText(punchline)}</p>
               )}
               <div className="space-y-6">
-                {content.split(/\n\s*\n/).map((para, i) => (
+                {transformGradeText(content).split(/\n\s*\n/).map((para, i) => (
                   <p key={i} className="text-[15px] text-gray-400 leading-[1.75]">
                     {para.trim()}
                   </p>
@@ -162,13 +163,13 @@ export default function BattleCompatibility({ chemistry, relationshipType }: Pro
                 <div className="px-6 pb-6 pt-4">
                   {/* Punchline */}
                   {chemPunchline && (
-                    <p className="text-[16px] font-semibold text-white leading-[1.6] mb-4">{chemPunchline}</p>
+                    <p className="text-[16px] font-semibold text-white leading-[1.6] mb-4">{transformGradeText(chemPunchline)}</p>
                   )}
 
                   {/* Analysis body */}
                   {displayAnalysis && (
                     <p className="text-[15px] text-gray-400 leading-[1.75]">
-                      {displayAnalysis}
+                      {transformGradeText(displayAnalysis)}
                     </p>
                   )}
                 </div>

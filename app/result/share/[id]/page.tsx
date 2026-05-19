@@ -7,6 +7,7 @@ import { calculateSaju } from "@/lib/utils/saju";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 import type { AnalysisResult } from "@/store/useInputStore";
 import type { CalendarType } from "@/lib/utils/lunar";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
 import ShareResultClient from "./ShareResultClient";
 
 function getTopPercent(tier: AnalysisResult["tier"]): string {
@@ -40,7 +41,7 @@ export async function generateMetadata({
   const result = parseResult(data);
   if (!result) return { title: "사주보는 두루미" };
 
-  const grade = result.tier?.grade || "?";
+  const grade = safeDisplayGrade(result.tier?.grade);
   const percent = getTopPercent(result.tier);
   const headline = result.tier?.title || "";
   const userName = data.name || "";

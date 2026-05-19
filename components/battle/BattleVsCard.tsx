@@ -2,6 +2,7 @@
 
 import type { CategoryMatchResult } from "@/types/battle";
 import type { BattleLlmAnalysis } from "@/types/battle";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 const COLOR_WINNER = "#FF6B6B";
 const COLOR_LOSER  = "#5A5A6A";
@@ -104,7 +105,7 @@ function CategoryCard({
           <>
             <div className="mt-4 mb-4 h-px bg-white/[0.06]" />
             <div className="space-y-6">
-              {comment.split(/\n\s*\n/).map((para, i) => (
+              {transformGradeText(comment).split(/\n\s*\n/).map((para, i) => (
                 <p key={i} className="text-[16px] text-text-primary leading-[1.75]">{para.trim()}</p>
               ))}
             </div>

@@ -8,6 +8,7 @@ import { FullScreenLoading } from "@/components/loading";
 import { Warning } from "@phosphor-icons/react";
 import SectionList from "@/components/result/SectionList";
 import type { YearlyResult } from "@/lib/yearly-prompt";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 type Props = {
   resultId: string;
@@ -351,12 +352,12 @@ function HeroBlock({
 
       {/* tier.title — 진짜 hero (어그로체 미디움) */}
       <h1 className="text-[24px] font-aggro text-text-primary leading-[1.35] tracking-[-0.01em] mb-4">
-        {tier.title}
+        {transformGradeText(tier.title)}
       </h1>
 
       {/* tier.description */}
       <p className="text-[14.5px] text-text-secondary leading-[1.75] whitespace-pre-line mb-5">
-        {tier.description}
+        {transformGradeText(tier.description)}
       </p>
 
       {/* 키워드 chip — 첫 키워드만 weight/contrast 로 강조 (브랜드 컬러 X) */}
@@ -637,7 +638,7 @@ function MonthRow({
 
       {/* hint — 본문 (흰색, 큰 사이즈) */}
       <p className="text-[15.5px] text-text-primary leading-relaxed font-medium">
-        {hint}
+        {transformGradeText(hint)}
       </p>
 
       {/* 사주 메타 — 본문 아래 (작은 캡션) */}
@@ -649,10 +650,10 @@ function MonthRow({
       {bigEvent && eventStyle && (
         <div className={`mt-3 rounded-xl px-4 py-3 ${eventStyle.chipBg}`}>
           <div className={`text-[13px] font-bold ${eventStyle.chipText} mb-1.5`}>
-            {bigEvent.label}
+            {transformGradeText(bigEvent.label)}
           </div>
           <p className="text-[14px] text-text-primary leading-relaxed">
-            {bigEvent.description}
+            {transformGradeText(bigEvent.description)}
           </p>
         </div>
       )}
