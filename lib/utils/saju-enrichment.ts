@@ -330,8 +330,31 @@ export function determineYongshin(
   }
 
   // ── 기신 / 희신 ──
+  // 기신: 용신을 극하는 오행 (단순 정의 유지)
   const gisin = findElementThatControls(eokbu)!;
-  const heesin = findElementThatGenerates(eokbu)!;
+
+  // 희신: 자평 정통 매핑. 단순 "용신을 생하는 오행"으로 잡으면
+  // 신강+식상/재성 용신 케이스에서 비겁이 희신으로 잡혀 자기모순.
+  // 격국 사전(lib/dict/data/gyeokguk/*)의 정통 매핑과 일치시킨다.
+  //   신강 + 관성 용신 → 희신 = 재성 (재생관)
+  //   신강 + 식상 용신 → 희신 = 재성 (식상생재)
+  //   신강 + 재성 용신 → 희신 = 식상 (식상생재)
+  //   신약 + 인성 용신 → 희신 = 관성 (관인상생)
+  //   신약 + 비겁 용신 → 희신 = 인성 (인성생비겁)
+  const gwansungOfDay = findElementThatControls(dayMasterElement)!;
+  const siksangOfDay = GENERATES[dayMasterElement];
+  const jaesungOfDay = CONTROLS[dayMasterElement];
+  const insungOfDay = findElementThatGenerates(dayMasterElement)!;
+
+  let heesin: KoreanElement;
+  if (isStrong) {
+    if (eokbu === gwansungOfDay) heesin = jaesungOfDay;       // 관성 → 재성(재생관)
+    else if (eokbu === siksangOfDay) heesin = jaesungOfDay;   // 식상 → 재성(식상생재)
+    else heesin = siksangOfDay;                                // 재성 → 식상(식상생재)
+  } else {
+    if (eokbu === insungOfDay) heesin = gwansungOfDay;        // 인성 → 관성(관인상생)
+    else heesin = insungOfDay;                                 // 비겁 → 인성(인성생비겁)
+  }
 
   return { eokbu, eokbuReason, johu, johuReason, gisin, heesin };
 }
