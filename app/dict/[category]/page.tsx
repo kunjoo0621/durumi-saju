@@ -76,6 +76,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `${SITE_URL}/dict/${cat}`,
       type: "website",
       locale: "ko_KR",
+      siteName: "사주보는 두루미",
+      images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: `${label} — 사주 사전` }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${label} — 사주 사전`,
+      description: desc,
+      images: [`${SITE_URL}/og-image.png`],
     },
   };
 }
@@ -98,6 +106,7 @@ export default async function DictCategoryPage({ params }: Props) {
         url: `${SITE_URL}/dict/${cat}`,
         name: `${label} — 사주 사전`,
         description: desc,
+        image: `${SITE_URL}/og-image.png`,
         inLanguage: "ko-KR",
         isPartOf: { "@id": `${SITE_URL}/#website` },
         publisher: { "@id": `${SITE_URL}/#organization` },
