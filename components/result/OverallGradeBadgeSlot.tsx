@@ -4,6 +4,7 @@
 
 import { useMemo } from "react";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
 
 export type OverallGradeLabel = "S" | "A" | "B" | "C" | "D";
 
@@ -32,6 +33,8 @@ export default function OverallGradeBadgeSlot({
   const glow = useMemo(() => GRADE_GLOWS[grade] || GRADE_GLOWS.D, [grade]);
   const resolvedBadge = badgeSrc ?? getGradeBadge(grade);
 
+  const displayLabel = safeDisplayGrade(grade);
+
   if (resolvedBadge) {
     const normalizedSize = typeof size === "number" && Number.isFinite(size)
       ? Math.min(220, Math.max(48, Math.round(size)))
@@ -40,11 +43,11 @@ export default function OverallGradeBadgeSlot({
       <div
         className={`relative isolate ${className || ""}`}
         style={{ width: normalizedSize, height: normalizedSize }}
-        aria-label={`등급 배지 슬롯 (${grade})`}
+        aria-label={`등급 배지 슬롯 (${displayLabel})`}
       >
         <img
           src={resolvedBadge}
-          alt={`등급 배지 ${grade}`}
+          alt={`등급 배지 ${displayLabel}`}
           className="h-full w-full object-contain"
           draggable={false}
         />
@@ -57,7 +60,7 @@ export default function OverallGradeBadgeSlot({
       <div
         className={`relative flex items-center justify-center ${className || ""}`}
         style={{ width: size, height: size }}
-        aria-label={`등급 배지 슬롯 (${grade})`}
+        aria-label={`등급 배지 슬롯 (${displayLabel})`}
       >
         <div
           className="absolute -inset-4 rounded-full"
@@ -65,7 +68,7 @@ export default function OverallGradeBadgeSlot({
           aria-hidden="true"
         />
         <span className="relative text-[28px] font-aggro font-bold text-white/90">
-          {grade}
+          {displayLabel}
         </span>
       </div>
     );
@@ -74,7 +77,7 @@ export default function OverallGradeBadgeSlot({
   return (
     <div
       className={`relative flex items-center justify-center ${className || ""}`}
-      aria-label={`등급 배지 슬롯 (${grade})`}
+      aria-label={`등급 배지 슬롯 (${displayLabel})`}
     >
       <div
         className="absolute -inset-12 rounded-full"
@@ -82,7 +85,7 @@ export default function OverallGradeBadgeSlot({
         aria-hidden="true"
       />
       <span className="relative text-8xl font-aggro font-bold text-white/90">
-        {grade}
+        {displayLabel}
       </span>
     </div>
   );

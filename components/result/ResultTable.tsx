@@ -12,6 +12,8 @@ import {
   normalizeComposite,
   percentileRankFromComposite,
   topPercentFromPercentileRank,
+  safeDisplayGrade,
+  transformGradeText,
 } from "@/lib/gradeSystem";
 import { getGradeBadge, getGradeColor } from "@/lib/utils/grade-colors";
 import { SECTION_ORDER, resolveKey } from "@/lib/constants/section-icons";
@@ -145,7 +147,7 @@ export default function ResultTable({
             </div>
             <div className="flex items-center justify-center gap-1.5">
               <span className="text-lg font-bold" style={{ color: gradeColor.main }}>
-                {safeTier.grade}등급
+                {safeDisplayGrade(safeTier.grade)}등급
               </span>
               <span className="text-lg font-bold text-gray-400">
                 · 상위 {safeTier.topPercent}%
@@ -155,7 +157,7 @@ export default function ResultTable({
               {safeTier.title}
             </div>
             <p className="mt-3 max-w-lg text-[16px] text-gray-400 text-center leading-7">
-              {safeTier.description}
+              {transformGradeText(safeTier.description)}
             </p>
             {safeTier.confidence === "low" && (
               <p className="mt-2 text-[13px] text-text-tertiary">

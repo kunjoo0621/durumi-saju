@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getSharedYearlyResult } from "@/lib/share-yearly";
 import ShareYearlyClient from "./ShareYearlyClient";
 import type { YearlyResult } from "@/lib/yearly-prompt";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 const SITE_URL = "https://www.durumisaju.com";
 const SITE_NAME = "사주보는 두루미";
@@ -19,7 +20,7 @@ export async function generateMetadata({
   const fj = (data as any).full_json as YearlyResult;
   const targetYear = fj?.yearlyMeta?.targetYear ?? (data as any).target_year ?? new Date().getFullYear();
   const name = (data as any).name || "";
-  const tierTitle = fj?.tier?.title || "";
+  const tierTitle = transformGradeText(fj?.tier?.title || "");
   const keywords = (fj?.yearlyKeywords ?? []).join(" · ");
 
   const title = name

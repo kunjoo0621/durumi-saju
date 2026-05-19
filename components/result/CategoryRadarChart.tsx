@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { getGradeColor } from "@/lib/utils/grade-colors";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
 
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
@@ -243,7 +244,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                     textAnchor="middle"
                     style={{ fontSize: 12, fontWeight: 500 }}
                   >
-                    <tspan fill={gradeColor}>{label.item.grade}</tspan>
+                    <tspan fill={gradeColor}>{safeDisplayGrade(label.item.grade)}</tspan>
                     <tspan fill="rgba(255,255,255,0.4)">{" · "}{label.item.score}점</tspan>
                   </text>
                 </g>
