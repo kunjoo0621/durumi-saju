@@ -13,6 +13,7 @@ import {
 import type { Icon } from "@phosphor-icons/react";
 import type { CategoryMatchResult } from "@/types/battle";
 import type { BattleLlmAnalysis } from "@/types/battle";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 type Props = {
   matches: CategoryMatchResult[];
@@ -306,12 +307,12 @@ export default function BattleCategorySwiper({
                               marginBottom: 10,
                             }}
                           >
-                            {comment.killingLine}
+                            {transformGradeText(comment.killingLine)}
                           </p>
                         )}
                         {comment.detail && (
                           <div>
-                            {comment.detail.split(/\n\s*\n/).map((para: string, i: number) => (
+                            {transformGradeText(comment.detail).split(/\n\s*\n/).map((para: string, i: number) => (
                               <p
                                 key={i}
                                 style={{

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import BattleRadarChart from "@/components/battle/BattleRadarChart";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
+import { safeDisplayGrade, transformGradeText } from "@/lib/gradeSystem";
 import type { BattleComparison, BattleIntensity } from "@/types/battle";
 import type { ServerScores } from "@/lib/utils/saju-scoring";
 
@@ -69,7 +70,7 @@ export default function BattleHero({
         {/* heroQuip — 최상단 */}
         {heroQuip && (
           <p className="text-[22px] font-bold font-aggro text-white text-center leading-[1.5] tracking-[-0.02em] mb-8 break-keep">
-            {heroQuip}
+            {transformGradeText(heroQuip)}
           </p>
         )}
 
@@ -84,7 +85,7 @@ export default function BattleHero({
               />
               <Image
                 src={getGradeBadge(gradeA)}
-                alt={`${gradeA}등급`}
+                alt={`${safeDisplayGrade(gradeA)}등급`}
                 width={52}
                 height={52}
                 className="relative"
@@ -95,7 +96,7 @@ export default function BattleHero({
             </span>
             <div className="flex items-center">
               <span className="text-[13px] font-semibold" style={{ color: gradeColorA.text }}>
-                {gradeA}등급
+                {safeDisplayGrade(gradeA)}등급
               </span>
               <span className="text-[13px] text-gray-600 mx-1">·</span>
               <span className="text-[13px] font-semibold text-gray-500">
@@ -162,7 +163,7 @@ export default function BattleHero({
               />
               <Image
                 src={getGradeBadge(gradeB)}
-                alt={`${gradeB}등급`}
+                alt={`${safeDisplayGrade(gradeB)}등급`}
                 width={52}
                 height={52}
                 className="relative"
@@ -173,7 +174,7 @@ export default function BattleHero({
             </span>
             <div className="flex items-center">
               <span className="text-[13px] font-semibold" style={{ color: gradeColorB.text }}>
-                {gradeB}등급
+                {safeDisplayGrade(gradeB)}등급
               </span>
               <span className="text-[13px] text-gray-600 mx-1">·</span>
               <span className="text-[13px] font-semibold text-gray-500">

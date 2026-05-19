@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Binoculars, CaretDown } from "@phosphor-icons/react";
 import type { BattleLlmAnalysis, FutureTimelineEntry } from "@/types/battle";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 type Props = {
   futureOutlook: BattleLlmAnalysis["futureOutlook"];
@@ -89,7 +90,7 @@ export default function BattleFutureOutlook({ futureOutlook, nameA, nameB }: Pro
               {/* Punchline */}
               {normalized.punchline && (
                 <p className="text-[16px] font-semibold text-white leading-[1.6] mb-5">
-                  {normalized.punchline}
+                  {transformGradeText(normalized.punchline)}
                 </p>
               )}
 
@@ -119,13 +120,13 @@ export default function BattleFutureOutlook({ futureOutlook, nameA, nameB }: Pro
                           {entry.eventA && (
                             <p className="text-[14px] text-gray-400 leading-[1.65] mt-1.5">
                               <span className="text-gray-300 font-medium">{nameA}</span>
-                              {" · "}{entry.eventA}
+                              {" · "}{transformGradeText(entry.eventA)}
                             </p>
                           )}
                           {entry.eventB && (
                             <p className="text-[14px] text-gray-400 leading-[1.65] mt-1">
                               <span className="text-gray-300 font-medium">{nameB}</span>
-                              {" · "}{entry.eventB}
+                              {" · "}{transformGradeText(entry.eventB)}
                             </p>
                           )}
                           {entry.relationship && (
@@ -133,7 +134,7 @@ export default function BattleFutureOutlook({ futureOutlook, nameA, nameB }: Pro
                               className="text-[13px] leading-[1.6] mt-2 px-3 py-2 rounded-lg"
                               style={{ color: "#A5B4FC", backgroundColor: "rgba(99,102,241,0.06)" }}
                             >
-                              {entry.relationship}
+                              {transformGradeText(entry.relationship)}
                             </p>
                           )}
                         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Lock } from "@phosphor-icons/react";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 type SectionBodyProps = {
   content?: string;
@@ -37,7 +38,10 @@ function parseStructuredContent(content: string) {
   };
 }
 
-export default function SectionBody({ content, locked = false, onUnlock, unlockLabel }: SectionBodyProps) {
+export default function SectionBody({ content: rawContent, locked = false, onUnlock, unlockLabel }: SectionBodyProps) {
+  // 풀이 본문에 박힌 옛 등급 표기(S등급·A등급…) → 새 체계(SS등급·S등급…) 일괄 변환.
+  // DB 원본은 그대로, 표시 시점에만 변환.
+  const content = typeof rawContent === "string" ? transformGradeText(rawContent) : rawContent;
   if (!locked && typeof content === "string" && content.trim()) {
     const structured = parseStructuredContent(content);
 

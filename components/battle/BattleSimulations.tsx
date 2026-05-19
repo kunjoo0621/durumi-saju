@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { transformGradeText } from "@/lib/gradeSystem";
 import {
   CaretDown,
   House,
@@ -183,22 +184,22 @@ export default function BattleSimulations({ simulations, icons }: Props) {
                     {sim.punchline ? (
                       <>
                         <p className="text-[16px] font-semibold text-white leading-[1.6] mb-3">
-                          {sim.punchline}
+                          {transformGradeText(sim.punchline)}
                         </p>
                         {sim.reasoning && (
                           <p className="text-[15px] text-gray-400 leading-[1.75]">
-                            {sim.reasoning}
+                            {transformGradeText(sim.reasoning)}
                           </p>
                         )}
                       </>
                     ) : (
                       <p className="text-[15px] text-gray-400 leading-[1.75]">
-                        {sim.answer}
+                        {transformGradeText(sim.answer ?? "")}
                       </p>
                     )}
                     {sim.basis && (
                       <span className="inline-block text-[11px] text-gray-400 bg-white/[0.06] px-2 py-0.5 rounded-full mt-3">
-                        {sim.basis}
+                        {transformGradeText(sim.basis)}
                       </span>
                     )}
                   </div>

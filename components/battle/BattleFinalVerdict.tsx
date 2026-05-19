@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Scales, CaretDown } from "@phosphor-icons/react";
 import type { BattleLlmAnalysis } from "@/types/battle";
+import { transformGradeText } from "@/lib/gradeSystem";
 
 type Props = {
   finalVerdict: BattleLlmAnalysis["finalVerdict"] | string;
@@ -13,11 +14,11 @@ type Props = {
 export default function BattleFinalVerdict({ finalVerdict, nameA, nameB }: Props) {
   const [expanded, setExpanded] = useState(false);
 
-  // Support both old (string) and new ({ punchline, verdict }) formats
-  const punchline = typeof finalVerdict === "object" ? finalVerdict.punchline : "";
-  const verdictA = typeof finalVerdict === "object" ? finalVerdict.verdictA : undefined;
-  const verdictB = typeof finalVerdict === "object" ? finalVerdict.verdictB : undefined;
-  const verdict = typeof finalVerdict === "object" ? finalVerdict.verdict : finalVerdict;
+  // 풀이 본문에 박힌 옛 등급 표기 → 새 체계 변환 (표시 시점)
+  const punchline = transformGradeText(typeof finalVerdict === "object" ? finalVerdict.punchline ?? "" : "");
+  const verdictA = transformGradeText(typeof finalVerdict === "object" ? finalVerdict.verdictA ?? "" : "");
+  const verdictB = transformGradeText(typeof finalVerdict === "object" ? finalVerdict.verdictB ?? "" : "");
+  const verdict = transformGradeText(typeof finalVerdict === "object" ? finalVerdict.verdict ?? "" : finalVerdict ?? "");
 
   if (!verdict && !punchline) return null;
 
