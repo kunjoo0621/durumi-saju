@@ -26,6 +26,7 @@ export const sinmyo: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "4등급 (하등) · 1점" },
     { label: "60갑자 순번", value: "28번" },
     { label: "음양 구성", value: "음금 · 음목" },
     { label: "지장간", value: "을(乙) 단일" },

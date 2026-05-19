@@ -29,6 +29,7 @@ export const imo: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "1등급 (상등) · 4점" },
     { label: "60갑자 순번", value: "19번" },
     { label: "음양 구성", value: "양수 · 양화" },
     { label: "지장간", value: "정(丁)·기(己)" },

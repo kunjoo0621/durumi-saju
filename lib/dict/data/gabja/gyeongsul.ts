@@ -30,6 +30,7 @@ export const gyeongsul: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "3등급 (중등) · 2점" },
     { label: "60갑자 순번", value: "47번" },
     { label: "음양 구성", value: "양금 · 양토" },
     { label: "지장간", value: "무(戊) · 신(辛) · 정(丁)" },

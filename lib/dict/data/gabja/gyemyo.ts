@@ -26,6 +26,7 @@ export const gyemyo: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "1등급 (상등) · 4점" },
     { label: "60갑자 순번", value: "40번" },
     { label: "음양 구성", value: "음수 · 음목" },
     { label: "지장간", value: "을(乙) 단일" },

@@ -29,6 +29,7 @@ export const byeongo: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "4등급 (하등) · 1점" },
     { label: "60갑자 순번", value: "43번" },
     { label: "음양 구성", value: "양화 · 양화" },
     { label: "지장간", value: "정(丁) · 기(己)" },
