@@ -158,6 +158,7 @@ import { eumyangchachak } from "./data/sinsal/eumyangchachak";
 import { goran as sinsalGoran } from "./data/sinsal/goran";
 import { tanghwa as sinsalTanghwa } from "./data/sinsal/tanghwa";
 import { hongryeom as sinsalHongryeom } from "./data/sinsal/hongryeom";
+import { sinsalGrade } from "./data/sinsal/sinsal-grade";
 import { dohwaSipi } from "./data/sipisinsal/dohwa";
 import { gyeopsalSipi } from "./data/sipisinsal/gyeopsal";
 import { jaesalSipi } from "./data/sipisinsal/jaesal";
@@ -205,6 +206,7 @@ import { sikshinGyeok } from "./data/gyeokguk/sikshin-gyeok";
 import { sanggwanGyeok } from "./data/gyeokguk/sanggwan-gyeok";
 import { geonrokGyeok } from "./data/gyeokguk/geonrok-gyeok";
 import { yanginGyeok } from "./data/gyeokguk/yangin-gyeok";
+import { gyeokgukGrade } from "./data/gyeokguk/gyeokguk-grade";
 import { ohaengIntro } from "./data/ohaeng/intro";
 import { sipsungIntro } from "./data/sipsung/intro";
 import { unseong12Intro } from "./data/unseong12/intro";
@@ -385,6 +387,7 @@ const ENTRY_LIST: DictEntry[] = [
   sinsalGoran,
   sinsalTanghwa,
   sinsalHongryeom,
+  sinsalGrade,
   dohwaSipi,
   gyeopsalSipi,
   jaesalSipi,
@@ -432,6 +435,7 @@ const ENTRY_LIST: DictEntry[] = [
   sanggwanGyeok,
   geonrokGyeok,
   yanginGyeok,
+  gyeokgukGrade,
   ohaengIntro,
   sipsungIntro,
   unseong12Intro,
