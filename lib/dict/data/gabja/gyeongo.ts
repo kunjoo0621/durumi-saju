@@ -29,6 +29,7 @@ export const gyeongo: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "2등급 (중상등) · 3점" },
     { label: "60갑자 순번", value: "7번" },
     { label: "음양 구성", value: "양금 · 양화" },
     { label: "지장간", value: "정(丁) · 기(己)" },

@@ -26,6 +26,7 @@ export const jeongyu: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "1등급 (상등) · 4점" },
     { label: "60갑자 순번", value: "34번" },
     { label: "음양 구성", value: "음화 · 음금" },
     { label: "지장간", value: "신(辛) 단일" },

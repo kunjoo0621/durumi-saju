@@ -30,6 +30,7 @@ export const gyemi: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "2등급 (중상등) · 3점" },
     { label: "60갑자 순번", value: "20번" },
     { label: "음양 구성", value: "음수 · 음토" },
     { label: "지장간", value: "기(己)·정(丁)·을(乙)" },

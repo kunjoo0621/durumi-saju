@@ -30,6 +30,7 @@ export const gyesa: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "1등급 (상등) · 4점" },
     { label: "60갑자 순번", value: "30번" },
     { label: "음양 구성", value: "음수 · 음화" },
     { label: "지장간", value: "병(丙) · 경(庚) · 무(戊)" },

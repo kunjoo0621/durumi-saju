@@ -89,6 +89,7 @@ import { gyeongsin } from "./data/gabja/gyeongsin";
 import { sinyu } from "./data/gabja/sinyu";
 import { imsul } from "./data/gabja/imsul";
 import { gyehae } from "./data/gabja/gyehae";
+import { iljuGrade } from "./data/gabja/ilju-grade";
 import { mok as ohaengMok } from "./data/ohaeng/mok";
 import { hwa as ohaengHwa } from "./data/ohaeng/hwa";
 import { to as ohaengTo } from "./data/ohaeng/to";
@@ -315,6 +316,7 @@ const ENTRY_LIST: DictEntry[] = [
   sinyu,
   imsul,
   gyehae,
+  iljuGrade,
   ohaengMok,
   ohaengHwa,
   ohaengTo,

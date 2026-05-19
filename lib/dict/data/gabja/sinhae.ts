@@ -29,6 +29,7 @@ export const sinhae: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "3등급 (중등) · 2점" },
     { label: "60갑자 순번", value: "48번" },
     { label: "음양 구성", value: "음금 · 음수" },
     { label: "지장간", value: "임(壬) · 갑(甲)" },

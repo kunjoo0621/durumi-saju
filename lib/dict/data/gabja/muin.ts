@@ -30,6 +30,7 @@ export const muin: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "3등급 (중등) · 2점" },
     { label: "60갑자 순번", value: "15번" },
     { label: "음양 구성", value: "양토 · 양목" },
     { label: "지장간", value: "갑(甲)·병(丙)·무(戊)" },

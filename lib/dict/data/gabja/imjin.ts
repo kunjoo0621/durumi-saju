@@ -30,6 +30,7 @@ export const imjin: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "2등급 (중상등) · 3점" },
     { label: "60갑자 순번", value: "29번" },
     { label: "음양 구성", value: "양수 · 양토" },
     { label: "지장간", value: "무(戊) · 을(乙) · 계(癸)" },

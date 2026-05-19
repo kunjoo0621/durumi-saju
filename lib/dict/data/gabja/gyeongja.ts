@@ -26,6 +26,7 @@ export const gyeongja: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "4등급 (하등) · 1점" },
     { label: "60갑자 순번", value: "37번" },
     { label: "음양 구성", value: "양금 · 양수" },
     { label: "지장간", value: "계(癸) 단일" },
