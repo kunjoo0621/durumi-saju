@@ -64,6 +64,13 @@ export async function POST(request: NextRequest) {
     }
 
     const input = sessionRow.payload as InputPayload;
+    // /yearly/input 폼은 coreFearAxis 질문을 건너뛰지만 hasRequiredInput은
+    // 여전히 필수로 요구. 스토어에 이전 /start 흔적이 남아 채워진 경우만 통과되고
+    // 신규 진입자는 전부 400으로 차단되어 왔음. yearly 분석은 coreFearAxis를
+    // 사용하지 않으므로 YearlyEntryClient의 "DISMISS" 폴백과 동일하게 보정한다.
+    if (!input.coreFearAxis) {
+      input.coreFearAxis = "DISMISS";
+    }
     if (!hasRequiredInput(input)) {
       return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
     }
