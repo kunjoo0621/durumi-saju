@@ -1,0 +1,307 @@
+// 오늘의 운세 prompt + 분석 흐름 (lib)
+// yearly-prompt.ts 패턴 미러. dev-test 로직 흡수해서 production API에서 재사용.
+//
+// 흐름:
+//   InputPayload + targetDate
+//     → 사주 계산 (마스터 calculateSaju + enrichSajuData)
+//     → 일진 매칭 (마스터 getPairRelation, getTenStar)
+//     → 서버 확정 mood/weather/십성
+//     → Gemini LLM 호출 (system prompt v1.5)
+//     → JSON 파싱 + 결과 반환
+
+import { readFileSync } from "fs";
+import { join } from "path";
+import type { InputPayload } from "@/lib/analysis";
+import { calculateSaju, formatEnrichedSajuText, enrichSajuData } from "@/lib/utils/saju";
+import { getPairRelation, STEM_ELEMENT, getTenStar, BRANCH_INFO, type PairRelation } from "@/lib/utils/saju-enrichment";
+
+export const TODAY_SCORING_VERSION = 1;
+
+// ────────────────────────────────────────────────────────
+// 결과 타입
+// ────────────────────────────────────────────────────────
+
+export interface TodaySection {
+  icon: string;
+  title: string;
+  content: string;
+}
+
+export interface TodayMeta {
+  targetDate: string;       // "YYYY-MM-DD"
+  dayPillar: string;        // 한자 "戊戌"
+  tenStar: string;          // 본인 일간 기준 일진 천간 십성 ("정관(正官)" 등)
+  twelveStage: string;      // 본인 12운성
+  mood: "강세" | "보통" | "주의" | "위기";
+  weatherIcon: "sun" | "cloud" | "rain" | "thunder";
+  weatherLabel: string;
+}
+
+export interface TodayResult {
+  tier: {
+    grade: string;
+    composite: number;
+    percentileRank: number;
+    topPercent: number;
+    confidence: number;
+    title: string;
+    description: string;
+  };
+  scores: Record<string, number>;
+  sections: TodaySection[];
+  todayMeta: TodayMeta;
+  todayKeywords: string[];
+}
+
+export interface TodayServerAnalysis {
+  ownerDayPillar: string;
+  ownerDayMaster: string;
+  ownerElement: string;
+  ownerStrength: string | undefined;
+  todayDayPillar: string;
+  todayDayMaster: string;
+  todayElement: string;
+  stemRelation: { label: string; impact: string };
+  branchRelation: string;
+  branchRelationType: PairRelation;
+  tenStar: string;
+  mood: "강세" | "보통" | "주의" | "위기";
+  weather: { icon: string; label: string };
+  twelveStage: string;
+}
+
+// ────────────────────────────────────────────────────────
+// 일진 ↔ 본인 매칭 helper (마스터 단일 소스 사용)
+// ────────────────────────────────────────────────────────
+
+const SAENG: Record<string, string> = { 목:"화", 화:"토", 토:"금", 금:"수", 수:"목" };
+const GEUK: Record<string, string> = { 목:"토", 토:"수", 수:"화", 화:"금", 금:"목" };
+
+function getStemRelation(ownerEl: string, todayEl: string): { label: string; impact: string } {
+  if (ownerEl === todayEl) return { label: "비화", impact: "같은 오행 — 친근·편함" };
+  if (SAENG[ownerEl] === todayEl) return { label: `${ownerEl}→${todayEl} 본인이 일진을 생함`, impact: "에너지 줌 (살짝 피곤)" };
+  if (SAENG[todayEl] === ownerEl) return { label: `${todayEl}→${ownerEl} 일진이 본인을 생함`, impact: "에너지 받음 (도움 옴)" };
+  if (GEUK[ownerEl] === todayEl) return { label: `${ownerEl}→${todayEl} 본인이 일진을 극함`, impact: "내가 우위 (주도 가능)" };
+  if (GEUK[todayEl] === ownerEl) return { label: `${todayEl}→${ownerEl} 일진이 본인을 극함`, impact: "압박 받음 (수동·기다림)" };
+  return { label: "관계 없음", impact: "평이" };
+}
+
+function decideMood(stemRel: string, pairType: PairRelation): "강세" | "보통" | "주의" | "위기" {
+  if (pairType === "chung" || stemRel.includes("일진이 본인을 극함")) return "위기";
+  if (pairType === "hyung" || pairType === "wonjin") return "주의";
+  if (pairType === "hap" || stemRel.includes("일진이 본인을 생함")) return "강세";
+  return "보통";
+}
+
+const WEATHER_MAP = {
+  강세: { icon: "sun" as const, label: "맑음" },
+  보통: { icon: "cloud" as const, label: "흐림" },
+  주의: { icon: "rain" as const, label: "비 예보" },
+  위기: { icon: "thunder" as const, label: "폭풍 주의" },
+};
+
+function computeTenStar(ownerStemHanja: string, todayStemHanja: string): string {
+  const ownerInfo = STEM_ELEMENT[ownerStemHanja];
+  const todayInfo = STEM_ELEMENT[todayStemHanja];
+  if (!ownerInfo || !todayInfo) return "";
+  return getTenStar(ownerInfo.element, ownerInfo.yin_yang, todayInfo.element, todayInfo.yin_yang);
+}
+
+// ────────────────────────────────────────────────────────
+// 나이대 매핑
+// ────────────────────────────────────────────────────────
+
+function getAgeBracket(age: number): string {
+  if (age < 20) return "10대 후반";
+  if (age < 25) return "20대 초";
+  if (age < 33) return "20대 후~30대 초";
+  if (age < 45) return "30대 중~40대 초";
+  if (age < 55) return "40대 중~50대 초";
+  return "50대 후~60대+";
+}
+
+// ────────────────────────────────────────────────────────
+// LLM 호출 (analysis.ts fallback fetch 패턴)
+// ────────────────────────────────────────────────────────
+
+async function callGeminiFetch(modelName: string, systemPrompt: string, userInfo: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  if (!apiKey) return null;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userInfo }] }],
+      generationConfig: {
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json",
+        temperature: 0.75,
+      },
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini fetch ${res.status}: ${errText.slice(0, 500)}`);
+  }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+  return text;
+}
+
+// ────────────────────────────────────────────────────────
+// 서버 결정론 분석 (LLM 호출 전 단계)
+// ────────────────────────────────────────────────────────
+
+export async function analyzeTodayServer(input: InputPayload, targetDate: string): Promise<{
+  serverAnalysis: TodayServerAnalysis;
+  ownerSajuText: string;
+  todayContext: string;
+}> {
+  // 1. 본인 사주 enriched
+  const birthYear = Number(input.birthYear);
+  const birthMonth = Number(input.birthMonth);
+  const birthDay = Number(input.birthDay);
+  const birthHour = input.unknownBirthTime ? undefined : Number(input.birthHour);
+  const birthMinute = input.unknownBirthTime ? undefined : Number(input.birthMinute);
+
+  const ownerSaju = await calculateSaju(birthYear, birthMonth, birthDay, birthHour, birthMinute, {
+    birthLocation: input.birthLocation,
+  });
+  if (!ownerSaju) throw new Error("본인 사주 계산 실패");
+
+  const ownerEnriched = enrichSajuData(ownerSaju, { isTimeUnknown: Boolean(input.unknownBirthTime) });
+  const ownerSajuText = formatEnrichedSajuText(ownerEnriched);
+
+  // 2. 오늘 일진 (정오 기준, 시 무관)
+  const [ty, tm, td] = targetDate.split("-").map(Number);
+  if (!ty || !tm || !td) throw new Error(`targetDate 형식 오류: ${targetDate}`);
+  const todaySaju = await calculateSaju(ty, tm, td, 12, 0);
+  if (!todaySaju) throw new Error("오늘 일진 계산 실패");
+  const todayEnriched = enrichSajuData(todaySaju, { isTimeUnknown: true });
+
+  // 3. 일진 ↔ 본인 매칭 (★ 마스터 getPairRelation 사용)
+  const ownerDayStemHanja = ownerEnriched.pillars.day.slice(0, 1);
+  const ownerDayBranchHanja = ownerEnriched.pillars.day.slice(1, 2);
+  const ownerDayStemKor = ownerEnriched.dayMaster.korean;
+  const ownerDayBranchKor = BRANCH_INFO[ownerDayBranchHanja]?.korean || ownerDayBranchHanja;
+  const ownerEl = ownerEnriched.dayMaster.element;
+
+  const todayDayStemHanja = todayEnriched.pillars.day.slice(0, 1);
+  const todayDayBranchHanja = todayEnriched.pillars.day.slice(1, 2);
+  const todayDayStemKor = todayEnriched.dayMaster.korean;
+  const todayDayBranchKor = BRANCH_INFO[todayDayBranchHanja]?.korean || todayDayBranchHanja;
+  const todayEl = todayEnriched.dayMaster.element;
+
+  const pair = getPairRelation(ownerDayBranchHanja, todayDayBranchHanja);
+  const stemRel = getStemRelation(ownerEl, todayEl);
+  const mood = decideMood(stemRel.label, pair.type);
+  const weather = WEATHER_MAP[mood];
+  const tenStar = computeTenStar(ownerDayStemHanja, todayDayStemHanja);
+  const twelveStage = ownerEnriched.twelveStages?.day?.korean || "";
+
+  const todayContext = `
+[오늘 일진 컨텍스트 — 서버 확정]
+오늘 날짜: ${targetDate}
+오늘 일진: ${todayEnriched.pillars.day}
+오늘 연주(세운): ${todayEnriched.pillars.year}
+오늘 월주(월건): ${todayEnriched.pillars.month}
+
+일주 ↔ 일진 상호작용:
+  - 일간 관계: 본인 ${ownerDayStemKor}(${ownerEl}) vs 일진 ${todayDayStemKor}(${todayEl}) → ${stemRel.label} (${stemRel.impact})
+  - 일지 관계: 본인 ${ownerDayBranchKor}(${ownerDayBranchHanja}) vs 일진 ${todayDayBranchKor}(${todayDayBranchHanja}) → ${pair.label}
+  - 일진 천간이 본인 일간 기준 십성: ${tenStar}
+
+본인 용신: ${ownerEnriched.yongshin?.eokbu || "-"} / 기신: ${ownerEnriched.yongshin?.gisin || "-"}
+본인 신강신약: ${ownerEnriched.strength?.result || "-"}
+
+오늘 mood (서버 확정): **${mood}** → weather: ${weather.icon} "${weather.label}"
+`.trim();
+
+  const serverAnalysis: TodayServerAnalysis = {
+    ownerDayPillar: ownerEnriched.pillars.day,
+    ownerDayMaster: ownerDayStemKor,
+    ownerElement: ownerEl,
+    ownerStrength: ownerEnriched.strength?.result,
+    todayDayPillar: todayEnriched.pillars.day,
+    todayDayMaster: todayDayStemKor,
+    todayElement: todayEl,
+    stemRelation: stemRel,
+    branchRelation: pair.label,
+    branchRelationType: pair.type,
+    tenStar,
+    mood,
+    weather: { icon: weather.icon, label: weather.label },
+    twelveStage,
+  };
+
+  return { serverAnalysis, ownerSajuText, todayContext };
+}
+
+// ────────────────────────────────────────────────────────
+// 메인 — LLM까지 전체 흐름 (production API에서 호출)
+// ────────────────────────────────────────────────────────
+
+export async function runTodayAnalysis(input: InputPayload, targetDate: string): Promise<{
+  result: TodayResult;
+  serverAnalysis: TodayServerAnalysis;
+}> {
+  const { serverAnalysis, ownerSajuText, todayContext } = await analyzeTodayServer(input, targetDate);
+
+  // 나이 + 나이대 산출
+  const [ty, tm, td] = targetDate.split("-").map(Number);
+  const age = ty - Number(input.birthYear) - (
+    tm < Number(input.birthMonth) || (tm === Number(input.birthMonth) && td < Number(input.birthDay)) ? 1 : 0
+  );
+  const ageBracket = getAgeBracket(age);
+
+  // system prompt 로드
+  const promptPath = join(process.cwd(), "prompts", "durumi_TODAY_SYSTEM_PROMPT_v1.0.md");
+  const systemPrompt = readFileSync(promptPath, "utf-8");
+
+  const userInfo = `
+[본인 사주 원국]
+${ownerSajuText}
+
+${todayContext}
+
+[입력값]
+이름: ${input.name || "(미입력)"}
+생년월일: ${input.birthYear}-${String(input.birthMonth).padStart(2, "0")}-${String(input.birthDay).padStart(2, "0")} (${input.calendarType === "lunar" ? "음력" : "양력"})
+출생시간: ${input.unknownBirthTime ? "(시 미상)" : `${input.birthHour}:${String(input.birthMinute || 0).padStart(2, "0")}`}
+오늘 날짜: ${targetDate}
+**현재 나이: 만 ${age}세 (${ageBracket})**  ← 본문 비유는 이 나이대 카테고리에서만 끌어올 것 (system prompt 8-1 매핑 따라)
+**직업 상태: ${input.employmentStatus || "미제공"}**  ← 본문 비유는 이 직업 카테고리에서만 끌어올 것 (system prompt 8-0 매핑 따라)
+
+위 정보로 system prompt JSON 스키마(tier + scores + sections[6] + todayMeta + todayKeywords)에 맞춰 출력:
+- weather/mood/일진 → 서버 확정값 그대로 반영
+- 6 section title 동적 생성 (8~25자, 비유·반전, 구체 명사 1개 이상)
+- scores 임시값 (재물65/연애60/직장70/건강60/대인70)
+- tier 임시값 (grade A, composite 80, percentileRank 82, topPercent 18, confidence 90)
+`.trim();
+
+  const text = await callGeminiFetch("gemini-3-flash-preview", systemPrompt, userInfo);
+  if (!text) throw new Error("Gemini API key 부재 또는 응답 없음");
+
+  let parsed: TodayResult;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`LLM JSON 파싱 실패: ${text.slice(0, 200)}`);
+  }
+
+  // 서버 확정값으로 todayMeta 덮어쓰기 (LLM이 잘못 출력해도 보호)
+  parsed.todayMeta = {
+    targetDate,
+    dayPillar: serverAnalysis.todayDayPillar.slice(0, 2),  // 한자만
+    tenStar: serverAnalysis.tenStar,
+    twelveStage: serverAnalysis.twelveStage,
+    mood: serverAnalysis.mood,
+    weatherIcon: serverAnalysis.weather.icon as TodayMeta["weatherIcon"],
+    weatherLabel: serverAnalysis.weather.label,
+  };
+
+  return { result: parsed, serverAnalysis };
+}

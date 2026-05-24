@@ -1,5 +1,6 @@
 export const SAJU_COST = 10;   // 사주 분석 = 10알
 export const BATTLE_COST = 20; // 배틀 = 20알
+export const TODAY_COST = 5;   // 오늘의 운세 = 5알 (데일리 부담 없는 가격)
 
 export type CoinPackageId = 'basic' | 'popular' | 'value';
 

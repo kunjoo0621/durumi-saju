@@ -23,6 +23,33 @@ export function hasRequiredInput(input: InputPayload) {
   return true;
 }
 
+/**
+ * today 전용 입력 검증. today 분석은 사주 계산 + 직업 매핑만 쓰므로
+ * relationshipStatus / coreFearAxis 등 사주 v1.3 전용 필드는 안 봄.
+ *
+ * yearly hotfix 0389a00 (coreFearAxis 폼/API mismatch) 패턴 회피 —
+ * today는 자체 검증으로 분리해 신규 진입자 차단을 원천 방지.
+ * employmentStatus도 미제공 폴백 매핑이 system prompt에 있어 옵셔널.
+ */
+export function hasTodayRequiredInput(input: InputPayload) {
+  if (
+    !input?.name ||
+    !input.birthYear ||
+    !input.birthMonth ||
+    !input.birthDay ||
+    !input.birthLocation ||
+    !input.gender
+  ) {
+    return false;
+  }
+
+  if (!input.unknownBirthTime && (!input.birthHour || !input.birthMinute)) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function markSessionConsumed(
   sessionId: string,
   userId: string | null,
