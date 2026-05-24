@@ -6,11 +6,16 @@ import { useSession } from "next-auth/react";
 import { Egg } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
-import { SAJU_COST, BATTLE_COST, YEARLY_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST, YEARLY_COST, TODAY_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 
 const YEARLY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_YEARLY === "1";
+const TODAY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TODAY === "1";
+
+// 오늘 날짜 라벨 ("5월 24일")
+const TODAY_DATE = new Date();
+const TODAY_LABEL = `${TODAY_DATE.getMonth() + 1}월 ${TODAY_DATE.getDate()}일`;
 
 // 메뉴 카드 "{N}년 내 운세" 표기는 yearly 분석과 일관되어야 함 — 입춘 기준.
 // 그레고리력 1/1~입춘 전 사이에는 전년도 세운이 적용되므로 메뉴도 동일 표기.
@@ -172,6 +177,55 @@ export default function MenuPage() {
                   <circle cx="82" cy="20" r="3" fill="#F59E0B" fillOpacity="0.5"/>
                   <circle cx="14" cy="52" r="2.5" fill="#F59E0B" fillOpacity="0.3"/>
                   <path d="M74 56l1.2 3.5 3.5 1.2-3.5 1.2-1.2 3.5-1.2-3.5-3.5-1.2 3.5-1.2z" fill="#F59E0B" fillOpacity="0.35"/>
+                </svg>
+              </div>
+            </button>
+          )}
+
+          {/* 오늘의 운세 카드 (FEATURE_FLAG 봉인) */}
+          {TODAY_ENABLED && (
+            <button
+              type="button"
+              className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_0.09s_both] w-full text-left"
+              style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+              onClick={() => router.push("/today")}
+            >
+              <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
+                style={{ background: 'rgba(14,165,233,0.10)' }} />
+
+              <div className="relative z-[2] flex-1 min-w-0">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold mb-3"
+                  style={{ background: 'rgba(14,165,233,0.10)', color: '#0EA5E9' }}>
+                  일진 풀이
+                </span>
+                <h3 className="text-xl font-bold text-white tracking-tight">
+                  {TODAY_LABEL} 내 운세
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mt-2">
+                  오늘 일진과 너의 사주가<br/>어디서 만나는지 짚어줄게
+                </p>
+                <p className="text-lg font-bold mt-3.5 flex items-center gap-1" style={{ color: '#0EA5E9' }}>
+                  <Egg size={18} weight="fill" />{TODAY_COST}알
+                </p>
+              </div>
+
+              <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
+                {/* 해 + 구름 모티프 — sky blue */}
+                <svg className="w-[112px] h-[112px] transition-transform duration-300 group-active:scale-110 group-active:rotate-2" style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} viewBox="0 0 96 96" fill="none">
+                  <ellipse cx="48" cy="84" rx="22" ry="4" fill="#0EA5E9" fillOpacity="0.1"/>
+                  <circle cx="50" cy="36" r="18" fill="#0EA5E9" fillOpacity="0.18"/>
+                  <circle cx="50" cy="36" r="13" fill="#0EA5E9" fillOpacity="0.35"/>
+                  <g stroke="#0EA5E9" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.5">
+                    <line x1="50" y1="10" x2="50" y2="16"/>
+                    <line x1="50" y1="56" x2="50" y2="62"/>
+                    <line x1="24" y1="36" x2="30" y2="36"/>
+                    <line x1="70" y1="36" x2="76" y2="36"/>
+                    <line x1="32" y1="18" x2="36" y2="22"/>
+                    <line x1="64" y1="50" x2="68" y2="54"/>
+                    <line x1="32" y1="54" x2="36" y2="50"/>
+                    <line x1="64" y1="22" x2="68" y2="18"/>
+                  </g>
+                  <path d="M28 64c-4 0-7 3-7 6s3 6 7 6h30c4 0 7-3 7-6s-3-6-7-6c-2-5-7-7-12-7s-10 2-11 7z" fill="#0EA5E9" fillOpacity="0.22" stroke="#0EA5E9" strokeOpacity="0.4" strokeWidth="1.5"/>
                 </svg>
               </div>
             </button>
