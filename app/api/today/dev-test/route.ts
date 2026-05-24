@@ -6,41 +6,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { calculateSaju, formatEnrichedSajuText, enrichSajuData } from "@/lib/utils/saju";
+import { getPairRelation, STEM_ELEMENT, getTenStar, BRANCH_INFO } from "@/lib/utils/saju-enrichment";
 
 // ────────────────────────────────────────────────────────
-// 일진 ↔ 본인 매칭 (today-interaction MVP 인라인)
+// 일진 ↔ 본인 매칭 — 마스터 saju-enrichment의 getPairRelation 사용
+// (인라인 매트릭스 금지. 단일 소스 원칙)
 // ────────────────────────────────────────────────────────
-
-const HAP: [string, string][] = [["자","축"],["인","해"],["묘","술"],["진","유"],["사","신"],["오","미"]];
-const CHUNG: [string, string][] = [["자","오"],["축","미"],["인","신"],["묘","유"],["진","술"],["사","해"]];
-const WONJIN: [string, string][] = [["자","미"],["축","오"],["인","유"],["묘","신"],["진","해"],["사","술"]];
-const HYUNG_GROUPS: string[][] = [
-  ["인","사","신"], ["축","술","미"], ["자","묘"],
-  ["진"], ["오"], ["유"], ["해"],
-];
 
 const SAENG: Record<string,string> = { 목:"화", 화:"토", 토:"금", 금:"수", 수:"목" };
 const GEUK: Record<string,string> = { 목:"토", 토:"수", 수:"화", 화:"금", 금:"목" };
-
-function pairIn(pairs: [string,string][], a: string, b: string): boolean {
-  return pairs.some(([x,y]) => (x===a&&y===b)||(y===a&&x===b));
-}
-function isHyung(a: string, b: string): boolean {
-  for (const g of HYUNG_GROUPS) {
-    if (g.length === 1 && a === b && a === g[0]) return true;
-    if (g.length > 1 && g.includes(a) && g.includes(b) && a !== b) return true;
-  }
-  return false;
-}
-
-function getBranchRelation(ownerBranch: string, todayBranch: string): string {
-  if (pairIn(HAP, ownerBranch, todayBranch)) return "6합 (끌림·결합)";
-  if (pairIn(CHUNG, ownerBranch, todayBranch)) return "6충 (정면 충돌)";
-  if (isHyung(ownerBranch, todayBranch)) return "형 (스트레스 누적·절차 꼬임)";
-  if (pairIn(WONJIN, ownerBranch, todayBranch)) return "원진 (보이지 않는 충돌)";
-  if (ownerBranch === todayBranch) return "동일 지지 (안정·반복)";
-  return "특별한 합·충 없음";
-}
 
 function getStemRelation(ownerEl: string, todayEl: string): { label: string; impact: string } {
   if (ownerEl === todayEl) return { label: "비화", impact: "같은 오행 — 친근·편함" };
@@ -51,11 +25,22 @@ function getStemRelation(ownerEl: string, todayEl: string): { label: string; imp
   return { label: "관계 없음", impact: "평이" };
 }
 
-function decideMood(stemRel: string, branchRel: string): "강세" | "보통" | "주의" | "위기" {
-  if (branchRel.includes("6충") || stemRel.includes("일진이 본인을 극함")) return "위기";
-  if (branchRel.includes("원진") || branchRel.includes("형")) return "주의";
-  if (branchRel.includes("6합") || stemRel.includes("일진이 본인을 생함")) return "강세";
+function decideMood(
+  stemRel: string,
+  pairType: "hap" | "samhap" | "banghap" | "chung" | "hyung" | "wonjin" | "same" | "none"
+): "강세" | "보통" | "주의" | "위기" {
+  if (pairType === "chung" || stemRel.includes("일진이 본인을 극함")) return "위기";
+  if (pairType === "hyung" || pairType === "wonjin") return "주의";
+  if (pairType === "hap" || stemRel.includes("일진이 본인을 생함")) return "강세";
   return "보통";
+}
+
+// 본인 일간 기준 일진 천간의 십성 (마스터 getTenStar 사용)
+function computeTenStar(ownerStemHanja: string, todayStemHanja: string): string {
+  const ownerInfo = STEM_ELEMENT[ownerStemHanja];
+  const todayInfo = STEM_ELEMENT[todayStemHanja];
+  if (!ownerInfo || !todayInfo) return "";
+  return getTenStar(ownerInfo.element, ownerInfo.yin_yang, todayInfo.element, todayInfo.yin_yang);
 }
 
 const WEATHER_MAP = {
@@ -112,6 +97,7 @@ export async function POST(request: NextRequest) {
       birthLocation?: string;
       gender?: string;
       name?: string;
+      employmentStatus?: string;  // "직장인" | "사업·프리랜서" | "학생" | "취업 준비 중"
       targetDate?: string;  // "YYYY-MM-DD" — 기본 오늘
     };
 
@@ -138,18 +124,27 @@ export async function POST(request: NextRequest) {
     }
     const todayEnriched = enrichSajuData(todaySaju, { isTimeUnknown: true });
 
-    // 3. 일진 ↔ 본인 매칭
-    const ownerDayStem = ownerEnriched.dayMaster.korean;
-    const ownerDayBranch = ownerEnriched.pillars.day.slice(1, 2);
+    // 3. 일진 ↔ 본인 매칭 (★ 마스터 saju-enrichment의 getPairRelation 사용)
+    //    pillars.day 형식 = "癸未(계미)" — 한자 2글자 + 괄호한글. 한자만 추출해 마스터와 매칭.
+    const ownerDayStemHanja = ownerEnriched.pillars.day.slice(0, 1);   // "癸"
+    const ownerDayBranchHanja = ownerEnriched.pillars.day.slice(1, 2); // "未"
+    const ownerDayStemKor = ownerEnriched.dayMaster.korean;            // "계"
+    const ownerDayBranchKor = BRANCH_INFO[ownerDayBranchHanja]?.korean || ownerDayBranchHanja;
     const ownerEl = ownerEnriched.dayMaster.element;
-    const todayDayStem = todayEnriched.dayMaster.korean;
-    const todayDayBranch = todayEnriched.pillars.day.slice(1, 2);
+
+    const todayDayStemHanja = todayEnriched.pillars.day.slice(0, 1);
+    const todayDayBranchHanja = todayEnriched.pillars.day.slice(1, 2);
+    const todayDayStemKor = todayEnriched.dayMaster.korean;
+    const todayDayBranchKor = BRANCH_INFO[todayDayBranchHanja]?.korean || todayDayBranchHanja;
     const todayEl = todayEnriched.dayMaster.element;
 
-    const branchRel = getBranchRelation(ownerDayBranch, todayDayBranch);
+    const pair = getPairRelation(ownerDayBranchHanja, todayDayBranchHanja);
     const stemRel = getStemRelation(ownerEl, todayEl);
-    const mood = decideMood(stemRel.label, branchRel);
+    const mood = decideMood(stemRel.label, pair.type);
     const weather = WEATHER_MAP[mood];
+
+    // 서버 결정론적 십성 (마스터 calculateTenStars 활용)
+    const todayTenStar = computeTenStar(ownerDayStemHanja, todayDayStemHanja);
 
     // 4. 일진 컨텍스트 블록
     const todayContext = `
@@ -160,8 +155,9 @@ export async function POST(request: NextRequest) {
 오늘 월주(월건): ${todayEnriched.pillars.month}
 
 일주 ↔ 일진 상호작용:
-  - 일간 관계: 본인 ${ownerDayStem}(${ownerEl}) vs 일진 ${todayDayStem}(${todayEl}) → ${stemRel.label} (${stemRel.impact})
-  - 일지 관계: 본인 ${ownerDayBranch} vs 일진 ${todayDayBranch} → ${branchRel}
+  - 일간 관계: 본인 ${ownerDayStemKor}(${ownerEl}) vs 일진 ${todayDayStemKor}(${todayEl}) → ${stemRel.label} (${stemRel.impact})
+  - 일지 관계: 본인 ${ownerDayBranchKor}(${ownerDayBranchHanja}) vs 일진 ${todayDayBranchKor}(${todayDayBranchHanja}) → ${pair.label}
+  - 일진 천간이 본인 일간 기준 십성: ${todayTenStar}
 
 본인 용신: ${ownerEnriched.yongshin?.eokbu || "-"} / 기신: ${ownerEnriched.yongshin?.gisin || "-"}
 본인 신강신약: ${ownerEnriched.strength?.result || "-"}
@@ -196,6 +192,7 @@ ${todayContext}
 출생시간: ${isTimeUnknown ? "(시 미상)" : `${body.birthHour}:${String(body.birthMinute || 0).padStart(2,"0")}`}
 오늘 날짜: ${targetStr}
 **현재 나이: 만 ${age}세 (${ageBracket})**  ← 본문 비유는 이 나이대 카테고리에서만 끌어올 것 (system prompt 8-1 매핑 따라)
+**직업 상태: ${body.employmentStatus || "미제공"}**  ← 본문 비유는 이 직업 카테고리에서만 끌어올 것 (system prompt 8-0 매핑 따라)
 
 위 정보로 system prompt JSON 스키마(tier + scores + sections[6] + todayMeta + todayKeywords)에 맞춰 출력:
 - weather/mood/일진 → 서버 확정값 그대로 반영
@@ -248,7 +245,9 @@ ${todayContext}
         todayDayMaster: todayEnriched.dayMaster.korean,
         todayElement: todayEl,
         stemRelation: stemRel,
-        branchRelation: branchRel,
+        branchRelation: pair.label,
+        branchRelationType: pair.type,
+        tenStar: todayTenStar,
         mood,
         weather,
       },
