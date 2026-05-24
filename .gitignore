@@ -43,3 +43,4 @@ next-env.d.ts
 *.backup-*
 build_output.log
 test-result-*.json
+public/__dev__/

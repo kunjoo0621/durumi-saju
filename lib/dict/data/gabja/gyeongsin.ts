@@ -30,6 +30,7 @@ export const gyeongsin: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "2등급 (중상등) · 3점" },
     { label: "60갑자 순번", value: "57번" },
     { label: "음양 구성", value: "양금 · 양금" },
     { label: "지장간", value: "경(庚) · 임(壬) · 무(戊)" },

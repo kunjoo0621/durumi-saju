@@ -30,6 +30,7 @@ export const imsin: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "3등급 (중등) · 2점" },
     { label: "60갑자 순번", value: "9번" },
     { label: "음양 구성", value: "양수 · 양금" },
     { label: "지장간", value: "경(庚) · 임(壬) · 무(戊)" },

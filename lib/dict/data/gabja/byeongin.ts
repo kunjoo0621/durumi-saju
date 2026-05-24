@@ -30,6 +30,7 @@ export const byeongin: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "2등급 (중상등) · 3점" },
     { label: "60갑자 순번", value: "3번" },
     { label: "음양 구성", value: "양화 · 양목" },
     { label: "지장간", value: "갑(甲) · 병(丙) · 무(戊)" },

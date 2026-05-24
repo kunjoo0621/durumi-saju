@@ -112,4 +112,6 @@ export interface DictEntry {
   faq: DictFAQ[];
   related: DictRelated[];
   updatedAt: string;
+  /** 카테고리 페이지 상단에 강조 카드로 노출 (개별 항목 아닌 메타·등급·랭킹 글) */
+  isOverview?: boolean;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useMemo, useState } from "react";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
 
 export type CategoryKey = "재물운" | "연애운" | "직장운" | "건강운" | "대인운";
 
@@ -211,7 +212,7 @@ function CategoryPetalChartInner({ categories }: CategoryPetalChartProps) {
             const targetRatio = item.score / 100;
             const localProgress = targetRatio > 0 ? ratio / targetRatio : 1;
             const labelOpacity = clamp((localProgress - 0.5) / 0.18, 0, 1);
-            const labelText = item.grade ? `${item.key} ${item.grade}` : item.key;
+            const labelText = item.grade ? `${item.key} ${safeDisplayGrade(item.grade)}` : item.key;
 
             return (
               <g key={item.key}>

@@ -29,6 +29,7 @@ export const gyehae: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "4등급 (하등) · 1점" },
     { label: "60갑자 순번", value: "60번 (마지막)" },
     { label: "음양 구성", value: "음수 · 음수" },
     { label: "지장간", value: "임(壬) · 갑(甲)" },

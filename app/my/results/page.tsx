@@ -9,6 +9,7 @@ import Image from "next/image";
 import Header from "@/components/layout/Header";
 import { useStoreActions } from "@/store/useInputStore";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
 import type { BattleListItem } from "@/types/battle";
 import { FullScreenLoading, InlineLoading } from "@/components/loading";
 import Modal from "@/components/Modal";
@@ -28,7 +29,24 @@ type ResultItem = {
   is_primary: boolean;
 };
 
-type Tab = "saju" | "battle";
+type Tab = "saju" | "yearly" | "battle";
+
+type YearlyItem = {
+  id: string;
+  target_year: number;
+  name: string | null;
+  birth_date: string | null;
+  birth_time: string | null;
+  gender: string | null;
+  yearly_pillar: string | null;
+  created_at: string | null;
+  grade: string | null;
+  score: number | null;
+  title: string | null;
+  tenStar: string | null;
+  twelveStage: string | null;
+  pillarKorean: string | null;
+};
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
   lover: "연인",
@@ -231,6 +249,12 @@ export default function MyResultsPage() {
   const [battleError, setBattleError] = useState(false);
   const battleFetched = useRef(false);
 
+  // Yearly results state
+  const [yearlyResults, setYearlyResults] = useState<YearlyItem[]>([]);
+  const [yearlyLoading, setYearlyLoading] = useState(false);
+  const [yearlyError, setYearlyError] = useState(false);
+  const yearlyFetched = useRef(false);
+
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "saju" | "battle";
@@ -283,6 +307,29 @@ export default function MyResultsPage() {
     await fetchBattles();
   }, [fetchBattles]);
 
+  const fetchYearly = useCallback(async () => {
+    if (yearlyFetched.current) return;
+    setYearlyLoading(true);
+    setYearlyError(false);
+    try {
+      const res = await fetch("/api/yearly/list");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setYearlyResults(Array.isArray(data.results) ? data.results : []);
+      yearlyFetched.current = true;
+    } catch {
+      setYearlyError(true);
+      setYearlyResults([]);
+    } finally {
+      setYearlyLoading(false);
+    }
+  }, []);
+
+  const retryYearly = useCallback(async () => {
+    yearlyFetched.current = false;
+    await fetchYearly();
+  }, [fetchYearly]);
+
   useEffect(() => {
     if (!session?.user) {
       setLoading(false);
@@ -295,7 +342,10 @@ export default function MyResultsPage() {
     if (tab === "battle" && session?.user) {
       fetchBattles();
     }
-  }, [tab, session, fetchBattles]);
+    if (tab === "yearly" && session?.user) {
+      fetchYearly();
+    }
+  }, [tab, session, fetchBattles, fetchYearly]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -405,6 +455,17 @@ export default function MyResultsPage() {
           </button>
           <button
             type="button"
+            onClick={() => setTab("yearly")}
+            className={`flex-1 py-3 text-center text-[14px] font-semibold transition-colors ${
+              tab === "yearly"
+                ? "text-white border-b-2 border-[#FF6B6B]"
+                : "text-gray-500"
+            }`}
+          >
+            올해 운세
+          </button>
+          <button
+            type="button"
             onClick={() => setTab("battle")}
             className={`flex-1 py-3 text-center text-[14px] font-semibold transition-colors ${
               tab === "battle"
@@ -447,7 +508,7 @@ export default function MyResultsPage() {
                             >
                               <Image
                                 src={badgeSrc}
-                                alt={`${item.grade}등급`}
+                                alt={`${safeDisplayGrade(item.grade)}등급`}
                                 width={30}
                                 height={30}
                               />
@@ -470,7 +531,7 @@ export default function MyResultsPage() {
                                   className="text-[13px] font-semibold whitespace-nowrap shrink-0"
                                   style={{ color: gc?.text || "#D0A070" }}
                                 >
-                                  {item.grade}등급{item.score != null ? ` · ${item.score}점` : ""}
+                                  {safeDisplayGrade(item.grade)}등급{item.score != null ? ` · ${item.score}점` : ""}
                                 </span>
                               )}
                             </div>
@@ -579,6 +640,146 @@ export default function MyResultsPage() {
             </>
           )}
 
+          {/* ===== 올해 운세 탭 ===== */}
+          {tab === "yearly" && (
+            <>
+              {yearlyLoading && <InlineLoading message="불러오는 중..." />}
+
+              {!yearlyLoading && !yearlyError && yearlyResults.length > 0 && (
+                <div className="space-y-3">
+                  {yearlyResults.map((y) => {
+                    const gc = y.grade ? getGradeColor(y.grade) : null;
+                    const badgeSrc = y.grade ? getGradeBadge(y.grade) : null;
+                    const birthTime = formatBirthTime(y.birth_time);
+
+                    return (
+                      <Link
+                        key={y.id}
+                        href={`/yearly/result/${y.id}`}
+                        className="block rounded-2xl active:opacity-80 transition-opacity"
+                        style={{ background: "#141414" }}
+                      >
+                        <div className="py-5 px-5 flex items-center gap-4">
+                          {/* 등급 메달 */}
+                          {badgeSrc ? (
+                            <div
+                              className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0"
+                              style={{ background: gc?.bg || "#2D231B" }}
+                            >
+                              <Image src={badgeSrc} alt={`${safeDisplayGrade(y.grade)}등급`} width={30} height={30} />
+                            </div>
+                          ) : (
+                            <div className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0 bg-white/5">
+                              <span className="text-[#4B5563] text-[14px]">?</span>
+                            </div>
+                          )}
+
+                          {/* 정보 영역 */}
+                          <div className="flex-1 min-w-0">
+                            {/* 1줄: 이름 + 연도 */}
+                            <div className="flex items-baseline gap-2 mb-1.5">
+                              <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
+                                {y.name || "올해 운세"}
+                              </span>
+                              <span
+                                className="text-[13px] font-semibold whitespace-nowrap shrink-0"
+                                style={{ color: gc?.text || "#D0A070" }}
+                              >
+                                {y.target_year}년
+                              </span>
+                            </div>
+                            {/* 2줄: 메타 (천간지지·십성·12운성) */}
+                            <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+                              {y.pillarKorean && <span>{y.pillarKorean}</span>}
+                              {y.tenStar && (
+                                <>
+                                  <span style={{ color: "#2A2A2A" }}>·</span>
+                                  <span>{y.tenStar}운</span>
+                                </>
+                              )}
+                              {y.twelveStage && (
+                                <>
+                                  <span style={{ color: "#2A2A2A" }}>·</span>
+                                  <span>{y.twelveStage}</span>
+                                </>
+                              )}
+                            </div>
+                            {/* 3줄: 생년월일 */}
+                            {y.birth_date && (
+                              <div className="flex items-center gap-1.5 text-[11px] mt-1" style={{ color: "#3A3A3A" }}>
+                                <span>{y.birth_date.replace(/-/g, ".")}</span>
+                                {y.gender && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{y.gender}</span>
+                                  </>
+                                )}
+                                {birthTime && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{birthTime}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!yearlyLoading && !yearlyError && yearlyResults.length === 0 && (
+                <div className="pt-12 flex flex-col items-center text-center space-y-6">
+                  <p className="text-[15px] text-text-secondary">
+                    아직 올해 운세 결과가 없어
+                  </p>
+                  <div className="w-full space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => router.push("/yearly")}
+                      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+                    >
+                      올해 운세 보러가기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/menu")}
+                      className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+                    >
+                      메뉴로
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!yearlyLoading && yearlyError && (
+                <div className="pt-12 flex flex-col items-center text-center space-y-6">
+                  <p className="text-[15px] text-text-secondary">
+                    올해 운세 내역을 못 불러왔어
+                  </p>
+                  <div className="w-full space-y-3">
+                    <button
+                      type="button"
+                      onClick={retryYearly}
+                      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+                    >
+                      다시 시도
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/menu")}
+                      className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+                    >
+                      메뉴로
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {/* ===== 사주 배틀 탭 ===== */}
           {tab === "battle" && (
             <>
@@ -617,13 +818,13 @@ export default function MyResultsPage() {
                               className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center"
                               style={{ background: gcA.bg }}
                             >
-                              <Image src={badgeA} alt={`${b.player_a_grade}등급`} width={30} height={30} />
+                              <Image src={badgeA} alt={`${safeDisplayGrade(b.player_a_grade)}등급`} width={30} height={30} />
                             </div>
                             <div
                               className="absolute -right-1.5 -bottom-1.5 w-[28px] h-[28px] rounded-[8px] flex items-center justify-center ring-2 ring-[#141414]"
                               style={{ background: gcB.bg }}
                             >
-                              <Image src={badgeB} alt={`${b.player_b_grade}등급`} width={16} height={16} />
+                              <Image src={badgeB} alt={`${safeDisplayGrade(b.player_b_grade)}등급`} width={16} height={16} />
                             </div>
                           </div>
 

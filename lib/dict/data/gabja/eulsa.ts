@@ -30,6 +30,7 @@ export const eulsa: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "3등급 (중등) · 2점" },
     { label: "60갑자 순번", value: "42번" },
     { label: "음양 구성", value: "음목 · 음화" },
     { label: "지장간", value: "병(丙) · 경(庚) · 무(戊)" },

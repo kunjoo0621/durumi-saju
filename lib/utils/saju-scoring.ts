@@ -9,7 +9,9 @@ import {
 import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-export const SCORING_VERSION = 16;
+// v17: 등급 컷 조정 옵션 18 (S85/A80/B70/C52) + UI 라벨 격상 (SS/S/A/B/C) 동시 적용.
+// 산식 자체는 변경 없음. 컷·라벨 변경만이지만 SCORING_VERSION 올려 캐시 무효화.
+export const SCORING_VERSION = 17;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;

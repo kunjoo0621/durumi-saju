@@ -30,6 +30,7 @@ export const gapsin: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "4등급 (하등) · 1점" },
     { label: "60갑자 순번", value: "21번" },
     { label: "음양 구성", value: "양목 · 양금" },
     { label: "지장간", value: "경(庚)·임(壬)·무(戊)" },

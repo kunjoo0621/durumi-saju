@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Warning, CaretDown } from "@phosphor-icons/react";
+import { transformGradeText } from "@/lib/gradeSystem";
 type DangerSignals = {
   triggers: { situation: string; description: string }[];
   summary?: string;
@@ -65,17 +66,17 @@ export default function BattleDangerSignals({ dangerSignals }: Props) {
                   style={{ backgroundColor: "rgba(245,158,11,0.06)" }}
                 >
                   <p className="text-[14px] font-bold text-text-primary mb-2">
-                    {trigger.situation}
+                    {transformGradeText(trigger.situation)}
                   </p>
                   <p className="text-[15px] text-gray-300 leading-[1.7]">
-                    {trigger.description}
+                    {transformGradeText(trigger.description)}
                   </p>
                 </div>
               ))}
 
               {dangerSignals.summary && (
                 <p className="text-[15px] text-text-primary leading-[1.7] pt-2">
-                  {dangerSignals.summary}
+                  {transformGradeText(dangerSignals.summary)}
                 </p>
               )}
             </div>

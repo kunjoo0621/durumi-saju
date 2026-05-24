@@ -1,7 +1,6 @@
 /**
- * 신건주(운영자) 본인 계정에 알 10개 테스트용 충전.
- * - profiles.coin_balance += 10
- * - coin_transactions에 bonus 기록 추가 (멱등 X, 매 실행 마다 추가)
+ * 신건주(운영자) 본인 계정에 알 30개 테스트용 충전.
+ * profiles + coin_transactions 를 atomic 으로 묶는 operator_grant_coins RPC 사용.
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
@@ -15,8 +14,8 @@ for (const line of envText.split("\n")) {
 const sb = createClient(envVars.NEXT_PUBLIC_SUPABASE_URL, envVars.SUPABASE_SERVICE_ROLE_KEY);
 
 const KAKAO_ID = "4722556140";
+const AMOUNT = 30;
 
-// 1) users 테이블에서 신건주 user_id 조회
 const { data: user, error: userErr } = await sb
   .from("users")
   .select("id, name, kakao_id")
@@ -29,25 +28,19 @@ if (userErr || !user) {
 }
 console.log(`대상 사용자: ${user.name} (id=${user.id}, kakao_id=${KAKAO_ID})`);
 
-// 2) 현재 coin_balance 조회
-const { data: prof } = await sb.from("profiles").select("coin_balance").eq("user_id", user.id).single();
-console.log(`현재 잔고: ${prof?.coin_balance ?? "없음"}알`);
+const { data: prof } = await sb.from("profiles").select("coin_balance").eq("user_id", user.id).maybeSingle();
+console.log(`현재 잔고: ${prof?.coin_balance ?? 0}알`);
 
-// 3) profiles.coin_balance += 30
-const newBalance = (prof?.coin_balance ?? 0) + 30;
-const { error: updErr } = await sb
-  .from("profiles")
-  .upsert({ user_id: user.id, coin_balance: newBalance }, { onConflict: "user_id" });
-if (updErr) { console.log("upsert 실패:", updErr); process.exit(1); }
-
-// 4) coin_transactions에 bonus 기록
-const { error: txErr } = await sb.from("coin_transactions").insert({
-  user_id: user.id,
-  type: "bonus",
-  amount: 30,
-  balance_after: newBalance,
-  reference_id: "operator_test_v1.4_battle",
+const { data, error } = await sb.rpc("operator_grant_coins", {
+  p_user_id: user.id,
+  p_amount: AMOUNT,
+  p_reason: "test_v1.4_battle",
 });
-if (txErr) { console.log("transaction 기록 실패:", txErr); process.exit(1); }
 
+if (error) {
+  console.log("처리 실패:", error.message);
+  process.exit(1);
+}
+
+const newBalance = Array.isArray(data) ? data[0]?.new_balance : (data as any)?.new_balance;
 console.log(`\n✓ 충전 완료. 새 잔고: ${newBalance}알`);

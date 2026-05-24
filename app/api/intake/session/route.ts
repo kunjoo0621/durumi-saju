@@ -16,8 +16,8 @@ function isValidInput(input: InputPayload) {
     !input.birthLocation ||
     !input.gender ||
     !input.relationshipStatus ||
-    !input.employmentStatus ||
-    !input.coreFearAxis
+    !input.employmentStatus
+    // coreFearAxis는 옵셔널 (yearly 단독 흐름은 제외)
   ) {
     return false;
   }

@@ -6,8 +6,15 @@ import { useSession } from "next-auth/react";
 import { Egg } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
-import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST, YEARLY_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
+import { resolveSolarYear } from "@/lib/utils/ipchun";
+
+const YEARLY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_YEARLY === "1";
+
+// 메뉴 카드 "{N}년 내 운세" 표기는 yearly 분석과 일관되어야 함 — 입춘 기준.
+// 그레고리력 1/1~입춘 전 사이에는 전년도 세운이 적용되므로 메뉴도 동일 표기.
+const CURRENT_YEAR = resolveSolarYear(new Date()).solarYear;
 
 export default function MenuPage() {
   const router = useRouter();
@@ -125,6 +132,49 @@ export default function MenuPage() {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* 올해의 운세 카드 (FEATURE_FLAG 봉인) */}
+          {YEARLY_ENABLED && (
+            <button
+              type="button"
+              className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_0.08s_both] w-full text-left"
+              style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+              onClick={() => router.push("/yearly")}
+            >
+              <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
+                style={{ background: 'rgba(245,158,11,0.08)' }} />
+
+              <div className="relative z-[2] flex-1 min-w-0">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold mb-3"
+                  style={{ background: 'rgba(245,158,11,0.10)', color: '#F59E0B' }}>
+                  세운 풀이
+                </span>
+                <h3 className="text-xl font-bold text-white tracking-tight">
+                  {CURRENT_YEAR}년 내 운세
+                </h3>
+                <p className="text-sm text-gray-400 leading-relaxed mt-2">
+                  내 사주 위에 올해 세운<br/>한 해 흐름 짚어줄게
+                </p>
+                <p className="text-lg font-bold mt-3.5 flex items-center gap-1" style={{ color: '#F59E0B' }}>
+                  <Egg size={18} weight="fill" />{YEARLY_COST}알
+                </p>
+              </div>
+
+              <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
+                <svg className="w-[112px] h-[112px] transition-transform duration-300 group-active:scale-110 group-active:-rotate-2" style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} viewBox="0 0 96 96" fill="none">
+                  <ellipse cx="48" cy="84" rx="22" ry="4" fill="#F59E0B" fillOpacity="0.1"/>
+                  <circle cx="48" cy="42" r="30" fill="#F59E0B" fillOpacity="0.12" stroke="#F59E0B" strokeOpacity="0.4" strokeWidth="2.5"/>
+                  <circle cx="48" cy="42" r="20" fill="#F59E0B" fillOpacity="0.15"/>
+                  <path d="M48 22v20l14 8" stroke="#F59E0B" strokeOpacity="0.7" strokeWidth="2.5" strokeLinecap="round"/>
+                  <circle cx="48" cy="42" r="2.5" fill="#F59E0B"/>
+                  <path d="M48 12l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#F59E0B" fillOpacity="0.6"/>
+                  <circle cx="82" cy="20" r="3" fill="#F59E0B" fillOpacity="0.5"/>
+                  <circle cx="14" cy="52" r="2.5" fill="#F59E0B" fillOpacity="0.3"/>
+                  <path d="M74 56l1.2 3.5 3.5 1.2-3.5 1.2-1.2 3.5-1.2-3.5-3.5-1.2 3.5-1.2z" fill="#F59E0B" fillOpacity="0.35"/>
+                </svg>
+              </div>
+            </button>
           )}
 
           {/* 배틀 카드 */}

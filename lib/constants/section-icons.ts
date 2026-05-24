@@ -10,6 +10,8 @@ import {
   Warning,
   MapPin,
   Star,
+  Sparkle,
+  Target,
 } from "@phosphor-icons/react";
 
 export type SectionKey =
@@ -22,7 +24,9 @@ export type SectionKey =
   | "health"
   | "warning"
   | "turningpoint"
-  | "overall";
+  | "overall"
+  | "yearlyOpening"
+  | "yearlyDecision";
 
 export const SECTION_META: Record<
   SectionKey,
@@ -38,6 +42,8 @@ export const SECTION_META: Record<
   warning:       { Icon: Warning, label: "주의", color: "#F87171", bg: "rgba(248, 113, 113, 0.15)", accent: "#F87171" },
   turningpoint:  { Icon: MapPin, label: "터닝포인트", color: "#A855F7", bg: "rgba(168, 85, 247, 0.15)", accent: "#A855F7" },
   overall:       { Icon: Star, label: "종합", color: "#9CA3AF", bg: "rgba(156, 163, 175, 0.12)", accent: "#D1D5DB" },
+  yearlyOpening: { Icon: Sparkle, label: "올해 한 줄", color: "#F59E0B", bg: "rgba(245, 158, 11, 0.15)", accent: "#F59E0B" },
+  yearlyDecision:{ Icon: Target, label: "결정 타이밍", color: "#A855F7", bg: "rgba(168, 85, 247, 0.15)", accent: "#A855F7" },
 };
 
 export const SECTION_ORDER: SectionKey[] = [
@@ -64,6 +70,9 @@ const EMOJI_TO_KEY: Record<string, SectionKey> = {
   "🚧": "warning",
   "📍": "turningpoint",
   "✅": "overall",
+  // yearly 전용
+  "🪶": "yearlyOpening",
+  "🎯": "yearlyDecision",
 };
 
 /** LLM이 출력한 이모지 → SectionKey 변환. 매칭 실패 시 "relationship" 폴백. */

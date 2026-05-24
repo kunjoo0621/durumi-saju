@@ -4,7 +4,7 @@ import Providers from "./providers";
 
 const SITE_URL = "https://www.durumisaju.com";
 const SITE_NAME = "사주보는 두루미";
-const DESCRIPTION = "내 사주 등급은 S? A? 사주 등급 분석부터 친구와 1:1 배틀까지.";
+const DESCRIPTION = "내 사주 등급은 SS? S? 사주 등급 분석부터 친구와 1:1 배틀까지.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

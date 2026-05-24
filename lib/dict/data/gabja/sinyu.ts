@@ -26,6 +26,7 @@ export const sinyu: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "2등급 (중상등) · 3점" },
     { label: "60갑자 순번", value: "58번" },
     { label: "음양 구성", value: "음금 · 음금" },
     { label: "지장간", value: "신(辛) 단일" },

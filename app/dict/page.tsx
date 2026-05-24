@@ -50,15 +50,15 @@ const CATEGORY_TOTAL: Record<DictCategory, number> = {
   pillars: 4,
   cheongan: 10,
   jiji: 12,
-  gabja: 60,
+  gabja: 61,
   ohaeng: 9,
   sipsung: 11,
   unseong12: 13,
   gangyak: 12,
   yongshin: 5,
-  gyeokguk: 11,
+  gyeokguk: 12,
   relation: 29,
-  sinsal: 22,
+  sinsal: 23,
   sipisinsal: 13,
 };
 

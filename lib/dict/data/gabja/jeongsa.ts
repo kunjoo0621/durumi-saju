@@ -30,6 +30,7 @@ export const jeongsa: DictEntry = {
     },
   },
   highlight: [
+    { label: "일주 등급", value: "4등급 (하등) · 1점" },
     { label: "60갑자 순번", value: "54번" },
     { label: "음양 구성", value: "음화 · 음화" },
     { label: "지장간", value: "병(丙) · 경(庚) · 무(戊)" },

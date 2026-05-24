@@ -265,3 +265,44 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ===== yearly 결과 페이지 전용 애니메이션 (yearly-only — 다른 페이지 영향 X) ===== */
+
+/* 카드 stagger fade-up — 페이지 진입 시 카드들이 차례로 등장 */
+@keyframes durumiFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.durumi-stagger > * {
+  opacity: 0;
+  animation: durumiFadeUp 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.durumi-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.durumi-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.durumi-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.durumi-stagger > *:nth-child(4) { animation-delay: 240ms; }
+.durumi-stagger > *:nth-child(5) { animation-delay: 320ms; }
+.durumi-stagger > *:nth-child(6) { animation-delay: 400ms; }
+.durumi-stagger > *:nth-child(7) { animation-delay: 480ms; }
+
+/* 라인 차트 그리기 애니메이션 (pathLength=1 사용) */
+@keyframes durumiLineDraw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to   { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+.durumi-line-draw {
+  animation: durumiLineDraw 1100ms cubic-bezier(0.65, 0, 0.35, 1) 200ms both;
+}
+
+/* 차트 mood shape pop 등장 — 라인 draw 후 차례로 */
+@keyframes durumiFadePop {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.durumi-fade-pop {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: durumiFadePop 360ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
