@@ -14,6 +14,7 @@ import { join } from "path";
 import type { InputPayload } from "@/lib/analysis";
 import { calculateSaju, formatEnrichedSajuText, enrichSajuData } from "@/lib/utils/saju";
 import { getPairRelation, STEM_ELEMENT, getTenStar, BRANCH_INFO, type PairRelation } from "@/lib/utils/saju-enrichment";
+import { calculateServerScoring } from "@/lib/utils/saju-scoring";
 
 export const TODAY_SCORING_VERSION = 1;
 
@@ -43,7 +44,7 @@ export interface TodayResult {
     composite: number;
     percentileRank: number;
     topPercent: number;
-    confidence: number;
+    confidence: string;  // "low" | "medium" | "high"
     title: string;
     description: string;
   };
@@ -136,7 +137,7 @@ async function callGeminiFetch(modelName: string, systemPrompt: string, userInfo
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts: [{ text: userInfo }] }],
       generationConfig: {
-        maxOutputTokens: 8192,
+        maxOutputTokens: 16384,
         responseMimeType: "application/json",
         temperature: 0.75,
       },
@@ -250,6 +251,18 @@ export async function runTodayAnalysis(input: InputPayload, targetDate: string):
 }> {
   const { serverAnalysis, ownerSajuText, todayContext } = await analyzeTodayServer(input, targetDate);
 
+  // ★ 마스터 원칙 — 개인사주 산식으로 tier·scores 산출 (yearly와 동일)
+  // 본인 enriched 재산출 (analyzeTodayServer 내부에서 했지만 export 안 함 → 다시 계산)
+  const ownerSaju = await calculateSaju(
+    Number(input.birthYear), Number(input.birthMonth), Number(input.birthDay),
+    input.unknownBirthTime ? undefined : Number(input.birthHour),
+    input.unknownBirthTime ? undefined : Number(input.birthMinute),
+    { birthLocation: input.birthLocation },
+  );
+  if (!ownerSaju) throw new Error("본인 사주 재계산 실패");
+  const ownerEnriched = enrichSajuData(ownerSaju, { isTimeUnknown: Boolean(input.unknownBirthTime) });
+  const { tier: masterTier, scores: masterScores } = calculateServerScoring(ownerEnriched);
+
   // 나이 + 나이대 산출
   const [ty, tm, td] = targetDate.split("-").map(Number);
   const age = ty - Number(input.birthYear) - (
@@ -267,6 +280,14 @@ ${ownerSajuText}
 
 ${todayContext}
 
+[★ 사주 마스터 값 — 서버 확정, LLM 변경 금지]
+사주 단일 분석 등급(grade): ${masterTier.grade}
+composite: ${masterTier.composite}
+percentileRank: ${masterTier.percentileRank}
+topPercent: ${masterTier.topPercent}
+confidence: ${masterTier.confidence}
+5분야 점수: 재물 ${masterScores.재물운} / 연애 ${masterScores.연애운} / 직장 ${masterScores.직장운} / 건강 ${masterScores.건강운} / 대인 ${masterScores.대인운}
+
 [입력값]
 이름: ${input.name || "(미입력)"}
 생년월일: ${input.birthYear}-${String(input.birthMonth).padStart(2, "0")}-${String(input.birthDay).padStart(2, "0")} (${input.calendarType === "lunar" ? "음력" : "양력"})
@@ -278,8 +299,7 @@ ${todayContext}
 위 정보로 system prompt JSON 스키마(tier + scores + sections[6] + todayMeta + todayKeywords)에 맞춰 출력:
 - weather/mood/일진 → 서버 확정값 그대로 반영
 - 6 section title 동적 생성 (8~25자, 비유·반전, 구체 명사 1개 이상)
-- scores 임시값 (재물65/연애60/직장70/건강60/대인70)
-- tier 임시값 (grade A, composite 80, percentileRank 82, topPercent 18, confidence 90)
+- ★ tier·scores → 위 사주 마스터 값 그대로 출력 (변경 금지). title·description은 LLM이 today 맥락 맞춰 생성하되 grade/composite 등 숫자는 마스터 그대로.
 `.trim();
 
   const text = await callGeminiFetch("gemini-3-flash-preview", systemPrompt, userInfo);
@@ -291,6 +311,18 @@ ${todayContext}
   } catch {
     throw new Error(`LLM JSON 파싱 실패: ${text.slice(0, 200)}`);
   }
+
+  // ★ 서버 확정값으로 마스터 덮어쓰기 (LLM이 임시값 만들어도 마스터로 강제)
+  parsed.tier = {
+    grade: masterTier.grade,
+    composite: masterTier.composite,
+    percentileRank: masterTier.percentileRank,
+    topPercent: masterTier.topPercent,
+    confidence: masterTier.confidence,
+    title: parsed.tier?.title || "",         // title·description은 LLM 생성 그대로
+    description: parsed.tier?.description || "",
+  };
+  parsed.scores = masterScores as unknown as Record<string, number>;
 
   // 서버 확정값으로 todayMeta 덮어쓰기 (LLM이 잘못 출력해도 보호)
   parsed.todayMeta = {
