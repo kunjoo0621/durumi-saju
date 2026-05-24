@@ -3,7 +3,7 @@
 // 오늘의 운세 결과 페이지 — yearly Hero 패턴 미러 + 시간대 흐름 제거
 // Hero (날짜 + weather + tier + 키워드 + 사주메타) → 6섹션 아코디언 → 푸터
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -130,10 +130,11 @@ export default function TodayResultClient({ resultId }: { resultId: string }) {
   const weatherLabel = WEATHER_LABEL[weatherIcon];
   const weatherColor = WEATHER_COLOR[weatherIcon];
 
-  const sections = useMemo(
-    () => result.sections.map((s) => ({ icon: s.icon, title: s.title, content: s.content })),
-    [result.sections],
-  );
+  const sections = result.sections.map((s) => ({
+    icon: s.icon,
+    title: s.title,
+    content: s.content,
+  }));
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/today/result/${resultId}`;
