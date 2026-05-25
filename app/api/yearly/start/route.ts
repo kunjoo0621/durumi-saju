@@ -210,21 +210,49 @@ export async function POST(request: NextRequest) {
       const resultId = upserted.data.id;
       const orderId = `egg_yearly_${targetYear}_${Date.now()}_${userId.slice(0, 8)}`;
 
-      await Promise.all([
-        supabaseAdmin
-          .from("yearly_result_unlocks")
-          .upsert(
-            {
-              user_id: userId,
-              result_id: resultId,
-              input_hash: inputHash,
-              target_year: targetYear,
-              order_id: orderId,
-            },
-            { onConflict: "order_id", ignoreDuplicates: true },
-          ),
-        markSessionConsumed(body.sessionId, userId),
-      ]);
+      // ★ 중복 요청 race 가드: unlock insert를 plain insert로 명시.
+      // (user_id, input_hash, target_year) unique 충돌 시 = 다른 요청이 먼저 차감·등록.
+      // 우리 차감(YEARLY_COST)은 손실 → 환불 + 기존 unlock의 result_id 재사용 반환.
+      // (today 패턴 미러 — 2026-05-25 commit 0a0517f)
+      const unlockInsert = await supabaseAdmin
+        .from("yearly_result_unlocks")
+        .insert({
+          user_id: userId,
+          result_id: resultId,
+          input_hash: inputHash,
+          target_year: targetYear,
+          order_id: orderId,
+        });
+
+      if (unlockInsert.error) {
+        // PostgreSQL unique_violation = 23505. user_input_year 또는 order_id 충돌.
+        if (unlockInsert.error.code === "23505") {
+          await refundCoins(userId, YEARLY_COST, body.sessionId);
+          const { data: priorUnlock } = await supabaseAdmin
+            .from("yearly_result_unlocks")
+            .select("result_id")
+            .eq("user_id", userId)
+            .eq("input_hash", inputHash)
+            .eq("target_year", targetYear)
+            .maybeSingle();
+          await markSessionConsumed(body.sessionId, userId);
+          return NextResponse.json({
+            ok: true,
+            reused: true,
+            resultId: priorUnlock?.result_id || resultId,
+            refunded: true,
+          });
+        }
+        // 그 외 에러 — 환불 후 실패
+        console.error("[YEARLY_START] unlock insert", unlockInsert.error.message);
+        await refundCoins(userId, YEARLY_COST, body.sessionId);
+        return NextResponse.json(
+          { error: "결제 기록 저장 중 오류가 발생했습니다.", refunded: true },
+          { status: 500 },
+        );
+      }
+
+      await markSessionConsumed(body.sessionId, userId);
 
       return NextResponse.json({
         ok: true,
