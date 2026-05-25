@@ -210,22 +210,40 @@ export default function MenuPage() {
               </div>
 
               <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
-                {/* 해 + 구름 모티프 — sky blue */}
+                {/* 해 + 햇살 + 구름 + 별·점 — sky blue (사주·yearly 카드 디테일 매칭) */}
                 <svg className="w-[112px] h-[112px] transition-transform duration-300 group-active:scale-110 group-active:rotate-2" style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} viewBox="0 0 96 96" fill="none">
+                  {/* 바닥 그림자 */}
                   <ellipse cx="48" cy="84" rx="22" ry="4" fill="#0EA5E9" fillOpacity="0.1"/>
-                  <circle cx="50" cy="36" r="18" fill="#0EA5E9" fillOpacity="0.18"/>
-                  <circle cx="50" cy="36" r="13" fill="#0EA5E9" fillOpacity="0.35"/>
-                  <g stroke="#0EA5E9" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.5">
-                    <line x1="50" y1="10" x2="50" y2="16"/>
-                    <line x1="50" y1="56" x2="50" y2="62"/>
-                    <line x1="24" y1="36" x2="30" y2="36"/>
-                    <line x1="70" y1="36" x2="76" y2="36"/>
-                    <line x1="32" y1="18" x2="36" y2="22"/>
-                    <line x1="64" y1="50" x2="68" y2="54"/>
-                    <line x1="32" y1="54" x2="36" y2="50"/>
-                    <line x1="64" y1="22" x2="68" y2="18"/>
+
+                  {/* 햇살 8방향 */}
+                  <g stroke="#0EA5E9" strokeWidth="2.5" strokeLinecap="round" strokeOpacity="0.55">
+                    <line x1="48" y1="8" x2="48" y2="16"/>
+                    <line x1="48" y1="60" x2="48" y2="68"/>
+                    <line x1="20" y1="38" x2="28" y2="38"/>
+                    <line x1="68" y1="38" x2="76" y2="38"/>
+                    <line x1="28" y1="18" x2="33" y2="23"/>
+                    <line x1="63" y1="53" x2="68" y2="58"/>
+                    <line x1="28" y1="58" x2="33" y2="53"/>
+                    <line x1="63" y1="23" x2="68" y2="18"/>
                   </g>
-                  <path d="M28 64c-4 0-7 3-7 6s3 6 7 6h30c4 0 7-3 7-6s-3-6-7-6c-2-5-7-7-12-7s-10 2-11 7z" fill="#0EA5E9" fillOpacity="0.22" stroke="#0EA5E9" strokeOpacity="0.4" strokeWidth="1.5"/>
+
+                  {/* 해 — 큰 원 fill + stroke + 내부 코어 */}
+                  <circle cx="48" cy="38" r="14" fill="#0EA5E9" fillOpacity="0.18"/>
+                  <circle cx="48" cy="38" r="14" stroke="#0EA5E9" strokeOpacity="0.5" strokeWidth="2.5"/>
+                  <circle cx="48" cy="38" r="8" fill="#0EA5E9" fillOpacity="0.4"/>
+
+                  {/* 해 하이라이트 */}
+                  <ellipse cx="44" cy="33" rx="4" ry="2.5" fill="white" fillOpacity="0.18" transform="rotate(-25, 44, 33)"/>
+
+                  {/* 구름 — 해 아래 살짝 가림 */}
+                  <path d="M30 70c-4 0-7 2.5-7 5.5s3 5.5 7 5.5h32c4 0 7-2.5 7-5.5s-3-5.5-7-5.5c-1.5-4.5-6-7-11-7s-9.5 2.5-10.5 7z" fill="#0EA5E9" fillOpacity="0.25"/>
+                  <path d="M30 70c-4 0-7 2.5-7 5.5s3 5.5 7 5.5h32c4 0 7-2.5 7-5.5s-3-5.5-7-5.5c-1.5-4.5-6-7-11-7s-9.5 2.5-10.5 7z" stroke="#0EA5E9" strokeOpacity="0.5" strokeWidth="1.8" fill="none"/>
+
+                  {/* 별·점 장식 외곽 */}
+                  <path d="M80 18l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5z" fill="#0EA5E9" fillOpacity="0.55"/>
+                  <circle cx="18" cy="22" r="2.5" fill="#0EA5E9" fillOpacity="0.45"/>
+                  <circle cx="84" cy="56" r="2" fill="#0EA5E9" fillOpacity="0.35"/>
+                  <path d="M14 56l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#0EA5E9" fillOpacity="0.3"/>
                 </svg>
               </div>
             </button>

@@ -8,6 +8,8 @@ import { FullScreenLoading } from "@/components/loading";
 import { YEARLY_COST } from "@/lib/constants/coins";
 import { useCoinStore } from "@/store/useCoinStore";
 import { resolveSolarYear, formatIpchunLabel } from "@/lib/utils/ipchun";
+import { getGradeBadge } from "@/lib/utils/grade-colors";
+import { displayGrade } from "@/lib/gradeSystem";
 
 type PrimarySaju = {
   sourceResultId: string;
@@ -24,6 +26,8 @@ type PrimarySaju = {
   employmentStatus: string;
   coreFearAxis: string;
   unknownBirthTime: boolean;
+  grade?: string | null;
+  ownedCount?: number;
 };
 
 // 입춘 기준 명리학 연도. 1/1~입춘 사이면 전년도 세운으로 자동 보정.
@@ -304,23 +308,54 @@ export default function YearlyEntryClient() {
             </div>
           ) : (
             <>
-              {/* 사주 요약 카드 */}
-              <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 space-y-3">
-                <div className="text-[12px] font-bold tracking-[0.05em] text-text-tertiary">
-                  내 사주 정보
-                </div>
-                <div className="text-[20px] font-bold font-aggro text-text-primary">
-                  {primary.name}
-                </div>
-                <div className="text-[14px] text-text-secondary">
-                  {primary.calendarType === "lunar" ? "음력 " : ""}
-                  {primary.birthYear}년 {Number(primary.birthMonth)}월 {Number(primary.birthDay)}일
-                  {primary.unknownBirthTime
-                    ? " (시간 미상)"
-                    : ` ${primary.birthHour}:${primary.birthMinute}`}
-                </div>
-                <div className="text-[13px] text-text-tertiary">
-                  {primary.birthLocation} · {primary.gender}
+              {/* 사주 요약 카드 — [등급 SVG] | 정보 | [변경] */}
+              <div className="rounded-2xl bg-background-secondary border border-white/5 p-5">
+                <div className="flex items-start gap-4">
+                  {/* 좌: 등급 SVG */}
+                  {primary.grade && (
+                    <div className="shrink-0 flex flex-col items-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getGradeBadge(primary.grade)}
+                        alt={`${displayGrade(primary.grade as any)}등급`}
+                        className="w-[64px] h-[64px]"
+                      />
+                      <span className="text-[11px] font-bold text-text-tertiary mt-1 tracking-wide">
+                        {displayGrade(primary.grade as any)}등급
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 중: 사주 정보 */}
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="text-[11px] font-bold tracking-[0.05em] text-text-tertiary">
+                      내 사주 정보
+                    </div>
+                    <div className="text-[19px] font-bold font-aggro text-text-primary truncate">
+                      {primary.name}
+                    </div>
+                    <div className="text-[13.5px] text-text-secondary">
+                      {primary.calendarType === "lunar" ? "음력 " : ""}
+                      {primary.birthYear}년 {Number(primary.birthMonth)}월 {Number(primary.birthDay)}일
+                      {primary.unknownBirthTime
+                        ? " (시간 미상)"
+                        : ` ${primary.birthHour}:${primary.birthMinute}`}
+                    </div>
+                    <div className="text-[12px] text-text-tertiary">
+                      {primary.birthLocation} · {primary.gender}
+                    </div>
+                  </div>
+
+                  {/* 우: 변경 버튼 (사주 ≥2개일 때만) */}
+                  {(primary.ownedCount ?? 0) >= 2 && (
+                    <button
+                      type="button"
+                      onClick={() => router.push("/my/results")}
+                      className="shrink-0 text-[12px] font-semibold text-text-tertiary hover:text-text-primary transition-colors px-2.5 py-1.5 rounded-lg border border-white/10 hover:border-white/20 active:scale-95"
+                    >
+                      변경
+                    </button>
+                  )}
                 </div>
               </div>
 

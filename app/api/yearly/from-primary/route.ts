@@ -45,7 +45,7 @@ export async function GET() {
     const { data: result, error: resultError } = await supabaseAdmin
       .from("saju_results")
       .select(
-        "id, name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type, core_fear_axis",
+        "id, name, birth_date, birth_time, region, gender, relationship_status, employment_status, calendar_type, core_fear_axis, full_json",
       )
       .eq("id", targetResultId)
       .eq("user_id", userId)
@@ -57,6 +57,15 @@ export async function GET() {
     if (!result) {
       return NextResponse.json({ result: null });
     }
+
+    // 변경 버튼 노출 판정 — 사용자가 가진 사주 결과 총 개수 (≥2 면 변경 가능)
+    const { count: ownedCount } = await supabaseAdmin
+      .from("saju_results")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    // grade 추출 (마스터 DB 저장값 그대로, UI에서 displayGrade로 변환)
+    const grade = (result.full_json as any)?.tier?.grade || null;
 
     const birthParts = result.birth_date?.split("-") || [];
     const timeParts = result.birth_time?.split(":") || [];
@@ -77,6 +86,8 @@ export async function GET() {
         employmentStatus: result.employment_status || "",
         coreFearAxis: result.core_fear_axis || "",
         unknownBirthTime: !result.birth_time,
+        grade,                          // ★ 신규 — 사주 단일 등급 (DB raw, UI에서 displayGrade 변환)
+        ownedCount: ownedCount ?? 0,    // ★ 신규 — ≥2 면 변경 버튼 노출
       },
     });
   } catch (error: any) {
