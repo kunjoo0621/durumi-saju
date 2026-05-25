@@ -9,6 +9,8 @@ import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import SectionList from "@/components/result/SectionList";
+import MoodGauge from "@/components/today/MoodGauge";
+import ScoresBar from "@/components/today/ScoresBar";
 import type { TodayResult, TodayMeta } from "@/lib/today-prompt";
 import { TODAY_LOADING_STEPS } from "@/lib/constants/today";
 import { dayPillarFriendly, tenStarFriendly, twelveStageFriendly } from "@/lib/utils/saju-friendly";
@@ -269,6 +271,12 @@ export default function TodayResultClient({ resultId }: { resultId: string }) {
             );
           })()}
         </section>
+
+        {/* 오늘 강도 게이지 — weather/mood 시각 */}
+        <MoodGauge mood={result.todayMeta.mood} />
+
+        {/* 내 사주 5분야 강도 — 사주 마스터 점수 */}
+        <ScoresBar scores={result.scores} />
 
         {/* 6섹션 상세 풀이 */}
         <section className="space-y-3 pt-2">
