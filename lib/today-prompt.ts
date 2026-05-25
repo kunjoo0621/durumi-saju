@@ -271,7 +271,7 @@ export async function runTodayAnalysis(input: InputPayload, targetDate: string):
   const ageBracket = getAgeBracket(age);
 
   // system prompt 로드
-  const promptPath = join(process.cwd(), "prompts", "durumi_TODAY_SYSTEM_PROMPT_v1.0.md");
+  const promptPath = join(process.cwd(), "prompts", "durumi_TODAY_SYSTEM_PROMPT_v1.7.md");
   const systemPrompt = readFileSync(promptPath, "utf-8");
 
   const userInfo = `
@@ -293,12 +293,15 @@ confidence: ${masterTier.confidence}
 생년월일: ${input.birthYear}-${String(input.birthMonth).padStart(2, "0")}-${String(input.birthDay).padStart(2, "0")} (${input.calendarType === "lunar" ? "음력" : "양력"})
 출생시간: ${input.unknownBirthTime ? "(시 미상)" : `${input.birthHour}:${String(input.birthMinute || 0).padStart(2, "0")}`}
 오늘 날짜: ${targetDate}
-**현재 나이: 만 ${age}세 (${ageBracket})**  ← 본문 비유는 이 나이대 카테고리에서만 끌어올 것 (system prompt 8-1 매핑 따라)
-**직업 상태: ${input.employmentStatus || "미제공"}**  ← 본문 비유는 이 직업 카테고리에서만 끌어올 것 (system prompt 8-0 매핑 따라)
+**현재 나이: 만 ${age}세 (${ageBracket})**  ← system prompt 8-1 나이대 매핑 참조 (경계 케이스는 8-X 교차 룰 적용)
+**직업 상태: ${input.employmentStatus || "미제공"}**  ← system prompt 8-0 B 룰 적용: 직업 컨텍스트는 6 영역 중 최대 2개(돈·직장)만. 관계·연애·건강·결정 4영역은 일반 도메인(가족·친구·동네·식사·수면·취미·환경)
+**연애 상태: ${input.relationshipStatus || "미제공"}**  ← 연애(💞) 영역 톤 분기에 사용 (system prompt 6섹션 정의 참조)
 
-위 정보로 system prompt JSON 스키마(tier + scores + sections[6] + todayMeta + todayKeywords)에 맞춰 출력:
+위 정보로 system prompt v1.7 JSON 스키마(tier + scores + sections[6] + todayMeta + todayKeywords)에 맞춰 출력:
 - weather/mood/일진 → 서버 확정값 그대로 반영
+- 6 sections icon 정확한 순서: 💸 / 🧩 / 💞 / 💼 / 🩺 / 🎯 (누락·중복·순서 어긋남 시 시스템이 throw)
 - 6 section title 동적 생성 (8~25자, 비유·반전, 구체 명사 1개 이상)
+- ★ 본문 한자 0건 — 일진 음역어("기해", "갑인", "계수") 본문 사용 금지. 친화어로 풀이
 - ★ tier·scores → 위 사주 마스터 값 그대로 출력 (변경 금지). title·description은 LLM이 today 맥락 맞춰 생성하되 grade/composite 등 숫자는 마스터 그대로.
 `.trim();
 
@@ -311,6 +314,28 @@ confidence: ${masterTier.confidence}
   } catch {
     throw new Error(`LLM JSON 파싱 실패: ${text.slice(0, 200)}`);
   }
+
+  // ★ v1.7 sections 검증 — icon 누락/중복/순서 어긋남 시 throw (라벨 mismatch 차단)
+  // 위치 기반 fallback은 위험 (LLM이 🧩를 빼먹으면 엉뚱한 내용이 "관계"로 라벨링됨).
+  // 차라리 throw로 실패 → 환불 흐름 타게 하는 게 안전.
+  const EXPECTED_ICONS = ["💸", "🧩", "💞", "💼", "🩺", "🎯"] as const;
+  if (!Array.isArray(parsed.sections) || parsed.sections.length !== 6) {
+    throw new Error(`sections 6개 필요. 실제: ${parsed.sections?.length ?? 0}`);
+  }
+  const byIcon = new Map(parsed.sections.map((s) => [s.icon, s]));
+  // 중복 icon 차단 (LLM이 💞를 두 번 출력 같은 케이스)
+  if (byIcon.size !== 6) {
+    const icons = parsed.sections.map((s) => s.icon).join(",");
+    throw new Error(`sections icon 중복: [${icons}]`);
+  }
+  // expected icon 누락 차단 (위치 기반 fallback X — 엉뚱한 내용 라벨링 위험)
+  const missing = EXPECTED_ICONS.filter((icon) => !byIcon.has(icon));
+  if (missing.length > 0) {
+    const actual = parsed.sections.map((s) => s.icon).join(",");
+    throw new Error(`sections icon 누락: 기대 ${missing.join(",")} / 실제 [${actual}]`);
+  }
+  // expected 순서로 강제 정렬 (LLM이 순서만 어겨도 sequence 보장)
+  parsed.sections = EXPECTED_ICONS.map((icon) => byIcon.get(icon)!);
 
   // ★ 서버 확정값으로 마스터 덮어쓰기 (LLM이 임시값 만들어도 마스터로 강제)
   parsed.tier = {

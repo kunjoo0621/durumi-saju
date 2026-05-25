@@ -117,10 +117,25 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        await supabaseAdmin
+        const { error: resetError } = await supabaseAdmin
           .from("today_results")
-          .update({ full_json: null, teaser_json: null })
+          .update({
+            full_json: null,
+            teaser_json: null,
+            // 락도 같이 풀어야 함 — 직전 실패의 analysis_started_at이 남아있으면
+            // 재결제 후 analyze가 already_processing으로 최대 3분 막힘.
+            analysis_started_at: null,
+          })
           .eq("id", existingResultId);
+        if (resetError) {
+          // 알 차감했는데 reset 실패 → 환불 + 에러 (사용자 _error 상태에 갇히는 사고 방지)
+          console.error("[TODAY_START] retry reset update", resetError.message);
+          await refundCoins(userId, TODAY_COST, body.sessionId);
+          return NextResponse.json(
+            { error: "재시도 준비에 실패했습니다.", refunded: true },
+            { status: 500 },
+          );
+        }
         await markSessionConsumed(body.sessionId, userId);
         return NextResponse.json({
           ok: true,

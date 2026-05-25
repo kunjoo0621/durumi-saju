@@ -47,6 +47,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ★ 분석 동시 실행 락 (배포 차단 이슈 fix)
+    // 새로고침·2탭에서 같은 row를 동시 analyze 호출하면 LLM 중복 호출·중복 환불·결과 덮어쓰기 발생.
+    // analysis_started_at atomic UPDATE WHERE 조건으로 락 획득 시도. 못 잡으면 "이미 분석 중" 응답.
+    // 락 만료 = 3분 (LLM ~90초 + 여유). 만료된 락은 다시 획득 가능 (실패한 분석 retry 보호).
+    //
+    // ★ 실서비스 정책: 컬럼 인식 안 되면 (schema cache stale 등) 실패 처리.
+    // 락 없이 진행하면 중복 분석·결과 덮어쓰기 위험 부활. 잠깐의 실패가 더 안전.
+    const LOCK_TIMEOUT_MS = 3 * 60 * 1000;
+    const lockExpireTime = new Date(Date.now() - LOCK_TIMEOUT_MS).toISOString();
+    const lockNow = new Date().toISOString();
+    const { data: lockResult, error: lockError } = await supabaseAdmin
+      .from("today_results")
+      .update({ analysis_started_at: lockNow })
+      .eq("id", resultId)
+      .eq("user_id", userId)
+      .is("full_json", null)
+      .or(`analysis_started_at.is.null,analysis_started_at.lt.${lockExpireTime}`)
+      .select("id");
+
+    if (lockError) {
+      console.error("[TODAY_ANALYZE] lock acquire", lockError.message);
+      return NextResponse.json({ error: "분석 시작 중 오류가 발생했습니다." }, { status: 500 });
+    }
+    if (!lockResult || lockResult.length === 0) {
+      // 락 못 잡음 — 다른 요청이 이미 분석 중. 클라이언트는 곧 결과를 polling 받게 됨.
+      return NextResponse.json({ status: "already_processing" });
+    }
+
     const [bY, bM, bD] = (row.birth_date || "").split("-");
     const [bH, bMin] = (row.birth_time || "").split(":");
     const input: InputPayload = {

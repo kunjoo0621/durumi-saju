@@ -2,15 +2,18 @@
 
 // 오늘의 운세 입력 페이지 — yearly input 패턴 + targetDate (오늘)
 // SajuInputFlow 재사용 + coreFearAxis/relationshipStatus skip (today 안 씀)
+// 잔액 부족 시 ChargeBottomSheet 등장 → 충전 후 자동 재시도 (개인 사주 패턴 미러)
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Warning } from "@phosphor-icons/react";
 import { useAllInputs } from "@/store/useInputStore";
 import { FullScreenLoading } from "@/components/loading";
+import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import SajuInputFlow from "@/components/saju-input/SajuInputFlow";
 import { TODAY_COST } from "@/lib/constants/coins";
 import { getKSTDateString } from "@/lib/utils/kst-date";
+import { useCoinStore } from "@/store/useCoinStore";
 
 const CONFIRM_STEPS = [
   { message: "사주 데이터를 계산하고 있어", delay: 0 },
@@ -22,80 +25,115 @@ const CONFIRM_STEPS = [
 export default function TodayInputPage() {
   const router = useRouter();
   const formData = useAllInputs();
+  const { balance, setBalance, fetchBalance } = useCoinStore();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showChargeSheet, setShowChargeSheet] = useState(false);
+  const [chargeToast, setChargeToast] = useState<string | null>(null);
+
+  // 진입 시 잔액 한 번 가져오기 — client 체크용
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  const runTodayFlow = useCallback(async () => {
+    // ★ client 잔액 체크 — 부족하면 session/start API 호출 안 하고 즉시 충전 시트
+    //   (balance가 null이면 fetch 못 끝낸 케이스 — backend가 fallback으로 처리)
+    if (balance !== null && balance < TODAY_COST) {
+      setShowChargeSheet(true);
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+    try {
+      // 1) intake session 생성
+      const sessionRes = await fetch("/api/intake/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const sessionData = await sessionRes.json().catch(() => ({}));
+      if (!sessionRes.ok) {
+        throw new Error(sessionData?.error || "세션 생성에 실패했어.");
+      }
+      const sid: string | undefined = sessionData.sessionId;
+      if (!sid) throw new Error("세션 ID를 받지 못했어.");
+
+      // 2) today start (결제 + pending row)
+      //    targetDate는 클릭 시점의 KST 날짜 — 자정 직전 입력 시작해서
+      //    자정 넘겨 제출하는 케이스 있어 매번 fresh 산출.
+      const targetDate = getKSTDateString();
+      const startRes = await fetch("/api/today/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sid, targetDate }),
+      });
+      const startData = await startRes.json().catch(() => ({}));
+
+      // 잔액 부족 → 에러 화면 대신 충전 바텀시트 (개인 사주 패턴 미러)
+      if (startData?.insufficient) {
+        if (typeof startData.balance === "number") {
+          setBalance(startData.balance);
+        }
+        setShowChargeSheet(true);
+        setProcessing(false);
+        return;
+      }
+      if (!startRes.ok) {
+        if (startData?.refunded) {
+          throw new Error("분석 준비에 실패했어. 알은 환불됐어.");
+        }
+        throw new Error(startData?.error || "처리에 실패했어.");
+      }
+
+      const resultId: string | undefined = startData?.resultId;
+      if (!resultId) throw new Error("결과 ID를 받지 못했어.");
+
+      // 잔액 갱신
+      if (typeof startData?.balance === "number") {
+        setBalance(startData.balance);
+      }
+
+      // 재사용된 결과면 바로 결과로
+      if (startData?.reused) {
+        router.replace(`/today/result/${resultId}`);
+        return;
+      }
+
+      // 3) analyze
+      const analyzeRes = await fetch("/api/today/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resultId }),
+      });
+      const analyzeData = await analyzeRes.json().catch(() => ({}));
+      if (!analyzeRes.ok) {
+        if (analyzeData?.refunded) {
+          throw new Error("분석에 실패했어. 알은 환불됐어.");
+        }
+        throw new Error(analyzeData?.error || "분석에 실패했어.");
+      }
+
+      router.replace(`/today/result/${resultId}`);
+    } catch (err: any) {
+      setError(err?.message || "처리 중 오류가 발생했어.");
+      setProcessing(false);
+    }
+  }, [balance, formData, router, setBalance]);
 
   const handleComplete = useCallback(() => {
-    void (async () => {
-      setProcessing(true);
-      setError(null);
-      try {
-        // 1) intake session 생성
-        const sessionRes = await fetch("/api/intake/session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        });
-        const sessionData = await sessionRes.json().catch(() => ({}));
-        if (!sessionRes.ok) {
-          throw new Error(sessionData?.error || "세션 생성에 실패했어.");
-        }
-        const sid: string | undefined = sessionData.sessionId;
-        if (!sid) throw new Error("세션 ID를 받지 못했어.");
+    void runTodayFlow();
+  }, [runTodayFlow]);
 
-        // 2) today start (결제 + pending row)
-        //    targetDate는 클릭 시점의 KST 날짜 — 자정 직전 입력 시작해서
-        //    자정 넘겨 제출하는 케이스 있어 매번 fresh 산출.
-        const targetDate = getKSTDateString();
-        const startRes = await fetch("/api/today/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: sid, targetDate }),
-        });
-        const startData = await startRes.json().catch(() => ({}));
-
-        if (startData?.insufficient) {
-          throw new Error(
-            `알이 부족해. ${startData.required}알이 필요해 (현재 ${startData.balance}알).`,
-          );
-        }
-        if (!startRes.ok) {
-          if (startData?.refunded) {
-            throw new Error("분석 준비에 실패했어. 알은 환불됐어.");
-          }
-          throw new Error(startData?.error || "처리에 실패했어.");
-        }
-
-        const resultId: string | undefined = startData?.resultId;
-        if (!resultId) throw new Error("결과 ID를 받지 못했어.");
-
-        // 재사용된 결과면 바로 결과로
-        if (startData?.reused) {
-          router.replace(`/today/result/${resultId}`);
-          return;
-        }
-
-        // 3) analyze
-        const analyzeRes = await fetch("/api/today/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resultId }),
-        });
-        const analyzeData = await analyzeRes.json().catch(() => ({}));
-        if (!analyzeRes.ok) {
-          if (analyzeData?.refunded) {
-            throw new Error("분석에 실패했어. 알은 환불됐어.");
-          }
-          throw new Error(analyzeData?.error || "분석에 실패했어.");
-        }
-
-        router.replace(`/today/result/${resultId}`);
-      } catch (err: any) {
-        setError(err?.message || "처리 중 오류가 발생했어.");
-        setProcessing(false);
-      }
-    })();
-  }, [formData, router]);
+  const handleChargeComplete = useCallback(async (newBalance: number) => {
+    setBalance(newBalance);
+    setShowChargeSheet(false);
+    // 충전 완료 토스트 — 분석 풀스크린 위에서도 보이게 z-[300]
+    setChargeToast(`충전 완료! ${newBalance}알 사용 가능`);
+    setTimeout(() => setChargeToast(null), 3000);
+    await runTodayFlow();
+  }, [setBalance, runTodayFlow]);
 
   if (processing && !error) {
     return (
@@ -137,13 +175,36 @@ export default function TodayInputPage() {
   }
 
   return (
-    <SajuInputFlow
-      onComplete={handleComplete}
-      callbackUrl="/today/input"
-      backUrl="/menu"
-      trackName="today"
-      skipQuestions={["coreFearAxis"]}
-      submitLabel={`${TODAY_COST}알 사용해서 오늘 운세 받기`}
-    />
+    <>
+      <SajuInputFlow
+        onComplete={handleComplete}
+        callbackUrl="/today/input"
+        backUrl="/menu"
+        trackName="today"
+        skipQuestions={["coreFearAxis"]}
+        submitLabel={`${TODAY_COST}알 사용해서 오늘 운세 받기`}
+      />
+
+      <ChargeBottomSheet
+        isOpen={showChargeSheet}
+        onClose={() => setShowChargeSheet(false)}
+        requiredCoins={TODAY_COST}
+        currentBalance={balance ?? 0}
+        onChargeComplete={handleChargeComplete}
+        redirectPath="/today/input"
+      />
+
+      {/* 충전 완료 토스트 — 분석 풀스크린 위에 떠도 보이도록 z-[300] */}
+      {chargeToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] bg-saju-wood-muted/95 text-white px-5 py-3 rounded-xl text-[14px] font-semibold shadow-lg backdrop-blur-sm animate-fadeIn flex items-center gap-2"
+        >
+          <span className="text-saju-wood">✓</span>
+          <span>{chargeToast}</span>
+        </div>
+      )}
+    </>
   );
 }
