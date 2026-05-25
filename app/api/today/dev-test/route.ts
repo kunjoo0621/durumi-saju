@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { InputPayload } from "@/lib/analysis";
 import { runTodayAnalysis } from "@/lib/today-prompt";
+import { getKSTDateString } from "@/lib/utils/kst-date";
 
 type DevBody = {
   birthYear: number | string;
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json()) as DevBody;
-    const targetDate = body.targetDate || new Date().toISOString().slice(0, 10);
+    const targetDate = body.targetDate || getKSTDateString();
 
     // dev-test body → InputPayload 형식 변환 (string 필드)
     const input: InputPayload = {

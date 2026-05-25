@@ -10,9 +10,7 @@ import { useAllInputs } from "@/store/useInputStore";
 import { FullScreenLoading } from "@/components/loading";
 import SajuInputFlow from "@/components/saju-input/SajuInputFlow";
 import { TODAY_COST } from "@/lib/constants/coins";
-
-// 오늘 날짜 (정오 KST 기준 "YYYY-MM-DD")
-const TARGET_DATE = new Date().toISOString().slice(0, 10);
+import { getKSTDateString } from "@/lib/utils/kst-date";
 
 const CONFIRM_STEPS = [
   { message: "사주 데이터를 계산하고 있어", delay: 0 },
@@ -46,10 +44,13 @@ export default function TodayInputPage() {
         if (!sid) throw new Error("세션 ID를 받지 못했어.");
 
         // 2) today start (결제 + pending row)
+        //    targetDate는 클릭 시점의 KST 날짜 — 자정 직전 입력 시작해서
+        //    자정 넘겨 제출하는 케이스 있어 매번 fresh 산출.
+        const targetDate = getKSTDateString();
         const startRes = await fetch("/api/today/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: sid, targetDate: TARGET_DATE }),
+          body: JSON.stringify({ sessionId: sid, targetDate }),
         });
         const startData = await startRes.json().catch(() => ({}));
 

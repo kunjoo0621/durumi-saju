@@ -96,6 +96,27 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if ((existingResult?.full_json as any)?._error) {
+        // 실패 row 재시도는 신규 결제 — yearly·saju spend route와 동일 정책.
+        // 1차 분석 실패 후 환불(+5)을 이미 받았으므로 재시도는 다시 spend.
+        // (이게 빠지면 무료 재시도 → 또 실패 → 또 환불 루프로 알 늘어남)
+        const retrySpend = await supabaseAdmin.rpc("spend_coins", {
+          p_user_id: userId,
+          p_amount: TODAY_COST,
+          p_reference_id: body.sessionId,
+        });
+        if (retrySpend.error) {
+          console.error("[TODAY_START] retry spend rpc", retrySpend.error.message);
+          return NextResponse.json({ error: "알 차감 중 오류가 발생했습니다." }, { status: 500 });
+        }
+        const retryResult = Array.isArray(retrySpend.data) ? retrySpend.data[0] : retrySpend.data;
+        if (!retryResult?.success) {
+          return NextResponse.json({
+            insufficient: true,
+            balance: retryResult?.new_balance ?? 0,
+            required: TODAY_COST,
+          });
+        }
+
         await supabaseAdmin
           .from("today_results")
           .update({ full_json: null, teaser_json: null })
@@ -105,6 +126,7 @@ export async function POST(request: NextRequest) {
           ok: true,
           resultId: existingResultId,
           pending: true,
+          balance: retryResult.new_balance,
         });
       }
 
@@ -187,21 +209,49 @@ export async function POST(request: NextRequest) {
       const resultId = upserted.data.id;
       const orderId = `egg_today_${targetDate}_${Date.now()}_${userId.slice(0, 8)}`;
 
-      await Promise.all([
-        supabaseAdmin
-          .from("today_result_unlocks")
-          .upsert(
-            {
-              user_id: userId,
-              result_id: resultId,
-              input_hash: inputHash,
-              target_date: targetDate,
-              order_id: orderId,
-            },
-            { onConflict: "order_id", ignoreDuplicates: true },
-          ),
-        markSessionConsumed(body.sessionId, userId),
-      ]);
+      // ★ 중복 요청 race 가드: unlock insert를 plain insert로 명시.
+      // (user_id, input_hash, target_date) unique 충돌 시 = 다른 요청이 먼저 차감·등록함.
+      // 우리 차감은 손실 — 환불 후 기존 unlock의 result_id 반환.
+      const unlockInsert = await supabaseAdmin
+        .from("today_result_unlocks")
+        .insert({
+          user_id: userId,
+          result_id: resultId,
+          input_hash: inputHash,
+          target_date: targetDate,
+          order_id: orderId,
+        });
+
+      if (unlockInsert.error) {
+        // PostgreSQL unique_violation = 23505. user_input_date 또는 order_id 충돌.
+        if (unlockInsert.error.code === "23505") {
+          // 다른 요청이 먼저 처리 — 우리 차감 환불 + 기존 unlock 재사용
+          await refundCoins(userId, TODAY_COST, body.sessionId);
+          const { data: priorUnlock } = await supabaseAdmin
+            .from("today_result_unlocks")
+            .select("result_id")
+            .eq("user_id", userId)
+            .eq("input_hash", inputHash)
+            .eq("target_date", targetDate)
+            .maybeSingle();
+          await markSessionConsumed(body.sessionId, userId);
+          return NextResponse.json({
+            ok: true,
+            reused: true,
+            resultId: priorUnlock?.result_id || resultId,
+            refunded: true,
+          });
+        }
+        // 그 외 에러 — 환불 후 실패
+        console.error("[TODAY_START] unlock insert", unlockInsert.error.message);
+        await refundCoins(userId, TODAY_COST, body.sessionId);
+        return NextResponse.json(
+          { error: "결제 기록 저장 중 오류가 발생했습니다.", refunded: true },
+          { status: 500 },
+        );
+      }
+
+      await markSessionConsumed(body.sessionId, userId);
 
       return NextResponse.json({
         ok: true,
