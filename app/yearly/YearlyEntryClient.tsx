@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import Header from "@/components/layout/Header";
-import { FullScreenLoading } from "@/components/loading";
+import { FullScreenLoading, SkeletonBar } from "@/components/loading";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import { YEARLY_COST } from "@/lib/constants/coins";
 import {
@@ -272,7 +272,36 @@ export default function YearlyEntryClient() {
 
           {/* 본문 — 서버에서 비로그인 차단하므로 항상 로그인 상태로 진입 */}
           {primaryLoading ? (
-            <div className="text-center text-text-secondary py-12">불러오는 중…</div>
+            <>
+              {/* 사주 카드 스켈레톤 */}
+              <div className="rounded-2xl bg-background-secondary border border-white/5 p-6">
+                <div className="flex items-center gap-4">
+                  <SkeletonBar className="w-[64px] h-[64px] rounded-2xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <SkeletonBar className="h-5 w-32" />
+                    <SkeletonBar className="h-4 w-44" />
+                    <SkeletonBar className="h-3.5 w-28" />
+                  </div>
+                </div>
+              </div>
+              {/* 결제 영역 스켈레톤 */}
+              <div className="px-1 space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <SkeletonBar className="h-4 w-16" />
+                    <SkeletonBar className="h-5 w-12" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <SkeletonBar className="h-4 w-16" />
+                    <SkeletonBar className="h-4 w-12" />
+                  </div>
+                </div>
+                <div className="space-y-3 pt-2">
+                  <SkeletonBar className="h-[54px] w-full rounded-xl" />
+                  <SkeletonBar className="h-[48px] w-full rounded-xl" />
+                </div>
+              </div>
+            </>
           ) : primaryError ? (
             <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 text-center space-y-4">
               <p className="text-body-2 text-text-secondary">{primaryError}</p>
