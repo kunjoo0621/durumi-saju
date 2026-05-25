@@ -13,7 +13,9 @@ const MOOD_STYLE: Record<Mood, { activeColor: string; activeBg: string }> = {
 };
 
 export default function MoodGauge({ mood }: { mood: Mood }) {
-  const activeIndex = MOOD_ORDER.indexOf(mood);
+  // mood가 expected union 밖 값일 때 (server decideMood 변경 사고 등) "보통" fallback — 빈 UI 방지.
+  const safeMood: Mood = MOOD_ORDER.includes(mood) ? mood : "보통";
+  const activeIndex = MOOD_ORDER.indexOf(safeMood);
 
   return (
     <section className="rounded-2xl bg-background-secondary border border-white/5 p-5">

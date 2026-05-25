@@ -18,8 +18,9 @@ export async function GET() {
     const result = await getPrimarySajuData(userId);
     return NextResponse.json({ result });
   } catch (error: any) {
+    console.error("[YEARLY_FROM_PRIMARY]", error?.message || error);
     return NextResponse.json(
-      { error: error?.message || "내 사주 조회 중 오류가 발생했습니다." },
+      { error: "내 사주 조회 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }

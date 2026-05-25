@@ -96,6 +96,9 @@ export default function TodayResultClient({ resultId }: { resultId: string }) {
 
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    // analyze trigger는 첫 pending 응답에서 1회만. 이후 polling은 GET /results/{id}만 호출.
+    // (직전: 매 3초 polling마다 /analyze POST 호출 → 90초 LLM 동안 30+ 회. lock으로 데이터 손상 X 다만 DB 부하·서버리스 비용)
+    let analyzeTriggered = false;
 
     const fetchResult = async () => {
       try {
@@ -108,13 +111,16 @@ export default function TodayResultClient({ resultId }: { resultId: string }) {
         if (cancelled) return;
 
         if (json.status === "pending") {
-          // 분석 트리거 (한 번)
-          await fetch("/api/today/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ resultId }),
-          });
-          // 3초 후 재조회 (yearly와 동일 패턴)
+          if (!analyzeTriggered) {
+            analyzeTriggered = true;
+            // 분석 트리거 — 첫 진입에서만 1회. 이후 polling은 결과만 fetch.
+            await fetch("/api/today/analyze", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ resultId }),
+            });
+          }
+          // 3초 후 재조회
           timeoutId = setTimeout(fetchResult, 3000);
           return;
         }
@@ -162,7 +168,10 @@ export default function TodayResultClient({ resultId }: { resultId: string }) {
 
   const { result, targetDate, todayWeatherIcon } = data;
   const dateLabel = targetDate ? formatDateLabel(targetDate) : "";
-  const weatherIcon = (todayWeatherIcon || result.todayMeta.weatherIcon) as TodayMeta["weatherIcon"];
+  // weatherIcon — expected union 밖 값 들어오면 결과 페이지 깨짐 (icon 404, label undefined).
+  // LLM 출력 strict validation이 있지만 fallback으로 안전 보강.
+  const rawWeatherIcon = (todayWeatherIcon || result.todayMeta.weatherIcon) as TodayMeta["weatherIcon"];
+  const weatherIcon = (WEATHER_LABEL[rawWeatherIcon] ? rawWeatherIcon : "cloud") as TodayMeta["weatherIcon"];
   const weatherLabel = WEATHER_LABEL[weatherIcon];
   const weatherColor = WEATHER_COLOR[weatherIcon];
 

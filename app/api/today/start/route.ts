@@ -117,24 +117,40 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        const { error: resetError } = await supabaseAdmin
+        // ★ atomic reset — 2탭 동시 retry 시 중복 결제 차단.
+        // WHERE full_json IS NOT NULL 조건으로 "이미 다른 요청이 reset 했나" 체크.
+        // 다른 탭이 먼저 reset했으면 우리 update 0 rows → 우리 spend 환불 + 기존 resultId 재사용.
+        const { data: resetRows, error: resetError } = await supabaseAdmin
           .from("today_results")
           .update({
             full_json: null,
             teaser_json: null,
-            // 락도 같이 풀어야 함 — 직전 실패의 analysis_started_at이 남아있으면
-            // 재결제 후 analyze가 already_processing으로 최대 3분 막힘.
             analysis_started_at: null,
           })
-          .eq("id", existingResultId);
+          .eq("id", existingResultId)
+          .eq("user_id", userId)
+          .not("full_json", "is", null)
+          .select("id");
         if (resetError) {
-          // 알 차감했는데 reset 실패 → 환불 + 에러 (사용자 _error 상태에 갇히는 사고 방지)
+          // 알 차감했는데 reset 실패 → 환불 + 에러
           console.error("[TODAY_START] retry reset update", resetError.message);
           await refundCoins(userId, TODAY_COST, body.sessionId);
           return NextResponse.json(
             { error: "재시도 준비에 실패했습니다.", refunded: true },
             { status: 500 },
           );
+        }
+        if (!resetRows || resetRows.length === 0) {
+          // 다른 탭이 먼저 reset 완료 → 우리 spend는 손실. 환불 + 기존 resultId 재사용으로 분석은 진행.
+          console.warn("[TODAY_START] retry reset race — refunding");
+          await refundCoins(userId, TODAY_COST, body.sessionId);
+          await markSessionConsumed(body.sessionId, userId);
+          return NextResponse.json({
+            ok: true,
+            resultId: existingResultId,
+            reused: true,
+            refunded: true,
+          });
         }
         await markSessionConsumed(body.sessionId, userId);
         return NextResponse.json({

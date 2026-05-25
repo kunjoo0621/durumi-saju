@@ -18,8 +18,10 @@ export async function GET() {
     const result = await getPrimarySajuData(userId);
     return NextResponse.json({ result });
   } catch (error: any) {
+    // raw error.message 사용자 노출 금지 (CLAUDE.md 규약) — generic 메시지만, 상세는 서버 로그.
+    console.error("[TODAY_FROM_PRIMARY]", error?.message || error);
     return NextResponse.json(
-      { error: error?.message || "내 사주 조회 중 오류가 발생했습니다." },
+      { error: "내 사주 조회 중 오류가 발생했습니다." },
       { status: 500 },
     );
   }
