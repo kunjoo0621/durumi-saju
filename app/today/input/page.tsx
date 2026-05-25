@@ -12,15 +12,10 @@ import { FullScreenLoading } from "@/components/loading";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import SajuInputFlow from "@/components/saju-input/SajuInputFlow";
 import { TODAY_COST } from "@/lib/constants/coins";
+import { TODAY_LOADING_STEPS } from "@/lib/constants/today";
+import { callTodayStart, callTodayAnalyze } from "@/lib/today-payment-flow";
 import { getKSTDateString } from "@/lib/utils/kst-date";
 import { useCoinStore } from "@/store/useCoinStore";
-
-const CONFIRM_STEPS = [
-  { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: "오늘 일진과 너의 사주를 매칭하는 중", delay: 8_000 },
-  { message: "두루미가 오늘 너의 하루를 읽는 중", delay: 30_000 },
-  { message: "결과를 정리하고 있어", delay: 70_000 },
-];
 
 export default function TodayInputPage() {
   const router = useRouter();
@@ -60,62 +55,33 @@ export default function TodayInputPage() {
       const sid: string | undefined = sessionData.sessionId;
       if (!sid) throw new Error("세션 ID를 받지 못했어.");
 
-      // 2) today start (결제 + pending row)
-      //    targetDate는 클릭 시점의 KST 날짜 — 자정 직전 입력 시작해서
-      //    자정 넘겨 제출하는 케이스 있어 매번 fresh 산출.
+      // 2) today start — targetDate는 클릭 시점 KST (자정 넘김 케이스 대비)
       const targetDate = getKSTDateString();
-      const startRes = await fetch("/api/today/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: sid, targetDate }),
-      });
-      const startData = await startRes.json().catch(() => ({}));
+      const startResult = await callTodayStart({ sessionId: sid, targetDate });
 
-      // 잔액 부족 → 에러 화면 대신 충전 바텀시트 (개인 사주 패턴 미러)
-      if (startData?.insufficient) {
-        if (typeof startData.balance === "number") {
-          setBalance(startData.balance);
-        }
+      if (startResult.kind === "insufficient") {
+        setBalance(startResult.balance);
         setShowChargeSheet(true);
         setProcessing(false);
         return;
       }
-      if (!startRes.ok) {
-        if (startData?.refunded) {
-          throw new Error("분석 준비에 실패했어. 알은 환불됐어.");
-        }
-        throw new Error(startData?.error || "처리에 실패했어.");
+      if (startResult.kind === "failed") {
+        throw new Error(startResult.message);
       }
-
-      const resultId: string | undefined = startData?.resultId;
-      if (!resultId) throw new Error("결과 ID를 받지 못했어.");
-
-      // 잔액 갱신
-      if (typeof startData?.balance === "number") {
-        setBalance(startData.balance);
+      if (typeof startResult.balance === "number") {
+        setBalance(startResult.balance);
       }
-
-      // 재사용된 결과면 바로 결과로
-      if (startData?.reused) {
-        router.replace(`/today/result/${resultId}`);
+      if (startResult.kind === "reused") {
+        router.replace(`/today/result/${startResult.resultId}`);
         return;
       }
 
       // 3) analyze
-      const analyzeRes = await fetch("/api/today/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resultId }),
-      });
-      const analyzeData = await analyzeRes.json().catch(() => ({}));
-      if (!analyzeRes.ok) {
-        if (analyzeData?.refunded) {
-          throw new Error("분석에 실패했어. 알은 환불됐어.");
-        }
-        throw new Error(analyzeData?.error || "분석에 실패했어.");
+      const analyzeResult = await callTodayAnalyze(startResult.resultId);
+      if (analyzeResult.kind === "failed") {
+        throw new Error(analyzeResult.message);
       }
-
-      router.replace(`/today/result/${resultId}`);
+      router.replace(`/today/result/${startResult.resultId}`);
     } catch (err: any) {
       setError(err?.message || "처리 중 오류가 발생했어.");
       setProcessing(false);
@@ -138,7 +104,7 @@ export default function TodayInputPage() {
   if (processing && !error) {
     return (
       <FullScreenLoading
-        steps={CONFIRM_STEPS}
+        steps={TODAY_LOADING_STEPS}
         estimatedDuration={90000}
         subMessage="보통 1~2분 걸려"
       />

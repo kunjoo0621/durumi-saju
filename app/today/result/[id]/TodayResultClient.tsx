@@ -10,6 +10,7 @@ import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import SectionList from "@/components/result/SectionList";
 import type { TodayResult, TodayMeta } from "@/lib/today-prompt";
+import { TODAY_LOADING_STEPS } from "@/lib/constants/today";
 import { dayPillarFriendly, tenStarFriendly, twelveStageFriendly } from "@/lib/utils/saju-friendly";
 import { resolveKey } from "@/lib/constants/section-icons";
 
@@ -43,14 +44,30 @@ const WEATHER_COLOR: Record<TodayMeta["weatherIcon"], string> = {
   thunder: "text-saju-fire",
 };
 
-// polling 로딩 화면 — TodayEntryClient/TodayInputPage와 동일 단계 (analyze ~90초)
-// 사용자 흐름 연속성 — entry에서 시작했든 result 직링크로 들어왔든 같은 progress 경험
-const LOADING_STEPS = [
-  { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: "오늘 일진과 너의 사주를 매칭하는 중", delay: 8_000 },
-  { message: "두루미가 오늘 너의 하루를 읽는 중", delay: 30_000 },
-  { message: "결과를 정리하고 있어", delay: 70_000 },
-];
+function MetaRow({
+  label,
+  friendly,
+  hanjaSub,
+  truncate = false,
+}: {
+  label: string;
+  friendly: string;
+  hanjaSub: string | null;
+  truncate?: boolean;
+}) {
+  const truncateClass = truncate ? " truncate" : "";
+  return (
+    <div>
+      <div className="text-[10px] text-text-tertiary tracking-wide">{label}</div>
+      <div className={`text-[13px] font-semibold text-text-primary mt-1 leading-snug${truncateClass}`}>
+        {friendly}
+      </div>
+      {hanjaSub && (
+        <div className={`text-[10px] text-text-tertiary mt-0.5${truncateClass}`}>{hanjaSub}</div>
+      )}
+    </div>
+  );
+}
 
 function formatDateLabel(targetDate: string): string {
   // "YYYY-MM-DD" → "5월 24일 (토)"
@@ -119,7 +136,7 @@ export default function TodayResultClient({ resultId }: { resultId: string }) {
   if (loading) {
     return (
       <FullScreenLoading
-        steps={LOADING_STEPS}
+        steps={TODAY_LOADING_STEPS}
         estimatedDuration={90000}
         subMessage="보통 1~2분 걸려"
       />
@@ -245,33 +262,9 @@ export default function TodayResultClient({ resultId }: { resultId: string }) {
             const stageSub = rawStage && rawStage !== stageFriendly ? rawStage : null;
             return (
               <div className="grid grid-cols-3 gap-x-2 pt-4 border-t border-white/5">
-                <div>
-                  <div className="text-[10px] text-text-tertiary tracking-wide">오늘의 기운</div>
-                  <div className="text-[13px] font-semibold text-text-primary mt-1 leading-snug">
-                    {pillarFriendly}
-                  </div>
-                  {pillarSub && (
-                    <div className="text-[10px] text-text-tertiary mt-0.5">{pillarSub}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-[10px] text-text-tertiary tracking-wide">오늘의 별</div>
-                  <div className="text-[13px] font-semibold text-text-primary mt-1 leading-snug truncate">
-                    {tenStarFriendlyLabel}
-                  </div>
-                  {tenStarSub && (
-                    <div className="text-[10px] text-text-tertiary mt-0.5 truncate">{tenStarSub}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-[10px] text-text-tertiary tracking-wide">오늘의 흐름</div>
-                  <div className="text-[13px] font-semibold text-text-primary mt-1 leading-snug">
-                    {stageFriendly}
-                  </div>
-                  {stageSub && (
-                    <div className="text-[10px] text-text-tertiary mt-0.5">{stageSub}</div>
-                  )}
-                </div>
+                <MetaRow label="오늘의 기운" friendly={pillarFriendly} hanjaSub={pillarSub} />
+                <MetaRow label="오늘의 별" friendly={tenStarFriendlyLabel} hanjaSub={tenStarSub} truncate />
+                <MetaRow label="오늘의 흐름" friendly={stageFriendly} hanjaSub={stageSub} />
               </div>
             );
           })()}

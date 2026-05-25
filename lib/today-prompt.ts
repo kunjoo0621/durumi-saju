@@ -160,6 +160,7 @@ export async function analyzeTodayServer(input: InputPayload, targetDate: string
   serverAnalysis: TodayServerAnalysis;
   ownerSajuText: string;
   todayContext: string;
+  ownerEnriched: ReturnType<typeof enrichSajuData>;
 }> {
   // 1. 본인 사주 enriched
   const birthYear = Number(input.birthYear);
@@ -238,7 +239,7 @@ export async function analyzeTodayServer(input: InputPayload, targetDate: string
     twelveStage,
   };
 
-  return { serverAnalysis, ownerSajuText, todayContext };
+  return { serverAnalysis, ownerSajuText, todayContext, ownerEnriched };
 }
 
 // ────────────────────────────────────────────────────────
@@ -249,18 +250,9 @@ export async function runTodayAnalysis(input: InputPayload, targetDate: string):
   result: TodayResult;
   serverAnalysis: TodayServerAnalysis;
 }> {
-  const { serverAnalysis, ownerSajuText, todayContext } = await analyzeTodayServer(input, targetDate);
+  const { serverAnalysis, ownerSajuText, todayContext, ownerEnriched } = await analyzeTodayServer(input, targetDate);
 
-  // ★ 마스터 원칙 — 개인사주 산식으로 tier·scores 산출 (yearly와 동일)
-  // 본인 enriched 재산출 (analyzeTodayServer 내부에서 했지만 export 안 함 → 다시 계산)
-  const ownerSaju = await calculateSaju(
-    Number(input.birthYear), Number(input.birthMonth), Number(input.birthDay),
-    input.unknownBirthTime ? undefined : Number(input.birthHour),
-    input.unknownBirthTime ? undefined : Number(input.birthMinute),
-    { birthLocation: input.birthLocation },
-  );
-  if (!ownerSaju) throw new Error("본인 사주 재계산 실패");
-  const ownerEnriched = enrichSajuData(ownerSaju, { isTimeUnknown: Boolean(input.unknownBirthTime) });
+  // 마스터 원칙 — 개인사주 산식으로 tier·scores 산출 (yearly와 동일)
   const { tier: masterTier, scores: masterScores } = calculateServerScoring(ownerEnriched);
 
   // 나이 + 나이대 산출

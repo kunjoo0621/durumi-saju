@@ -7,6 +7,8 @@ import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import { TODAY_COST } from "@/lib/constants/coins";
+import { TODAY_LOADING_STEPS } from "@/lib/constants/today";
+import { callTodayStart, callTodayAnalyze } from "@/lib/today-payment-flow";
 import { useCoinStore } from "@/store/useCoinStore";
 import { getKSTDateString } from "@/lib/utils/kst-date";
 import { getGradeBadge } from "@/lib/utils/grade-colors";
@@ -37,17 +39,9 @@ const INITIAL_DATE = getKSTDateString();
 const [INITIAL_YEAR_STR, INITIAL_MONTH_STR, INITIAL_DAY_STR] = INITIAL_DATE.split("-");
 const TARGET_DATE_LABEL = `${INITIAL_YEAR_STR}.${INITIAL_MONTH_STR}.${INITIAL_DAY_STR}`;
 
-// today/input의 CONFIRM_STEPS와 동일 (사용자 체감 일관성)
-const CONFIRM_STEPS = [
-  { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: "오늘 일진과 너의 사주를 매칭하는 중", delay: 8_000 },
-  { message: "두루미가 오늘 너의 하루를 읽는 중", delay: 30_000 },
-  { message: "결과를 정리하고 있어", delay: 70_000 },
-];
-
 export default function TodayEntryClient() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const { balance, fetchBalance, setBalance } = useCoinStore();
 
   const [primary, setPrimary] = useState<PrimarySaju | null>(null);
@@ -62,7 +56,6 @@ export default function TodayEntryClient() {
 
   const isAuthenticated = status === "authenticated";
 
-  // 대표사주 로딩
   useEffect(() => {
     if (!isAuthenticated) {
       setPrimaryLoading(false);
@@ -90,7 +83,6 @@ export default function TodayEntryClient() {
     };
   }, [isAuthenticated]);
 
-  // 잔액 로딩
   useEffect(() => {
     if (isAuthenticated) fetchBalance();
   }, [isAuthenticated, fetchBalance]);
@@ -137,7 +129,6 @@ export default function TodayEntryClient() {
     }
   }, [primary, sessionId, createSession]);
 
-  // 결제 + 분석
   const handleStart = useCallback(async () => {
     if (!isAuthenticated) {
       signIn("kakao", { callbackUrl: "/today" });
@@ -145,16 +136,15 @@ export default function TodayEntryClient() {
     }
     if (!primary) return;
 
-    // ★ client 잔액 체크 — 부족하면 API 호출 안 하고 즉시 충전 시트 (TodayInputPage 패턴 미러)
+    // 클라이언트 잔액 체크 — 부족하면 API 호출 없이 충전 시트
     if (balance !== null && balance < TODAY_COST) {
       setShowChargeSheet(true);
       return;
     }
 
     setError(null);
-    setPaying(true);  // 더블탭 방어
-    // ★ 클릭 즉시 FullScreenLoading 전환 — "버튼 회색 → 가만히" 구간 제거
-    // 사용자 체감 시간 ↓ (start API 1~3초 + balance fetch 1초 = 2~5초 동안 화면 전환 없던 문제 해결)
+    setPaying(true);
+    // 클릭 즉시 로딩 화면 — start API 대기 동안 버튼 상태로 머무는 어색함 차단
     setConfirming(true);
     try {
       let sid = sessionId;
@@ -167,71 +157,44 @@ export default function TodayEntryClient() {
         return;
       }
 
-      // 클릭 시점 KST 날짜 fresh 산출 (모듈 로드 시점 X — 자정 넘겨 결제 케이스 대비)
+      // 클릭 시점 KST 날짜 — 자정 넘겨 결제 케이스 대비 매번 fresh
       const targetDate = getKSTDateString();
-      const startRes = await fetch("/api/today/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: sid,
-          targetDate,
-          sourceResultId: primary.sourceResultId,
-        }),
+      const startResult = await callTodayStart({
+        sessionId: sid,
+        targetDate,
+        sourceResultId: primary.sourceResultId,
       });
-      const startData = await startRes.json().catch(() => ({}));
 
-      if (startData.insufficient) {
-        if (typeof startData.balance === "number") {
-          setBalance(startData.balance);
-        }
+      if (startResult.kind === "insufficient") {
+        setBalance(startResult.balance);
         setConfirming(false);
         setPaying(false);
         setShowChargeSheet(true);
         return;
       }
-      if (!startRes.ok) {
-        if (startData.refunded) {
-          throw new Error("분석 준비에 실패했어. 알은 환불됐어.");
-        }
-        throw new Error(startData?.error || "처리에 실패했어.");
+      if (startResult.kind === "failed") {
+        throw new Error(startResult.message);
       }
-
-      const resultId: string | undefined = startData.resultId;
-      if (!resultId) throw new Error("결과 ID를 받지 못했어.");
-
-      // 재사용된 결과면 곧장 결과로 이동
-      if (startData.reused) {
+      if (startResult.kind === "reused") {
         sessionStorage.setItem("todayJustPaid", "1");
-        router.replace(`/today/result/${resultId}`);
+        router.replace(`/today/result/${startResult.resultId}`);
         return;
       }
-
-      // 잔액 갱신 — fire-and-forget (대기 불필요)
-      if (typeof startData.balance === "number") {
-        void fetchBalance();
+      if (typeof startResult.balance === "number") {
+        setBalance(startResult.balance);
       }
 
-      // 분석 호출
-      const analyzeRes = await fetch("/api/today/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resultId }),
-      });
-      const analyzeData = await analyzeRes.json().catch(() => ({}));
-      if (!analyzeRes.ok) {
-        if (analyzeData.refunded) {
-          throw new Error("분석에 실패했어. 알은 환불됐어.");
-        }
-        throw new Error(analyzeData?.error || "분석에 실패했어.");
+      const analyzeResult = await callTodayAnalyze(startResult.resultId);
+      if (analyzeResult.kind === "failed") {
+        throw new Error(analyzeResult.message);
       }
-
       sessionStorage.setItem("todayJustPaid", "1");
-      router.replace(`/today/result/${resultId}`);
+      router.replace(`/today/result/${startResult.resultId}`);
     } catch (err: any) {
       setError(err?.message || "처리에 실패했어.");
       setConfirming(false);
     }
-  }, [isAuthenticated, primary, balance, sessionId, createSession, router, fetchBalance, setBalance]);
+  }, [isAuthenticated, primary, balance, sessionId, createSession, router, setBalance]);
 
   // 충전 완료 콜백 — balance 갱신 후 자동으로 분석 재시도
   const handleChargeComplete = useCallback(async (newBalance: number) => {
@@ -243,7 +206,7 @@ export default function TodayEntryClient() {
   if (confirming) {
     return (
       <FullScreenLoading
-        steps={CONFIRM_STEPS}
+        steps={TODAY_LOADING_STEPS}
         estimatedDuration={90000}
         subMessage="보통 1~2분 걸려"
       />

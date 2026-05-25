@@ -47,13 +47,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ★ 분석 동시 실행 락 (배포 차단 이슈 fix)
-    // 새로고침·2탭에서 같은 row를 동시 analyze 호출하면 LLM 중복 호출·중복 환불·결과 덮어쓰기 발생.
-    // analysis_started_at atomic UPDATE WHERE 조건으로 락 획득 시도. 못 잡으면 "이미 분석 중" 응답.
-    // 락 만료 = 3분 (LLM ~90초 + 여유). 만료된 락은 다시 획득 가능 (실패한 분석 retry 보호).
-    //
-    // ★ 실서비스 정책: 컬럼 인식 안 되면 (schema cache stale 등) 실패 처리.
-    // 락 없이 진행하면 중복 분석·결과 덮어쓰기 위험 부활. 잠깐의 실패가 더 안전.
+    // 분석 동시 실행 락 — 새로고침·2탭 동시 호출 시 LLM 중복 호출 + 중복 환불 차단.
+    // analysis_started_at atomic UPDATE WHERE 조건으로 획득. 만료 3분 (LLM ~90초 + 여유).
+    // schema cache stale 등으로 컬럼 인식 못 하면 실패 응답 (잠깐의 실패가 중복 분석보다 안전).
     const LOCK_TIMEOUT_MS = 3 * 60 * 1000;
     const lockExpireTime = new Date(Date.now() - LOCK_TIMEOUT_MS).toISOString();
     const lockNow = new Date().toISOString();
@@ -131,7 +127,8 @@ export async function POST(request: NextRequest) {
         console.error("[TODAY_ANALYZE] update", updateError.message);
         await supabaseAdmin
           .from("today_results")
-          .update({ full_json: { _error: true, _message: "결과 저장 실패" } })
+          // 락도 같이 풀어야 함 — 안 풀면 3분간 stuck (start route reset에서만 해제됨)
+          .update({ full_json: { _error: true, _message: "결과 저장 실패" }, analysis_started_at: null })
           .eq("id", resultId);
         await refundCoins(userId, TODAY_COST, refundRef);
         return NextResponse.json(
@@ -145,7 +142,8 @@ export async function POST(request: NextRequest) {
       console.error("[TODAY_ANALYZE] analysis failed", analysisError?.message);
       await supabaseAdmin
         .from("today_results")
-        .update({ full_json: { _error: true, _message: "분석 실패" } })
+        // 락도 같이 풀어야 함 — LLM/JSON parse/sections validation 실패 시에도 락 stuck 방지
+        .update({ full_json: { _error: true, _message: "분석 실패" }, analysis_started_at: null })
         .eq("id", resultId);
       await refundCoins(userId, TODAY_COST, refundRef);
       return NextResponse.json(
