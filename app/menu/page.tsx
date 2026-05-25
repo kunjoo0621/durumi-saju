@@ -11,7 +11,6 @@ import BusinessFooter from "@/components/BusinessFooter";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 
 const YEARLY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_YEARLY === "1";
-const TODAY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TODAY === "1";
 
 // 오늘 날짜 라벨 ("5월 24일")
 const TODAY_DATE = new Date();
@@ -182,9 +181,8 @@ export default function MenuPage() {
             </button>
           )}
 
-          {/* 오늘의 운세 카드 (FEATURE_FLAG 봉인) */}
-          {TODAY_ENABLED && (
-            <button
+          {/* 오늘의 운세 카드 */}
+          <button
               type="button"
               className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_0.09s_both] w-full text-left"
               style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
@@ -246,8 +244,7 @@ export default function MenuPage() {
                   <path d="M14 56l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#0EA5E9" fillOpacity="0.3"/>
                 </svg>
               </div>
-            </button>
-          )}
+          </button>
 
           {/* 배틀 카드 */}
           <button
