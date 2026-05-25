@@ -53,21 +53,64 @@ export async function POST(request: NextRequest) {
     const LOCK_TIMEOUT_MS = 3 * 60 * 1000;
     const lockExpireTime = new Date(Date.now() - LOCK_TIMEOUT_MS).toISOString();
     const lockNow = new Date().toISOString();
-    const { data: lockResult, error: lockError } = await supabaseAdmin
+    // PostgREST update + or(timestamp) 조합이 운영에서 0 rows를 반환해 분석이 영구 pending 되는
+    // 케이스가 있었다. OR 대신 null 락 → 만료 락을 두 번의 atomic UPDATE로 분리한다.
+    let { data: lockResult, error: lockError } = await supabaseAdmin
       .from("today_results")
       .update({ analysis_started_at: lockNow })
       .eq("id", resultId)
       .eq("user_id", userId)
       .is("full_json", null)
-      .or(`analysis_started_at.is.null,analysis_started_at.lt.${lockExpireTime}`)
+      .is("analysis_started_at", null)
       .select("id");
+
+    if (!lockError && (!lockResult || lockResult.length === 0)) {
+      const expiredLock = await supabaseAdmin
+        .from("today_results")
+        .update({ analysis_started_at: lockNow })
+        .eq("id", resultId)
+        .eq("user_id", userId)
+        .is("full_json", null)
+        .lt("analysis_started_at", lockExpireTime)
+        .select("id");
+
+      lockResult = expiredLock.data;
+      lockError = expiredLock.error;
+    }
 
     if (lockError) {
       console.error("[TODAY_ANALYZE] lock acquire", lockError.message);
-      return NextResponse.json({ error: "분석 시작 중 오류가 발생했습니다." }, { status: 500 });
+      // 락 acquire 실패(예: schema cache stale) → 차감된 알 환불.
+      // ★ atomic _error marking으로 중복 환불 방지 — polling이 매 3초 호출하므로
+      //   marking 안 하면 매번 환불 발동해서 알 무한 증가 사고 (운영자 본인 발견).
+      const { data: marked } = await supabaseAdmin
+        .from("today_results")
+        .update({ full_json: { _error: true, _message: "분석 시작 실패" } })
+        .eq("id", resultId)
+        .eq("user_id", userId)
+        .is("full_json", null)
+        .select("id");
+
+      let refunded = false;
+      if (marked && marked.length > 0) {
+        // 처음 marking 성공 = 첫 호출. 환불 1회만 발생. 이후 polling은 marking 0 rows → 환불 skip.
+        const { data: unlock } = await supabaseAdmin
+          .from("today_result_unlocks")
+          .select("order_id")
+          .eq("result_id", resultId)
+          .eq("user_id", userId)
+          .maybeSingle();
+        await refundCoins(userId, TODAY_COST, unlock?.order_id || resultId);
+        refunded = true;
+      }
+
+      return NextResponse.json(
+        { error: "분석 시작에 실패했어. 알은 환불됐어.", refunded },
+        { status: 500 },
+      );
     }
     if (!lockResult || lockResult.length === 0) {
-      // 락 못 잡음 — 다른 요청이 이미 분석 중. 클라이언트는 곧 결과를 polling 받게 됨.
+      // 락 못 잡음 — 다른 요청이 이미 분석 중. 환불 X (다른 요청이 마무리할 거니까).
       return NextResponse.json({ status: "already_processing" });
     }
 
