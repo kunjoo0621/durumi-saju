@@ -88,7 +88,11 @@ function getStemRelation(ownerEl: string, todayEl: string): { label: string; imp
 }
 
 function decideMood(stemRel: string, pairType: PairRelation): "강세" | "보통" | "주의" | "위기" {
-  if (pairType === "chung" || stemRel.includes("일진이 본인을 극함")) return "위기";
+  // 위기는 일지 충 + 일간 극이 동시 발현일 때만 (prompt v1.7 매핑 일치).
+  // 천간 극 단독 / 일지 충 단독은 "주의"로 약화 — 위기 빈도 ↓, 정관 일진 같은 길성도 적절히 분류.
+  const stemKuk = stemRel.includes("일진이 본인을 극함");
+  if (pairType === "chung" && stemKuk) return "위기";
+  if (pairType === "chung" || stemKuk) return "주의";
   if (pairType === "hyung" || pairType === "wonjin") return "주의";
   if (pairType === "hap" || stemRel.includes("일진이 본인을 생함")) return "강세";
   return "보통";
