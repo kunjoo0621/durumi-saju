@@ -7,6 +7,11 @@ import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import { YEARLY_COST } from "@/lib/constants/coins";
+import {
+  DEFAULT_RELATIONSHIP_STATUS,
+  DEFAULT_EMPLOYMENT_STATUS,
+  DEFAULT_CORE_FEAR_AXIS,
+} from "@/lib/constants/saju-defaults";
 import { useCoinStore } from "@/store/useCoinStore";
 import { resolveSolarYear, formatIpchunLabel } from "@/lib/utils/ipchun";
 import { getGradeBadge } from "@/lib/utils/grade-colors";
@@ -107,9 +112,9 @@ export default function YearlyEntryClient() {
         birthMinute: primary.birthMinute,
         birthLocation: primary.birthLocation,
         gender: primary.gender,
-        relationshipStatus: primary.relationshipStatus || "솔로",
-        employmentStatus: primary.employmentStatus || "직장인",
-        coreFearAxis: primary.coreFearAxis || "DISMISS",
+        relationshipStatus: primary.relationshipStatus || DEFAULT_RELATIONSHIP_STATUS,
+        employmentStatus: primary.employmentStatus || DEFAULT_EMPLOYMENT_STATUS,
+        coreFearAxis: primary.coreFearAxis || DEFAULT_CORE_FEAR_AXIS,
         unknownBirthTime: primary.unknownBirthTime,
       };
       const res = await fetch("/api/intake/session", {

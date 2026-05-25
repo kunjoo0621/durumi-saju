@@ -13,6 +13,11 @@ import { trackPaymentAttempt, trackPaymentSuccess, trackPaymentFail, trackInsuff
 import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
+import {
+  DEFAULT_RELATIONSHIP_STATUS,
+  DEFAULT_EMPLOYMENT_STATUS,
+  DEFAULT_CORE_FEAR_AXIS,
+} from "@/lib/constants/saju-defaults";
 import { getQuickSajuTags, type SajuTag } from "@/app/checkout/actions";
 import { Egg, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { FullScreenLoading, ButtonSpinner } from "@/components/loading";
@@ -223,9 +228,9 @@ function TeaserContent() {
               birthMinute: playerA.birthMinute,
               birthLocation: playerA.birthLocation,
               gender: playerA.gender,
-              relationshipStatus: playerA.relationshipStatus || "솔로",
-              employmentStatus: playerA.employmentStatus || "직장인",
-              coreFearAxis: playerA.coreFearAxis || "DISMISS",
+              relationshipStatus: playerA.relationshipStatus || DEFAULT_RELATIONSHIP_STATUS,
+              employmentStatus: playerA.employmentStatus || DEFAULT_EMPLOYMENT_STATUS,
+              coreFearAxis: playerA.coreFearAxis || DEFAULT_CORE_FEAR_AXIS,
               unknownBirthTime: playerA.unknownBirthTime,
             }
           : inputs;

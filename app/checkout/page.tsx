@@ -13,6 +13,11 @@ import BusinessFooter from "@/components/BusinessFooter";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import Modal from "@/components/Modal";
 import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
+import {
+  DEFAULT_RELATIONSHIP_STATUS,
+  DEFAULT_EMPLOYMENT_STATUS,
+  DEFAULT_CORE_FEAR_AXIS,
+} from "@/lib/constants/saju-defaults";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 
 type CheckoutType = "analysis" | "battle";
@@ -357,9 +362,9 @@ function CheckoutForm({
               birthMinute: battleStore.playerA.birthMinute,
               birthLocation: battleStore.playerA.birthLocation,
               gender: battleStore.playerA.gender,
-              relationshipStatus: battleStore.playerA.relationshipStatus || "솔로",
-              employmentStatus: battleStore.playerA.employmentStatus || "직장인",
-              coreFearAxis: battleStore.playerA.coreFearAxis || "DISMISS",
+              relationshipStatus: battleStore.playerA.relationshipStatus || DEFAULT_RELATIONSHIP_STATUS,
+              employmentStatus: battleStore.playerA.employmentStatus || DEFAULT_EMPLOYMENT_STATUS,
+              coreFearAxis: battleStore.playerA.coreFearAxis || DEFAULT_CORE_FEAR_AXIS,
               unknownBirthTime: battleStore.playerA.unknownBirthTime,
             }
           : inputs;

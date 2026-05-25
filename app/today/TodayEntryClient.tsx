@@ -9,6 +9,11 @@ import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import { TODAY_COST } from "@/lib/constants/coins";
 import { TODAY_LOADING_STEPS } from "@/lib/constants/today";
 import { callTodayStart, callTodayAnalyze } from "@/lib/today-payment-flow";
+import {
+  DEFAULT_RELATIONSHIP_STATUS,
+  DEFAULT_EMPLOYMENT_STATUS,
+  DEFAULT_CORE_FEAR_AXIS,
+} from "@/lib/constants/saju-defaults";
 import { useCoinStore } from "@/store/useCoinStore";
 import { getKSTDateString } from "@/lib/utils/kst-date";
 import { getGradeBadge } from "@/lib/utils/grade-colors";
@@ -101,9 +106,9 @@ export default function TodayEntryClient() {
         birthMinute: primary.birthMinute,
         birthLocation: primary.birthLocation,
         gender: primary.gender,
-        relationshipStatus: primary.relationshipStatus || "솔로",
-        employmentStatus: primary.employmentStatus || "직장인",
-        coreFearAxis: primary.coreFearAxis || "DISMISS",
+        relationshipStatus: primary.relationshipStatus || DEFAULT_RELATIONSHIP_STATUS,
+        employmentStatus: primary.employmentStatus || DEFAULT_EMPLOYMENT_STATUS,
+        coreFearAxis: primary.coreFearAxis || DEFAULT_CORE_FEAR_AXIS,
         unknownBirthTime: primary.unknownBirthTime,
       };
       const res = await fetch("/api/intake/session", {
