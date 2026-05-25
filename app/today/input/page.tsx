@@ -31,10 +31,11 @@ export default function TodayInputPage() {
     fetchBalance();
   }, [fetchBalance]);
 
-  const runTodayFlow = useCallback(async () => {
-    // ★ client 잔액 체크 — 부족하면 session/start API 호출 안 하고 즉시 충전 시트
-    //   (balance가 null이면 fetch 못 끝낸 케이스 — backend가 fallback으로 처리)
-    if (balance !== null && balance < TODAY_COST) {
+  const runTodayFlow = useCallback(async (overrideBalance?: number) => {
+    // client 잔액 체크 — 부족하면 session/start API 호출 안 하고 즉시 충전 시트.
+    // overrideBalance: 충전 직후 setBalance가 비동기라 closure의 balance가 stale일 때 명시적 fresh 값
+    const effectiveBalance = overrideBalance ?? balance;
+    if (effectiveBalance !== null && effectiveBalance < TODAY_COST) {
       setShowChargeSheet(true);
       return;
     }
@@ -98,7 +99,7 @@ export default function TodayInputPage() {
     // 충전 완료 토스트 — 분석 풀스크린 위에서도 보이게 z-[300]
     setChargeToast(`충전 완료! ${newBalance}알 사용 가능`);
     setTimeout(() => setChargeToast(null), 3000);
-    await runTodayFlow();
+    await runTodayFlow(newBalance);
   }, [setBalance, runTodayFlow]);
 
   if (processing && !error) {

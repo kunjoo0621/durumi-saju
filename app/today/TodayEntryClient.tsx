@@ -134,7 +134,7 @@ export default function TodayEntryClient() {
     }
   }, [primary, sessionId, createSession]);
 
-  const handleStart = useCallback(async () => {
+  const handleStart = useCallback(async (overrideBalance?: number) => {
     if (!isAuthenticated) {
       signIn("kakao", { callbackUrl: "/today" });
       return;
@@ -142,7 +142,9 @@ export default function TodayEntryClient() {
     if (!primary) return;
 
     // 클라이언트 잔액 체크 — 부족하면 API 호출 없이 충전 시트
-    if (balance !== null && balance < TODAY_COST) {
+    // overrideBalance: 충전 직후 setBalance가 비동기라 closure의 balance가 stale일 때 명시적 fresh 값
+    const effectiveBalance = overrideBalance ?? balance;
+    if (effectiveBalance !== null && effectiveBalance < TODAY_COST) {
       setShowChargeSheet(true);
       return;
     }
@@ -205,7 +207,7 @@ export default function TodayEntryClient() {
   const handleChargeComplete = useCallback(async (newBalance: number) => {
     setBalance(newBalance);
     setShowChargeSheet(false);
-    await handleStart();
+    await handleStart(newBalance);
   }, [setBalance, handleStart]);
 
   if (confirming) {
@@ -332,7 +334,7 @@ export default function TodayEntryClient() {
 
                 <div className="space-y-3">
                   <button
-                    onClick={handleStart}
+                    onClick={() => handleStart()}
                     disabled={paying}
                     className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold disabled:opacity-60 active:scale-[0.98] transition-transform"
                   >
