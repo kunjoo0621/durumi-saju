@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { getPrimarySajuData } from "@/lib/server/get-primary-saju";
 
-// 대표사주(또는 최근 사주) 조회 → 올해의 운세 입력으로 자동 채울 정보 반환.
-// 응답 shape은 today/from-primary와 1:1 동일 — lib/server/get-primary-saju에서 공유.
+// 대표사주(또는 최근 사주) 조회 → 오늘의 운세 입력으로 자동 채울 정보 반환.
+// 응답 shape은 yearly/from-primary와 1:1 동일 — lib/server/get-primary-saju에서 공유.
 
 export async function GET() {
   try {
@@ -18,7 +18,8 @@ export async function GET() {
     const result = await getPrimarySajuData(userId);
     return NextResponse.json({ result });
   } catch (error: any) {
-    console.error("[YEARLY_FROM_PRIMARY]", error?.message || error);
+    // raw error.message 사용자 노출 금지 (CLAUDE.md 규약) — generic 메시지만, 상세는 서버 로그.
+    console.error("[TODAY_FROM_PRIMARY]", error?.message || error);
     return NextResponse.json(
       { error: "내 사주 조회 중 오류가 발생했습니다." },
       { status: 500 },

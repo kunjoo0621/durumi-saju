@@ -613,6 +613,128 @@ export function findRelationships(branches: string[]): {
   return result;
 }
 
+// ────────────────────────────────────────────────────────
+// 원진(怨嗔) · 방합(方合) 매트릭스 (한자 기반)
+// — findRelationships()는 4기둥 내부 관계만 다루지만,
+//   두 사주 비교(today·pet·battle 등)에서 원진/방합 검출 필요.
+// — 모든 모듈은 이 마스터 상수를 import해야 함 (인라인 복사 금지).
+// ────────────────────────────────────────────────────────
+
+export const WONJIN: [string, string][] = [
+  ["子", "未"],  // 자미 원진
+  ["丑", "午"],  // 축오 원진
+  ["寅", "酉"],  // 인유 원진
+  ["卯", "申"],  // 묘신 원진
+  ["辰", "亥"],  // 진해 원진
+  ["巳", "戌"],  // 사술 원진
+];
+
+export const BANGHAP: [string, string, string, KoreanElement][] = [
+  ["寅", "卯", "辰", "목"],  // 동방 목국
+  ["巳", "午", "未", "화"],  // 남방 화국
+  ["申", "酉", "戌", "금"],  // 서방 금국
+  ["亥", "子", "丑", "수"],  // 북방 수국
+];
+
+// ────────────────────────────────────────────────────────
+// 두 사주 비교용 헬퍼 — 두 지지 한자 받아 관계 반환
+// today/pet/battle 등 모듈이 사용. 인라인 매트릭스 복사 금지.
+// ────────────────────────────────────────────────────────
+
+export type PairRelation =
+  | "hap"          // 6합
+  | "samhap"       // 삼합 반합
+  | "banghap"      // 방합 반방합
+  | "chung"        // 6충
+  | "hyung"        // 형
+  | "wonjin"       // 원진
+  | "same"         // 동일 지지
+  | "none";
+
+export function getPairRelation(branchA: string, branchB: string): {
+  type: PairRelation;
+  label: string;       // 한글 라벨 (UI/프롬프트용)
+  hanjaLabel: string;  // 한자 라벨
+} {
+  if (!branchA || !branchB) {
+    return { type: "none", label: "특별한 관계 없음", hanjaLabel: "" };
+  }
+
+  // 6합
+  for (const [a, b, elem] of YUKAP) {
+    if ((a === branchA && b === branchB) || (b === branchA && a === branchB)) {
+      const kor = `${BRANCH_INFO[a].korean}${BRANCH_INFO[b].korean}합${elem} (끌림·결합)`;
+      return { type: "hap", label: kor, hanjaLabel: `${a}${b}合${ELEMENT_TO_HANJA[elem]}` };
+    }
+  }
+
+  // 6충 (마스터 YUKCHUNG 사용)
+  for (const [a, b] of YUKCHUNG) {
+    if ((a === branchA && b === branchB) || (b === branchA && a === branchB)) {
+      const kor = `${BRANCH_INFO[a].korean}${BRANCH_INFO[b].korean}충 (정면 충돌)`;
+      return { type: "chung", label: kor, hanjaLabel: `${a}${b}沖` };
+    }
+  }
+
+  // 형
+  for (const [group, name] of HYUNG) {
+    // 자형 (XX 같은 글자 2개): 두 글자가 같고 group[0]과도 같으면 성립
+    if (group.length === 2 && group[0] === group[1]) {
+      if (branchA === branchB && branchA === group[0]) {
+        const kor = `${BRANCH_INFO[group[0]].korean}${BRANCH_INFO[group[1]].korean}형 (${name})`;
+        return { type: "hyung", label: kor, hanjaLabel: `${group[0]}${group[1]}刑` };
+      }
+      continue;
+    }
+    // 다중 글자 형 (인사신·축술미·자묘): 둘 다 group에 속하고 다른 글자면 성립
+    if (group.length > 1 && group.includes(branchA) && group.includes(branchB) && branchA !== branchB) {
+      const kor = `${BRANCH_INFO[branchA].korean}${BRANCH_INFO[branchB].korean}형 (${name})`;
+      return { type: "hyung", label: kor, hanjaLabel: `${branchA}${branchB}刑` };
+    }
+  }
+
+  // 원진
+  for (const [a, b] of WONJIN) {
+    if ((a === branchA && b === branchB) || (b === branchA && a === branchB)) {
+      const kor = `${BRANCH_INFO[a].korean}${BRANCH_INFO[b].korean}원진 (미운 정·보이지 않는 충돌)`;
+      return { type: "wonjin", label: kor, hanjaLabel: `${a}${b}怨嗔` };
+    }
+  }
+
+  // 삼합 반합 (두 글자가 같은 삼합 그룹)
+  for (const [a, b, c, elem] of SAMHAP) {
+    const group = [a, b, c];
+    if (group.includes(branchA) && group.includes(branchB) && branchA !== branchB) {
+      const kor = `${BRANCH_INFO[branchA].korean}${BRANCH_INFO[branchB].korean} 삼합 반합${elem} (같은 의지)`;
+      return { type: "samhap", label: kor, hanjaLabel: `${branchA}${branchB}半合${ELEMENT_TO_HANJA[elem]}` };
+    }
+  }
+
+  // 방합 반방합 (두 글자가 같은 방합 그룹)
+  for (const [a, b, c, elem] of BANGHAP) {
+    const group = [a, b, c];
+    if (group.includes(branchA) && group.includes(branchB) && branchA !== branchB) {
+      const kor = `${BRANCH_INFO[branchA].korean}${BRANCH_INFO[branchB].korean} 방합 반방합${elem} (같은 계절)`;
+      return { type: "banghap", label: kor, hanjaLabel: `${branchA}${branchB}半方合${ELEMENT_TO_HANJA[elem]}` };
+    }
+  }
+
+  // 동일 지지
+  if (branchA === branchB) {
+    return {
+      type: "same",
+      label: `${BRANCH_INFO[branchA].korean}${BRANCH_INFO[branchA].korean} 동일 지지 (안정·반복)`,
+      hanjaLabel: `${branchA}${branchA}`,
+    };
+  }
+
+  return {
+    type: "none",
+    label: `${BRANCH_INFO[branchA].korean}-${BRANCH_INFO[branchB].korean} 특별한 합·충 없음`,
+    hanjaLabel: `${branchA}-${branchB}`,
+  };
+}
+
 /** @deprecated 내부 로직은 SHINSAL_DEFS 사용. 외부 참조용으로만 유지. */
 export const DOHWA: Record<string, string> = {
   子: "酉", 丑: "午", 寅: "卯", 卯: "子", 辰: "酉", 巳: "午",

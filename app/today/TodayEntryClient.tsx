@@ -6,14 +6,16 @@ import { useSession, signIn } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { FullScreenLoading, SkeletonBar } from "@/components/loading";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
-import { YEARLY_COST } from "@/lib/constants/coins";
+import { TODAY_COST } from "@/lib/constants/coins";
+import { TODAY_LOADING_STEPS } from "@/lib/constants/today";
+import { callTodayStart, callTodayAnalyze } from "@/lib/today-payment-flow";
 import {
   DEFAULT_RELATIONSHIP_STATUS,
   DEFAULT_EMPLOYMENT_STATUS,
   DEFAULT_CORE_FEAR_AXIS,
 } from "@/lib/constants/saju-defaults";
 import { useCoinStore } from "@/store/useCoinStore";
-import { resolveSolarYear, formatIpchunLabel } from "@/lib/utils/ipchun";
+import { getKSTDateString } from "@/lib/utils/kst-date";
 import { getGradeBadge } from "@/lib/utils/grade-colors";
 import { displayGrade } from "@/lib/gradeSystem";
 
@@ -36,21 +38,15 @@ type PrimarySaju = {
   ownedCount?: number;
 };
 
-// 입춘 기준 명리학 연도. 1/1~입춘 사이면 전년도 세운으로 자동 보정.
-const YEAR_RESOLUTION = resolveSolarYear(new Date());
-const TARGET_YEAR = YEAR_RESOLUTION.solarYear;
-const IPCHUN_LABEL = formatIpchunLabel(YEAR_RESOLUTION.ipchunDate);
+// KST 날짜 라벨 — 표시용. 진입 시점 1회 계산 (자정 넘기는 사용자는 새로고침 자연 유도).
+// ★ 실제 분석 targetDate는 handleStart 클릭 시점에 fresh 계산 (자정 넘겨 결제 시 정확한 날짜 보장).
+const INITIAL_DATE = getKSTDateString();
+const [INITIAL_YEAR_STR, INITIAL_MONTH_STR, INITIAL_DAY_STR] = INITIAL_DATE.split("-");
+const TARGET_DATE_LABEL = `${INITIAL_YEAR_STR}.${INITIAL_MONTH_STR}.${INITIAL_DAY_STR}`;
 
-const CONFIRM_STEPS = [
-  { message: "사주 데이터를 계산하고 있어", delay: 0 },
-  { message: `${TARGET_YEAR}년 세운과 원국 상호작용을 분석하고 있어`, delay: 16_000 },
-  { message: `${TARGET_YEAR}년의 흐름을 작성하고 있어`, delay: 50_000 },
-  { message: "결과를 정리하고 있어", delay: 100_000 },
-];
-
-export default function YearlyEntryClient() {
+export default function TodayEntryClient() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const { balance, fetchBalance, setBalance } = useCoinStore();
 
   const [primary, setPrimary] = useState<PrimarySaju | null>(null);
@@ -65,7 +61,6 @@ export default function YearlyEntryClient() {
 
   const isAuthenticated = status === "authenticated";
 
-  // 대표사주 로딩
   useEffect(() => {
     if (!isAuthenticated) {
       setPrimaryLoading(false);
@@ -74,7 +69,7 @@ export default function YearlyEntryClient() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/yearly/from-primary");
+        const res = await fetch("/api/today/from-primary");
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) {
@@ -93,12 +88,11 @@ export default function YearlyEntryClient() {
     };
   }, [isAuthenticated]);
 
-  // 잔액 로딩
   useEffect(() => {
     if (isAuthenticated) fetchBalance();
   }, [isAuthenticated, fetchBalance]);
 
-  // 대표사주 정보로 intake 세션 만들기 (사용자 확인 클릭 시 곧장 spend 가능하도록)
+  // 대표사주 정보로 intake 세션 만들기
   const createSession = useCallback(async () => {
     if (!primary) return null;
     try {
@@ -140,107 +134,88 @@ export default function YearlyEntryClient() {
     }
   }, [primary, sessionId, createSession]);
 
-  // 결제 + 분석
-  const handleStart = useCallback(async () => {
+  const handleStart = useCallback(async (overrideBalance?: number) => {
     if (!isAuthenticated) {
-      signIn("kakao", { callbackUrl: "/yearly" });
+      signIn("kakao", { callbackUrl: "/today" });
       return;
     }
     if (!primary) return;
 
+    // 클라이언트 잔액 체크 — 부족하면 API 호출 없이 충전 시트
+    // overrideBalance: 충전 직후 setBalance가 비동기라 closure의 balance가 stale일 때 명시적 fresh 값
+    const effectiveBalance = overrideBalance ?? balance;
+    if (effectiveBalance !== null && effectiveBalance < TODAY_COST) {
+      setShowChargeSheet(true);
+      return;
+    }
+
     setError(null);
     setPaying(true);
+    // 클릭 즉시 로딩 화면 — start API 대기 동안 버튼 상태로 머무는 어색함 차단
+    setConfirming(true);
     try {
       let sid = sessionId;
       if (!sid) {
         sid = await createSession();
       }
       if (!sid) {
+        setConfirming(false);
         setPaying(false);
         return;
       }
 
-      const startRes = await fetch("/api/yearly/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: sid,
-          targetYear: TARGET_YEAR,
-          sourceResultId: primary.sourceResultId,
-        }),
+      // 클릭 시점 KST 날짜 — 자정 넘겨 결제 케이스 대비 매번 fresh
+      const targetDate = getKSTDateString();
+      const startResult = await callTodayStart({
+        sessionId: sid,
+        targetDate,
+        sourceResultId: primary.sourceResultId,
       });
-      const startData = await startRes.json().catch(() => ({}));
 
-      if (startData.insufficient) {
-        if (typeof startData.balance === "number") {
-          setBalance(startData.balance);
-        }
+      if (startResult.kind === "insufficient") {
+        setBalance(startResult.balance);
+        setConfirming(false);
+        setPaying(false);
         setShowChargeSheet(true);
-        setPaying(false);
         return;
       }
-      if (!startRes.ok) {
-        if (startData.refunded) {
-          throw new Error("분석 준비에 실패했어. 알은 환불됐어.");
-        }
-        throw new Error(startData?.error || "처리에 실패했어.");
+      if (startResult.kind === "failed") {
+        throw new Error(startResult.message);
       }
-
-      const resultId: string | undefined = startData.resultId;
-      if (!resultId) throw new Error("결과 ID를 받지 못했어.");
-
-      // 재사용된 결과면 곧장 결과로 이동
-      if (startData.reused) {
-        setPaying(false);
-        sessionStorage.setItem("yearlyJustPaid", "1");
-        router.replace(`/yearly/result/${resultId}`);
+      if (startResult.kind === "reused") {
+        sessionStorage.setItem("todayJustPaid", "1");
+        router.replace(`/today/result/${startResult.resultId}`);
         return;
       }
-
-      // 잔액 갱신
-      if (typeof startData.balance === "number") {
-        await fetchBalance();
+      if (typeof startResult.balance === "number") {
+        setBalance(startResult.balance);
       }
 
-      // 분석 호출
-      setConfirming(true);
-      setPaying(false);
-      const analyzeRes = await fetch("/api/yearly/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resultId }),
-      });
-      const analyzeData = await analyzeRes.json().catch(() => ({}));
-      if (!analyzeRes.ok) {
-        if (analyzeData.refunded) {
-          throw new Error("분석에 실패했어. 알은 환불됐어.");
-        }
-        throw new Error(analyzeData?.error || "분석에 실패했어.");
+      const analyzeResult = await callTodayAnalyze(startResult.resultId);
+      if (analyzeResult.kind === "failed") {
+        throw new Error(analyzeResult.message);
       }
-
-      sessionStorage.setItem("yearlyJustPaid", "1");
-      router.replace(`/yearly/result/${resultId}`);
+      sessionStorage.setItem("todayJustPaid", "1");
+      router.replace(`/today/result/${startResult.resultId}`);
     } catch (err: any) {
       setError(err?.message || "처리에 실패했어.");
-    } finally {
-      setPaying(false);
       setConfirming(false);
     }
-  }, [isAuthenticated, primary, sessionId, createSession, router, fetchBalance, setBalance]);
+  }, [isAuthenticated, primary, balance, sessionId, createSession, router, setBalance]);
 
   // 충전 완료 콜백 — balance 갱신 후 자동으로 분석 재시도
   const handleChargeComplete = useCallback(async (newBalance: number) => {
     setBalance(newBalance);
     setShowChargeSheet(false);
-    await handleStart();
+    await handleStart(newBalance);
   }, [setBalance, handleStart]);
 
   if (confirming) {
     return (
       <FullScreenLoading
-        steps={CONFIRM_STEPS}
-        estimatedDuration={180000}
-        subMessage="보통 3분 정도 걸려"
+        steps={TODAY_LOADING_STEPS}
+        estimatedDuration={90000}
+        subMessage="보통 1~2분 걸려"
       />
     );
   }
@@ -253,21 +228,11 @@ export default function YearlyEntryClient() {
         <div className="max-w-[640px] mx-auto pt-12 space-y-10">
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-bold font-aggro text-text-primary">
-              {TARGET_YEAR}년 운세
+              오늘 운세
             </h1>
             <p className="text-body-2 text-text-secondary">
-              내 사주 위에 {TARGET_YEAR}년 세운이 얹힌 한 해 풀이
+              {TARGET_DATE_LABEL} · 내 사주 위에 오늘 일진이 얹힌 하루 풀이
             </p>
-            {YEAR_RESOLUTION.beforeIpchun && (
-              <p className="text-[12px] text-text-tertiary pt-2 leading-relaxed">
-                명리학상 한 해의 시작은 입춘(立春).
-                <br />
-                {YEAR_RESOLUTION.gregorianYear}년 입춘 ({IPCHUN_LABEL}) 전이라
-                {" "}
-                <span className="text-text-secondary font-semibold">{TARGET_YEAR}년 세운</span>
-                으로 봅니다.
-              </p>
-            )}
           </div>
 
           {/* 본문 — 서버에서 비로그인 차단하므로 항상 로그인 상태로 진입 */}
@@ -315,15 +280,15 @@ export default function YearlyEntryClient() {
           ) : !primary ? (
             <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 text-center space-y-4">
               <p className="text-body-2 text-text-secondary">
-                {TARGET_YEAR}년 운세는 본인 사주를 기반으로 풀어줘.
+                오늘 운세는 본인 사주를 기반으로 풀어줘.
                 <br />
                 대표사주가 있으면 그걸로 풀고, 없으면 입력해서 바로 볼 수 있어.
               </p>
               <button
-                onClick={() => router.push("/yearly/input")}
+                onClick={() => router.push("/today/input")}
                 className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
               >
-                {TARGET_YEAR}년 운세만 보기
+                오늘 운세만 보기
               </button>
               <button
                 onClick={() => router.push("/start")}
@@ -334,7 +299,7 @@ export default function YearlyEntryClient() {
             </div>
           ) : (
             <>
-              {/* 사주 요약 카드 — [등급 SVG] | 정보 | [변경] (세로 중앙 정렬) */}
+              {/* 사주 요약 카드 — [등급 SVG] | 정보 | [변경] (세로 중앙 정렬, yearly entry 패턴 그대로) */}
               <div className="rounded-2xl bg-background-secondary border border-white/5 p-6">
                 <div className="flex items-center gap-4">
                   {/* 좌: 등급 SVG */}
@@ -381,11 +346,10 @@ export default function YearlyEntryClient() {
 
               {/* 그룹 2: 결제 (비용 + CTA) — 박스 없이 내부 정렬로 그룹핑 */}
               <div className="px-1 space-y-6">
-                {/* 비용 정보 */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-body-2 text-text-secondary">소비 알</span>
-                    <span className="text-[17px] font-bold text-text-primary">{YEARLY_COST}알</span>
+                    <span className="text-[17px] font-bold text-text-primary">{TODAY_COST}알</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-body-2 text-text-secondary">현재 보유</span>
@@ -397,18 +361,17 @@ export default function YearlyEntryClient() {
                   <p className="text-[13px] text-amber-400 text-center">{error}</p>
                 )}
 
-                {/* CTA */}
                 <div className="space-y-3">
                   <button
-                    onClick={handleStart}
+                    onClick={() => handleStart()}
                     disabled={paying}
                     className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold disabled:opacity-60 active:scale-[0.98] transition-transform"
                   >
-                    {paying ? "준비 중…" : `${TARGET_YEAR}년 운세 분석 시작`}
+                    {paying ? "준비 중…" : "오늘 운세 분석 시작"}
                   </button>
 
                   <button
-                    onClick={() => router.push("/yearly/input")}
+                    onClick={() => router.push("/today/input")}
                     className="btn-secondary w-full h-[48px] rounded-xl text-[14px] font-semibold active:scale-[0.98] transition-transform"
                   >
                     다른 사주로 진행
@@ -423,10 +386,10 @@ export default function YearlyEntryClient() {
       <ChargeBottomSheet
         isOpen={showChargeSheet}
         onClose={() => setShowChargeSheet(false)}
-        requiredCoins={YEARLY_COST}
+        requiredCoins={TODAY_COST}
         currentBalance={balance ?? 0}
         onChargeComplete={handleChargeComplete}
-        redirectPath="/yearly"
+        redirectPath="/today"
       />
     </div>
   );

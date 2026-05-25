@@ -73,6 +73,9 @@ const EMOJI_TO_KEY: Record<string, SectionKey> = {
   // yearly 전용
   "🪶": "yearlyOpening",
   "🎯": "yearlyDecision",
+  // today 전용 (today system prompt v1.0 sections)
+  "🥚": "overall",       // 종합
+  "💸": "wealth",        // 돈·결제 (💰와 별개 emoji 사용)
 };
 
 /** LLM이 출력한 이모지 → SectionKey 변환. 매칭 실패 시 "relationship" 폴백. */

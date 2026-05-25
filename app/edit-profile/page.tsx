@@ -41,7 +41,7 @@ const REGIONS = [
 ];
 const GENDERS = ["남성", "여성"];
 const RELATIONSHIPS = ["솔로", "연애중", "기혼"];
-const EMPLOYMENT = ["직장인", "사업·프리랜서", "학생", "취업 준비 중"];
+const EMPLOYMENT = ["직장인", "사업·프리랜서", "학생", "취업 준비 중", "주부"];
 
 const formatBirthDate = (value: string) => {
   const digits = value.replace(/\D/g, "").slice(0, 8);

@@ -1,3 +1,6 @@
+// /api/today/start — 입력 검증 + 코인 차감 + row 생성
+// yearly start 패턴 미러 + target_date 변형 + hasTodayRequiredInput 사용
+
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -5,22 +8,21 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
 import {
-  hasRequiredInput,
+  hasTodayRequiredInput,
   markSessionConsumed,
   formatBirthDate,
   formatBirthTime,
   refundCoins,
 } from "@/lib/server/session-helpers";
-import { YEARLY_COST } from "@/lib/constants/coins";
+import { TODAY_COST } from "@/lib/constants/coins";
 
 type StartBody = {
   sessionId: string;
-  targetYear: number;
-  sourceResultId?: string | null;  // 대표사주에서 진입했을 때
+  targetDate: string;  // "YYYY-MM-DD"
+  sourceResultId?: string | null;  // 대표사주에서 진입
 };
 
-const YEAR_MIN = 1900;
-const YEAR_MAX = 2100;
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,10 +36,10 @@ export async function POST(request: NextRequest) {
     if (!body.sessionId) {
       return NextResponse.json({ error: "세션 정보가 필요합니다." }, { status: 400 });
     }
-    const targetYear = Number(body.targetYear);
-    if (!Number.isFinite(targetYear) || targetYear < YEAR_MIN || targetYear > YEAR_MAX) {
-      return NextResponse.json({ error: "분석 연도가 올바르지 않습니다." }, { status: 400 });
+    if (!body.targetDate || !DATE_REGEX.test(body.targetDate)) {
+      return NextResponse.json({ error: "분석 날짜 형식이 올바르지 않습니다." }, { status: 400 });
     }
+    const targetDate = body.targetDate;
 
     // prepayment_sessions 조회
     const pending = await supabaseAdmin
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (pending.error) {
-      console.error("[YEARLY_START] session lookup", pending.error.message);
+      console.error("[TODAY_START] session lookup", pending.error.message);
       return NextResponse.json({ error: "세션 조회 중 오류가 발생했습니다." }, { status: 500 });
     }
     const sessionRow = pending.data;
@@ -64,14 +66,8 @@ export async function POST(request: NextRequest) {
     }
 
     const input = sessionRow.payload as InputPayload;
-    // /yearly/input 폼은 coreFearAxis 질문을 건너뛰지만 hasRequiredInput은
-    // 여전히 필수로 요구. 스토어에 이전 /start 흔적이 남아 채워진 경우만 통과되고
-    // 신규 진입자는 전부 400으로 차단되어 왔음. yearly 분석은 coreFearAxis를
-    // 사용하지 않으므로 YearlyEntryClient의 "DISMISS" 폴백과 동일하게 보정한다.
-    if (!input.coreFearAxis) {
-      input.coreFearAxis = "DISMISS";
-    }
-    if (!hasRequiredInput(input)) {
+    // ★ today 전용 검증 (relationshipStatus / coreFearAxis 안 봄 — yearly 0389a00 mismatch 회피)
+    if (!hasTodayRequiredInput(input)) {
       return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
     }
 
@@ -80,38 +76,36 @@ export async function POST(request: NextRequest) {
         ? sessionRow.input_hash
         : buildInputHash(input);
 
-    // ── 기존 결과 재사용: (user_id, input_hash, target_year) ──
+    // ── 기존 결과 재사용: (user_id, input_hash, target_date) ──
     const existingUnlock = await supabaseAdmin
-      .from("yearly_result_unlocks")
+      .from("today_result_unlocks")
       .select("result_id")
       .eq("user_id", userId)
       .eq("input_hash", inputHash)
-      .eq("target_year", targetYear)
+      .eq("target_date", targetDate)
       .maybeSingle();
 
     if (existingUnlock.data?.result_id) {
       const existingResultId = existingUnlock.data.result_id;
 
-      // 기존 row가 실패 상태(_error)면 재사용 시 "알만 빠지고 결과 없음" 발생.
-      // full_json/teaser_json을 null로 리셋해 pending 상태로 되돌리고, 클라이언트가
-      // /api/yearly/analyze 호출해 재분석하도록 흐름을 다시 태운다.
-      // (saju 핫픽스 6d4a822와 동일 패턴)
+      // 실패 row 재사용 시 "알만 빠지고 결과 없음" 사고 방지 (29ad160 패턴)
       const { data: existingResult } = await supabaseAdmin
-        .from("yearly_results")
+        .from("today_results")
         .select("full_json")
         .eq("id", existingResultId)
         .maybeSingle();
 
       if ((existingResult?.full_json as any)?._error) {
-        // 실패 row 재시도는 무료가 아니라 재결제 — saju spend route와 동일 정책.
-        // 1차 분석 실패 후 환불(+10)을 이미 받았으므로 재시도는 신규 결제로 처리.
+        // 실패 row 재시도는 신규 결제 — yearly·saju spend route와 동일 정책.
+        // 1차 분석 실패 후 환불(+5)을 이미 받았으므로 재시도는 다시 spend.
+        // (이게 빠지면 무료 재시도 → 또 실패 → 또 환불 루프로 알 늘어남)
         const retrySpend = await supabaseAdmin.rpc("spend_coins", {
           p_user_id: userId,
-          p_amount: YEARLY_COST,
+          p_amount: TODAY_COST,
           p_reference_id: body.sessionId,
         });
         if (retrySpend.error) {
-          console.error("[YEARLY_START] retry spend rpc", retrySpend.error.message);
+          console.error("[TODAY_START] retry spend rpc", retrySpend.error.message);
           return NextResponse.json({ error: "알 차감 중 오류가 발생했습니다." }, { status: 500 });
         }
         const retryResult = Array.isArray(retrySpend.data) ? retrySpend.data[0] : retrySpend.data;
@@ -119,20 +113,51 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             insufficient: true,
             balance: retryResult?.new_balance ?? 0,
-            required: YEARLY_COST,
+            required: TODAY_COST,
           });
         }
 
-        await supabaseAdmin
-          .from("yearly_results")
-          .update({ full_json: null, teaser_json: null })
-          .eq("id", existingResultId);
+        // ★ atomic reset — 2탭 동시 retry 시 중복 결제 차단.
+        // WHERE full_json IS NOT NULL 조건으로 "이미 다른 요청이 reset 했나" 체크.
+        // 다른 탭이 먼저 reset했으면 우리 update 0 rows → 우리 spend 환불 + 기존 resultId 재사용.
+        const { data: resetRows, error: resetError } = await supabaseAdmin
+          .from("today_results")
+          .update({
+            full_json: null,
+            teaser_json: null,
+            analysis_started_at: null,
+          })
+          .eq("id", existingResultId)
+          .eq("user_id", userId)
+          .not("full_json", "is", null)
+          .select("id");
+        if (resetError) {
+          // 알 차감했는데 reset 실패 → 환불 + 에러
+          console.error("[TODAY_START] retry reset update", resetError.message);
+          await refundCoins(userId, TODAY_COST, body.sessionId);
+          return NextResponse.json(
+            { error: "재시도 준비에 실패했습니다.", refunded: true },
+            { status: 500 },
+          );
+        }
+        if (!resetRows || resetRows.length === 0) {
+          // 다른 탭이 먼저 reset 완료 → 우리 spend는 손실. 환불 + 기존 resultId 재사용으로 분석은 진행.
+          console.warn("[TODAY_START] retry reset race — refunding");
+          await refundCoins(userId, TODAY_COST, body.sessionId);
+          await markSessionConsumed(body.sessionId, userId);
+          return NextResponse.json({
+            ok: true,
+            resultId: existingResultId,
+            reused: true,
+            refunded: true,
+          });
+        }
         await markSessionConsumed(body.sessionId, userId);
         return NextResponse.json({
           ok: true,
           resultId: existingResultId,
-          balance: retryResult.new_balance,
           pending: true,
+          balance: retryResult.new_balance,
         });
       }
 
@@ -144,15 +169,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 코인 차감
+    // 코인 차감 (spend_coins RPC, TODAY_COST = 5)
     const spendRpc = await supabaseAdmin.rpc("spend_coins", {
       p_user_id: userId,
-      p_amount: YEARLY_COST,
+      p_amount: TODAY_COST,
       p_reference_id: body.sessionId,
     });
 
     if (spendRpc.error) {
-      console.error("[YEARLY_START] spend rpc", spendRpc.error.message);
+      console.error("[TODAY_START] spend rpc", spendRpc.error.message);
       return NextResponse.json({ error: "알 차감 중 오류가 발생했습니다." }, { status: 500 });
     }
 
@@ -161,7 +186,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         insufficient: true,
         balance: spendResult?.new_balance ?? 0,
-        required: YEARLY_COST,
+        required: TODAY_COST,
       });
     }
 
@@ -169,38 +194,43 @@ export async function POST(request: NextRequest) {
       const birthDate = formatBirthDate(input);
       const birthTime = formatBirthTime(input);
 
-      // pending yearly_results row 생성 (full_json: null)
+      // pending today_results row 생성
       const upserted = await supabaseAdmin
-        .from("yearly_results")
+        .from("today_results")
         .upsert(
           {
             user_id: userId,
             source_result_id: body.sourceResultId ?? null,
             input_hash: inputHash,
-            target_year: targetYear,
+            target_date: targetDate,
             name: input.name,
             birth_date: birthDate,
             birth_time: birthTime,
             region: input.birthLocation,
             gender: input.gender,
-            relationship_status: input.relationshipStatus,
-            employment_status: input.employmentStatus,
+            relationship_status: input.relationshipStatus || null,
+            employment_status: input.employmentStatus || null,
             calendar_type: input.calendarType,
             core_fear_axis: input.coreFearAxis || null,
             saju_text: null,
-            yearly_pillar: null,
+            today_pillar: null,
+            today_mood: null,
+            today_weather_icon: null,
+            branch_relation_type: null,
+            stem_relation_label: null,
+            ten_star: null,
             teaser_json: null,
             full_json: null,
             unlocked_at: new Date().toISOString(),
           },
-          { onConflict: "user_id,input_hash,target_year" },
+          { onConflict: "user_id,input_hash,target_date" },
         )
         .select("id")
         .maybeSingle();
 
       if (upserted.error || !upserted.data?.id) {
-        console.error("[YEARLY_START] result upsert", upserted.error?.message);
-        await refundCoins(userId, YEARLY_COST, body.sessionId);
+        console.error("[TODAY_START] result upsert", upserted.error?.message);
+        await refundCoins(userId, TODAY_COST, body.sessionId);
         return NextResponse.json(
           { error: "결과 저장 중 오류가 발생했습니다.", refunded: true },
           { status: 500 },
@@ -208,32 +238,32 @@ export async function POST(request: NextRequest) {
       }
 
       const resultId = upserted.data.id;
-      const orderId = `egg_yearly_${targetYear}_${Date.now()}_${userId.slice(0, 8)}`;
+      const orderId = `egg_today_${targetDate}_${Date.now()}_${userId.slice(0, 8)}`;
 
       // ★ 중복 요청 race 가드: unlock insert를 plain insert로 명시.
-      // (user_id, input_hash, target_year) unique 충돌 시 = 다른 요청이 먼저 차감·등록.
-      // 우리 차감(YEARLY_COST)은 손실 → 환불 + 기존 unlock의 result_id 재사용 반환.
-      // (today 패턴 미러 — 2026-05-25 commit 0a0517f)
+      // (user_id, input_hash, target_date) unique 충돌 시 = 다른 요청이 먼저 차감·등록함.
+      // 우리 차감은 손실 — 환불 후 기존 unlock의 result_id 반환.
       const unlockInsert = await supabaseAdmin
-        .from("yearly_result_unlocks")
+        .from("today_result_unlocks")
         .insert({
           user_id: userId,
           result_id: resultId,
           input_hash: inputHash,
-          target_year: targetYear,
+          target_date: targetDate,
           order_id: orderId,
         });
 
       if (unlockInsert.error) {
-        // PostgreSQL unique_violation = 23505. user_input_year 또는 order_id 충돌.
+        // PostgreSQL unique_violation = 23505. user_input_date 또는 order_id 충돌.
         if (unlockInsert.error.code === "23505") {
-          await refundCoins(userId, YEARLY_COST, body.sessionId);
+          // 다른 요청이 먼저 처리 — 우리 차감 환불 + 기존 unlock 재사용
+          await refundCoins(userId, TODAY_COST, body.sessionId);
           const { data: priorUnlock } = await supabaseAdmin
-            .from("yearly_result_unlocks")
+            .from("today_result_unlocks")
             .select("result_id")
             .eq("user_id", userId)
             .eq("input_hash", inputHash)
-            .eq("target_year", targetYear)
+            .eq("target_date", targetDate)
             .maybeSingle();
           await markSessionConsumed(body.sessionId, userId);
           return NextResponse.json({
@@ -244,8 +274,8 @@ export async function POST(request: NextRequest) {
           });
         }
         // 그 외 에러 — 환불 후 실패
-        console.error("[YEARLY_START] unlock insert", unlockInsert.error.message);
-        await refundCoins(userId, YEARLY_COST, body.sessionId);
+        console.error("[TODAY_START] unlock insert", unlockInsert.error.message);
+        await refundCoins(userId, TODAY_COST, body.sessionId);
         return NextResponse.json(
           { error: "결제 기록 저장 중 오류가 발생했습니다.", refunded: true },
           { status: 500 },
@@ -261,15 +291,15 @@ export async function POST(request: NextRequest) {
         pending: true,
       });
     } catch (err: any) {
-      console.error("[YEARLY_START] pre-analysis", err?.message);
-      await refundCoins(userId, YEARLY_COST, body.sessionId);
+      console.error("[TODAY_START] pre-analysis", err?.message);
+      await refundCoins(userId, TODAY_COST, body.sessionId);
       return NextResponse.json(
         { error: "분석 준비 중 오류가 발생했습니다. 알은 환불되었습니다.", refunded: true },
         { status: 500 },
       );
     }
   } catch (error: any) {
-    console.error("[YEARLY_START] error", error?.message);
+    console.error("[TODAY_START] error", error?.message);
     return NextResponse.json({ error: "처리 중 오류가 발생했습니다." }, { status: 500 });
   }
 }

@@ -49,7 +49,7 @@ const CALENDAR_OPTIONS = [
 ] as const;
 
 const RELATIONSHIP_OPTIONS = ["솔로", "연애중", "기혼"] as const;
-const EMPLOYMENT_OPTIONS = ["직장인", "사업·프리랜서", "학생", "취업 준비 중"] as const;
+const EMPLOYMENT_OPTIONS = ["직장인", "사업·프리랜서", "학생", "취업 준비 중", "주부"] as const;
 
 // 핵심 결핍/공포 축 선택지
 const CORE_FEAR_OPTIONS = [
