@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
+
+// Google Ads 전환 추적용 gtag — 모든 페이지의 head 에 로드.
+// 결제 완료 시점의 conversion firing 은 hooks/useCharge.ts 의 onSuccess 직전에서 처리.
+const GOOGLE_ADS_ID = "AW-18186268670";
 
 const SITE_URL = "https://www.durumisaju.com";
 const SITE_NAME = "사주보는 두루미";
@@ -105,6 +110,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" style={{ colorScheme: "dark" }}>
+      <head>
+        <Script
+          id="gtag-src"
+          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GOOGLE_ADS_ID}');
+          `}
+        </Script>
+      </head>
       <body className="antialiased">
         <script
           type="application/ld+json"
