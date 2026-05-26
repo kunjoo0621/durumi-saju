@@ -124,6 +124,20 @@ export async function POST(request: NextRequest) {
     // RPC 멱등 가드가 발동하면 charged=0, bonus=0을 반환 (잔액은 현재값).
     // 정상 첫 호출은 charged>0. 이 둘로 멱등 여부를 판정.
     const alreadyCharged = result?.charged === 0 && result?.bonus === 0;
+
+    // charge_orders 신구조 가시화: 매칭되는 row 있으면 paid/charged 시각 기록.
+    // 운영자 흐름에서만 row 존재 → 일반 사용자 결제는 matched 0건으로 no-op.
+    // .update().eq() 는 row 없으면 무해 (silent skip).
+    await supabaseAdmin
+      .from("charge_orders")
+      .update({
+        status: "charged",
+        payment_id: body.paymentId ?? body.orderId,
+        paid_at: new Date().toISOString(),
+        charged_at: new Date().toISOString(),
+      })
+      .eq("order_id", body.orderId);
+
     return NextResponse.json({
       ok: true,
       balance: result?.new_balance ?? 0,
