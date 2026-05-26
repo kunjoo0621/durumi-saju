@@ -5,10 +5,10 @@ import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { COIN_PACKAGES } from "@/lib/constants/coins";
-import { isOperator } from "@/lib/constants/operator";
 
 // charge_orders 기반 결제 시작 endpoint (Stripe payment_intents 패턴).
-// 1차 검증 단계: 운영자만 사용. 일반 사용자는 기존 useCharge.randomUUID 흐름 유지.
+// 5/N: 전체 사용자 신구조 전환 — 운영자 production 실결제(2/N, 4/N) 검증 후 gate 제거.
+// 모든 로그인 사용자가 server-issued orderId 사용.
 //
 // intent 실패 시 클라이언트는 결제를 시작하지 않음 (useCharge에서 throw).
 // fallback 절대 X — 우슬기 사고는 클라이언트 randomUUID 흐름의 redirect 끊김 때문이라
@@ -24,15 +24,6 @@ export async function POST(request: NextRequest) {
     const userId = await getSupabaseUserId(session);
     if (!userId) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
-    }
-
-    if (!isOperator(userId)) {
-      // 일반 사용자는 기존 흐름으로. useCharge가 운영자 여부 확인 후 분기하므로
-      // 이 endpoint를 호출했다는 것 자체가 비정상.
-      return NextResponse.json(
-        { error: "신구조 결제는 아직 운영자 전용입니다." },
-        { status: 403 }
-      );
     }
 
     const body = (await request.json()) as IntentBody;
