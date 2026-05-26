@@ -76,9 +76,19 @@ export async function POST(request: NextRequest) {
   // 후속 PR(7/N 전체 사용자 전환) 이후엔 모든 결제에 row 존재.
   const orderId = paymentId; // PortOne paymentId === 우리 발급 order_id
 
+  // 비-UUID paymentId 가드:
+  // charge_orders.order_id 는 UUID 컬럼. useCharge.ts 의 fallback (`charge_${Date.now()}`) 또는
+  // 옛 결제의 paymentId 형식이 UUID 아니면 Postgres uuid cast error → 500 응답 →
+  // PortOne 재시도 폭주. 형식이 우리 발급 UUID 패턴 아니면 명시적으로 ignored 처리.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(orderId)) {
+    console.info("[WEBHOOK] 비-UUID paymentId — 신구조 아님, ignored", { paymentId });
+    return NextResponse.json({ ok: true, ignored: "non-uuid paymentId" });
+  }
+
   const { data: existing, error: lookupError } = await supabaseAdmin
     .from("charge_orders")
-    .select("status")
+    .select("status, amount")
     .eq("order_id", orderId)
     .maybeSingle();
 
@@ -92,6 +102,20 @@ export async function POST(request: NextRequest) {
     // reconcile (8/N) 이 PortOne PAID vs charge_orders 비교로 잡음.
     console.info("[WEBHOOK] charge_orders 없음 — 일반 사용자 redirect 흐름", { orderId });
     return NextResponse.json({ ok: true, ignored: "no charge_order" });
+  }
+
+  // 결제 금액 검증 (★ 결제 보안):
+  // PortOne API 응답의 paid amount 가 우리 charge_orders 의 expected amount 와 일치해야 함.
+  // /api/coins/charge 와 동일한 검증 패턴 (route.ts:77-80). 불일치 시 paid 마킹 금지.
+  // 시나리오: 클라이언트가 1,000원 주문 만들고 100원만 결제 시도 → status PAID 받지만 amount 불일치.
+  const paidAmount = paymentData.amount?.total ?? paymentData.amount?.paid;
+  if (paidAmount !== existing.amount) {
+    console.error("[WEBHOOK] amount 불일치, paid 마킹 금지", {
+      orderId,
+      expected: existing.amount,
+      paid: paidAmount,
+    });
+    return NextResponse.json({ error: "amount mismatch" }, { status: 400 });
   }
 
   // 상태 머신:
