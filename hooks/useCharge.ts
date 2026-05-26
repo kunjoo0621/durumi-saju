@@ -4,6 +4,27 @@ import { useState } from "react";
 import * as PortOne from "@portone/browser-sdk/v2";
 import { getPaymentConfig, type CoinPackage } from "@/lib/constants/coins";
 
+// Google Ads 전환 추적 firing.
+// gtag.js 자체는 app/layout.tsx 에서 모든 페이지 head 에 로드. 여기선 결제 완료 시점에만 conversion event.
+// alreadyCharged(=멱등 재호출)는 firing X — 같은 결제가 두 번 전환 카운트되면 안 됨 (transaction_id 중복 가드와 별개로 클라이언트에서도 차단).
+// gtag 미로드(광고 차단 브라우저) / firing 실패는 결제 흐름에 영향 0.
+function fireGoogleAdsConversion(orderId: string, value: number, alreadyCharged?: boolean) {
+  if (alreadyCharged) return;
+  if (typeof window === "undefined") return;
+  const gtag = (window as { gtag?: (...args: unknown[]) => void }).gtag;
+  if (typeof gtag !== "function") return;
+  try {
+    gtag("event", "conversion", {
+      send_to: "AW-18186268670/_rXuCOX2yrMcEP7f8d9D",
+      value,
+      currency: "KRW",
+      transaction_id: orderId,
+    });
+  } catch (err) {
+    console.warn("[gtag] conversion fire failed", err);
+  }
+}
+
 interface UseChargeOptions {
   customerName?: string;
   redirectPath?: string;
@@ -72,6 +93,7 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
           throw new Error(data?.error || "충전에 실패했습니다.");
         }
         const data = await res.json();
+        fireGoogleAdsConversion(orderId, pkg.price, data?.alreadyCharged);
         onSuccess(data);
         return;
       }
@@ -109,6 +131,7 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
         throw new Error(data?.error || "충전 검증에 실패했습니다.");
       }
       const data = await res.json();
+      fireGoogleAdsConversion(orderId, pkg.price, data?.alreadyCharged);
       onSuccess(data);
     } catch (err: any) {
       const raw = err?.message || "";
