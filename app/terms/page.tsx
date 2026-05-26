@@ -204,10 +204,10 @@ export default function TermsPage() {
                   결제 후 시스템 오류로 알이 정상 충전되지 않은 경우 또는 알
                   사용 후 서비스가 정상 제공되지 않은 경우, 해당 알은 자동
                   환불됩니다. 자동 환불이 이루어지지 않은 경우
-                  kunjoo0621@gmail.com으로 접수해주시기 바랍니다.
+                  durumi.crew@gmail.com으로 접수해주시기 바랍니다.
                 </li>
                 <li>
-                  환불 요청은 kunjoo0621@gmail.com으로 접수하며, 접수 후
+                  환불 요청은 durumi.crew@gmail.com으로 접수하며, 접수 후
                   영업일 기준 3일 이내에 처리됩니다.
                 </li>
               </ol>
@@ -331,7 +331,7 @@ export default function TermsPage() {
                 <li>업태/종목: 도매 및 소매업 / 전자상거래 소매업</li>
                 <li>주소: 경기 용인시 수지구 용구대로2790번길 7, 302호 S218</li>
                 <li>고객센터: 0502-1913-6990</li>
-                <li>이메일: kunjoo0621@gmail.com</li>
+                <li>이메일: durumi.crew@gmail.com</li>
                 <li>호스팅 서비스 제공자: Vercel Inc.</li>
               </ul>
             </section>
