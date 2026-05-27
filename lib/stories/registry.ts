@@ -1,0 +1,64 @@
+import { dombokSaju } from "./data/dombok-saju";
+import { snakeDream } from "./data/snake-dream";
+import { yeonaePattern } from "./data/yeonae-pattern";
+import type { Story, StoryCategory } from "./types";
+
+const STORIES: Story[] = [dombokSaju, snakeDream, yeonaePattern];
+
+const SLUG_MAP: Record<string, Story> = STORIES.reduce<Record<string, Story>>(
+  (acc, story) => {
+    acc[story.slug] = story;
+    return acc;
+  },
+  {},
+);
+
+export function getAllStories(): Story[] {
+  return [...STORIES].sort((a, b) =>
+    a.publishedAt < b.publishedAt ? 1 : a.publishedAt > b.publishedAt ? -1 : 0,
+  );
+}
+
+export function getStoriesByCategory(category: StoryCategory): Story[] {
+  return getAllStories().filter((s) => s.category === category);
+}
+
+export function getStoryBySlug(slug: string): Story | undefined {
+  return SLUG_MAP[slug];
+}
+
+export function getReadingMinutes(story: Story): number {
+  const parts: string[] = [story.intro];
+  for (const s of story.sections) {
+    parts.push(s.heading);
+    for (const b of s.blocks) {
+      if (b.kind === "p" || b.kind === "callout") parts.push(b.text);
+      else if (b.kind === "checklist") {
+        if (b.title) parts.push(b.title);
+        parts.push(...b.items);
+      } else if (b.kind === "table") {
+        parts.push(...b.headers);
+        for (const row of b.rows) parts.push(...row);
+        if (b.caption) parts.push(b.caption);
+      }
+    }
+  }
+  const chars = parts.join(" ").replace(/\s+/g, "").length;
+  return Math.max(1, Math.round(chars / 450));
+}
+
+export function getRelatedStories(story: Story, limit = 3): Story[] {
+  if (!story.related?.length) {
+    return getAllStories()
+      .filter((s) => s.slug !== story.slug && s.category === story.category)
+      .slice(0, limit);
+  }
+  const picked = story.related
+    .map((slug) => SLUG_MAP[slug])
+    .filter((s): s is Story => Boolean(s) && s.slug !== story.slug);
+  if (picked.length >= limit) return picked.slice(0, limit);
+  const fallback = getAllStories().filter(
+    (s) => s.slug !== story.slug && !picked.includes(s),
+  );
+  return [...picked, ...fallback].slice(0, limit);
+}

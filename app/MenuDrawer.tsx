@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
-import { X, Egg, BookOpenText, Sparkle, Sword } from "@phosphor-icons/react";
+import { X, Egg, BookOpenText, Sparkle, Sword, Notebook } from "@phosphor-icons/react";
 import { SkeletonBar } from "@/components/loading";
 import Modal, { ModalDivider } from "@/components/Modal";
 
@@ -166,6 +166,16 @@ export default function MenuDrawer() {
               </Link>
 
               <MenuItem
+                href="/stories"
+                title="두루미 매거진"
+                subtitle="몰랐던 사주·꿈해몽·궁합 이야기"
+                iconBg="rgba(244,114,182,0.12)"
+                iconColor="#F472B6"
+                Icon={Notebook}
+                onClick={closeMenu}
+              />
+
+              <MenuItem
                 href="/dict"
                 title="사주 사전"
                 subtitle="60갑자·천간지지·신살 정리"
@@ -255,6 +265,15 @@ export default function MenuDrawer() {
                 iconBg="rgba(234,179,8,0.1)"
                 iconColor="#EAB308"
                 Icon={Sword}
+                onClick={closeMenu}
+              />
+              <MenuItem
+                href="/stories"
+                title="두루미 매거진"
+                subtitle="몰랐던 사주·꿈해몽·궁합 이야기"
+                iconBg="rgba(244,114,182,0.12)"
+                iconColor="#F472B6"
+                Icon={Notebook}
                 onClick={closeMenu}
               />
               <MenuItem
