@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { InstagramLogo, YoutubeLogo } from "@phosphor-icons/react/dist/ssr";
+import { SOCIAL_LINKS } from "@/lib/social-links";
 
 export default function BusinessFooter({
   footerClassName = "border-t border-white/[0.06] bg-[rgb(var(--c-dark-bg))]",
@@ -27,7 +28,7 @@ export default function BusinessFooter({
 
         <div className="mt-3 flex items-center gap-3 flex-wrap">
           <a
-            href="https://www.instagram.com/durumi_saju/"
+            href={SOCIAL_LINKS.instagram}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="두루미사주 인스타그램"
@@ -36,7 +37,7 @@ export default function BusinessFooter({
             <InstagramLogo size={18} weight="regular" />
           </a>
           <a
-            href="https://www.youtube.com/@durumisaju"
+            href={SOCIAL_LINKS.youtube}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="두루미사주 유튜브"
@@ -45,7 +46,7 @@ export default function BusinessFooter({
             <YoutubeLogo size={18} weight="regular" />
           </a>
           <a
-            href="https://blog.naver.com/durumi_log"
+            href={SOCIAL_LINKS.naverBlog}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[12px] text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"

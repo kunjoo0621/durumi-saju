@@ -53,10 +53,12 @@ const SLUG_MAP: Record<string, Story> = STORIES.reduce<Record<string, Story>>(
   {},
 );
 
+const SORTED_STORIES: readonly Story[] = [...STORIES].sort((a, b) =>
+  a.publishedAt < b.publishedAt ? 1 : a.publishedAt > b.publishedAt ? -1 : 0,
+);
+
 export function getAllStories(): Story[] {
-  return [...STORIES].sort((a, b) =>
-    a.publishedAt < b.publishedAt ? 1 : a.publishedAt > b.publishedAt ? -1 : 0,
-  );
+  return [...SORTED_STORIES];
 }
 
 export function getStoriesByCategory(category: StoryCategory): Story[] {

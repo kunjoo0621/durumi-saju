@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
+import { SAME_AS_URLS } from "@/lib/social-links";
 
 // Google Ads 전환 추적용 gtag — 모든 페이지의 head 에 로드.
 // 결제 완료 시점의 conversion firing 은 hooks/useCharge.ts 의 onSuccess 직전에서 처리.
@@ -72,11 +73,7 @@ const jsonLd = {
         height: 630,
       },
       description: DESCRIPTION,
-      sameAs: [
-        "https://www.youtube.com/@durumisaju",
-        "https://www.instagram.com/durumi_saju/",
-        "https://blog.naver.com/durumi_log",
-      ],
+      sameAs: SAME_AS_URLS,
     },
     {
       "@type": "WebSite",
