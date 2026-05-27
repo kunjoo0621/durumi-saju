@@ -195,7 +195,7 @@ export const dombokSaju: Story = {
   ctaAfter: 2,
   cta: {
     label: "내 재물운 등급과 그릇 크기 확인하기",
-    href: "/start",
+    href: "/menu",
     tone: "earth",
   },
   related: ["snake-dream", "yeonae-pattern"],

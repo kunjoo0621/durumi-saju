@@ -1,15 +1,17 @@
-export type StoryCategory = "saju" | "dream" | "love";
+export type StoryCategory = "saju" | "dream" | "love" | "celebrity";
 
 export const STORY_CATEGORY_LABEL: Record<StoryCategory, string> = {
   saju: "사주 이야기",
   dream: "꿈해몽",
   love: "운세·궁합",
+  celebrity: "연예인 사주",
 };
 
 export const STORY_CATEGORY_TAGLINE: Record<StoryCategory, string> = {
   saju: "사주에 대해 몰랐던 이야기들",
   dream: "꿈에 나온 그 장면, 정말 그런 뜻일까?",
   love: "연애·궁합·재물·일운에 대한 이야기",
+  celebrity: "공개된 생년월일로 본 그 사람의 사주 원국과 풀이",
 };
 
 /**
@@ -19,11 +21,16 @@ export const STORY_CATEGORY_TAGLINE: Record<StoryCategory, string> = {
  */
 export const STORY_CATEGORY_ART: Record<
   StoryCategory,
-  { bg: string; icon: "BookOpenText" | "Moon" | "HeartStraight"; ink: string }
+  {
+    bg: string;
+    icon: "BookOpenText" | "Moon" | "HeartStraight" | "Star";
+    ink: string;
+  }
 > = {
   saju: { bg: "#D8B4FE", icon: "BookOpenText", ink: "#1F1147" },
   dream: { bg: "#FDE68A", icon: "Moon", ink: "#3F2A05" },
   love: { bg: "#FDA4AF", icon: "HeartStraight", ink: "#481125" },
+  celebrity: { bg: "#C9A8FF", icon: "Star", ink: "#2A1559" },
 };
 
 /** 카테고리 핸들 — 카드 메타 라인의 짧은 라벨 */
@@ -31,6 +38,7 @@ export const STORY_CATEGORY_HANDLE: Record<StoryCategory, string> = {
   saju: "사주 이야기",
   dream: "꿈해몽",
   love: "운세·궁합",
+  celebrity: "연예인 사주",
 };
 
 export type StoryCTA = {
@@ -78,6 +86,32 @@ export type StoryHeroImage = {
   alt: string;
 };
 
+/**
+ * 연예인 사주 글 전용 메타.
+ * 본문 페이지에서 SajuChart 컴포넌트로 4기둥을 시각화하기 위해 필요한 정보.
+ * 빌드 시 `computeCelebritySaju()`로 SajuData 산출.
+ */
+export type CelebritySajuInfo = {
+  /** 표기용 이름 — "이찬원" */
+  name: string;
+  /** 직업·소개 라벨 — "트로트 가수" */
+  occupation?: string;
+  /** YYYY-MM-DD */
+  birthDate: string;
+  /** "HH:MM" — 시 미상이면 생략(사이트 표준 12:00 fallback) */
+  birthTime?: string;
+  /** 양력/음력 */
+  calendar: "solar" | "lunar";
+  /** 음력 윤달 여부 */
+  isLeapMonth?: boolean;
+  /** 사주 계산에 필요 */
+  gender: "M" | "F";
+  /** 출처 표기 — "위키백과 (2026-05-27 확인)" */
+  source?: string;
+  /** 추가 메모 — 일주 한 줄 요약 등, hero 아래 노출 */
+  iljuLabel?: string;
+};
+
 export type Story = {
   slug: string;
   category: StoryCategory;
@@ -101,6 +135,11 @@ export type Story = {
    * OG·JSON-LD에도 이 이미지 사용.
    */
   heroImage?: StoryHeroImage;
+  /**
+   * 연예인 카테고리 전용. 본문 페이지에서 SajuChart로 4기둥 시각화 + 메타 노출.
+   * 다른 카테고리에는 undefined.
+   */
+  celebrity?: CelebritySajuInfo;
   publishedAt: string;
   updatedAt: string;
 };

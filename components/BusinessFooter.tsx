@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { InstagramLogo, YoutubeLogo } from "@phosphor-icons/react/dist/ssr";
+import { SOCIAL_LINKS } from "@/lib/social-links";
 
 export default function BusinessFooter({
   footerClassName = "border-t border-white/[0.06] bg-[rgb(var(--c-dark-bg))]",
@@ -21,6 +23,35 @@ export default function BusinessFooter({
           <span>·</span>
           <a href="/privacy" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
             개인정보처리방침
+          </a>
+        </div>
+
+        <div className="mt-3 flex items-center gap-3 flex-wrap">
+          <a
+            href={SOCIAL_LINKS.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="두루미사주 인스타그램"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.04] text-[rgb(var(--c-text-sub))] hover:text-white hover:bg-white/[0.08] transition-colors"
+          >
+            <InstagramLogo size={18} weight="regular" />
+          </a>
+          <a
+            href={SOCIAL_LINKS.youtube}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="두루미사주 유튜브"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.04] text-[rgb(var(--c-text-sub))] hover:text-white hover:bg-white/[0.08] transition-colors"
+          >
+            <YoutubeLogo size={18} weight="regular" />
+          </a>
+          <a
+            href={SOCIAL_LINKS.naverBlog}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[12px] text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
+          >
+            Naver Blog
           </a>
         </div>
 
