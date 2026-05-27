@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstagramLogo, YoutubeLogo } from "@phosphor-icons/react/dist/ssr";
 
 export default function BusinessFooter({
   footerClassName = "border-t border-white/[0.06] bg-[rgb(var(--c-dark-bg))]",
@@ -24,32 +25,30 @@ export default function BusinessFooter({
           </a>
         </div>
 
-        <div className="mt-3 flex items-center gap-2 text-[12px] flex-wrap text-[rgb(var(--c-text-muted))]">
-          <span>공식 채널</span>
-          <span>·</span>
-          <a
-            href="https://www.youtube.com/@durumisaju"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
-          >
-            YouTube
-          </a>
-          <span>·</span>
+        <div className="mt-3 flex items-center gap-3 flex-wrap">
           <a
             href="https://www.instagram.com/durumi_saju/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
+            aria-label="두루미사주 인스타그램"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.04] text-[rgb(var(--c-text-sub))] hover:text-white hover:bg-white/[0.08] transition-colors"
           >
-            Instagram
+            <InstagramLogo size={18} weight="regular" />
           </a>
-          <span>·</span>
+          <a
+            href="https://www.youtube.com/@durumisaju"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="두루미사주 유튜브"
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/[0.04] text-[rgb(var(--c-text-sub))] hover:text-white hover:bg-white/[0.08] transition-colors"
+          >
+            <YoutubeLogo size={18} weight="regular" />
+          </a>
           <a
             href="https://blog.naver.com/durumi_log"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
+            className="text-[12px] text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
           >
             Naver Blog
           </a>
