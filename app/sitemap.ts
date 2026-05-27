@@ -6,7 +6,12 @@ import type { StoryCategory } from "@/lib/stories/types";
 
 const BASE = "https://www.durumisaju.com";
 
-const STORY_CATEGORIES: StoryCategory[] = ["saju", "dream", "love"];
+const STORY_CATEGORIES: StoryCategory[] = [
+  "saju",
+  "dream",
+  "love",
+  "celebrity",
+];
 
 const DICT_CATEGORIES: DictCategory[] = [
   "saju",

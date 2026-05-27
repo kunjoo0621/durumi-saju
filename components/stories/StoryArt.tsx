@@ -2,6 +2,7 @@ import {
   BookOpenText,
   Moon,
   HeartStraight,
+  Star,
 } from "@phosphor-icons/react/dist/ssr";
 import type { Icon } from "@phosphor-icons/react";
 import { STORY_CATEGORY_ART } from "@/lib/stories/types";
@@ -11,6 +12,7 @@ const ICON_MAP: Record<string, Icon> = {
   BookOpenText,
   Moon,
   HeartStraight,
+  Star,
 };
 
 interface Props {

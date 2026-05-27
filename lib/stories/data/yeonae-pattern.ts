@@ -157,7 +157,7 @@ export const yeonaePattern: Story = {
   ctaAfter: 2,
   cta: {
     label: "내 연애운 등급과 일지 결 확인하기",
-    href: "/start",
+    href: "/menu",
     tone: "love",
   },
   related: ["dombok-saju", "snake-dream"],

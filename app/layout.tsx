@@ -73,6 +73,7 @@ const jsonLd = {
       },
       description: DESCRIPTION,
       sameAs: [
+        "https://www.youtube.com/@durumisaju",
         "https://www.instagram.com/durumi_saju/",
         "https://blog.naver.com/durumi_log",
       ],

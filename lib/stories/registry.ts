@@ -1,9 +1,49 @@
+import { careerSaju } from "./data/career-saju";
 import { dombokSaju } from "./data/dombok-saju";
+import { dragonDream } from "./data/dragon-dream";
+import { fireDream } from "./data/fire-dream";
+import { iljiSpouse } from "./data/ilji-spouse";
+import { iljuPersonality } from "./data/ilju-personality";
+import { lastingCouple } from "./data/lasting-couple";
+import { leeChanwon } from "./data/leechanwon";
+import { marriageCaution } from "./data/marriage-caution";
+import { moneyDream } from "./data/money-dream";
+import { pigDream } from "./data/pig-dream";
+import { poopDream } from "./data/poop-dream";
+import { pregnancyDream } from "./data/pregnancy-dream";
+import { rich2026Saju } from "./data/rich-2026-saju";
+import { savingsSaju } from "./data/savings-saju";
 import { snakeDream } from "./data/snake-dream";
+import { tigerDream } from "./data/tiger-dream";
+import { toothDream } from "./data/tooth-dream";
+import { waterDream } from "./data/water-dream";
 import { yeonaePattern } from "./data/yeonae-pattern";
+import { zodiacVsMyeongni } from "./data/zodiac-vs-myeongni";
 import type { Story, StoryCategory } from "./types";
 
-const STORIES: Story[] = [dombokSaju, snakeDream, yeonaePattern];
+const STORIES: Story[] = [
+  careerSaju,
+  dombokSaju,
+  dragonDream,
+  fireDream,
+  iljiSpouse,
+  iljuPersonality,
+  lastingCouple,
+  leeChanwon,
+  marriageCaution,
+  moneyDream,
+  pigDream,
+  poopDream,
+  pregnancyDream,
+  rich2026Saju,
+  savingsSaju,
+  snakeDream,
+  tigerDream,
+  toothDream,
+  waterDream,
+  yeonaePattern,
+  zodiacVsMyeongni,
+];
 
 const SLUG_MAP: Record<string, Story> = STORIES.reduce<Record<string, Story>>(
   (acc, story) => {

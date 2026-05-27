@@ -24,6 +24,37 @@ export default function BusinessFooter({
           </a>
         </div>
 
+        <div className="mt-3 flex items-center gap-2 text-[12px] flex-wrap text-[rgb(var(--c-text-muted))]">
+          <span>공식 채널</span>
+          <span>·</span>
+          <a
+            href="https://www.youtube.com/@durumisaju"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
+          >
+            YouTube
+          </a>
+          <span>·</span>
+          <a
+            href="https://www.instagram.com/durumi_saju/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
+          >
+            Instagram
+          </a>
+          <span>·</span>
+          <a
+            href="https://blog.naver.com/durumi_log"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors"
+          >
+            Naver Blog
+          </a>
+        </div>
+
         <details className="mt-4 group">
           <summary className="cursor-pointer list-none flex items-center gap-1 text-[12px] text-[rgb(var(--c-text-muted))] hover:text-[rgb(var(--c-text-sub))] transition-colors">
             사업자 정보

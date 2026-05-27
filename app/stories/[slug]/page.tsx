@@ -8,12 +8,14 @@ import StoryBody from "@/components/stories/StoryBody";
 import StoryCTA from "@/components/stories/StoryCTA";
 import StoryCard from "@/components/stories/StoryCard";
 import StoryViewCounter from "@/components/stories/StoryViewCounter";
+import CelebritySajuCard from "@/components/stories/CelebritySajuCard";
 import {
   getAllStories,
   getReadingMinutes,
   getRelatedStories,
   getStoryBySlug,
 } from "@/lib/stories/registry";
+import { computeCelebritySaju } from "@/lib/stories/celebrity";
 import {
   STORY_CATEGORY_LABEL,
   type StoryCategory,
@@ -77,6 +79,14 @@ export default async function StoryDetailPage({ params }: Props) {
   const readingMin = getReadingMinutes(story);
   const related = getRelatedStories(story, 3);
   const categoryLabel = STORY_CATEGORY_LABEL[story.category];
+
+  // 연예인 카테고리 — birth info → SajuData (SSG 빌드 시 계산).
+  // hourUnknown=true면 클라이언트 카드에서 시주 컬럼 마스킹.
+  const celebritySajuResult = story.celebrity
+    ? await computeCelebritySaju(story.celebrity)
+    : null;
+  const celebritySaju = celebritySajuResult?.data ?? null;
+  const celebrityHourUnknown = celebritySajuResult?.hourUnknown ?? false;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -165,12 +175,24 @@ export default async function StoryDetailPage({ params }: Props) {
 
         {story.heroImage ? (
           <div className="mb-7 sm:mb-8 -mx-5 sm:mx-0 sm:rounded-2xl overflow-hidden bg-white/[0.04]">
-            <div className="relative w-full aspect-[16/9]">
+            {/* 연예인 카테고리는 인물 캐리커처라 세로 4:5 비율로 머리 안 잘리게.
+                일반 글은 16:9 와이드 hero. */}
+            <div
+              className={`relative w-full ${
+                story.category === "celebrity"
+                  ? "aspect-[4/5] max-w-[420px] mx-auto"
+                  : "aspect-[16/9]"
+              }`}
+            >
               <Image
                 src={story.heroImage.src}
                 alt={story.heroImage.alt}
                 fill
-                sizes="(min-width: 768px) 720px, 100vw"
+                sizes={
+                  story.category === "celebrity"
+                    ? "(min-width: 768px) 420px, 100vw"
+                    : "(min-width: 768px) 720px, 100vw"
+                }
                 className="object-cover"
                 priority
               />
@@ -214,6 +236,15 @@ export default async function StoryDetailPage({ params }: Props) {
         </header>
 
         <div className="h-px bg-white/10 mb-10" aria-hidden="true" />
+
+        {/* 연예인 카테고리 — 사주 원국 차트 카드 (dynamic import로 청크 분리). */}
+        {story.celebrity && celebritySaju ? (
+          <CelebritySajuCard
+            celebrity={story.celebrity}
+            sajuData={celebritySaju}
+            hourUnknown={celebrityHourUnknown}
+          />
+        ) : null}
 
         <StoryBody story={story} />
 

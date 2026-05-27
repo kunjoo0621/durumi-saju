@@ -18,7 +18,12 @@ import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 
 const SITE_URL = "https://www.durumisaju.com";
 
-const VALID_CATEGORIES = new Set<StoryCategory>(["saju", "dream", "love"]);
+const VALID_CATEGORIES = new Set<StoryCategory>([
+  "saju",
+  "dream",
+  "love",
+  "celebrity",
+]);
 
 const CATEGORY_DESCRIPTION: Record<StoryCategory, string> = {
   saju:
@@ -27,6 +32,8 @@ const CATEGORY_DESCRIPTION: Record<StoryCategory, string> = {
     "꿈에서 본 장면이 어떤 의미인지 — 색·상황·반복 여부에 따라 다르게 풀어드립니다. 검색해서 들어와도 한 글에 답이 모이도록.",
   love:
     "왜 매번 비슷한 사람을 만날까, 돈복은 어떻게 보일까, 일운이 약한 사주는 어디서 막힐까 — 인생 운에 대한 이야기.",
+  celebrity:
+    "공개된 생년월일을 바탕으로 본 그 사람의 사주 원국과 풀이. 명리학적 해석이라 본인의 실제 사주와 다를 수 있습니다.",
 };
 
 type Props = { params: Promise<{ category: string }> };
@@ -178,7 +185,7 @@ export default async function StoryCategoryPage({ params }: Props) {
             다른 시리즈
           </div>
           <div className="flex flex-wrap gap-2">
-            {(["saju", "dream", "love"] as StoryCategory[])
+            {(["saju", "dream", "love", "celebrity"] as StoryCategory[])
               .filter((c) => c !== cat)
               .map((c) => (
                 <Link

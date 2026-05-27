@@ -14,7 +14,7 @@ import {
 } from "@/lib/stories/types";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 
-const CATEGORY_ORDER: StoryCategory[] = ["saju", "dream", "love"];
+const CATEGORY_ORDER: StoryCategory[] = ["celebrity", "saju", "dream", "love"];
 
 const SITE_URL = "https://www.durumisaju.com";
 
