@@ -4,6 +4,7 @@ import { dragonDream } from "./data/dragon-dream";
 import { fireDream } from "./data/fire-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
+import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
 import { lastingCouple } from "./data/lasting-couple";
 import { leeChanwon } from "./data/leechanwon";
@@ -29,6 +30,7 @@ const STORIES: Story[] = [
   fireDream,
   iljiSpouse,
   iljuPersonality,
+  imYoungwoong,
   iu,
   lastingCouple,
   leeChanwon,
