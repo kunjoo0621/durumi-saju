@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const moneyDream: Story = {
   slug: "money-dream",
   category: "dream",
-  title: "돈 받는 꿈 vs 줍는 꿈, 의미가 완전히 달라요",
+  title: "돈 꿈 해몽, 받는 꿈 vs 줍는 꿈 정반대인 이유",
   excerpt:
     "돈 꿈은 다 길몽 같지만, 받는 꿈과 줍는 꿈은 결이 정반대예요. 안정된 수입이 들어올 사람, 갑작스러운 한 방이 올 사람이 갈립니다.",
   intro:

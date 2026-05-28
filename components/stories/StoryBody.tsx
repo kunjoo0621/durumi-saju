@@ -209,6 +209,43 @@ function BlockView({ block }: { block: StoryBlock }) {
         </figure>
       );
     }
+
+    case "faq": {
+      // 자주 묻는 질문 — h3 질문 + 단락 답변. FAQPage schema는 [slug]/page.tsx에서 자동 생성.
+      return (
+        <div className="not-prose my-2">
+          {block.title && (
+            <div
+              className="text-[12.5px] uppercase tracking-[0.08em] mb-5 font-aggro flex items-center gap-2.5 text-[#A8C4FF]"
+            >
+              <span
+                className="inline-block w-6 h-px bg-[#A8C4FF]"
+                aria-hidden="true"
+              />
+              {block.title}
+            </div>
+          )}
+          <dl className="divide-y divide-white/[0.07]">
+            {block.items.map((item, i) => (
+              <div key={i} className="py-4">
+                <dt
+                  className="font-aggro text-[15.5px] sm:text-[16px] text-text-primary mb-2 leading-[1.45]"
+                  style={{ wordBreak: "keep-all" }}
+                >
+                  Q. {item.q}
+                </dt>
+                <dd
+                  className="text-[15px] sm:text-[15.5px] text-text-secondary leading-[1.7]"
+                  style={{ wordBreak: "keep-all" }}
+                >
+                  {renderInline(item.a)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      );
+    }
   }
 }
 

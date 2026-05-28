@@ -29,7 +29,7 @@ export default function StoryCard({ story, variant = "default" }: Props) {
     >
       <div className="flex gap-4 sm:gap-5 items-start">
         <div className="flex-1 min-w-0">
-          <h3
+          <h2
             className={`font-aggro text-text-primary leading-[1.3] tracking-tight line-clamp-2 ${
               featured
                 ? "text-[19px] sm:text-[20px] mb-3"
@@ -38,7 +38,7 @@ export default function StoryCard({ story, variant = "default" }: Props) {
             style={{ wordBreak: "keep-all" }}
           >
             {story.title}
-          </h3>
+          </h2>
           <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[12.5px] text-text-tertiary">
             <span>{STORY_CATEGORY_HANDLE[story.category]}</span>
             <span className="text-white/20" aria-hidden="true">·</span>

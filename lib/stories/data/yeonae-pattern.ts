@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const yeonaePattern: Story = {
   slug: "yeonae-pattern",
   category: "love",
-  title: "\"이번엔 다른 사람\" 했는데 결국 비슷한 사람, 사주에서 보면 이유 있어요",
+  title: "연애 패턴 사주, 결국 같은 사람을 만나는 이유",
   excerpt:
     "매번 결심하고 시작해도 결국 비슷한 결의 사람을 만나게 되는 분들이 있어요. 사주에서는 그걸 '일지(日支)의 흐름'으로 풀이해요.",
   intro:

@@ -11,6 +11,7 @@ import StoryViewCounter from "@/components/stories/StoryViewCounter";
 import CelebritySajuCard from "@/components/stories/CelebritySajuCard";
 import {
   getAllStories,
+  getFaqItems,
   getReadingMinutes,
   getRelatedStories,
   getStoryBySlug,
@@ -152,6 +153,25 @@ export default async function StoryDetailPage({ params }: Props) {
           },
         ],
       },
+      ...(() => {
+        const faqs = getFaqItems(story);
+        return faqs.length > 0
+          ? [
+              {
+                "@type": "FAQPage",
+                "@id": `${SITE_URL}/stories/${story.slug}#faq`,
+                mainEntity: faqs.map((f) => ({
+                  "@type": "Question",
+                  name: f.q,
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: f.a,
+                  },
+                })),
+              },
+            ]
+          : [];
+      })(),
     ],
   };
 

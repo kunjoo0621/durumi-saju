@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const iljiSpouse: Story = {
   slug: "ilji-spouse",
   category: "love",
-  title: "내 일지로 보는 배우자 결, 끌리는 결은 정해져 있어요",
+  title: "배우자 사주 궁합, 일지로 보는 끌리는 결",
   excerpt:
     "사주의 일지(日支)는 배우자궁이에요. 본인의 일지에 따라 평생 끌리는 배우자 결이 정해져 있어요. \"이번엔 다른 사람\" 결심해도 안 바뀌는 이유예요.",
   intro:

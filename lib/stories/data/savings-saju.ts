@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const savingsSaju: Story = {
   slug: "savings-saju",
   category: "saju",
-  title: "평생 모으는 사주 vs 새는 사주, 결정적 차이 하나",
+  title: "재물운 사주, 평생 모으는 vs 새는 결정적 차이",
   excerpt:
     "같은 월급, 같은 환경인데 한 사람은 1억 모으고 한 사람은 통장이 0이에요. 사주에서는 '재성을 잡아두는 구조'를 봅니다.",
   intro:
