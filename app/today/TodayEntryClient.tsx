@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -145,6 +145,8 @@ export default function TodayEntryClient() {
     // overrideBalance: 충전 직후 setBalance가 비동기라 closure의 balance가 stale일 때 명시적 fresh 값
     const effectiveBalance = overrideBalance ?? balance;
     if (effectiveBalance !== null && effectiveBalance < TODAY_COST) {
+      // afterCharge 경유 시 confirming 로딩이 켜진 채 진입 — 충전 시트가 로딩에 덮이지 않게 해제
+      setConfirming(false);
       setShowChargeSheet(true);
       return;
     }
@@ -209,6 +211,34 @@ export default function TodayEntryClient() {
     setShowChargeSheet(false);
     await handleStart(newBalance);
   }, [setBalance, handleStart]);
+
+  // charge-success 복귀 처리 — 운영자가 결제 완료 화면 거쳐 돌아온 경우.
+  // 충전은 charge-success 가 이미 끝냄 → balance fresh 조회 후 handleStart(분석, targetDate 재계산) 직행.
+  // ★ afterCharge 감지(마운트)와 실행(세션·대표사주 준비 후)을 분리한다. []-deps로 묶으면
+  //   마운트 시점 stale handleStart(isAuthenticated=false·primary=null)를 잡아 로그인 튕김/로딩 멈춤 발생.
+  const afterChargeRanRef = useRef(false);
+  useEffect(() => {
+    if (afterChargeRanRef.current) return;
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("afterCharge") !== "1") return;
+    setConfirming(true); // 즉시 로딩 — 깜빡임 방지 (세션·대표사주 로딩 대기 중에도 유지)
+    if (primaryError) {
+      // 대표사주 로드 실패 → 로딩 풀고 에러 화면으로 (무한 로딩 방지)
+      afterChargeRanRef.current = true;
+      setConfirming(false);
+      window.history.replaceState({}, "", "/today");
+      return;
+    }
+    if (!isAuthenticated || !primary) return; // 준비 전 — 세션/대표사주 로드되면 deps로 재실행
+    afterChargeRanRef.current = true;
+    window.history.replaceState({}, "", "/today");
+    (async () => {
+      const r = await fetch("/api/coins/balance").then((res) => res.json()).catch(() => null);
+      const bal = typeof r?.balance === "number" ? r.balance : undefined;
+      if (typeof bal === "number") setBalance(bal);
+      await handleStart(bal);
+    })();
+  }, [isAuthenticated, primary, primaryError, handleStart, setBalance]);
 
   if (confirming) {
     return (

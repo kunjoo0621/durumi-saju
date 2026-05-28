@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Warning } from "@phosphor-icons/react";
 import { useAllInputs } from "@/store/useInputStore";
 import { FullScreenLoading } from "@/components/loading";
+import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import SajuInputFlow from "@/components/saju-input/SajuInputFlow";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 import { YEARLY_COST } from "@/lib/constants/coins";
+import { useCoinStore } from "@/store/useCoinStore";
 
 const TARGET_YEAR = resolveSolarYear(new Date()).solarYear;
 
@@ -20,11 +22,35 @@ const CONFIRM_STEPS = [
 export default function YearlyInputPage() {
   const router = useRouter();
   const formData = useAllInputs();
+  const { balance, setBalance, fetchBalance } = useCoinStore();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showChargeSheet, setShowChargeSheet] = useState(false);
 
-  const handleComplete = useCallback(() => {
+  // 진입 시 잔액 한 번 가져오기 — client 선체크용
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  // overrideBalance: 충전 직후 setBalance 비동기로 closure balance 가 stale 일 때 명시 전달.
+  const runYearlyFlow = useCallback((overrideBalance?: number) => {
     void (async () => {
+      // client 잔액 선체크 — 부족하면 로딩 없이 즉시 충전 시트 (today/input 패턴).
+      let effectiveBalance = overrideBalance ?? balance;
+      if (effectiveBalance === null) {
+        const r = await fetch("/api/coins/balance").then((res) => res.json()).catch(() => null);
+        if (typeof r?.balance === "number") {
+          effectiveBalance = r.balance;
+          setBalance(r.balance);
+        }
+      }
+      if (effectiveBalance !== null && effectiveBalance < YEARLY_COST) {
+        // afterCharge 경유 시 processing 로딩이 켜진 채 진입 — 충전 시트가 로딩에 덮이지 않게 해제
+        setProcessing(false);
+        setShowChargeSheet(true);
+        return;
+      }
+
       setProcessing(true);
       setError(null);
       try {
@@ -50,9 +76,10 @@ export default function YearlyInputPage() {
         const startData = await startRes.json().catch(() => ({}));
 
         if (startData?.insufficient) {
-          throw new Error(
-            `알이 부족해. ${startData.required}알이 필요해 (현재 ${startData.balance}알).`,
-          );
+          if (typeof startData.balance === "number") setBalance(startData.balance);
+          setShowChargeSheet(true);
+          setProcessing(false);
+          return;
         }
         if (!startRes.ok) {
           if (startData?.refunded) {
@@ -92,7 +119,32 @@ export default function YearlyInputPage() {
         setProcessing(false);
       }
     })();
-  }, [formData, router]);
+  }, [balance, formData, router, setBalance]);
+
+  const handleComplete = useCallback(() => {
+    runYearlyFlow();
+  }, [runYearlyFlow]);
+
+  // 충전 완료 콜백 — balance 갱신 후 자동 재시도 (overrideBalance 로 stale 회피)
+  const handleChargeComplete = useCallback(async (newBalance: number) => {
+    setBalance(newBalance);
+    setShowChargeSheet(false);
+    runYearlyFlow(newBalance);
+  }, [setBalance, runYearlyFlow]);
+
+  // charge-success 복귀 — 운영자가 결제 완료 화면 거쳐 돌아온 경우 자동 분석
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("afterCharge") !== "1") return;
+    setProcessing(true); // 입력 폼 노출 없이 즉시 로딩 — 깜빡임 방지
+    window.history.replaceState({}, "", "/yearly/input");
+    (async () => {
+      const r = await fetch("/api/coins/balance").then((res) => res.json()).catch(() => null);
+      const bal = typeof r?.balance === "number" ? r.balance : undefined;
+      if (typeof bal === "number") setBalance(bal);
+      runYearlyFlow(bal);
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (processing && !error) {
     return (
@@ -134,13 +186,23 @@ export default function YearlyInputPage() {
   }
 
   return (
-    <SajuInputFlow
-      onComplete={handleComplete}
-      callbackUrl="/yearly/input"
-      backUrl="/menu"
-      trackName="yearly"
-      skipQuestions={["coreFearAxis"]}
-      submitLabel={`${YEARLY_COST}알 사용해서 결과 받기`}
-    />
+    <>
+      <SajuInputFlow
+        onComplete={handleComplete}
+        callbackUrl="/yearly/input"
+        backUrl="/menu"
+        trackName="yearly"
+        skipQuestions={["coreFearAxis"]}
+        submitLabel={`${YEARLY_COST}알 사용해서 결과 받기`}
+      />
+      <ChargeBottomSheet
+        isOpen={showChargeSheet}
+        onClose={() => setShowChargeSheet(false)}
+        requiredCoins={YEARLY_COST}
+        currentBalance={balance ?? 0}
+        onChargeComplete={handleChargeComplete}
+        redirectPath="/yearly/input"
+      />
+    </>
   );
 }

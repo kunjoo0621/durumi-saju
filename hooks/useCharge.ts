@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import * as PortOne from "@portone/browser-sdk/v2";
 import { getPaymentConfig, type CoinPackage } from "@/lib/constants/coins";
+import { isOperator } from "@/lib/constants/operator";
 
 // Google Ads 전환 추적 firing.
 // gtag.js 자체는 app/layout.tsx 에서 모든 페이지 head 에 로드. 여기선 결제 완료 시점에만 conversion event.
@@ -55,6 +58,8 @@ async function fetchServerIssuedOrderId(packageId: string): Promise<string> {
 export function useCharge({ customerName, redirectPath, onSuccess, onError }: UseChargeOptions) {
   const [charging, setCharging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { data: session } = useSession();
 
   const { storeId, channelKey, isMockPayment } = getPaymentConfig();
 
@@ -62,6 +67,15 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
     if (charging) return;
     setCharging(true);
     setError(null);
+
+    // 운영자 한정: 결제 완료 화면(charge-success)을 경유.
+    // charge-success가 charge + Google conversion firing 담당 → 여기선 firing 안 함 (중복 방지).
+    // PR-1: /coins 계열(사주·배틀·단순충전). PR-1b: yearly·today 추가.
+    // 복귀 후 분석 시작은 각 entry 가 담당 (charge-success는 charge+firing+returnTo 까지만).
+    const SUCCESS_PAGE_RETURNS = ["/coins", "/yearly", "/yearly/input", "/today", "/today/input"];
+    const supabaseId = (session?.user as { supabaseId?: string } | undefined)?.supabaseId;
+    const returnTo = redirectPath || "/coins";
+    const viaSuccessPage = isOperator(supabaseId) && SUCCESS_PAGE_RETURNS.includes(returnTo);
 
     let orderId: string;
     try {
@@ -78,6 +92,13 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
 
     try {
       if (isMockPayment) {
+        if (viaSuccessPage) {
+          // 운영자 mock: charge-success가 charge + firing 담당.
+          router.push(
+            `/coins/charge-success?mock=1&chargeOrderId=${encodeURIComponent(orderId)}&packageId=${pkg.id}&amount=${pkg.price}&returnTo=${encodeURIComponent(returnTo)}`
+          );
+          return;
+        }
         const res = await fetch("/api/coins/charge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -98,7 +119,11 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
         return;
       }
 
-      // 실결제: PortOne
+      // 실결제: PortOne. viaSuccessPage면 redirect 복귀지를 charge-success로.
+      const redirectUrl = viaSuccessPage
+        ? `${window.location.origin}/coins/charge-success?returnTo=${encodeURIComponent(returnTo)}&chargeOrderId=${encodeURIComponent(orderId)}&packageId=${pkg.id}&amount=${pkg.price}`
+        : `${window.location.origin}${returnTo}?chargeOrderId=${encodeURIComponent(orderId)}&packageId=${pkg.id}&amount=${pkg.price}`;
+
       const response = await PortOne.requestPayment({
         storeId,
         channelKey,
@@ -108,12 +133,20 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
         currency: "CURRENCY_KRW",
         payMethod: "EASY_PAY",
         customer: { fullName: customerName || "두루미" },
-        redirectUrl: `${window.location.origin}${redirectPath || "/coins"}?chargeOrderId=${encodeURIComponent(orderId)}&packageId=${pkg.id}&amount=${pkg.price}`,
+        redirectUrl,
       });
 
       if (!response) return;
       if (response.code != null) {
         throw new Error(response.message || "결제가 취소되었습니다.");
+      }
+
+      if (viaSuccessPage) {
+        // 운영자 popup 흐름: charge-success가 charge + firing 담당.
+        router.push(
+          `/coins/charge-success?chargeOrderId=${encodeURIComponent(orderId)}&paymentId=${encodeURIComponent(response.paymentId ?? orderId)}&packageId=${pkg.id}&amount=${pkg.price}&returnTo=${encodeURIComponent(returnTo)}`
+        );
+        return;
       }
 
       const res = await fetch("/api/coins/charge", {

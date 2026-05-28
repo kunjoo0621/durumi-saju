@@ -110,30 +110,19 @@ export default function CoinsPage() {
     }
 
     const effectivePaymentId = paymentId || chargeOrderId;
+    // charged=1: charge-success 페이지가 이미 충전을 끝냈다는 신호.
+    // 이 경우 /coins 는 charge 를 재호출하지 않고(중복 충전 PortOne API 낭비 + dev mock 402 방지)
+    // 잔액만 갱신한 뒤 pendingSpend spend 로 직행한다. (운영자 charge-success 경유 흐름)
+    const alreadyChargedBySuccessPage = params.get("charged") === "1";
 
-    fetch("/api/coins/charge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        packageId,
-        orderId: chargeOrderId,
-        paymentId: effectivePaymentId,
-        amount: Number(amount),
-      }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data?.error || "충전에 실패했습니다.");
-        }
-        return res.json();
-      })
-      .then(async (data) => {
-        setBalance(data.balance);
-        window.history.replaceState({}, "", "/coins");
+    // 충전 이후 공통 처리: pendingSpend 있으면 spend → 결과, 없으면 토스트.
+    const proceedAfterCharge = async (chargeData: { balance?: number; charged?: number; bonus?: number; alreadyCharged?: boolean } | null) => {
+      if (chargeData && typeof chargeData.balance === "number") setBalance(chargeData.balance);
+      window.history.replaceState({}, "", "/coins");
 
-        // pendingSpend가 있으면 자동 spend → 결과 페이지
-        const raw = sessionStorage.getItem("pendingSpend");
+      // pendingSpend가 있으면 자동 spend → 결과 페이지
+      const raw = sessionStorage.getItem("pendingSpend");
+      {
         if (raw) {
           sessionStorage.removeItem("pendingSpend");
           try {
@@ -182,21 +171,54 @@ export default function CoinsPage() {
             console.error("[COINS] pendingSpend error:", err?.message);
             setRedirectError(err?.message || "결과 처리에 실패했습니다. 알은 충전되었습니다.");
             setProcessingSpend(false);
+            // spend 실패 시 아래 "충전 완료" 토스트로 fall-through 방지 (에러+완료 토스트 동시 노출 버그)
+            return;
           }
         }
 
-        // pendingSpend 없으면 일반 충전 완료
-        if (data.alreadyCharged) {
+        // pendingSpend 없으면 일반 충전 완료 (charged=1 경유는 항상 pendingSpend 있어 여기 안 옴)
+        if (chargeData?.alreadyCharged) {
           setToast("이미 처리된 결제예요. 잔액을 확인해주세요.");
-        } else {
-          setToast(`${data.charged}알 ${data.bonus > 0 ? `+ ${data.bonus}알 보너스 ` : ""}충전 완료!`);
+        } else if (chargeData) {
+          setToast(`${chargeData.charged}알 ${chargeData.bonus && chargeData.bonus > 0 ? `+ ${chargeData.bonus}알 보너스 ` : ""}충전 완료!`);
         }
         fetchHistory();
+      }
+    };
+
+    // 충전 방식 분기
+    if (alreadyChargedBySuccessPage) {
+      // charge-success가 이미 충전 완료 → 잔액 갱신 후 spend 로 직행 (charge 재호출 X)
+      fetchBalance()
+        .catch(() => {})
+        .finally(() => {
+          proceedAfterCharge(null);
+        });
+    } else {
+      // 일반 redirect 복귀: charge 호출 (실결제 PortOne 검증) 후 처리
+      fetch("/api/coins/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          packageId,
+          orderId: chargeOrderId,
+          paymentId: effectivePaymentId,
+          amount: Number(amount),
+        }),
       })
-      .catch((err) => {
-        setRedirectError(err?.message || "충전에 실패했습니다.");
-        setProcessingSpend(false);
-      });
+        .then(async (res) => {
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            throw new Error(d?.error || "충전에 실패했습니다.");
+          }
+          return res.json();
+        })
+        .then((data) => proceedAfterCharge(data))
+        .catch((err) => {
+          setRedirectError(err?.message || "충전에 실패했습니다.");
+          setProcessingSpend(false);
+        });
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 토스트 자동 숨김
