@@ -24,11 +24,29 @@ import { COIN_PACKAGES } from "@/lib/constants/coins";
 //   - "*" = 전체 사용자 자동 충전
 //   - "uuid1,uuid2" = 그 user_id만 자동 충전 (운영자 테스트 단계)
 
+// charge_orders.status 가능값 (Postgres CHECK 제약과 1:1 매칭).
+// 오타 시 silent breakage 방지 (.eq("status","paid")가 매칭 0건이어도 에러 안 남).
+const ORDER_STATUS = {
+  PENDING: "pending",
+  PAID: "paid",
+  CHARGED: "charged",
+  FAILED: "failed",
+  REFUNDED: "refunded",
+} as const;
+
+// 모듈 로드 시 1회 파싱. env는 cold start 후 불변이라 매 요청 split 불필요.
+// "*" = 전체, Set = 운영자만, null = OFF (관찰 모드 유지).
+const AUTO_CHARGE_ALLOWLIST: Set<string> | "*" | null = (() => {
+  const raw = process.env.WEBHOOK_AUTO_CHARGE_USER_IDS?.trim();
+  if (!raw) return null;
+  if (raw === "*") return "*";
+  return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+})();
+
 function isAutoChargeEnabledFor(userId: string): boolean {
-  const allow = process.env.WEBHOOK_AUTO_CHARGE_USER_IDS?.trim();
-  if (!allow) return false;
-  if (allow === "*") return true;
-  return allow.split(",").map((s) => s.trim()).includes(userId);
+  if (AUTO_CHARGE_ALLOWLIST === null) return false;
+  if (AUTO_CHARGE_ALLOWLIST === "*") return true;
+  return AUTO_CHARGE_ALLOWLIST.has(userId);
 }
 
 export async function POST(request: NextRequest) {
@@ -71,10 +89,20 @@ export async function POST(request: NextRequest) {
     console.error("[WEBHOOK] PORTONE_API_SECRET 미설정");
     return NextResponse.json({ error: "config missing" }, { status: 500 });
   }
+  // 5s timeout — PortOne API 지연 시 handler hang → PortOne 재시도 폭주 방지.
   const res = await fetch(
     `https://api.portone.io/payments/${encodeURIComponent(paymentId)}`,
-    { headers: { Authorization: `PortOne ${portoneApiSecret}` } }
-  );
+    {
+      headers: { Authorization: `PortOne ${portoneApiSecret}` },
+      signal: AbortSignal.timeout(5000),
+    }
+  ).catch((err) => {
+    console.error("[WEBHOOK] PortOne API fetch 실패", err?.message ?? err);
+    return null;
+  });
+  if (!res) {
+    return NextResponse.json({ error: "PortOne API timeout" }, { status: 502 });
+  }
   if (!res.ok) {
     console.error("[WEBHOOK] PortOne API 조회 실패", res.status);
     return NextResponse.json({ error: "PortOne API error" }, { status: 502 });
@@ -135,30 +163,38 @@ export async function POST(request: NextRequest) {
 
   // 상태 머신:
   //   pending → paid     (webhook이 redirect보다 먼저 도착)
-  //   paid    → paid     (멱등, 변화 없음)
+  //   paid    → paid     (멱등, 변화 없음 — 자동 충전으로 진행)
   //   charged → charged  (이미 redirect 흐름이 충전 완료, webhook은 사후 도착 — 자동 충전 skip)
-  //   failed/refunded    → 변경 없음 (별개 이벤트로 처리)
-  if (existing.status === "pending") {
+  //   failed/refunded    → 명시 거부 (실패·환불된 주문에 PAID webhook 늦게 와도 충전 X)
+  if (existing.status === ORDER_STATUS.FAILED || existing.status === ORDER_STATUS.REFUNDED) {
+    console.warn("[WEBHOOK] charge_orders 가 이미 failed/refunded, 자동 충전 거부", {
+      orderId,
+      status: existing.status,
+    });
+    return NextResponse.json({ ok: true, ignored: `status ${existing.status}` });
+  }
+
+  if (existing.status === ORDER_STATUS.PENDING) {
     const { error: updateError } = await supabaseAdmin
       .from("charge_orders")
       .update({
-        status: "paid",
+        status: ORDER_STATUS.PAID,
         payment_id: paymentId,
         paid_at: paymentData.paidAt ?? new Date().toISOString(),
       })
       .eq("order_id", orderId)
-      .eq("status", "pending"); // race 가드: 그 사이 redirect 흐름이 charged 로 변경했으면 update X
+      .eq("status", ORDER_STATUS.PENDING); // race 가드: 그 사이 redirect 흐름이 charged 로 변경했으면 update X
 
     if (updateError) {
       console.error("[WEBHOOK] charge_orders update 실패", updateError.message);
       return NextResponse.json({ error: "update failed" }, { status: 500 });
     }
     console.info("[WEBHOOK] charge_orders pending → paid", { orderId });
-  } else if (existing.status === "charged") {
+  } else if (existing.status === ORDER_STATUS.CHARGED) {
     console.info("[WEBHOOK] charge_orders 이미 charged, 자동 충전 skip", { orderId });
     return NextResponse.json({ ok: true, alreadyCharged: true });
   } else {
-    console.info("[WEBHOOK] charge_orders 다른 상태, no-op", { orderId, status: existing.status });
+    console.info("[WEBHOOK] charge_orders status=paid, 자동 충전 진행", { orderId });
   }
 
   // ─── 자동 충전 (브라우저 복귀 의존 없음) ─────────────────────────────────
@@ -189,7 +225,7 @@ export async function POST(request: NextRequest) {
   // payment_transactions 멱등 기록 (onConflict: order_id, ignoreDuplicates).
   // /api/coins/charge 와 동일 패턴 — redirect 흐름이 먼저 박았으면 silent skip.
   const paymentMethod = paymentData.method?.provider || paymentData.method?.type || "portone";
-  await supabaseAdmin
+  const { error: paymentTxError } = await supabaseAdmin
     .from("payment_transactions")
     .upsert(
       {
@@ -201,6 +237,15 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: "order_id", ignoreDuplicates: true }
     );
+
+  if (paymentTxError) {
+    console.error("[WEBHOOK] payment_transactions upsert 실패", {
+      orderId,
+      message: paymentTxError.message,
+    });
+    // 500 → PortOne 재시도. upsert는 멱등이라 안전.
+    return NextResponse.json({ error: "payment tx failed" }, { status: 500 });
+  }
 
   // charge_coins RPC 호출 — 멱등 가드 내장.
   // 같은 order_id 두 번 호출이면 두 번째는 charged=0, bonus=0 반환 (no-op).
@@ -216,7 +261,11 @@ export async function POST(request: NextRequest) {
       orderId,
       message: rpc.error.message,
     });
-    // 500 응답 → PortOne 자동 재시도. RPC 멱등이라 안전.
+    // first_charge_already_used 는 비즈니스 룰 실패 (재시도 무의미) — 200 으로 ack.
+    // 그 외는 500 → PortOne 자동 재시도. RPC 멱등이라 안전.
+    if (rpc.error.message.includes("first_charge_already_used")) {
+      return NextResponse.json({ ok: true, ignored: "first_charge_already_used" });
+    }
     return NextResponse.json({ error: "charge failed" }, { status: 500 });
   }
 
@@ -226,14 +275,23 @@ export async function POST(request: NextRequest) {
   // 첫 충전이면 charge_orders.status → charged.
   // 이미 charged 였다면 update 시점은 no-op (status가 charged면 .eq("status", "paid") 매칭 X).
   if (!alreadyCharged) {
-    await supabaseAdmin
+    const { error: chargedUpdateError } = await supabaseAdmin
       .from("charge_orders")
       .update({
-        status: "charged",
+        status: ORDER_STATUS.CHARGED,
         charged_at: new Date().toISOString(),
       })
       .eq("order_id", orderId)
-      .eq("status", "paid"); // race 가드: 동시에 redirect가 charged 박았으면 skip
+      .eq("status", ORDER_STATUS.PAID); // race 가드: 동시에 redirect가 charged 박았으면 skip
+
+    if (chargedUpdateError) {
+      // 코인은 충전됐는데 status가 paid에 머무는 상태.
+      // reconcile cron이 잡을 수 있지만 fail-loud 로깅으로 즉시 감지.
+      console.error("[WEBHOOK] 코인 충전 성공했으나 charge_orders → charged 전환 실패", {
+        orderId,
+        message: chargedUpdateError.message,
+      });
+    }
     console.info("[WEBHOOK] 자동 충전 완료", {
       orderId,
       charged: result?.charged,
