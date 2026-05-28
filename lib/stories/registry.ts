@@ -21,6 +21,7 @@ import { tigerDream } from "./data/tiger-dream";
 import { toothDream } from "./data/tooth-dream";
 import { waterDream } from "./data/water-dream";
 import { yeonaePattern } from "./data/yeonae-pattern";
+import { zhangHao } from "./data/zhanghao";
 import { zodiacVsMyeongni } from "./data/zodiac-vs-myeongni";
 import type { Story, StoryCategory } from "./types";
 
@@ -48,6 +49,7 @@ const STORIES: Story[] = [
   toothDream,
   waterDream,
   yeonaePattern,
+  zhangHao,
   zodiacVsMyeongni,
 ];
 
