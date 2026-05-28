@@ -6,6 +6,7 @@ import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
 import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
+import { jungwon } from "./data/jungwon";
 import { lastingCouple } from "./data/lasting-couple";
 import { leeChanwon } from "./data/leechanwon";
 import { marriageCaution } from "./data/marriage-caution";
@@ -32,6 +33,7 @@ const STORIES: Story[] = [
   iljuPersonality,
   imYoungwoong,
   iu,
+  jungwon,
   lastingCouple,
   leeChanwon,
   marriageCaution,
