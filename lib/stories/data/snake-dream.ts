@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const snakeDream: Story = {
   slug: "snake-dream",
   category: "dream",
-  title: "흰 뱀, 검은 뱀, 물리는 꿈은 전혀 다른 뜻이에요",
+  title: "뱀 꿈 해몽, 흰 뱀·검은 뱀 의미가 정반대인 이유",
   excerpt:
     "\"뱀 꿈 = 돈 꿈\"은 절반만 맞아요. 색·크기·상황·내 감정에 따라 의미가 완전히 갈려요. 같은 뱀 꿈도 어떤 분에겐 길몽, 어떤 분에겐 경고예요.",
   intro:

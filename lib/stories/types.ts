@@ -72,6 +72,11 @@ export type StoryBlock =
       kind: "callout";
       tone?: "tip" | "warn";
       text: string;
+    }
+  | {
+      kind: "faq";
+      title?: string;
+      items: { q: string; a: string }[];
     };
 
 export type StorySection = {

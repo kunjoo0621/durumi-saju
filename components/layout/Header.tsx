@@ -64,9 +64,9 @@ export default function Header({
           )}
         </div>
 
-        <h1 className="text-title-3 text-text-primary font-aggro shrink-0">
+        <div className="text-title-3 text-text-primary font-aggro shrink-0">
           <Link href="/">{title}</Link>
-        </h1>
+        </div>
 
         <div className="flex-1 flex items-center justify-end gap-2">
           {showCoinBalance && (

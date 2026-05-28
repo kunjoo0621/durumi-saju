@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const iljuPersonality: Story = {
   slug: "ilju-personality",
   category: "saju",
-  title: "태어난 날 한 글자로 보는 성격, 사주에선 일주라고 해요",
+  title: "사주 일주 성격, 60갑자로 보는 본질의 결",
   excerpt:
     "사주 네 기둥 중에서 가장 핵심인 게 '일주'예요. 태어난 날의 천간·지지 두 글자로 본인의 본질을 크게 잡을 수 있습니다.",
   intro:

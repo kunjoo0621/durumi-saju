@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const rich2026Saju: Story = {
   slug: "rich-2026-saju",
   category: "saju",
-  title: "2026 병오년, 재물 흐름 좋다고 보는 사주 5가지",
+  title: "2026 운세, 병오년 재물 좋은 사주 5가지 결",
   excerpt:
     "2026년은 명리에서 '병오년(丙午年)'으로 불 기운이 강한 해예요. 이 흐름을 받쳐주는 사주 결 다섯 가지를 풀어드릴게요.",
   intro:

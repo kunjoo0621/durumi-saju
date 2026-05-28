@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const marriageCaution: Story = {
   slug: "marriage-caution",
   category: "love",
-  title: "결혼 전에 한 번 더 봐야 하는 사주, 다섯 가지 결",
+  title: "결혼 궁합 사주, 신중하게 봐야 할 5가지 결",
   excerpt:
     "\"이런 사람은 결혼하지 마라\"는 단정은 위험해요. 다만 명리에서 보면 결혼 전에 한 번 더 신중하게 봐야 하는 다섯 가지 결이 있어요.",
   intro:

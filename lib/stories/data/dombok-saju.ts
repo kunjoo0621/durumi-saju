@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const dombokSaju: Story = {
   slug: "dombok-saju",
   category: "saju",
-  title: "월 350 받는데 통장은 늘 70만원, 사주에서 보면 이유가 있어요",
+  title: "돈복 사주, 월급은 있는데 통장이 안 차는 이유",
   excerpt:
     "월급은 또래 평균인데 통장은 늘 그 자리. 의지 문제가 아니라 사주 구조 문제예요. 명리학에서 말하는 '돈을 받쳐줄 그릇'을 풀어드릴게요.",
   intro:

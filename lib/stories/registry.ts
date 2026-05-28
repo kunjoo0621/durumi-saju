@@ -96,11 +96,26 @@ export function getReadingMinutes(story: Story): number {
         parts.push(...b.headers);
         for (const row of b.rows) parts.push(...row);
         if (b.caption) parts.push(b.caption);
+      } else if (b.kind === "faq") {
+        if (b.title) parts.push(b.title);
+        for (const item of b.items) {
+          parts.push(item.q, item.a);
+        }
       }
     }
   }
   const chars = parts.join(" ").replace(/\s+/g, "").length;
   return Math.max(1, Math.round(chars / 450));
+}
+
+export function getFaqItems(story: Story): { q: string; a: string }[] {
+  const out: { q: string; a: string }[] = [];
+  for (const s of story.sections) {
+    for (const b of s.blocks) {
+      if (b.kind === "faq") out.push(...b.items);
+    }
+  }
+  return out;
 }
 
 export function getRelatedStories(story: Story, limit = 3): Story[] {

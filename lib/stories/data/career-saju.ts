@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const careerSaju: Story = {
   slug: "career-saju",
   category: "saju",
-  title: "같은 회사인데 누군 잘 다니고 누군 못 견뎌요",
+  title: "사주 직장운, 5가지 일자리 결로 보는 적성",
   excerpt:
     "능력도 비슷한데 한 사람은 잘 적응하고 한 사람은 1년도 못 채워요. 사주에서는 '직장에 어울리는 결'이 따로 있다고 봅니다.",
   intro:
