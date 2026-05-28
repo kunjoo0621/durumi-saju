@@ -22,6 +22,7 @@ import { sungchan } from "./data/sungchan";
 import { tigerDream } from "./data/tiger-dream";
 import { toothDream } from "./data/tooth-dream";
 import { waterDream } from "./data/water-dream";
+import { wonyoung } from "./data/wonyoung";
 import { yeonaePattern } from "./data/yeonae-pattern";
 import { zhangHao } from "./data/zhanghao";
 import { zodiacVsMyeongni } from "./data/zodiac-vs-myeongni";
@@ -52,6 +53,7 @@ const STORIES: Story[] = [
   tigerDream,
   toothDream,
   waterDream,
+  wonyoung,
   yeonaePattern,
   zhangHao,
   zodiacVsMyeongni,
