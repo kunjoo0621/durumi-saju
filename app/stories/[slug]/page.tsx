@@ -16,6 +16,7 @@ import {
   getStoryBySlug,
 } from "@/lib/stories/registry";
 import { computeCelebritySaju } from "@/lib/stories/celebrity";
+import { getHeroImageSize } from "@/lib/stories/hero-image-size";
 import {
   STORY_CATEGORY_LABEL,
   type StoryCategory,
@@ -51,16 +52,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: story.publishedAt,
       modifiedTime: story.updatedAt,
       ...(story.heroImage
-        ? {
-            images: [
-              {
-                url: `${SITE_URL}${story.heroImage.src}`,
-                alt: story.heroImage.alt,
-                width: 1376,
-                height: 768,
-              },
-            ],
-          }
+        ? (() => {
+            const dim = getHeroImageSize(story.heroImage.src);
+            return {
+              images: [
+                {
+                  url: `${SITE_URL}${story.heroImage.src}`,
+                  alt: story.heroImage.alt,
+                  width: dim.width,
+                  height: dim.height,
+                },
+              ],
+            };
+          })()
         : {}),
     },
   };
@@ -104,14 +108,17 @@ export default async function StoryDetailPage({ params }: Props) {
         datePublished: story.publishedAt,
         dateModified: story.updatedAt,
         ...(story.heroImage
-          ? {
-              image: {
-                "@type": "ImageObject",
-                url: `${SITE_URL}${story.heroImage.src}`,
-                width: 1376,
-                height: 768,
-              },
-            }
+          ? (() => {
+              const dim = getHeroImageSize(story.heroImage.src);
+              return {
+                image: {
+                  "@type": "ImageObject",
+                  url: `${SITE_URL}${story.heroImage.src}`,
+                  width: dim.width,
+                  height: dim.height,
+                },
+              };
+            })()
           : {}),
         isPartOf: { "@id": `${SITE_URL}/#website` },
         publisher: { "@id": `${SITE_URL}/#organization` },
