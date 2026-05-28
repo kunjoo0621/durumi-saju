@@ -1,3 +1,4 @@
+import { anton } from "./data/anton";
 import { careerSaju } from "./data/career-saju";
 import { dombokSaju } from "./data/dombok-saju";
 import { dragonDream } from "./data/dragon-dream";
@@ -26,6 +27,7 @@ import { zodiacVsMyeongni } from "./data/zodiac-vs-myeongni";
 import type { Story, StoryCategory } from "./types";
 
 const STORIES: Story[] = [
+  anton,
   careerSaju,
   dombokSaju,
   dragonDream,
