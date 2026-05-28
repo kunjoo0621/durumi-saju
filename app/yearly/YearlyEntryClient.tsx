@@ -141,12 +141,31 @@ export default function YearlyEntryClient() {
   }, [primary, sessionId, createSession]);
 
   // 결제 + 분석
-  const handleStart = useCallback(async () => {
+  const handleStart = useCallback(async (overrideBalance?: number) => {
     if (!isAuthenticated) {
       signIn("kakao", { callbackUrl: "/yearly" });
       return;
     }
     if (!primary) return;
+
+    // 클라이언트 잔액 선체크 — 부족하면 로딩(setPaying) 없이 즉시 충전 시트.
+    // overrideBalance: 충전 직후 setBalance 비동기로 closure balance 가 stale 일 때 명시 전달.
+    // balance 가 아직 null(로드 전)이면 가벼운 balance API 로 fresh 조회 후 체크 — start API 다녀와
+    // insufficient 로 로딩 후 충전 시트 뜨는 어색함 방지.
+    let effectiveBalance = overrideBalance ?? balance;
+    if (effectiveBalance === null) {
+      const r = await fetch("/api/coins/balance").then((res) => res.json()).catch(() => null);
+      if (typeof r?.balance === "number") {
+        effectiveBalance = r.balance;
+        setBalance(r.balance);
+      }
+    }
+    if (effectiveBalance !== null && effectiveBalance < YEARLY_COST) {
+      // afterCharge 경유 시 confirming 로딩이 켜진 채 진입 — 충전 시트가 로딩에 덮이지 않게 해제
+      setConfirming(false);
+      setShowChargeSheet(true);
+      return;
+    }
 
     setError(null);
     setPaying(true);
@@ -177,6 +196,7 @@ export default function YearlyEntryClient() {
         }
         setShowChargeSheet(true);
         setPaying(false);
+        setConfirming(false);
         return;
       }
       if (!startRes.ok) {
@@ -226,14 +246,29 @@ export default function YearlyEntryClient() {
       setPaying(false);
       setConfirming(false);
     }
-  }, [isAuthenticated, primary, sessionId, createSession, router, fetchBalance, setBalance]);
+  }, [isAuthenticated, primary, sessionId, createSession, router, fetchBalance, setBalance, balance]);
 
-  // 충전 완료 콜백 — balance 갱신 후 자동으로 분석 재시도
+  // 충전 완료 콜백 — balance 갱신 후 자동으로 분석 재시도 (overrideBalance 로 stale 회피)
   const handleChargeComplete = useCallback(async (newBalance: number) => {
     setBalance(newBalance);
     setShowChargeSheet(false);
-    await handleStart();
+    await handleStart(newBalance);
   }, [setBalance, handleStart]);
+
+  // charge-success 복귀 처리 — 운영자가 결제 완료 화면 거쳐 돌아온 경우.
+  // 충전은 charge-success 가 이미 끝냄 → balance fresh 조회 후 handleStart(분석) 직행.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("afterCharge") !== "1") return;
+    setConfirming(true); // 대표사주 카드 노출 없이 즉시 로딩 — 깜빡임 방지
+    window.history.replaceState({}, "", "/yearly");
+    (async () => {
+      const r = await fetch("/api/coins/balance").then((res) => res.json()).catch(() => null);
+      const bal = typeof r?.balance === "number" ? r.balance : undefined;
+      if (typeof bal === "number") setBalance(bal);
+      await handleStart(bal);
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (confirming) {
     return (
@@ -400,7 +435,7 @@ export default function YearlyEntryClient() {
                 {/* CTA */}
                 <div className="space-y-3">
                   <button
-                    onClick={handleStart}
+                    onClick={() => handleStart()}
                     disabled={paying}
                     className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold disabled:opacity-60 active:scale-[0.98] transition-transform"
                   >

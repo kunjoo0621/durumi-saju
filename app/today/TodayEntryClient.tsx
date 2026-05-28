@@ -145,6 +145,8 @@ export default function TodayEntryClient() {
     // overrideBalance: 충전 직후 setBalance가 비동기라 closure의 balance가 stale일 때 명시적 fresh 값
     const effectiveBalance = overrideBalance ?? balance;
     if (effectiveBalance !== null && effectiveBalance < TODAY_COST) {
+      // afterCharge 경유 시 confirming 로딩이 켜진 채 진입 — 충전 시트가 로딩에 덮이지 않게 해제
+      setConfirming(false);
       setShowChargeSheet(true);
       return;
     }
@@ -209,6 +211,21 @@ export default function TodayEntryClient() {
     setShowChargeSheet(false);
     await handleStart(newBalance);
   }, [setBalance, handleStart]);
+
+  // charge-success 복귀 처리 — 운영자가 결제 완료 화면 거쳐 돌아온 경우.
+  // 충전은 charge-success 가 이미 끝냄 → balance fresh 조회 후 handleStart(분석, targetDate 재계산) 직행.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("afterCharge") !== "1") return;
+    setConfirming(true); // 대표사주 카드 노출 없이 즉시 로딩 — 깜빡임 방지
+    window.history.replaceState({}, "", "/today");
+    (async () => {
+      const r = await fetch("/api/coins/balance").then((res) => res.json()).catch(() => null);
+      const bal = typeof r?.balance === "number" ? r.balance : undefined;
+      if (typeof bal === "number") setBalance(bal);
+      await handleStart(bal);
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (confirming) {
     return (

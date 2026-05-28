@@ -68,12 +68,14 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
     setCharging(true);
     setError(null);
 
-    // PR-1 (운영자 한정 + /coins 계열만): 결제 완료 화면(charge-success)을 경유.
+    // 운영자 한정: 결제 완료 화면(charge-success)을 경유.
     // charge-success가 charge + Google conversion firing 담당 → 여기선 firing 안 함 (중복 방지).
-    // yearly/today (redirectPath="/yearly","/today" 등)는 PR-1 제외 → 기존 흐름 유지.
+    // PR-1: /coins 계열(사주·배틀·단순충전). PR-1b: yearly·today 추가.
+    // 복귀 후 분석 시작은 각 entry 가 담당 (charge-success는 charge+firing+returnTo 까지만).
+    const SUCCESS_PAGE_RETURNS = ["/coins", "/yearly", "/yearly/input", "/today", "/today/input"];
     const supabaseId = (session?.user as { supabaseId?: string } | undefined)?.supabaseId;
-    const viaSuccessPage = isOperator(supabaseId) && (!redirectPath || redirectPath === "/coins");
     const returnTo = redirectPath || "/coins";
+    const viaSuccessPage = isOperator(supabaseId) && SUCCESS_PAGE_RETURNS.includes(returnTo);
 
     let orderId: string;
     try {

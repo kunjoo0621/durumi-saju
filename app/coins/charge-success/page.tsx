@@ -19,12 +19,13 @@ import { FullScreenLoading } from "@/components/loading";
 const AD_SEND_TO = "AW-18186268670/_rXuCOX2yrMcEP7f8d9D";
 
 // open redirect 방지 — 허용된 entry 복귀 경로만.
-const RETURN_WHITELIST = ["/coins", "/teaser", "/yearly", "/today", "/today/input"];
+const RETURN_WHITELIST = ["/coins", "/teaser", "/yearly", "/yearly/input", "/today", "/today/input"];
 
 const RETURN_LABEL: Record<string, string> = {
   "/coins": "확인",
   "/teaser": "결과 보기",
   "/yearly": "올해 운세 보기",
+  "/yearly/input": "올해 운세 보기",
   "/today": "오늘 운세 보기",
   "/today/input": "오늘 운세 보기",
 };
@@ -49,6 +50,8 @@ function ChargeSuccessInner() {
   const router = useRouter();
   const params = useSearchParams();
   const ranRef = useRef(false);
+  // 마운트 시점의 pendingSpend 원본 보관 — 클릭 시점에 sessionStorage에서 사라져도(다른 탭·세션만료) spend 복원용
+  const pendingRef = useRef<string | null>(null);
   const [state, setState] = useState<"processing" | "done" | "error">("processing");
   const [charged, setCharged] = useState(0);
   const [bonus, setBonus] = useState(0);
@@ -88,6 +91,7 @@ function ChargeSuccessInner() {
     try {
       const pending = sessionStorage.getItem("pendingSpend");
       if (pending) {
+        pendingRef.current = pending;
         const type = (JSON.parse(pending) as { type?: string })?.type;
         setButtonLabel(type === "battle" ? "대결 결과 보기" : "사주 결과 보기");
       } else {
@@ -132,14 +136,28 @@ function ChargeSuccessInner() {
     // 사주/배틀: pendingSpend가 있으면 /coins로 chargeOrderId 전달 → /coins가 기존 로직으로
     //   charge(멱등 no-op, 이미 충전됨) + spend + 결과 페이지 이동. 분석 로직 복제 안 함.
     // 단순충전: pendingSpend 없으면 그냥 /coins (잔액만, 이미 충전 완료).
+    // 가드: 마운트 시 pendingSpend가 있었는데 클릭 시점에 사라졌으면(다른 탭·세션만료) 복원.
+    // 복원 안 하면 사주/배틀이 단순충전 분기로 빠져 결제했는데 결과를 못 보는 spend 드롭 발생.
+    if (typeof window !== "undefined" && pendingRef.current && !sessionStorage.getItem("pendingSpend")) {
+      try {
+        sessionStorage.setItem("pendingSpend", pendingRef.current);
+      } catch {}
+    }
     const hasPending = typeof window !== "undefined" && !!sessionStorage.getItem("pendingSpend");
-    if (returnTo === "/coins" && hasPending && orderId && packageId && amount) {
-      // charged=1: 이미 여기서 충전 완료 → /coins는 charge 재호출 말고 spend만.
-      router.replace(
-        `/coins?chargeOrderId=${encodeURIComponent(orderId)}&packageId=${encodeURIComponent(packageId)}&amount=${encodeURIComponent(amount)}&charged=1`
-      );
+    if (returnTo === "/coins") {
+      if (hasPending && orderId && packageId && amount) {
+        // 사주·배틀: charged=1 → /coins는 charge 재호출 말고 spend 만.
+        router.replace(
+          `/coins?chargeOrderId=${encodeURIComponent(orderId)}&packageId=${encodeURIComponent(packageId)}&amount=${encodeURIComponent(amount)}&charged=1`
+        );
+      } else {
+        // 단순충전: 잔액만 (이미 충전 완료)
+        router.replace("/coins");
+      }
     } else {
-      router.replace(returnTo);
+      // yearly·today·today/input: entry 가 afterCharge=1 신호 보고 분석 시작 (충전은 이미 됨).
+      // URL 파라미터로 1회성 전달 (sessionStorage 잔존 버그 회피).
+      router.replace(`${returnTo}?afterCharge=1`);
     }
   };
 

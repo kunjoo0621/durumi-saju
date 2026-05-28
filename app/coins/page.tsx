@@ -171,6 +171,8 @@ export default function CoinsPage() {
             console.error("[COINS] pendingSpend error:", err?.message);
             setRedirectError(err?.message || "결과 처리에 실패했습니다. 알은 충전되었습니다.");
             setProcessingSpend(false);
+            // spend 실패 시 아래 "충전 완료" 토스트로 fall-through 방지 (에러+완료 토스트 동시 노출 버그)
+            return;
           }
         }
 
