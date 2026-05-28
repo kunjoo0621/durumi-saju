@@ -1,3 +1,4 @@
+import { anton } from "./data/anton";
 import { careerSaju } from "./data/career-saju";
 import { dombokSaju } from "./data/dombok-saju";
 import { dragonDream } from "./data/dragon-dream";
@@ -6,6 +7,7 @@ import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
 import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
+import { jungwon } from "./data/jungwon";
 import { lastingCouple } from "./data/lasting-couple";
 import { leeChanwon } from "./data/leechanwon";
 import { marriageCaution } from "./data/marriage-caution";
@@ -16,14 +18,18 @@ import { pregnancyDream } from "./data/pregnancy-dream";
 import { rich2026Saju } from "./data/rich-2026-saju";
 import { savingsSaju } from "./data/savings-saju";
 import { snakeDream } from "./data/snake-dream";
+import { sungchan } from "./data/sungchan";
 import { tigerDream } from "./data/tiger-dream";
 import { toothDream } from "./data/tooth-dream";
 import { waterDream } from "./data/water-dream";
+import { wonyoung } from "./data/wonyoung";
 import { yeonaePattern } from "./data/yeonae-pattern";
+import { zhangHao } from "./data/zhanghao";
 import { zodiacVsMyeongni } from "./data/zodiac-vs-myeongni";
 import type { Story, StoryCategory } from "./types";
 
 const STORIES: Story[] = [
+  anton,
   careerSaju,
   dombokSaju,
   dragonDream,
@@ -32,6 +38,7 @@ const STORIES: Story[] = [
   iljuPersonality,
   imYoungwoong,
   iu,
+  jungwon,
   lastingCouple,
   leeChanwon,
   marriageCaution,
@@ -42,10 +49,13 @@ const STORIES: Story[] = [
   rich2026Saju,
   savingsSaju,
   snakeDream,
+  sungchan,
   tigerDream,
   toothDream,
   waterDream,
+  wonyoung,
   yeonaePattern,
+  zhangHao,
   zodiacVsMyeongni,
 ];
 
