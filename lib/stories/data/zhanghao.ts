@@ -159,6 +159,10 @@ export const zhangHao: Story = {
     iljuLabel: "갑신(甲申)일주",
     source: "위키백과 · KProfiles (2026-05-28 확인)",
   },
+  heroImage: {
+    src: "/stories/heroes/zhanghao.png",
+    alt: "장하오(제로베이스원) 수채화 일러스트 — 두루미 매거진 연예인 사주",
+  },
   publishedAt: "2026-05-28",
   updatedAt: "2026-05-28",
 };

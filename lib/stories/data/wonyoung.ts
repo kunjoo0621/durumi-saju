@@ -160,6 +160,10 @@ export const wonyoung: Story = {
     iljuLabel: "임오(壬午)일주",
     source: "위키백과 · 나무위키 · KProfiles (2026-05-28 확인)",
   },
+  heroImage: {
+    src: "/stories/heroes/wonyoung.png",
+    alt: "장원영(아이브) 수채화 일러스트 — 두루미 매거진 연예인 사주",
+  },
   publishedAt: "2026-05-28",
   updatedAt: "2026-05-28",
 };
