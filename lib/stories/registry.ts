@@ -18,6 +18,7 @@ import { pregnancyDream } from "./data/pregnancy-dream";
 import { rich2026Saju } from "./data/rich-2026-saju";
 import { savingsSaju } from "./data/savings-saju";
 import { snakeDream } from "./data/snake-dream";
+import { sungchan } from "./data/sungchan";
 import { tigerDream } from "./data/tiger-dream";
 import { toothDream } from "./data/tooth-dream";
 import { waterDream } from "./data/water-dream";
@@ -47,6 +48,7 @@ const STORIES: Story[] = [
   rich2026Saju,
   savingsSaju,
   snakeDream,
+  sungchan,
   tigerDream,
   toothDream,
   waterDream,
