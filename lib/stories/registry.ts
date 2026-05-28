@@ -17,6 +17,7 @@ import { poopDream } from "./data/poop-dream";
 import { pregnancyDream } from "./data/pregnancy-dream";
 import { rich2026Saju } from "./data/rich-2026-saju";
 import { savingsSaju } from "./data/savings-saju";
+import { seongHanbin } from "./data/seonghanbin";
 import { snakeDream } from "./data/snake-dream";
 import { sungchan } from "./data/sungchan";
 import { tigerDream } from "./data/tiger-dream";
@@ -48,6 +49,7 @@ const STORIES: Story[] = [
   pregnancyDream,
   rich2026Saju,
   savingsSaju,
+  seongHanbin,
   snakeDream,
   sungchan,
   tigerDream,
