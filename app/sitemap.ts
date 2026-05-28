@@ -1,8 +1,17 @@
 import type { MetadataRoute } from "next";
 import { getAllDictEntries } from "@/lib/dict/registry";
 import type { DictCategory } from "@/lib/dict/types";
+import { getAllStories } from "@/lib/stories/registry";
+import type { StoryCategory } from "@/lib/stories/types";
 
 const BASE = "https://www.durumisaju.com";
+
+const STORY_CATEGORIES: StoryCategory[] = [
+  "saju",
+  "dream",
+  "love",
+  "celebrity",
+];
 
 const DICT_CATEGORIES: DictCategory[] = [
   "saju",
@@ -30,6 +39,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/start`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/battle/input`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/dict`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${BASE}/stories`, lastModified: now, changeFrequency: "weekly", priority: 0.85 },
     { url: `${BASE}/coins`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/login`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
@@ -50,5 +60,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticPages, ...dictCategoryPages, ...dictDetailPages];
+  const storyCategoryPages: MetadataRoute.Sitemap = STORY_CATEGORIES.map(
+    (cat) => ({
+      url: `${BASE}/stories/series/${cat}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    }),
+  );
+
+  const storyDetailPages: MetadataRoute.Sitemap = getAllStories().map((s) => ({
+    url: `${BASE}/stories/${s.slug}`,
+    lastModified: new Date(s.updatedAt),
+    changeFrequency: "monthly",
+    priority: 0.75,
+  }));
+
+  return [
+    ...staticPages,
+    ...dictCategoryPages,
+    ...dictDetailPages,
+    ...storyCategoryPages,
+    ...storyDetailPages,
+  ];
 }
