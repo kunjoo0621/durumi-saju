@@ -136,7 +136,7 @@ export const leeChanwon: Story = {
   ctaAfter: 3,
   cta: {
     label: "이찬원과 비슷한 결의 내 사주 보기",
-    href: "/start",
+    href: "/menu",
     tone: "brand",
   },
   related: ["dombok-saju", "yeonae-pattern"],

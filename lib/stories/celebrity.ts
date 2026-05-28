@@ -1,9 +1,12 @@
-import { calculateSaju, type SajuData } from "@/lib/utils/saju";
+import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
+import type { EnrichedSajuData } from "@/lib/utils/saju-enrichment";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 import type { CelebritySajuInfo } from "./types";
 
 export type ComputedCelebritySaju = {
   data: SajuData | null;
+  /** 십성·신살·강약 등 풍부 데이터. data와 함께 계산됨 (data null이면 null). */
+  enriched: EnrichedSajuData | null;
   /** birthTime이 누락돼 12:00 fallback으로 계산됨. UI에서 시주 마스킹 필요. */
   hourUnknown: boolean;
 };
@@ -28,7 +31,7 @@ export async function computeCelebritySaju(
 
   const hourUnknown = !info.birthTime;
 
-  if (!year || !month || !day) return { data: null, hourUnknown };
+  if (!year || !month || !day) return { data: null, enriched: null, hourUnknown };
 
   // 음력 → 양력 변환
   let solarYear = year;
@@ -37,7 +40,7 @@ export async function computeCelebritySaju(
 
   if (info.calendar === "lunar") {
     const solar = convertLunarToSolar(year, month, day, info.isLeapMonth ?? false);
-    if (!solar) return { data: null, hourUnknown };
+    if (!solar) return { data: null, enriched: null, hourUnknown };
     solarYear = solar.year;
     solarMonth = solar.month;
     solarDay = solar.day;
@@ -56,7 +59,11 @@ export async function computeCelebritySaju(
   }
 
   const data = await calculateSaju(solarYear, solarMonth, solarDay, hour, minute);
-  return { data, hourUnknown };
+  // 시 미상이면 enrichSajuData에 isTimeUnknown 플래그 — 시주 의존 신살 가중치 자동 조정.
+  const enriched = data
+    ? enrichSajuData(data, { isTimeUnknown: hourUnknown })
+    : null;
+  return { data, enriched, hourUnknown };
 }
 
 /** 출생 정보 노출용 문자열 — "1996.11.01 · 양력 · 시 미상" */

@@ -2,11 +2,12 @@
 
 import dynamic from "next/dynamic";
 import type { SajuData } from "@/lib/utils/saju";
+import type { EnrichedSajuData } from "@/lib/utils/saju-enrichment";
 import type { CelebritySajuInfo } from "@/lib/stories/types";
 import { formatCelebrityBirthMeta } from "@/lib/stories/celebrity";
 
 /**
- * SajuChart는 무거운 클라이언트 컴포넌트라 매거진 전체 청크에 들어가면
+ * SajuChart·ShinsalBadges는 무거운 클라이언트 컴포넌트라 매거진 전체 청크에 들어가면
  * 비-연예인 글의 First Load JS가 ~280kB 더 커진다.
  * 이 카드 안에서만 dynamic으로 로드해 청크 분리.
  */
@@ -17,9 +18,16 @@ const SajuChart = dynamic(() => import("@/components/saju/SajuChart"), {
   ),
 });
 
+const ShinsalBadges = dynamic(
+  () => import("@/components/saju/ShinsalBadges"),
+  { ssr: true },
+);
+
 interface Props {
   celebrity: CelebritySajuInfo;
   sajuData: SajuData;
+  /** 십성·신살 풍부 데이터. 없으면 기본 차트만. */
+  enriched: EnrichedSajuData | null;
   /**
    * birthTime이 없을 때 true. 차트의 시주 컬럼을 시각적으로 마스킹
    * (12:00 fallback 값이 사실로 보이지 않게).
@@ -37,6 +45,7 @@ interface Props {
 export default function CelebritySajuCard({
   celebrity,
   sajuData,
+  enriched,
   hourUnknown,
 }: Props) {
   return (
@@ -91,9 +100,10 @@ export default function CelebritySajuCard({
 
       {/* 차트 + 시주 미상 마스킹.
           SajuChart는 4기둥(생시·일주·생월·생년)을 가로 grid로 렌더.
-          시주 컬럼이 leftmost. hourUnknown=true 시 left 25% 영역 어둡게 + 라벨 오버레이. */}
+          시주 컬럼이 leftmost. hourUnknown=true 시 left 25% 영역 어둡게 + 라벨 오버레이.
+          enriched 전달 시 십성·오행 강약·지장간 시각화 활성화 (결과 페이지와 동일). */}
       <div className="relative">
-        <SajuChart sajuData={sajuData} hideStrengthPanel />
+        <SajuChart sajuData={sajuData} enriched={enriched} hideStrengthPanel />
         {hourUnknown ? (
           <div
             className="pointer-events-none absolute inset-y-0 left-0 w-[25%] rounded-l-xl flex items-center justify-center"
@@ -110,6 +120,17 @@ export default function CelebritySajuCard({
           </div>
         ) : null}
       </div>
+
+      {/* 신살 배지 — 도화·천을귀인·문창귀인 등 시각화.
+          결과 페이지의 ShinsalBadges 그대로 사용. matches가 있을 때만 노출. */}
+      {enriched?.shinsal && enriched.shinsal.matches.length > 0 ? (
+        <div className="mt-6 pt-5 border-t border-white/[0.06]">
+          <ShinsalBadges
+            matches={enriched.shinsal.matches}
+            note={enriched.shinsal.meta?.note}
+          />
+        </div>
+      ) : null}
 
       {celebrity.source ? (
         <p className="mt-4 text-[11px] text-text-tertiary leading-[1.5]">

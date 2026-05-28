@@ -80,12 +80,13 @@ export default async function StoryDetailPage({ params }: Props) {
   const related = getRelatedStories(story, 3);
   const categoryLabel = STORY_CATEGORY_LABEL[story.category];
 
-  // 연예인 카테고리 — birth info → SajuData (SSG 빌드 시 계산).
+  // 연예인 카테고리 — birth info → SajuData + enriched (십성·신살) 빌드 시 계산.
   // hourUnknown=true면 클라이언트 카드에서 시주 컬럼 마스킹.
   const celebritySajuResult = story.celebrity
     ? await computeCelebritySaju(story.celebrity)
     : null;
   const celebritySaju = celebritySajuResult?.data ?? null;
+  const celebrityEnriched = celebritySajuResult?.enriched ?? null;
   const celebrityHourUnknown = celebritySajuResult?.hourUnknown ?? false;
 
   const jsonLd = {
@@ -242,6 +243,7 @@ export default async function StoryDetailPage({ params }: Props) {
           <CelebritySajuCard
             celebrity={story.celebrity}
             sajuData={celebritySaju}
+            enriched={celebrityEnriched}
             hourUnknown={celebrityHourUnknown}
           />
         ) : null}
