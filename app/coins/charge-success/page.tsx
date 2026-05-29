@@ -120,10 +120,12 @@ function ChargeSuccessInner() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || "충전에 실패했어.");
 
-        // firing — alreadyCharged(멱등 재호출)면 발동 안 함 (중복 전환 방지)
-        if (!data.alreadyCharged) {
-          fireConversion(orderId, Number(amount));
-        }
+        // firing — 충전이 확정되면(res.ok) 항상 발동.
+        // alreadyCharged=true 여도 쏴야 함: webhook 자동충전(전체 ON)이 redirect보다 먼저
+        // 도착하면 이 호출은 멱등 no-op(alreadyCharged=true)이 되는데, 여기서 발동을 건너뛰면
+        // 전환이 영영 누락됨(모바일 redirect는 server-to-server webhook보다 자주 느림).
+        // 중복(새로고침·StrictMode)은 transaction_id(=orderId)로 Google Ads가 dedup → 1건 처리.
+        fireConversion(orderId, Number(amount));
         setCharged(data.charged ?? 0);
         setBonus(data.bonus ?? 0);
         setAlreadyCharged(!!data.alreadyCharged);
