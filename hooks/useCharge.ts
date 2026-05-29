@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import * as PortOne from "@portone/browser-sdk/v2";
 import { getPaymentConfig, type CoinPackage } from "@/lib/constants/coins";
-import { isOperator } from "@/lib/constants/operator";
 
 // Google Ads 전환 추적 firing.
 // gtag.js 자체는 app/layout.tsx 에서 모든 페이지 head 에 로드. 여기선 결제 완료 시점에만 conversion event.
@@ -59,7 +57,6 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
   const [charging, setCharging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { data: session } = useSession();
 
   const { storeId, channelKey, isMockPayment } = getPaymentConfig();
 
@@ -68,14 +65,13 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
     setCharging(true);
     setError(null);
 
-    // 운영자 한정: 결제 완료 화면(charge-success)을 경유.
+    // 전체 사용자: 결제 완료 화면(charge-success)을 경유.
     // charge-success가 charge + Google conversion firing 담당 → 여기선 firing 안 함 (중복 방지).
-    // PR-1: /coins 계열(사주·배틀·단순충전). PR-1b: yearly·today 추가.
+    // whitelist 경로(/coins 계열·yearly·today)만 경유. 그 외 returnTo는 기존 인라인 흐름.
     // 복귀 후 분석 시작은 각 entry 가 담당 (charge-success는 charge+firing+returnTo 까지만).
     const SUCCESS_PAGE_RETURNS = ["/coins", "/yearly", "/yearly/input", "/today", "/today/input"];
-    const supabaseId = (session?.user as { supabaseId?: string } | undefined)?.supabaseId;
     const returnTo = redirectPath || "/coins";
-    const viaSuccessPage = isOperator(supabaseId) && SUCCESS_PAGE_RETURNS.includes(returnTo);
+    const viaSuccessPage = SUCCESS_PAGE_RETURNS.includes(returnTo);
 
     let orderId: string;
     try {
@@ -93,7 +89,7 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
     try {
       if (isMockPayment) {
         if (viaSuccessPage) {
-          // 운영자 mock: charge-success가 charge + firing 담당.
+          // mock: charge-success가 charge + firing 담당.
           router.push(
             `/coins/charge-success?mock=1&chargeOrderId=${encodeURIComponent(orderId)}&packageId=${pkg.id}&amount=${pkg.price}&returnTo=${encodeURIComponent(returnTo)}`
           );
@@ -142,7 +138,7 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
       }
 
       if (viaSuccessPage) {
-        // 운영자 popup 흐름: charge-success가 charge + firing 담당.
+        // popup 흐름: charge-success가 charge + firing 담당.
         router.push(
           `/coins/charge-success?chargeOrderId=${encodeURIComponent(orderId)}&paymentId=${encodeURIComponent(response.paymentId ?? orderId)}&packageId=${pkg.id}&amount=${pkg.price}&returnTo=${encodeURIComponent(returnTo)}`
         );

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Egg, CheckCircle } from "@phosphor-icons/react";
 import { FullScreenLoading } from "@/components/loading";
 
-// 결제 완료 페이지 (PR-1, 운영자 한정).
+// 결제 완료 페이지 (전체 사용자).
 //
 // 책임 (하이브리드 — 분석은 entry가, 여기선 충전·광고·완료화면만):
 //   1. 결제 파라미터 확인 (취소/실패면 charge·firing 안 함)
@@ -14,7 +14,7 @@ import { FullScreenLoading } from "@/components/loading";
 //   4. "결제 완료" 화면 + 충전된 알 표시
 //   5. 버튼 클릭 → returnTo(whitelist)로 복귀. 분석은 entry 페이지가 afterChargeAction 보고 실행.
 //
-// firing은 여기 한 곳만 책임 (useCharge의 기존 firing은 운영자 경로에서 호출 안 함 — 중복 방지).
+// firing은 여기 한 곳만 책임 (useCharge의 기존 firing은 charge-success 경유 시 호출 안 함 — 중복 방지).
 
 const AD_SEND_TO = "AW-18186268670/_rXuCOX2yrMcEP7f8d9D";
 
