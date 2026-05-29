@@ -128,5 +128,10 @@ export const config = {
     "/dict",
     "/dict/:path*",
     "/battle/input",
+    // 공유된 결과·매거진 유입을 landing_path로 잡기 위해 추적 대상에 추가
+    // (둘 다 비보호 경로 → referrer 캡처만 하고 통과)
+    "/result/share/:path*",
+    "/stories",
+    "/stories/:path*",
   ],
 };
