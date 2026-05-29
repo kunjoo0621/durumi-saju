@@ -7,7 +7,13 @@ import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
 import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
+import { chaeunwoo } from "./data/chaeunwoo";
+import { jungkook } from "./data/jungkook";
 import { jungwon } from "./data/jungwon";
+import { karina } from "./data/karina";
+import { minji } from "./data/minji";
+import { songgain } from "./data/songgain";
+import { youngtak } from "./data/youngtak";
 import { lastingCouple } from "./data/lasting-couple";
 import { leeChanwon } from "./data/leechanwon";
 import { marriageCaution } from "./data/marriage-caution";
@@ -40,6 +46,12 @@ const STORIES: Story[] = [
   imYoungwoong,
   iu,
   jungwon,
+  karina,
+  chaeunwoo,
+  jungkook,
+  minji,
+  songgain,
+  youngtak,
   lastingCouple,
   leeChanwon,
   marriageCaution,
