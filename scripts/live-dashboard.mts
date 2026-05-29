@@ -564,6 +564,13 @@ async function main() {
     .order("created_at", { ascending: false })
     .limit(15);
 
+  // 헤더에 표시할 24h 실제 총 가입 수 (목록은 최근 15명만, 카운트는 전체)
+  const { count: signup24hTotal } = await sb
+    .from("users")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", H24)
+    .not("id", "in", INTERNAL_ID_LIST);
+
   const userIds = (newUsers ?? []).map((u) => u.id);
   let analysisByUser = new Map<string, { personal: number; yearly: number }>();
   if (userIds.length > 0) {
@@ -586,7 +593,7 @@ async function main() {
     }
   }
 
-  section(`👥  오늘 신규 가입자  ${c.dim}(${newUsers?.length ?? 0}명, 최근 24h)${c.reset}`);
+  section(`👥  오늘 신규 가입자  ${c.dim}(24h 총 ${signup24hTotal ?? 0}명 · 아래 최근 ${newUsers?.length ?? 0}명 표시)${c.reset}`);
   if (!newUsers || newUsers.length === 0) {
     console.log("  " + c.dim + "(아직 없음)" + c.reset);
   } else {
