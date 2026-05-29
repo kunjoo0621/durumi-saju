@@ -17,6 +17,10 @@ export default function BusinessFooter({
             사주 사전
           </Link>
           <span>·</span>
+          <Link href="/stories" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
+            두루미 매거진
+          </Link>
+          <span>·</span>
           <a href="/terms" className="text-[rgb(var(--c-text-sub))] hover:text-white transition-colors">
             이용약관
           </a>
