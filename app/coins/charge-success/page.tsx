@@ -55,6 +55,9 @@ function ChargeSuccessInner() {
   const [state, setState] = useState<"processing" | "done" | "error">("processing");
   const [charged, setCharged] = useState(0);
   const [bonus, setBonus] = useState(0);
+  // webhook 자동 충전이 redirect보다 먼저 도착하면 /api/coins/charge가 멱등 가드로
+  // charged=0/bonus=0/alreadyCharged=true 반환. 이때 "0알 충전됐어" 표시 방지용 분기.
+  const [alreadyCharged, setAlreadyCharged] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   // 버튼 텍스트: 사주/배틀(pendingSpend 있음)이면 "결과 보기" 계열, 단순충전이면 "확인".
   const [buttonLabel, setButtonLabel] = useState("확인");
@@ -123,6 +126,7 @@ function ChargeSuccessInner() {
         }
         setCharged(data.charged ?? 0);
         setBonus(data.bonus ?? 0);
+        setAlreadyCharged(!!data.alreadyCharged);
         setState("done");
       } catch (err: any) {
         setState("error");
@@ -191,7 +195,9 @@ function ChargeSuccessInner() {
         <p className="flex items-center justify-center gap-1.5 text-[16px] text-text-secondary mb-10">
           <Egg size={18} weight="fill" />
           <span>
-            {charged}알{bonus > 0 ? ` + 보너스 ${bonus}알` : ""} 충전됐어
+            {alreadyCharged
+              ? "결제가 이미 확인됐어. 잔액에 반영됐어"
+              : `${charged}알${bonus > 0 ? ` + 보너스 ${bonus}알` : ""} 충전됐어`}
           </span>
         </p>
         <button
