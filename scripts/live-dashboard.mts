@@ -99,6 +99,26 @@ const fmtHM = (iso: string | null | undefined) => {
 
 const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 100) : 0);
 
+// 서비스 화면 기준 등급. DB raw 값은 S/A/B/C/D로 저장하지만
+// 사용자는 SS/S/A/B/C로 본다. 대시보드도 사용자 기준으로 통일한다.
+const DISPLAY_GRADE_MAP: Record<string, string> = {
+  S: "SS",
+  A: "S",
+  B: "A",
+  C: "B",
+  D: "C",
+};
+
+function displayGrade(raw: unknown): string {
+  if (typeof raw !== "string") return "—";
+  const g = raw.trim();
+  return DISPLAY_GRADE_MAP[g] ?? g;
+}
+
+function displayGradePair(a: unknown, b: unknown): string {
+  return `${displayGrade(a)}/${displayGrade(b)}`;
+}
+
 function section(title: string) {
   console.log("");
   console.log(HR);
@@ -116,6 +136,28 @@ async function countSince(table: string, since: string, internalColumn: "id" | "
   return count ?? 0;
 }
 
+async function countBetween(table: string, since: string, until?: string, internalColumn: "id" | "user_id" | null = "user_id") {
+  let q = sb
+    .from(table)
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", since);
+  if (until) q = q.lt("created_at", until);
+  if (internalColumn) q = q.not(internalColumn, "in", INTERNAL_ID_LIST);
+  const { count } = await q;
+  return count ?? 0;
+}
+
+type ChargeOrderRow = {
+  order_id: string;
+  user_id: string | null;
+  package_id: string | null;
+  amount: number | null;
+  status: string;
+  created_at: string;
+  paid_at: string | null;
+  charged_at: string | null;
+};
+
 async function main() {
   const nowKst = new Date(now + 9 * 3600_000).toISOString().slice(0, 19).replace("T", " ");
 
@@ -125,9 +167,9 @@ async function main() {
   console.log(`  ${c.dim}${nowKst} KST${c.reset}`);
 
   // ── 1. 핵심 지표 테이블 ──────────────────────────
-  const periods = [
-    { label: "1시간", since: H1 },
-    { label: "24시간", since: H24 },
+  const periods: Array<{ label: string; since: string; until?: string }> = [
+    { label: "오늘", since: TODAY_START },
+    { label: "어제", since: YESTERDAY_START, until: YESTERDAY_END },
     { label: "7일", since: D7 },
   ];
 
@@ -143,11 +185,15 @@ async function main() {
   const rows: Row[] = [];
   for (const p of periods) {
     const [users, results, yearly, battles, payments] = await Promise.all([
-      countSince("users", p.since, "id"),
-      countSince("saju_results", p.since),
-      countSince("yearly_results", p.since),
-      countSince("saju_battles", p.since),
-      sb.from("payment_transactions").select("amount, method, user_id").gte("created_at", p.since).eq("status", "success"),
+      countBetween("users", p.since, p.until, "id"),
+      countBetween("saju_results", p.since, p.until),
+      countBetween("yearly_results", p.since, p.until),
+      countBetween("saju_battles", p.since, p.until),
+      (() => {
+        let q = sb.from("payment_transactions").select("amount, method, user_id").gte("created_at", p.since).eq("status", "success");
+        if (p.until) q = q.lt("created_at", p.until);
+        return q;
+      })(),
     ]);
     const kakaoPaid = (payments.data ?? []).filter(isPayable);
     rows.push({
@@ -174,19 +220,113 @@ async function main() {
   }
 
   // ── 1-1. 운영 요약 ──────────────────────────
-  const h1 = rows[0];
-  const d1 = rows[1];
+  const today = rows[0];
+  const yesterday = rows[1];
   const d7row = rows[2];
-  const signupToAnalysis = pct(d1.results, d1.users);
-  const signupToPay = pct(d1.pays, d1.users);
-  const avgPay = d1.pays > 0 ? Math.round(d1.revenue / d1.pays) : 0;
-  const avgRevenuePerSignup = d1.users > 0 ? Math.round(d1.revenue / d1.users) : 0;
+  const [h1Users, h1Results, h1Yearly, h1Battles, h1Payments] = await Promise.all([
+    countSince("users", H1, "id"),
+    countSince("saju_results", H1),
+    countSince("yearly_results", H1),
+    countSince("saju_battles", H1),
+    sb.from("payment_transactions").select("amount, method, user_id").gte("created_at", H1).eq("status", "success"),
+  ]);
+  const h1Paid = (h1Payments.data ?? []).filter(isPayable);
+  const h1: Row = {
+    period: "1시간",
+    users: h1Users,
+    results: h1Results,
+    yearly: h1Yearly,
+    battles: h1Battles,
+    pays: h1Paid.length,
+    revenue: h1Paid.reduce((s, x) => s + (x.amount ?? 0), 0),
+  };
+  const signupToAnalysis = pct(today.results, today.users);
+  const signupToPay = pct(today.pays, today.users);
+  const avgPay = today.pays > 0 ? Math.round(today.revenue / today.pays) : 0;
+  const avgRevenuePerSignup = today.users > 0 ? Math.round(today.revenue / today.users) : 0;
 
   section("🧭  운영 요약");
   console.log(`  지금 1시간   가입 ${c.green}${h1.users}${c.reset} · 개인 ${c.cyan}${h1.results}${c.reset} · 결제 ${c.yellow}${h1.pays}${c.reset} · 매출 ${c.yellow}${h1.revenue.toLocaleString()}원${c.reset}`);
-  console.log(`  24시간 비율  개인/가입 ${c.bold}${signupToAnalysis}%${c.reset}${c.dim}(반복 포함)${c.reset}  결제/가입 ${c.bold}${signupToPay}%${c.reset}  객단가 ${c.bold}${avgPay.toLocaleString()}원${c.reset}  가입당매출 ${c.bold}${avgRevenuePerSignup.toLocaleString()}원${c.reset}`);
+  console.log(`  오늘 비율    개인/가입 ${c.bold}${signupToAnalysis}%${c.reset}${c.dim}(반복 포함)${c.reset}  결제/가입 ${c.bold}${signupToPay}%${c.reset}  객단가 ${c.bold}${avgPay.toLocaleString()}원${c.reset}  가입당매출 ${c.bold}${avgRevenuePerSignup.toLocaleString()}원${c.reset}`);
+  console.log(`  어제 대비    가입 ${today.users - yesterday.users >= 0 ? c.green + "+" : c.red}${today.users - yesterday.users}명${c.reset} · 개인 ${today.results - yesterday.results >= 0 ? c.green + "+" : c.red}${today.results - yesterday.results}건${c.reset} · 매출 ${today.revenue - yesterday.revenue >= 0 ? c.green + "+" : c.red}${(today.revenue - yesterday.revenue).toLocaleString()}원${c.reset}`);
   console.log(`  7일 규모     가입 ${c.green}${d7row.users}명${c.reset} · 개인 ${c.cyan}${d7row.results}건${c.reset} · 결제 ${c.yellow}${d7row.pays}건${c.reset} · 매출 ${c.yellow}${d7row.revenue.toLocaleString()}원${c.reset}`);
-  console.log(`  올해 운세    실사용 ${d1.yearly > 0 ? c.yellow + d1.yearly + c.reset : c.dim + "0" + c.reset}건 ${c.dim}(운영자 테스트 제외)${c.reset}`);
+  console.log(`  올해 운세    오늘 ${today.yearly > 0 ? c.yellow + today.yearly + c.reset : c.dim + "0" + c.reset}건 · 어제 ${yesterday.yearly > 0 ? c.yellow + yesterday.yearly + c.reset : c.dim + "0" + c.reset}건 ${c.dim}(운영자 테스트 제외)${c.reset}`);
+
+  // ── 1-0. 결제 이상 감지 ──────────────────────────
+  // payment_transactions 기준 매출 집계만 보면 PortOne/webhook 에서는 PAID인데
+  // charge RPC 까지 못 내려온 결제(=코인 미충전)를 놓친다.
+  // charge_orders.status=paid 는 "결제 성공은 확인됐지만 아직 충전 전" 상태라
+  // 대시보드 최상단에서 즉시 경고해야 한다.
+  const pendingCutoffIso = new Date(now - 10 * 60_000).toISOString();
+  const [{ data: paidOrdersRaw }, { data: stalePendingRaw }] = await Promise.all([
+    sb
+      .from("charge_orders")
+      .select("order_id, user_id, package_id, amount, status, created_at, paid_at, charged_at")
+      .eq("status", "paid")
+      .order("paid_at", { ascending: false })
+      .limit(50),
+    sb
+      .from("charge_orders")
+      .select("order_id, user_id, package_id, amount, status, created_at, paid_at, charged_at")
+      .eq("status", "pending")
+      .lt("created_at", pendingCutoffIso)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  const paidOrders = ((paidOrdersRaw ?? []) as ChargeOrderRow[]).filter((o) => !o.user_id || !INTERNAL_USER_IDS.has(o.user_id));
+  const stalePending = ((stalePendingRaw ?? []) as ChargeOrderRow[]).filter((o) => !o.user_id || !INTERNAL_USER_IDS.has(o.user_id));
+  const issueUserIds = [...new Set([...paidOrders, ...stalePending].map((o) => o.user_id).filter(Boolean))] as string[];
+  const { data: issueUsers } = issueUserIds.length
+    ? await sb.from("users").select("id, nickname, referrer, utm_source, landing_path").in("id", issueUserIds)
+    : { data: [] as any[] };
+  const issueUserMap = new Map((issueUsers ?? []).map((u) => [u.id, u]));
+
+  const paidOrderIds = paidOrders.map((o) => o.order_id);
+  const [{ data: paidOrderCoins }, { data: paidOrderTxs }] = paidOrderIds.length
+    ? await Promise.all([
+        sb.from("coin_transactions").select("reference_id, type, amount").in("reference_id", paidOrderIds),
+        sb.from("payment_transactions").select("order_id, status, amount").in("order_id", paidOrderIds),
+      ])
+    : [{ data: [] as any[] }, { data: [] as any[] }];
+  const coinByOrder = new Map<string, number>();
+  for (const tx of paidOrderCoins ?? []) {
+    if (tx.type !== "charge" && tx.type !== "bonus") continue;
+    coinByOrder.set(tx.reference_id, (coinByOrder.get(tx.reference_id) ?? 0) + (tx.amount ?? 0));
+  }
+  const paymentTxOrderSet = new Set((paidOrderTxs ?? []).map((p) => p.order_id));
+  const confirmedMissing = paidOrders.filter((o) => (coinByOrder.get(o.order_id) ?? 0) <= 0);
+
+  section(`${confirmedMissing.length > 0 ? c.red : c.green}${confirmedMissing.length > 0 ? "🚨" : "✅"}  결제 이상 감지${c.reset}`);
+  if (confirmedMissing.length === 0 && stalePending.length === 0) {
+    console.log(`  ${c.green}이상 없음${c.reset}  ${c.dim}(charge_orders paid 미충전 0건 · 10분 초과 pending 0건)${c.reset}`);
+  } else {
+    if (confirmedMissing.length > 0) {
+      const missingRevenue = confirmedMissing.reduce((sum, o) => sum + (o.amount ?? 0), 0);
+      console.log(`  ${c.red}${c.bold}확정 누락 ${confirmedMissing.length}건 · ${missingRevenue.toLocaleString()}원${c.reset}  ${c.dim}(PortOne/webhook PAID, 코인 원장 없음)${c.reset}`);
+      console.log(`  ${c.dim}시각           닉네임       금액      유입          랜딩       order        payment_tx${c.reset}`);
+      console.log(`  ${c.dim}${"─".repeat(90)}${c.reset}`);
+      for (const o of confirmedMissing.slice(0, 12)) {
+        const u = o.user_id ? issueUserMap.get(o.user_id) : null;
+        const ch = classifyChannel(u?.referrer ?? null, u?.utm_source ?? null);
+        const hasPaymentTx = paymentTxOrderSet.has(o.order_id) ? "있음" : "없음";
+        console.log(
+          `  ${padR(fmtHM(o.paid_at ?? o.created_at), 14)} ${padR(clip(u?.nickname ?? "—", 10), 12)} ${padL((o.amount ?? 0).toLocaleString() + "원", 8)}  ${ch.color}${padR(ch.short, 12)}${c.reset} ${padR(clip(u?.landing_path ?? "—", 9), 10)} ${o.order_id.slice(0, 12)}  ${hasPaymentTx}`,
+        );
+      }
+      if (confirmedMissing.length > 12) console.log(`  ${c.dim}… ${confirmedMissing.length - 12}건 더 있음${c.reset}`);
+    }
+    if (stalePending.length > 0) {
+      console.log(`  ${c.yellow}오래된 pending ${stalePending.length}건${c.reset}  ${c.dim}(10분 이상 결제 완료/취소 확인 안 됨 — 실제 PAID 여부 확인 필요)${c.reset}`);
+      for (const o of stalePending.slice(0, 8)) {
+        const u = o.user_id ? issueUserMap.get(o.user_id) : null;
+        const ch = classifyChannel(u?.referrer ?? null, u?.utm_source ?? null);
+        console.log(
+          `  ${c.yellow}${fmtHM(o.created_at)}${c.reset}  ${padR(clip(u?.nickname ?? "—", 12), 14)} ${(o.amount ?? 0).toLocaleString()}원  ${ch.color}${ch.short}${c.reset}  ${o.order_id.slice(0, 12)}`,
+        );
+      }
+    }
+  }
 
   // ── 1-1-1. 어제 요약 ──────────────────────────
   const [yUsers, yPersonal, yYearly, yBattles, yPayments, yChannels, yGrades] = await Promise.all([
@@ -247,13 +387,13 @@ async function main() {
     .slice(0, 3)
     .map((x) => `${x.color}${x.short} ${x.count}${c.reset}`)
     .join(" / ") || `${c.dim}없음${c.reset}`;
-  const gradeCounts: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, D: 0, ERR: 0 };
+  const gradeCounts: Record<string, number> = { SS: 0, S: 0, A: 0, B: 0, C: 0, ERR: 0 };
   for (const row of yGrades.data ?? []) {
     const fj = row.full_json as any;
-    const g = fj?._error ? "ERR" : fj?.tier?.grade;
+    const g = fj?._error ? "ERR" : displayGrade(fj?.tier?.grade);
     if (typeof g === "string" && g in gradeCounts) gradeCounts[g]++;
   }
-  const yGradeLine = `S ${gradeCounts.S} · A ${gradeCounts.A} · B ${gradeCounts.B} · C ${gradeCounts.C} · D ${gradeCounts.D}${gradeCounts.ERR ? ` · ERR ${gradeCounts.ERR}` : ""}`;
+  const yGradeLine = `SS ${gradeCounts.SS} · S ${gradeCounts.S} · A ${gradeCounts.A} · B ${gradeCounts.B} · C ${gradeCounts.C}${gradeCounts.ERR ? ` · ERR ${gradeCounts.ERR}` : ""}`;
 
   section(`📌  어제 요약  ${c.dim}(${YESTERDAY_KST}, KST)${c.reset}`);
   console.log(`  가입 ${c.green}${yUsers.count ?? 0}명${c.reset} · 개인 ${c.cyan}${yPersonal.count ?? 0}건${c.reset} · 올해 ${c.yellow}${yYearly.count ?? 0}건${c.reset} · 배틀 ${c.magenta}${yBattles.count ?? 0}건${c.reset} · 결제 ${c.yellow}${yPaid.length}건${c.reset} · 매출 ${c.yellow}${yRevenue.toLocaleString()}원${c.reset}`);
@@ -305,7 +445,7 @@ async function main() {
       birthDate: r.birth_date ?? null,
       gender: r.gender ?? null,
       region: r.region ?? null,
-      grade: fj?._error ? "ERR" : fj?.tier?.grade ?? (!fj ? "..." : "—"),
+      grade: fj?._error ? "ERR" : (!fj ? "..." : displayGrade(fj?.tier?.grade)),
       score: fj?._error || !fj ? "—" : typeof fj?.tier?.composite === "number" ? String(fj.tier.composite) : "—",
     });
   }
@@ -319,7 +459,7 @@ async function main() {
       birthDate: r.birth_date ?? null,
       gender: r.gender ?? null,
       region: r.region ?? null,
-      grade: fj?._error ? "ERR" : fj?.tier?.grade ?? (!fj ? "..." : "—"),
+      grade: fj?._error ? "ERR" : (!fj ? "..." : displayGrade(fj?.tier?.grade)),
       score: fj?._error || !fj ? "—" : typeof fj?.tier?.composite === "number" ? String(Math.round(fj.tier.composite)) : "—",
     });
   }
@@ -332,7 +472,7 @@ async function main() {
       birthDate: null,
       gender: null,
       region: null,
-      grade: `${r.player_a_grade ?? "—"}/${r.player_b_grade ?? "—"}`,
+      grade: displayGradePair(r.player_a_grade, r.player_b_grade),
       score: `${r.wins_a ?? 0}:${r.wins_b ?? 0}${r.draws ? `:${r.draws}` : ""}`,
     });
   }
@@ -703,7 +843,7 @@ async function main() {
       const u = r.user_id ? yearlyUserMap.get(r.user_id) : null;
       const ch = classifyChannel(u?.referrer ?? null, u?.utm_source ?? null);
       const fj = r.full_json as any;
-      const grade = fj?._error ? "ERR" : fj?.tier?.grade ?? (!fj ? "..." : "—");
+      const grade = fj?._error ? "ERR" : (!fj ? "..." : displayGrade(fj?.tier?.grade));
       const score = fj?._error || !fj ? "—" : typeof fj?.tier?.composite === "number" ? String(Math.round(fj.tier.composite)) : "—";
       console.log(
         `  ${padR(fmtHM(r.created_at), 14)} ${padL(String(r.target_year ?? "—"), 5)} ${padR(grade, 5)} ${padL(score, 5)} ${member}  ${padR(name, 10)} ${padR(r.birth_date ?? "—", 12)} ${gender}  ${c.dim}${padR(r.region ?? "—", 6)}${c.reset} ${ch.color}${padR(ch.short, 10)}${c.reset} ${padR(r.yearly_pillar ?? "—", 6)}`,
@@ -712,7 +852,7 @@ async function main() {
   }
 
   // ── 최근 활동 감지 ──────────────────────
-  if (rows[0].users >= 3 || rows[0].pays > 0) {
+  if (h1.users >= 3 || h1.pays > 0) {
     console.log("");
     console.log(`  ${c.bgPink}${c.white} 🔥 최근 1시간 활발 — 모니터링 유지 권장 ${c.reset}`);
   }
