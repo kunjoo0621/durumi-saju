@@ -2453,6 +2453,14 @@ const TITLE_FIELD_META: Record<string, { label: string; world: string }> = {
 };
 // 동점 시 고정 우선순위(결정론)
 const TITLE_FIELD_ORDER = ["재물운", "직장운", "대인운", "연애운", "건강운"];
+// 분야별 비유 각도 풀 — 같은 분야라도 사람마다 다른 갈래 배정해 중복 방지(v1.5)
+const TITLE_ANGLE_POOL: Record<string, string[]> = {
+  재물운: ["통장 잔고", "월급의 행방", "플렉스·과소비", "투자·굴리기", "텅장·무지출"],
+  직장운: ["직급(인턴↔임원)", "마감·기획", "에이스·일머리", "워커홀릭·갓생", "퇴사 욕구"],
+  연애운: ["썸·환승", "밀당", "지속·본방 사수", "고백·직진", "연애 패턴"],
+  건강운: ["체력·배터리", "수면·리듬", "번아웃", "관리 습관"],
+  대인운: ["인맥·마당발", "분위기 메이커", "리더·중심", "거리·눈치"],
+};
 
 function buildTitleDirective(
   scores: Record<string, number>,
@@ -2464,6 +2472,13 @@ function buildTitleDirective(
   const bottom = [...entries].sort((a, b) => a.v - b.v)[0];
   const tm = TITLE_FIELD_META[top.k];
   const bm = TITLE_FIELD_META[bottom.k];
+
+  // 강점 분야의 비유 각도를 사람별로 분산 배정(결정론적, 입력 해시) — 중복 방지
+  const pool = TITLE_ANGLE_POOL[top.k] ?? [];
+  const seed = `${input.name}${input.birthYear}${input.birthMonth}${input.birthDay}`
+    .split("")
+    .reduce((a, c) => a + c.charCodeAt(0), 0);
+  const angle = pool.length ? pool[seed % pool.length] : "";
 
   const g = (internalGrade || "").trim().toUpperCase();
   let band: string;
@@ -2491,7 +2506,8 @@ function buildTitleDirective(
     `- 최고 분야: ${tm.label} ${top.v}점 (세계: ${tm.world}) → 강점은 여기서만 뽑아라.`,
     `- 최저 분야: ${bm.label} ${bottom.v}점 (세계: ${bm.world}) → 약점이 필요하면 여기서만. 최고 분야를 약점으로 쓰면 실패.`,
     `- 등급밴드: ${band}`,
-    '- 같은 분야라도 흔한 표현("돈 냄새 맡는" 등) 반복 말고 다른 각도로 신선하게.',
+    ...(angle ? [`- 강점 각도: 이번엔 "${angle}" 갈래로 풀어라 (흔한 표현·다른 사람과 안 겹치게).`] : []),
+    '- 같은 분야라도 흔한 표현("돈 냄새 맡는"·"칼/칼집" 등) 반복 말고 다른 각도로.',
     ...(guard ? [`- ${guard}`] : []),
   ].join("\n");
 }
