@@ -2442,6 +2442,87 @@ export function assertNoContentKey(value: unknown, path: string[] = []) {
   }
 }
 
+// ── tier.title 서버 계산 scaffold (v1.5) ──────────────
+// 모델이 분야 선택·등급 게이팅을 75%만 따르는 문제 → 서버가 결정론적으로 계산해 주입.
+const TITLE_FIELD_META: Record<string, { label: string; world: string }> = {
+  재물운: { label: "재물", world: "돈·소비" },
+  연애운: { label: "애정", world: "연애" },
+  직장운: { label: "직업", world: "일·회사" },
+  건강운: { label: "건강", world: "몸·체력" },
+  대인운: { label: "대인관계", world: "사람·모임" },
+};
+// 동점 시 고정 우선순위(결정론)
+const TITLE_FIELD_ORDER = ["재물운", "직장운", "대인운", "연애운", "건강운"];
+// 분야별 비유 각도 풀 — 같은 분야라도 사람마다 다른 갈래 배정해 중복 방지(v1.5)
+const TITLE_ANGLE_POOL: Record<string, string[]> = {
+  재물운: ["통장 잔고", "월급의 행방", "플렉스·과소비", "투자·굴리기", "텅장·무지출"],
+  직장운: ["직급(인턴↔임원)", "마감·기획", "에이스·일머리", "워커홀릭·갓생", "퇴사 욕구"],
+  연애운: ["썸·환승", "밀당", "지속·본방 사수", "고백·직진", "연애 패턴"],
+  건강운: ["체력·배터리", "수면·리듬", "번아웃", "관리 습관"],
+  대인운: ["인맥·마당발", "분위기 메이커", "리더·중심", "거리·눈치"],
+};
+
+function buildTitleDirective(
+  scores: Record<string, number>,
+  internalGrade: string,
+  input: InputPayload,
+): string {
+  const entries = TITLE_FIELD_ORDER.map((k) => ({ k, v: scores[k] ?? 0 }));
+  const top = [...entries].sort((a, b) => b.v - a.v)[0];
+  const bottom = [...entries].sort((a, b) => a.v - b.v)[0];
+  const tm = TITLE_FIELD_META[top.k];
+  const bm = TITLE_FIELD_META[bottom.k];
+
+  // 강점 분야의 비유 각도를 사람별로 분산 배정(결정론적, 입력 해시) — 중복 방지
+  const pool = TITLE_ANGLE_POOL[top.k] ?? [];
+  const seed = `${input.name}${input.birthYear}${input.birthMonth}${input.birthDay}`
+    .split("")
+    .reduce((a, c) => a + c.charCodeAt(0), 0);
+  const angle = pool.length ? pool[seed % pool.length] : "";
+
+  const g = (internalGrade || "").trim().toUpperCase();
+  let band: string;
+  if (g === "S" || g === "A") {
+    band = `상위권 — 약점 절 절대 금지("~인데/지만/는데" 대비 구조 쓰지 마라). ${tm.label} 강점만으로 "오 멋진데" 소리 나오게.`;
+  } else if (g === "B") {
+    band = `강점 우세 — ${tm.label} 강점을 앞세우고 약점은 애교 수준으로만 살짝.`;
+  } else if (g === "C") {
+    band = `균형 — ${tm.label}(강점)과 ${bm.label}(약점)을 반반으로, 모질지 않게.`;
+  } else {
+    band = `하위권 — ${bm.label} 약점을 정면으로 팩폭(인격 아닌 패턴 공격), 단 웃기게.`;
+  }
+
+  const solo = /single|솔로|싱글|모태/i.test(input.relationshipStatus || "");
+  const student = /student|학생|취준|job.?seek/i.test(input.employmentStatus || "");
+  const guardParts: string[] = [];
+  if (solo) guardParts.push("솔로라 연애 세계 비유 금지");
+  if (student) guardParts.push("학생/취준이라 회사 세계 비유 금지");
+  const guard = guardParts.length
+    ? `단, ${guardParts.join("·")} — 그 분야가 걸리면 다른 세계(일상·돈·몸 등)로 표현.`
+    : "";
+
+  return [
+    "[tier.title 전용 지침 — 서버 계산값, 반드시 따를 것]",
+    `- 최고 분야: ${tm.label} ${top.v}점 (세계: ${tm.world}) → 강점은 여기서만 뽑아라.`,
+    `- 최저 분야: ${bm.label} ${bottom.v}점 (세계: ${bm.world}) → 약점이 필요하면 여기서만. 최고 분야를 약점으로 쓰면 실패.`,
+    `- 등급밴드: ${band}`,
+    ...(angle ? [`- 강점 각도: 이번엔 "${angle}" 갈래로 풀어라 (흔한 표현·다른 사람과 안 겹치게).`] : []),
+    '- 같은 분야라도 흔한 표현("돈 냄새 맡는"·"칼/칼집" 등) 반복 말고 다른 각도로.',
+    ...(guard ? [`- ${guard}`] : []),
+  ].join("\n");
+}
+
+// tier.title 품질 모니터링 로그(재생성 안 함, 관찰만) — v1.5
+function logTitleQuality(title: string, internalGrade: string): void {
+  if (!title) return;
+  const g = (internalGrade || "").trim().toUpperCase();
+  const SLANG = /만렙|마나|쿨타임|유리대포|캐릭|챔피언|폭딜|빌드|너프|딜러|데미지|딜링/;
+  if (SLANG.test(title)) console.warn("[TITLE_QC] 게임 슬랭 검출:", title);
+  if ((g === "S" || g === "A") && /인데|지만|는데/.test(title)) {
+    console.warn("[TITLE_QC] 상위권 대비/약점 구조 누출:", g, title);
+  }
+}
+
 export async function runFullAnalysis(input: InputPayload) {
   const useMock = process.env.USE_MOCK === "true";
   if (useMock) {
@@ -2498,6 +2579,7 @@ export async function runFullAnalysis(input: InputPayload) {
     ? CORE_FEAR_LABELS[input.coreFearAxis as CoreFearAxis]
     : "미선택";
   const { currentYear, koreanAge, internationalAge } = getAges(input.birthYear);
+  const titleDirective = buildTitleDirective(serverScores, serverTier.grade, input);
   const userInfo = `
 이름: ${input.name}
 생년월일: ${input.birthYear}년 ${input.birthMonth}월 ${input.birthDay}일
@@ -2512,6 +2594,8 @@ export async function runFullAnalysis(input: InputPayload) {
 [서버 계산 결과]
 ${serverScoreSummary}
 위 점수/등급은 확정값이다. 텍스트 생성 시 이 값을 근거로 서술하되, 점수 자체를 변경하지 마라.
+
+${titleDirective}
 
 위 정보를 바탕으로 사주를 분석해주세요. 연애/직업 정보가 제공된 경우 해당 맥락을 결과에 반영하세요.
   `.trim();
@@ -2558,6 +2642,8 @@ ${serverScoreSummary}
             : [],
           coreFearAxisBlock: typeof parsed?.coreFearAxisBlock === "string" ? parsed.coreFearAxisBlock : "",
         };
+
+        logTitleQuality(geminiText.tier.title, serverTier.grade);
 
         const assembled = assembleFinalResult(serverTier, serverScores, geminiText) as unknown as AnalysisResult;
         assembled.coreFearAxisBlock = resolveCoreFearAxisBlock(input, assembled.coreFearAxisBlock);
