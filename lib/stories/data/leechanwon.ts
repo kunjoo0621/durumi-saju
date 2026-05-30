@@ -71,7 +71,7 @@ export const leeChanwon: Story = {
       blocks: [
         {
           kind: "p",
-          text: "임수 일간 기준으로 보면 사주에 **식신 · 편관 · 편재 · 겁재**가 드러나 있어요. 이게 가수·방송인이라는 직업에 잘 맞는 조합이에요.",
+          text: "임수 일간 기준으로 보면 사주에 [식신](/dict/sipsung/sikshin) · [편관](/dict/sipsung/pyeongwan) · [편재](/dict/sipsung/pyeonjae) · [겁재](/dict/sipsung/gyeopjae)가 드러나 있어요. 이게 가수·방송인이라는 직업에 잘 맞는 조합이에요.",
         },
         {
           kind: "checklist",
@@ -98,7 +98,7 @@ export const leeChanwon: Story = {
       blocks: [
         {
           kind: "p",
-          text: "강점으로 보기 좋은 신살은 **천덕귀인과 월덕귀인**이에요.",
+          text: "강점으로 보기 좋은 신살은 [천덕귀인](/dict/sinsal/cheondeok-gwiin)과 [월덕귀인](/dict/sinsal/woldeok-gwiin)이에요.",
         },
         {
           kind: "p",
