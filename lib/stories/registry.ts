@@ -1,7 +1,9 @@
 import { anton } from "./data/anton";
 import { careerSaju } from "./data/career-saju";
+import { deathDream } from "./data/death-dream";
 import { dombokSaju } from "./data/dombok-saju";
 import { dragonDream } from "./data/dragon-dream";
+import { exLoverDream } from "./data/ex-lover-dream";
 import { fireDream } from "./data/fire-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
@@ -38,8 +40,10 @@ import type { Story, StoryCategory } from "./types";
 const STORIES: Story[] = [
   anton,
   careerSaju,
+  deathDream,
   dombokSaju,
   dragonDream,
+  exLoverDream,
   fireDream,
   iljiSpouse,
   iljuPersonality,
