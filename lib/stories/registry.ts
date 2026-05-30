@@ -4,7 +4,10 @@ import { deathDream } from "./data/death-dream";
 import { dombokSaju } from "./data/dombok-saju";
 import { dragonDream } from "./data/dragon-dream";
 import { exLoverDream } from "./data/ex-lover-dream";
+import { catDream } from "./data/cat-dream";
 import { fireDream } from "./data/fire-dream";
+import { fishDream } from "./data/fish-dream";
+import { weddingDream } from "./data/wedding-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
 import { imYoungwoong } from "./data/imyoungwoong";
@@ -40,10 +43,13 @@ import type { Story, StoryCategory } from "./types";
 const STORIES: Story[] = [
   anton,
   careerSaju,
+  catDream,
   deathDream,
   dombokSaju,
   dragonDream,
   exLoverDream,
+  fishDream,
+  weddingDream,
   fireDream,
   iljiSpouse,
   iljuPersonality,
