@@ -1,3 +1,4 @@
+import Link from "next/link";
 import StoryCTA from "./StoryCTA";
 import type { Story, StoryBlock } from "@/lib/stories/types";
 
@@ -9,7 +10,7 @@ interface Props {
  * 토스피드·카카오앤써 본문 디테일 + 블록 기반 콘텐츠 모델:
  * - 단락(p), 표(table), 체크리스트(checklist), 콜아웃(callout)
  * - H2 좌측 컬러바, 본문 행간 1.85
- * - **bold** 인라인 강조
+ * - **bold** 인라인 강조, [text](url) 인라인 링크(내부는 /dict 용어 연결)
  * - section ctaAfter 인덱스 다음에 카드형 CTA
  */
 export default function StoryBody({ story }: Props) {
@@ -249,17 +250,48 @@ function BlockView({ block }: { block: StoryBlock }) {
   }
 }
 
+// [text](url) 링크만 토큰화해 렌더. bold 내부에서도 재사용(중첩 지원).
+function renderLinks(text: string, kp: string) {
+  return text.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+    const key = `${kp}-${i}`;
+    const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link) {
+      const [, label, href] = link;
+      const cls =
+        "text-[#A8C4FF] underline decoration-[#A8C4FF]/40 underline-offset-[3px] hover:decoration-[#A8C4FF] transition-colors";
+      // 내부 링크(/dict 등)는 next/link, 외부는 새 탭.
+      return href.startsWith("/") ? (
+        <Link key={key} href={href} className={cls}>
+          {label}
+        </Link>
+      ) : (
+        <a
+          key={key}
+          href={href}
+          className={cls}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {label}
+        </a>
+      );
+    }
+    return <span key={key}>{part}</span>;
+  });
+}
+
 function renderInline(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    const m = part.match(/^\*\*(.+)\*\*$/);
-    if (m) {
+  // **bold** 토큰화 후, bold 안팎 모두 [text](url) 링크를 재귀 처리.
+  // → **[용어](/dict/...)** 처럼 링크가 굵게 안에 있어도 정상 렌더.
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
+    const bold = part.match(/^\*\*(.+)\*\*$/);
+    if (bold) {
       return (
         <strong key={i} className="text-text-primary font-semibold">
-          {m[1]}
+          {renderLinks(bold[1], `b${i}`)}
         </strong>
       );
     }
-    return <span key={i}>{part}</span>;
+    return <span key={i}>{renderLinks(part, `t${i}`)}</span>;
   });
 }

@@ -14,7 +14,7 @@ export const dombokSaju: Story = {
       blocks: [
         {
           kind: "p",
-          text: "사주에서 돈을 상징하는 글자를 **재성**이라고 합니다. 정재(正財)와 편재(偏財) 두 종류가 있고, 합쳐서 '재성'이라고 묶어요.",
+          text: "사주에서 돈을 상징하는 글자를 **재성**이라고 합니다. [정재](/dict/sipsung/jeongjae)(正財)와 [편재](/dict/sipsung/pyeonjae)(偏財) 두 종류가 있고, 합쳐서 '재성'이라고 묶어요.",
         },
         {
           kind: "p",
