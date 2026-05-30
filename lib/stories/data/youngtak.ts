@@ -67,7 +67,7 @@ export const youngtak: Story = {
       blocks: [
         {
           kind: "p",
-          text: "신금 일간 기준으로 사주에 **[정관](/dict/sipsung/jeonggwan)·[편관](/dict/sipsung/pyeongwan) · [식신](/dict/sipsung/sikshin)·[상관](/dict/sipsung/sanggwan) · 편인** 결이 자리해 있어요. 그중에서 **관성(책임·무대)과 식상(표현·재능)이 함께 드러나는 게 가장 큰 특징**이에요.",
+          text: "신금 일간 기준으로 사주에 **정관·편관 · 식신·상관 · 편인** 결이 자리해 있어요. 그중에서 **관성(책임·무대)과 식상(표현·재능)이 함께 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",

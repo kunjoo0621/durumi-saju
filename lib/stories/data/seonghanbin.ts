@@ -71,7 +71,7 @@ export const seongHanbin: Story = {
       blocks: [
         {
           kind: "p",
-          text: "정화 일간 기준으로 사주에 [비견](/dict/sipsung/bigyeon) · [겁재](/dict/sipsung/gyeopjae) · **식신** · [편재](/dict/sipsung/pyeonjae) · **정인** 결이 두루 자리해 있어요. 그중에서 **비견·겁재(나와 같은 결)가 강하게 드러나는 게 가장 큰 특징**이에요.",
+          text: "정화 일간 기준으로 사주에 **비견 · 겁재 · 식신 · 편재 · 정인** 결이 두루 자리해 있어요. 그중에서 **비견·겁재(나와 같은 결)가 강하게 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",

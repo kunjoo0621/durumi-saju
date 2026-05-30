@@ -71,7 +71,7 @@ export const zhangHao: Story = {
       blocks: [
         {
           kind: "p",
-          text: "갑목 일간 기준으로 사주에 **편관** · [정재](/dict/sipsung/jeongjae) · [편재](/dict/sipsung/pyeonjae) · [정인](/dict/sipsung/jeongin) 별이 자리해 있어요. 그중에서 **편관(책임·규율)과 재성(실리·결과)이 함께 드러나는 게 가장 큰 특징**이에요.",
+          text: "갑목 일간 기준으로 사주에 **편관 · 정재 · 편재 · 정인** 별이 자리해 있어요. 그중에서 **편관(책임·규율)과 재성(실리·결과)이 함께 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",

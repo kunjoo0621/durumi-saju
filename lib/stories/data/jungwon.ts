@@ -67,7 +67,7 @@ export const jungwon: Story = {
       blocks: [
         {
           kind: "p",
-          text: "무토 일간 기준으로 사주에 **[편관](/dict/sipsung/pyeongwan) · 편인 · 정인 · [식신](/dict/sipsung/sikshin)**이 드러나요. 그중에서 **편관(책임·규율)과 인성(학습·받쳐줌)이 함께 드러나는 게 가장 큰 특징**이에요.",
+          text: "무토 일간 기준으로 사주에 **편관 · 편인 · 정인 · 식신**이 드러나요. 그중에서 **편관(책임·규율)과 인성(학습·받쳐줌)이 함께 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",

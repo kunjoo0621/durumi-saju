@@ -67,7 +67,7 @@ export const minji: Story = {
       blocks: [
         {
           kind: "p",
-          text: "병화 일간 기준으로 사주에 상관·식신 · [편인](/dict/sipsung/pyeonin) · [편재](/dict/sipsung/pyeonjae)가 자리해 있어요. 그중에서 **식상(표현·재능)과 편인(깊은 사고)이 함께 드러나는 게 가장 큰 특징**이에요.",
+          text: "병화 일간 기준으로 사주에 상관·식신 · 편인 · 편재가 자리해 있어요. 그중에서 **식상(표현·재능)과 편인(깊은 사고)이 함께 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",

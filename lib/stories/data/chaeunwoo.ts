@@ -67,7 +67,7 @@ export const chaeunwoo: Story = {
       blocks: [
         {
           kind: "p",
-          text: "신금 일간 기준으로 사주에 식신 · 편인 · [편재](/dict/sipsung/pyeonjae) · [편관](/dict/sipsung/pyeongwan) 결이 자리해 있어요. 그중에서 **식신(표현)과 편인(깊은 사고)이 함께 드러나는 게 가장 큰 특징**이에요.",
+          text: "신금 일간 기준으로 사주에 식신 · 편인 · 편재 · 편관 결이 자리해 있어요. 그중에서 **식신(표현)과 편인(깊은 사고)이 함께 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",

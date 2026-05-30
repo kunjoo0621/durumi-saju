@@ -71,7 +71,7 @@ export const iu: Story = {
       blocks: [
         {
           kind: "p",
-          text: "정화 일간 기준으로 사주에 [편재](/dict/sipsung/pyeonjae) · [편관](/dict/sipsung/pyeongwan) · [비견](/dict/sipsung/bigyeon) · 겁재 별이 두루 드러나요. 이 조합이 **\"자기 손으로 자기 자리를 만드는\"** 자수성가 성향의 결을 만듭니다.",
+          text: "정화 일간 기준으로 사주에 편재 · 편관 · 비견 · 겁재 별이 두루 드러나요. 이 조합이 **\"자기 손으로 자기 자리를 만드는\"** 자수성가 성향의 결을 만듭니다.",
         },
         {
           kind: "checklist",

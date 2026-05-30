@@ -71,7 +71,7 @@ export const wonyoung: Story = {
       blocks: [
         {
           kind: "p",
-          text: "임수 일간 기준으로 사주에 **[식신](/dict/sipsung/sikshin) · [비견](/dict/sipsung/bigyeon) · [편인](/dict/sipsung/pyeonin) · 정재** 결이 자리해 있어요. 그중에서 **비견(자기 주관)과 식신(표현)·편인(직관)이 함께 드러나는 게 가장 큰 특징**이에요.",
+          text: "임수 일간 기준으로 사주에 **식신 · 비견 · 편인 · 정재** 결이 자리해 있어요. 그중에서 **비견(자기 주관)과 식신(표현)·편인(직관)이 함께 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",

@@ -67,7 +67,7 @@ export const jungkook: Story = {
       blocks: [
         {
           kind: "p",
-          text: "병화 일간 기준으로 사주에 **겁재 · 식신 · [상관](/dict/sipsung/sanggwan) · [편재](/dict/sipsung/pyeonjae)** 기운이 자리해 있어요. 그중에서 **비겁(자립·추진)과 식상(표현·재능)이 함께 드러나는 게 가장 큰 특징**이에요.",
+          text: "병화 일간 기준으로 사주에 **겁재 · 식신 · 상관 · 편재** 기운이 자리해 있어요. 그중에서 **비겁(자립·추진)과 식상(표현·재능)이 함께 드러나는 게 가장 큰 특징**이에요.",
         },
         {
           kind: "checklist",
