@@ -180,7 +180,7 @@ export const jennie: Story = {
   ],
   celebrity: {
     name: "제니",
-    occupation: "블랙핑크(BLACKPINK)",
+    occupation: "블랙핑크(BLACKPINK) 멤버·솔로 아티스트",
     birthDate: "1996-01-16",
     calendar: "solar",
     gender: "F",
