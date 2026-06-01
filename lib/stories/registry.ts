@@ -10,6 +10,9 @@ import { exLoverDream } from "./data/ex-lover-dream";
 import { catDream } from "./data/cat-dream";
 import { fireDream } from "./data/fire-dream";
 import { fishDream } from "./data/fish-dream";
+import { hanSohee } from "./data/hansohee";
+import { jennie } from "./data/jennie";
+import { kimSoohyun } from "./data/kimsoohyun";
 import { weddingDream } from "./data/wedding-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
@@ -47,6 +50,9 @@ const STORIES: Story[] = [
   anton,
   bloodDream,
   careerSaju,
+  hanSohee,
+  jennie,
+  kimSoohyun,
   chasedDream,
   dogDream,
   catDream,
