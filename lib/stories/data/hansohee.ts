@@ -181,6 +181,10 @@ export const hanSohee: Story = {
     iljuLabel: "계묘(癸卯)일주",
     source: "위키백과 · 나무위키 (2026-06-01 확인)",
   },
+  heroImage: {
+    src: "/stories/heroes/hansohee.png",
+    alt: "한소희 수채화 일러스트 — 두루미 매거진 연예인 사주",
+  },
   publishedAt: "2026-06-01",
   updatedAt: "2026-06-01",
 };
