@@ -1,9 +1,13 @@
 import { anton } from "./data/anton";
+import { babyDream } from "./data/baby-dream";
 import { bloodDream } from "./data/blood-dream";
 import { careerSaju } from "./data/career-saju";
 import { chasedDream } from "./data/chased-dream";
 import { deathDream } from "./data/death-dream";
 import { dogDream } from "./data/dog-dream";
+import { fallingDream } from "./data/falling-dream";
+import { hairDream } from "./data/hair-dream";
+import { houseDream } from "./data/house-dream";
 import { dombokSaju } from "./data/dombok-saju";
 import { dragonDream } from "./data/dragon-dream";
 import { exLoverDream } from "./data/ex-lover-dream";
@@ -48,8 +52,12 @@ import type { Story, StoryCategory } from "./types";
 
 const STORIES: Story[] = [
   anton,
+  babyDream,
   bloodDream,
   careerSaju,
+  fallingDream,
+  hairDream,
+  houseDream,
   hanSohee,
   jennie,
   kimSoohyun,
