@@ -193,7 +193,7 @@ export const iu: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "정유(丁酉)일주",
-    source: "위키백과 · 나무위키 (2026-05-27 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-05-27 확인)",
   },
   heroImage: {
     src: "/stories/heroes/iu.png",

@@ -23,7 +23,7 @@ export const jungwon: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "무토는 다섯 천간 중 가장 '중심'을 상징해요. 사람과 상황을 끌어안아 자리 잡게 하는 기질이라, 리더·중재자 자리에 자주 어울리는 일간입니다.",
+          text: "무토는 열 천간 중 가장 '중심'을 상징해요. 사람과 상황을 끌어안아 자리 잡게 하는 기질이라, 리더·중재자 자리에 자주 어울리는 일간입니다.",
         },
       ],
     },
@@ -183,7 +183,7 @@ export const jungwon: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "무오(戊午)일주",
-    source: "위키백과 · KProfiles (2026-05-28 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 · KProfiles (2026-05-28 확인)",
   },
   heroImage: {
     src: "/stories/heroes/jungwon.png",

@@ -23,7 +23,7 @@ export const minji: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "병화는 다섯 천간의 불 중 가장 크고 밝은 불, 태양이에요. 속을 감추기보다 환하게 드러내는 성질이라, 솔직함과 분명한 존재감이 함께 어울리는 일간입니다.",
+          text: "병화는 두 불 천간 중 가장 크고 밝은 불, 태양이에요. 속을 감추기보다 환하게 드러내는 성질이라, 솔직함과 분명한 존재감이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -172,7 +172,7 @@ export const minji: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "병술(丙戌)일주",
-    source: "위키백과 · 나무위키 (2026-05-29 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-05-29 확인)",
   },
   heroImage: {
     src: "/stories/heroes/minji.png",

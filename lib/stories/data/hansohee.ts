@@ -23,7 +23,7 @@ export const hanSohee: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "계수는 다섯 천간의 물 중 가장 섬세하고 맑은 물이에요. 크게 휘몰아치기보다 조용히 스며들며 적응하는 성향이라, 총명함과 섬세함, 유연한 적응력이 함께 어울리는 일간입니다.",
+          text: "계수는 두 물 천간 중 가장 섬세하고 맑은 물이에요. 크게 휘몰아치기보다 조용히 스며들며 적응하는 성향이라, 총명함과 섬세함, 유연한 적응력이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -179,7 +179,7 @@ export const hanSohee: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "계묘(癸卯)일주",
-    source: "위키백과 · 나무위키 (2026-06-01 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-06-01 확인)",
   },
   heroImage: {
     src: "/stories/heroes/hansohee.png",

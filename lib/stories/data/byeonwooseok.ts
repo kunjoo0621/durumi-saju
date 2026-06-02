@@ -23,7 +23,7 @@ export const byeonWooseok: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "갑목은 다섯 천간의 나무 중 가장 곧고 우뚝한 나무예요. 옆으로 휘기보다 위로 곧게 솟는 성질이라, 곧은 자기 기준과 우뚝 서려는 기상이 함께 어울리는 일간입니다.",
+          text: "갑목은 두 나무 천간 중 가장 곧고 우뚝한 나무예요. 옆으로 휘기보다 위로 곧게 솟는 성질이라, 곧은 자기 기준과 우뚝 서려는 기상이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -180,7 +180,7 @@ export const byeonWooseok: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "갑술(甲戌)일주",
-    source: "위키백과 · 나무위키 (2026-06-03 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-06-03 확인)",
   },
   heroImage: {
     src: "/stories/heroes/byeonwooseok.png",

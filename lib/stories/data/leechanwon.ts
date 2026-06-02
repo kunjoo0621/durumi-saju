@@ -181,7 +181,7 @@ export const leeChanwon: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "임인(壬寅)일주",
-    source: "위키백과 · 나무위키 (2026-05-27 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-05-27 확인)",
   },
   heroImage: {
     src: "/stories/heroes/leechanwon.png",

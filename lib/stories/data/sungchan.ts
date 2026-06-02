@@ -184,7 +184,7 @@ export const sungchan: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "기묘(己卯)일주",
-    source: "위키백과 · KProfiles · Famous Birthdays (2026-05-28 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 · KProfiles · Famous Birthdays (2026-05-28 확인)",
   },
   heroImage: {
     src: "/stories/heroes/sungchan.png",

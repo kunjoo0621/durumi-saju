@@ -23,7 +23,7 @@ export const karina: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "기토는 다섯 천간의 흙 중 가장 섬세한 흙이에요. 크게 드러내기보다 안에서 실속을 챙기며 키워내는 성향이라, 포용력과 현실 감각이 함께 어울리는 일간입니다.",
+          text: "기토는 두 흙 천간 중 가장 섬세한 흙이에요. 크게 드러내기보다 안에서 실속을 챙기며 키워내는 성향이라, 포용력과 현실 감각이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -180,7 +180,7 @@ export const karina: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "기해(己亥)일주",
-    source: "위키백과 · 나무위키 (2026-05-29 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-05-29 확인)",
   },
   heroImage: {
     src: "/stories/heroes/karina.png",

@@ -23,7 +23,7 @@ export const kimDahyun: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "기토는 다섯 천간의 흙 중 가장 너르고 포용력 있는 흙이에요. 물을 머금어 곡식을 키워내듯, 무언가를 진득하게 길러내는 끈기와 안정감이 함께 어울리는 일간입니다.",
+          text: "기토는 두 흙 천간 중 가장 너르고 포용력 있는 흙이에요. 물을 머금어 곡식을 키워내듯, 무언가를 진득하게 길러내는 끈기와 안정감이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -180,7 +180,7 @@ export const kimDahyun: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "기해(己亥)일주",
-    source: "위키백과 · 나무위키 (2026-06-03 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-06-03 확인)",
   },
   heroImage: {
     src: "/stories/heroes/kimdahyun.png",

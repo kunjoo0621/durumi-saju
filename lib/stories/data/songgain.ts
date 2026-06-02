@@ -23,7 +23,7 @@ export const songgain: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "갑목은 다섯 천간의 나무 중 가장 크고 곧은 나무예요. 굽히기보다 위로 뻗는 성질이라, 자기 중심과 곧은 자존이 뚜렷한 일간입니다.",
+          text: "갑목은 두 나무 천간 중 가장 크고 곧은 나무예요. 굽히기보다 위로 뻗는 성질이라, 자기 중심과 곧은 자존이 뚜렷한 일간입니다.",
         },
       ],
     },
@@ -172,7 +172,7 @@ export const songgain: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "갑진(甲辰)일주",
-    source: "위키백과 · 나무위키 (2026-05-29 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-05-29 확인)",
   },
   heroImage: {
     src: "/stories/heroes/songgain.png",

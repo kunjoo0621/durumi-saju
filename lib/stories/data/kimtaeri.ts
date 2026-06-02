@@ -23,7 +23,7 @@ export const kimTaeri: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "기토는 다섯 천간의 흙 중 가장 너르고 포용력 있는 흙이에요. 거칠게 솟기보다 만물을 품어 길러내는 성질이라, 단단한 자기 중심과 무언가를 키워내는 끈기가 함께 어울리는 일간입니다.",
+          text: "기토는 두 흙 천간 중 가장 너르고 포용력 있는 흙이에요. 거칠게 솟기보다 만물을 품어 길러내는 성질이라, 단단한 자기 중심과 무언가를 키워내는 끈기가 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -180,7 +180,7 @@ export const kimTaeri: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "기미(己未)일주",
-    source: "위키백과 · 나무위키 (2026-06-03 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-06-03 확인)",
   },
   heroImage: {
     src: "/stories/heroes/kimtaeri.png",
