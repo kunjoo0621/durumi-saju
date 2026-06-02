@@ -18,7 +18,6 @@ import { hanSohee } from "./data/hansohee";
 import { jennie } from "./data/jennie";
 import { kimSoohyun } from "./data/kimsoohyun";
 import { kimTaeri } from "./data/kimtaeri";
-import { kimDahyun } from "./data/kimdahyun";
 import { byeonWooseok } from "./data/byeonwooseok";
 import { weddingDream } from "./data/wedding-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
@@ -65,7 +64,6 @@ const STORIES: Story[] = [
   jennie,
   kimSoohyun,
   kimTaeri,
-  kimDahyun,
   byeonWooseok,
   chasedDream,
   dogDream,

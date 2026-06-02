@@ -161,7 +161,7 @@ export const kimTaeri: Story = {
     href: "/menu",
     tone: "brand",
   },
-  related: ["kimdahyun", "karina", "iu"],
+  related: ["karina", "anton", "iu"],
   keywords: [
     "김태리 사주",
     "김태리 일주",
