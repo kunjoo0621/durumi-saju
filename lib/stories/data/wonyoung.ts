@@ -23,7 +23,7 @@ export const wonyoung: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "임수는 다섯 천간 중 가장 크고 깊은 물이에요. 어디든 흘러 적응하면서도 자기 깊이를 지키는 성향이라, 총명함과 유연함이 함께 어울리는 일간입니다.",
+          text: "임수는 두 물 천간 중 가장 크고 깊은 물이에요. 어디든 흘러 적응하면서도 자기 깊이를 지키는 성향이라, 총명함과 유연함이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -184,7 +184,7 @@ export const wonyoung: Story = {
     calendar: "solar",
     gender: "F",
     iljuLabel: "임오(壬午)일주",
-    source: "위키백과 · 나무위키 · KProfiles (2026-05-28 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 · KProfiles (2026-05-28 확인)",
   },
   heroImage: {
     src: "/stories/heroes/wonyoung.png",

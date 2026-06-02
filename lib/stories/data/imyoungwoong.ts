@@ -182,7 +182,7 @@ export const imYoungwoong: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "정사(丁巳)일주",
-    source: "위키백과 · 아시아경제 사주풀이 (2026-05-28 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 · 아시아경제 사주풀이 (2026-05-28 확인)",
   },
   heroImage: {
     src: "/stories/heroes/imyoungwoong.png",

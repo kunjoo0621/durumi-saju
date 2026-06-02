@@ -23,7 +23,7 @@ export const chaeunwoo: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "신금은 다섯 천간의 금 중 가장 세공된 금이에요. 거칠게 밀어붙이기보다 정교하고 깔끔하게 다듬는 성질이라, 단정함과 높은 기준이 함께 어울리는 일간입니다.",
+          text: "신금은 두 금 천간 중 가장 세공된 금이에요. 거칠게 밀어붙이기보다 정교하고 깔끔하게 다듬는 성질이라, 단정함과 높은 기준이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -172,7 +172,7 @@ export const chaeunwoo: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "신미(辛未)일주",
-    source: "위키백과 · 나무위키 (2026-05-29 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-05-29 확인)",
   },
   heroImage: {
     src: "/stories/heroes/chaeunwoo.png",

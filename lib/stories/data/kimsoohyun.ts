@@ -23,7 +23,7 @@ export const kimSoohyun: Story = {
         {
           kind: "callout",
           tone: "tip",
-          text: "신금은 다섯 천간의 금 중 가장 세공된 금이에요. 거칠게 밀어붙이기보다 날카롭고 정교하게 다듬는 성질이라, 섬세한 감각과 높은 기준이 함께 어울리는 일간입니다.",
+          text: "신금은 두 금 천간 중 가장 세공된 금이에요. 거칠게 밀어붙이기보다 날카롭고 정교하게 다듬는 성질이라, 섬세한 감각과 높은 기준이 함께 어울리는 일간입니다.",
         },
       ],
     },
@@ -180,7 +180,7 @@ export const kimSoohyun: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "신축(辛丑)일주",
-    source: "위키백과 · 나무위키 (2026-06-01 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-06-01 확인)",
   },
   heroImage: {
     src: "/stories/heroes/kimsoohyun.png",

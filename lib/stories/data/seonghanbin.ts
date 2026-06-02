@@ -183,7 +183,7 @@ export const seongHanbin: Story = {
     calendar: "solar",
     gender: "M",
     iljuLabel: "정미(丁未)일주",
-    source: "위키백과 · 나무위키 (2026-05-28 확인)",
+    source: "공개된 프로필 기준 · 위키백과 등 (2026-05-28 확인)",
   },
   heroImage: {
     src: "/stories/heroes/seonghanbin.png",
