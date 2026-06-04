@@ -23,6 +23,11 @@ import { weddingDream } from "./data/wedding-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
 import { mutoIlganWoman } from "./data/muto-ilgan-woman";
+import { gapmokIlganWoman } from "./data/gapmok-ilgan-woman";
+import { eulmokIlganWoman } from "./data/eulmok-ilgan-woman";
+import { byeonghwaIlganWoman } from "./data/byeonghwa-ilgan-woman";
+import { jeonghwaIlganWoman } from "./data/jeonghwa-ilgan-woman";
+import { gitoIlganWoman } from "./data/gito-ilgan-woman";
 import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
 import { chaeunwoo } from "./data/chaeunwoo";
@@ -79,6 +84,11 @@ const STORIES: Story[] = [
   iljiSpouse,
   iljuPersonality,
   mutoIlganWoman,
+  gapmokIlganWoman,
+  eulmokIlganWoman,
+  byeonghwaIlganWoman,
+  jeonghwaIlganWoman,
+  gitoIlganWoman,
   imYoungwoong,
   iu,
   jungwon,
