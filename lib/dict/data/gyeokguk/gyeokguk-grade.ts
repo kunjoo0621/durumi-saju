@@ -105,6 +105,7 @@ export const gyeokgukGrade: DictEntry = {
     { category: "gyeokguk", slug: "yangin-gyeok", label: "양인격", hint: "특수" },
     { category: "gabja", slug: "ilju-grade", label: "일주 등급", hint: "60갑자" },
     { category: "sinsal", slug: "sinsal-grade", label: "신살 등급", hint: "신살" },
+    { category: "saju", slug: "grade", label: "사주 등급", hint: "전체 등급 개념" },
   ],
   updatedAt: "2026-05-19",
   isOverview: true,

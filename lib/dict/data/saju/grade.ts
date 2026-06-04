@@ -7,9 +7,9 @@ export const grade: DictEntry = {
   hanja: "四柱 等級",
   tagline: "SS부터 C까지 5단계로 보는 사주의 큰 그릇 — 명리학 전통의 '그릇론' 연장",
   meta: {
-    title: "사주 등급 — SS부터 C까지, 사주의 큰 그릇을 보는 법",
+    title: "사주 등급 뜻 — SS·S·A·B·C 5단계와 내 등급 보는 법",
     description:
-      "사주 등급이란 무엇인지, SS·S·A·B·C 5단계가 가리키는 결과 의미, 명리학 전통의 '큰 그릇·작은 그릇' 관점과 어떻게 이어지는지, 등급에 대한 흔한 오해까지 정리합니다. 사주 등급은 절대 평가가 아니라 사주의 한 단면입니다.",
+      "사주 등급이란 무엇인지, SS·S·A·B·C 5단계가 가리키는 결과 의미, 내 사주 등급을 보는 법, 명리학 전통의 '큰 그릇' 관점과 흔한 오해까지 한 번에 정리했습니다. 사주 등급은 절대 평가가 아니라 사주의 한 단면입니다.",
   },
   hero: {
     variant: "concept",
@@ -105,12 +105,12 @@ export const grade: DictEntry = {
   related: [
     { category: "saju", slug: "saju-palja", label: "사주팔자란?", hint: "입문" },
     { category: "saju", slug: "ilgan", label: "일간(나)", hint: "사주의 중심" },
+    { category: "gabja", slug: "ilju-grade", label: "일주 등급", hint: "60갑자 일주 4등급" },
+    { category: "gyeokguk", slug: "gyeokguk-grade", label: "격국 등급", hint: "10격국 강도" },
+    { category: "sinsal", slug: "sinsal-grade", label: "신살 등급", hint: "신살 강도" },
     { category: "gyeokguk", slug: "intro", label: "격국 입문", hint: "사주의 정통 분류" },
     { category: "saju", slug: "shin-gang-shin-yak", label: "신강·신약", hint: "일간의 힘" },
     { category: "yongshin", slug: "yongshin", label: "용신", hint: "균형의 핵심" },
-    { category: "saju", slug: "dae-un", label: "대운", hint: "10년 주기 흐름" },
-    { category: "saju", slug: "se-un", label: "세운", hint: "올해의 흐름" },
-    { category: "gabja", slug: "gapja", label: "60갑자", hint: "사주의 글자" },
   ],
   updatedAt: "2026-05-12",
 };

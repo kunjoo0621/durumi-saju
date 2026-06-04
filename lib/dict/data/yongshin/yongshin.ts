@@ -19,7 +19,7 @@ export const yongshin: DictEntry = {
   highlight: [
     { label: "한자", value: "用神 (쓸모 있는 글자)" },
     { label: "기준", value: "일간의 강약 + 사주 균형" },
-    { label: "종류", value: "억부용신 · 조후용신" },
+    { label: "종류", value: "억부 · 조후 · 통관 · 병약 · 전왕" },
     { label: "활용", value: "운 흐름 해석의 기준점" },
   ],
   body: {
@@ -37,7 +37,7 @@ export const yongshin: DictEntry = {
       {
         heading: "억부용신과 조후용신",
         paragraphs: [
-          "용신은 잡는 관점에 따라 두 갈래로 나뉩니다. 강약을 기준으로 잡는 것이 억부용신(抑扶用神)이고, 계절의 차고 더움을 기준으로 잡는 것이 조후용신(調候用神)입니다.",
+          "용신은 잡는 관점에 따라 억부·조후·통관·병약·전왕의 다섯 갈래로 나뉩니다. 그중 가장 많이 쓰는 두 가지가 억부와 조후입니다. 강약을 기준으로 잡는 것이 억부용신(抑扶用神)이고, 계절의 차고 더움을 기준으로 잡는 것이 조후용신(調候用神)입니다.",
           "억부용신은 일간이 강하면 누르고(억抑), 약하면 도와주는(부扶) 방식으로 잡습니다. 사주 분석에서 가장 흔히 보는 용신이 억부용신이며, 신강·신약 판단의 결과로 자연스럽게 도출됩니다.",
           "조후용신은 사주 전체가 너무 차거나 더울 때 그 균형을 잡아주는 오행입니다. 한겨울에 태어난 갑목이 얼지 않도록 화(火)로 데워주고, 한여름의 경금이 조열에 녹지 않도록 수(水)로 식혀준다는 식입니다. 억부와 조후가 일치하면 용신이 명확하지만, 갈리는 경우엔 사주의 다른 구조까지 함께 보아 우선순위를 정합니다.",
         ],
@@ -67,10 +67,13 @@ export const yongshin: DictEntry = {
     },
   ],
   related: [
-    { category: "yongshin", slug: "eokbu", label: "억부용신", hint: "용신" },
-    { category: "yongshin", slug: "johu", label: "조후용신", hint: "용신" },
-    { category: "yongshin", slug: "heesin", label: "희신", hint: "용신" },
-    { category: "yongshin", slug: "gisin", label: "기신", hint: "용신" },
+    { category: "yongshin", slug: "eokbu", label: "억부용신", hint: "강약으로" },
+    { category: "yongshin", slug: "johu", label: "조후용신", hint: "한열로" },
+    { category: "yongshin", slug: "tonggwan", label: "통관용신", hint: "대립을 이음" },
+    { category: "yongshin", slug: "byeongyak", label: "병약용신", hint: "병을 고침" },
+    { category: "yongshin", slug: "jeonwang", label: "전왕용신", hint: "기세를 따름" },
+    { category: "yongshin", slug: "heesin", label: "희신", hint: "용신의 보조" },
+    { category: "yongshin", slug: "gisin", label: "기신", hint: "용신의 적" },
     { category: "saju", slug: "shin-gang-shin-yak", label: "신강·신약", hint: "강약" },
   ],
   updatedAt: "2026-05-06",

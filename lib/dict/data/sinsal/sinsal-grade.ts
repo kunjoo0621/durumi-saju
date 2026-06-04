@@ -115,6 +115,7 @@ export const sinsalGrade: DictEntry = {
     { category: "sinsal", slug: "dohwa", label: "도화살", hint: "양면" },
     { category: "sinsal", slug: "cheonyl-gwiin", label: "천을귀인", hint: "길성" },
     { category: "gabja", slug: "ilju-grade", label: "일주 등급", hint: "60갑자" },
+    { category: "saju", slug: "grade", label: "사주 등급", hint: "전체 등급 개념" },
   ],
   updatedAt: "2026-05-19",
   isOverview: true,
