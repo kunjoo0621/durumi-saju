@@ -22,6 +22,7 @@ import { byeonWooseok } from "./data/byeonwooseok";
 import { weddingDream } from "./data/wedding-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
+import { mutoIlganWoman } from "./data/muto-ilgan-woman";
 import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
 import { chaeunwoo } from "./data/chaeunwoo";
@@ -77,6 +78,7 @@ const STORIES: Story[] = [
   fireDream,
   iljiSpouse,
   iljuPersonality,
+  mutoIlganWoman,
   imYoungwoong,
   iu,
   jungwon,
