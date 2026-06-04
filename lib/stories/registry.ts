@@ -22,6 +22,26 @@ import { byeonWooseok } from "./data/byeonwooseok";
 import { weddingDream } from "./data/wedding-dream";
 import { iljiSpouse } from "./data/ilji-spouse";
 import { iljuPersonality } from "./data/ilju-personality";
+import { mutoIlganWoman } from "./data/muto-ilgan-woman";
+import { gapmokIlganWoman } from "./data/gapmok-ilgan-woman";
+import { eulmokIlganWoman } from "./data/eulmok-ilgan-woman";
+import { byeonghwaIlganWoman } from "./data/byeonghwa-ilgan-woman";
+import { jeonghwaIlganWoman } from "./data/jeonghwa-ilgan-woman";
+import { gitoIlganWoman } from "./data/gito-ilgan-woman";
+import { gyeonggeumIlganWoman } from "./data/gyeonggeum-ilgan-woman";
+import { singeumIlganWoman } from "./data/singeum-ilgan-woman";
+import { imsuIlganWoman } from "./data/imsu-ilgan-woman";
+import { gyesuIlganWoman } from "./data/gyesu-ilgan-woman";
+import { mutoIlganMan } from "./data/muto-ilgan-man";
+import { gapmokIlganMan } from "./data/gapmok-ilgan-man";
+import { eulmokIlganMan } from "./data/eulmok-ilgan-man";
+import { byeonghwaIlganMan } from "./data/byeonghwa-ilgan-man";
+import { jeonghwaIlganMan } from "./data/jeonghwa-ilgan-man";
+import { gitoIlganMan } from "./data/gito-ilgan-man";
+import { gyeonggeumIlganMan } from "./data/gyeonggeum-ilgan-man";
+import { singeumIlganMan } from "./data/singeum-ilgan-man";
+import { imsuIlganMan } from "./data/imsu-ilgan-man";
+import { gyesuIlganMan } from "./data/gyesu-ilgan-man";
 import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
 import { chaeunwoo } from "./data/chaeunwoo";
@@ -77,6 +97,26 @@ const STORIES: Story[] = [
   fireDream,
   iljiSpouse,
   iljuPersonality,
+  mutoIlganWoman,
+  gapmokIlganWoman,
+  eulmokIlganWoman,
+  byeonghwaIlganWoman,
+  jeonghwaIlganWoman,
+  gitoIlganWoman,
+  gyeonggeumIlganWoman,
+  singeumIlganWoman,
+  imsuIlganWoman,
+  gyesuIlganWoman,
+  mutoIlganMan,
+  gapmokIlganMan,
+  eulmokIlganMan,
+  byeonghwaIlganMan,
+  jeonghwaIlganMan,
+  gitoIlganMan,
+  gyeonggeumIlganMan,
+  singeumIlganMan,
+  imsuIlganMan,
+  gyesuIlganMan,
   imYoungwoong,
   iu,
   jungwon,
