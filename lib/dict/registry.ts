@@ -178,6 +178,9 @@ import { eokbu as yongshinEokbu } from "./data/yongshin/eokbu";
 import { johu as yongshinJohu } from "./data/yongshin/johu";
 import { heesin as yongshinHeesin } from "./data/yongshin/heesin";
 import { gisin as yongshinGisin } from "./data/yongshin/gisin";
+import { tonggwan as yongshinTonggwan } from "./data/yongshin/tonggwan";
+import { byeongyak as yongshinByeongyak } from "./data/yongshin/byeongyak";
+import { jeonwang as yongshinJeonwang } from "./data/yongshin/jeonwang";
 import { deukryeong as gangyakDeukryeong } from "./data/gangyak/deukryeong";
 import { deukji as gangyakDeukji } from "./data/gangyak/deukji";
 import { deuksi as gangyakDeuksi } from "./data/gangyak/deuksi";
@@ -407,6 +410,9 @@ const ENTRY_LIST: DictEntry[] = [
   yongshinJohu,
   yongshinHeesin,
   yongshinGisin,
+  yongshinTonggwan,
+  yongshinByeongyak,
+  yongshinJeonwang,
   gangyakDeukryeong,
   gangyakDeukji,
   gangyakDeuksi,
