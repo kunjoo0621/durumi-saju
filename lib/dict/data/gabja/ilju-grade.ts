@@ -96,6 +96,7 @@ export const iljuGrade: DictEntry = {
   ],
   related: [
     { category: "pillars", slug: "ilju", label: "일주", hint: "기둥" },
+    { category: "saju", slug: "grade", label: "사주 등급", hint: "전체 등급 개념" },
     { category: "gabja", slug: "gapja", label: "갑자 (1등급)", hint: "60갑자" },
     { category: "gabja", slug: "imja", label: "임자 (4등급)", hint: "60갑자" },
     { category: "sinsal", slug: "baekho", label: "백호살", hint: "신살" },
