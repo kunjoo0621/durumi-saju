@@ -32,6 +32,11 @@ import { gyeonggeumIlganWoman } from "./data/gyeonggeum-ilgan-woman";
 import { singeumIlganWoman } from "./data/singeum-ilgan-woman";
 import { imsuIlganWoman } from "./data/imsu-ilgan-woman";
 import { gyesuIlganWoman } from "./data/gyesu-ilgan-woman";
+import { mutoIlganMan } from "./data/muto-ilgan-man";
+import { gapmokIlganMan } from "./data/gapmok-ilgan-man";
+import { eulmokIlganMan } from "./data/eulmok-ilgan-man";
+import { byeonghwaIlganMan } from "./data/byeonghwa-ilgan-man";
+import { jeonghwaIlganMan } from "./data/jeonghwa-ilgan-man";
 import { imYoungwoong } from "./data/imyoungwoong";
 import { iu } from "./data/iu";
 import { chaeunwoo } from "./data/chaeunwoo";
@@ -97,6 +102,11 @@ const STORIES: Story[] = [
   singeumIlganWoman,
   imsuIlganWoman,
   gyesuIlganWoman,
+  mutoIlganMan,
+  gapmokIlganMan,
+  eulmokIlganMan,
+  byeonghwaIlganMan,
+  jeonghwaIlganMan,
   imYoungwoong,
   iu,
   jungwon,
