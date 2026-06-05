@@ -155,6 +155,10 @@ export const deadPersonDream: Story = {
     "죽은 사람이 데려가는 꿈",
     "죽은 사람과 밥 먹는 꿈",
   ],
+  heroImage: {
+    src: "/stories/heroes/dead-person-dream.png",
+    alt: "두루미가 쿠션 위에서 평온하게 잠든 사이 머리 위 꿈 구름 안에 따뜻한 금빛 빛이 감도는 일러스트 — 죽은 사람 꿈 해몽 메타포",
+  },
   publishedAt: "2026-06-05",
   updatedAt: "2026-06-05",
 };

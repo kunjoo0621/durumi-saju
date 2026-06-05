@@ -156,6 +156,10 @@ export const seaDream: Story = {
     "잔잔한 바다 꿈",
     "해일 꿈",
   ],
+  heroImage: {
+    src: "/stories/heroes/sea-dream.png",
+    alt: "두루미가 쿠션 위에서 평온하게 잠든 사이 머리 위 꿈 구름 안에 잔잔한 파스텔 바다와 작은 종이배가 떠 있는 일러스트 — 바다 꿈 해몽 메타포",
+  },
   publishedAt: "2026-06-05",
   updatedAt: "2026-06-05",
 };

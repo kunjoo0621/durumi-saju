@@ -150,6 +150,10 @@ export const bugDream: Story = {
     "벌레 죽이는 꿈",
     "몸에 벌레 나오는 꿈",
   ],
+  heroImage: {
+    src: "/stories/heroes/bug-dream.png",
+    alt: "두루미가 쿠션 위에서 평온하게 잠든 사이 머리 위 꿈 구름 안에 귀여운 반딧불과 무당벌레가 반짝이는 일러스트 — 벌레 꿈 해몽 메타포",
+  },
   publishedAt: "2026-06-05",
   updatedAt: "2026-06-05",
 };

@@ -155,6 +155,10 @@ export const ghostDream: Story = {
     "무서운 꿈 해몽",
     "소복 귀신 꿈",
   ],
+  heroImage: {
+    src: "/stories/heroes/ghost-dream.png",
+    alt: "두루미가 쿠션 위에서 평온하게 잠든 사이 머리 위 꿈 구름 안에 귀여운 흰 유령이 웃고 있는 일러스트 — 귀신 꿈 해몽 메타포",
+  },
   publishedAt: "2026-06-05",
   updatedAt: "2026-06-05",
 };

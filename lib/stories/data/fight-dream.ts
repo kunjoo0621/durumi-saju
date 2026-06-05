@@ -154,6 +154,10 @@ export const fightDream: Story = {
     "때리는 꿈",
     "싸워서 이기는 꿈",
   ],
+  heroImage: {
+    src: "/stories/heroes/fight-dream.png",
+    alt: "두루미가 베개를 안고 잠든 사이 머리 위 꿈 구름 안에 말랑한 권투 글러브 두 개가 장난스럽게 맞닿는 일러스트 — 싸우는 꿈 해몽 메타포",
+  },
   publishedAt: "2026-06-05",
   updatedAt: "2026-06-05",
 };
