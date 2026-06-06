@@ -58,6 +58,16 @@ import { moneyDream } from "./data/money-dream";
 import { pigDream } from "./data/pig-dream";
 import { poopDream } from "./data/poop-dream";
 import { pregnancyDream } from "./data/pregnancy-dream";
+import { ghostDream } from "./data/ghost-dream";
+import { deadPersonDream } from "./data/dead-person-dream";
+import { bugDream } from "./data/bug-dream";
+import { fightDream } from "./data/fight-dream";
+import { seaDream } from "./data/sea-dream";
+import { flyingDream } from "./data/flying-dream";
+import { examDream } from "./data/exam-dream";
+import { spiderDream } from "./data/spider-dream";
+import { ratDream } from "./data/rat-dream";
+import { theftDream } from "./data/theft-dream";
 import { rich2026Saju } from "./data/rich-2026-saju";
 import { savingsSaju } from "./data/savings-saju";
 import { seongHanbin } from "./data/seonghanbin";
@@ -133,6 +143,16 @@ const STORIES: Story[] = [
   pigDream,
   poopDream,
   pregnancyDream,
+  ghostDream,
+  deadPersonDream,
+  bugDream,
+  fightDream,
+  seaDream,
+  flyingDream,
+  examDream,
+  spiderDream,
+  ratDream,
+  theftDream,
   rich2026Saju,
   savingsSaju,
   seongHanbin,
