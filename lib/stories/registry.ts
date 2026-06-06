@@ -43,6 +43,9 @@ import { singeumIlganMan } from "./data/singeum-ilgan-man";
 import { imsuIlganMan } from "./data/imsu-ilgan-man";
 import { gyesuIlganMan } from "./data/gyesu-ilgan-man";
 import { imYoungwoong } from "./data/imyoungwoong";
+import { jangMinho } from "./data/jangminho";
+import { kimHeejae } from "./data/kimheejae";
+import { jungDongwon } from "./data/jungdongwon";
 import { iu } from "./data/iu";
 import { chaeunwoo } from "./data/chaeunwoo";
 import { jungkook } from "./data/jungkook";
@@ -128,6 +131,9 @@ const STORIES: Story[] = [
   imsuIlganMan,
   gyesuIlganMan,
   imYoungwoong,
+  jangMinho,
+  kimHeejae,
+  jungDongwon,
   iu,
   jungwon,
   karina,
