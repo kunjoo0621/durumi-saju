@@ -46,6 +46,11 @@ import { imYoungwoong } from "./data/imyoungwoong";
 import { jangMinho } from "./data/jangminho";
 import { kimHeejae } from "./data/kimheejae";
 import { jungDongwon } from "./data/jungdongwon";
+import { anSeonghun } from "./data/anseonghun";
+import { yangJieun } from "./data/yangjieun";
+import { parkSeojin } from "./data/parkseojin";
+import { hongja } from "./data/hongja";
+import { jinseong } from "./data/jinseong";
 import { iu } from "./data/iu";
 import { chaeunwoo } from "./data/chaeunwoo";
 import { jungkook } from "./data/jungkook";
@@ -134,6 +139,11 @@ const STORIES: Story[] = [
   jangMinho,
   kimHeejae,
   jungDongwon,
+  anSeonghun,
+  yangJieun,
+  parkSeojin,
+  hongja,
+  jinseong,
   iu,
   jungwon,
   karina,
