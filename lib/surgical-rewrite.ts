@@ -223,6 +223,33 @@ export function detectKillingLinePattern(
     masked: maskNames(cats[key].killingLine, names),
   }));
 
+  // 구조 기반 감지(최우선): "추상 두 마디 대비" 골격.
+  // killingLine은 "구체적 이미지 한 컷"으로 웃겨야 한다. 다만 "두 마디 대비" 골격
+  // 자체가 죄는 아니다 — 양쪽 다 그림이 있으면("서연 통장엔 숫자가 찍히는데 민준 통장엔
+  // 한숨만 찍혀") 통과시킨다. 진짜 문제는 그림 없이 승패/우열만 읊는 "추상 대비"
+  // ("민준이 이겼는데 정작 야근 독박은 민준이야")다. 그래서 두 마디 골격 + 추상 판정어가
+  // 같이 있을 때만 붕괴로 보고, 해당 줄 전부를 구체 한 컷으로 다시 쓴다.
+  const contrastStructureRe = [
+    /__NAME__[^]*?(?:때|동안|는데|지만)[^]*?__NAME__/, // 두 이름 + 대비 연결어
+    /지금은[^]*?(?:\d{2,4}\s*년|나중|뒤엔)/, // 시간 대비
+  ];
+  const abstractJudgmentRe =
+    /이겼|졌|이긴|이기|지는|진다|유리|불리|우세|열세|압도|압승|완승|밀려|밀린|밀리|강해|약해|판정|승리|승부|역전|앞서|뒤져|꺾|제압|정작|판가름|우열/;
+  const contrastKeys = entries
+    .filter(
+      (e) =>
+        contrastStructureRe.some((re) => re.test(e.masked)) && abstractJudgmentRe.test(e.text),
+    )
+    .map((e) => e.key);
+  if (contrastKeys.length >= 1) {
+    return {
+      needsRewrite: true,
+      targets: contrastKeys,
+      pattern:
+        '"추상 두 마디 대비"(승패/우열만 읊고 그림이 없음, 예: "A가 이겼는데 정작 야근 독박은 A야") — 승패 판정어를 버리고 "터무니없이 구체적인 사물·장면 한 컷"으로 다시 써라(예: "A 통장이 B 술값까지 막아줬네"). 양쪽 다 구체 이미지가 있는 대비는 괜찮다.',
+    };
+  }
+
   // 어미 기반 감지
   const endingGroups = new Map<string, BattleCategoryKey[]>();
   for (const e of entries) {
@@ -741,7 +768,9 @@ async function callRewrite(
   try {
     const res = await callGemini(model, userPrompt, systemPrompt, {
       temperature: 0.85,
-      maxOutputTokens: 2048,
+      // gemini-2.5-flash는 thinking 모델 — 2048이면 thinking 토큰이 예산을 다 먹어
+      // 실제 JSON이 MAX_TOKENS로 잘려 리라이트가 100% 실패했다. 8192도 가끔 잘려 여유분 확보.
+      maxOutputTokens: 16384,
     });
     if (!res.ok) {
       warnings.push(`[surgical-rewrite] Gemini API 실패: ${res.message}`);
@@ -809,11 +838,17 @@ export async function surgicalRewriteBattle(
 
   // 타겟 1: killingLine 문형 반복
   const klDetect = detectKillingLinePattern(result.categoryResults, names);
+  const killingLineSkipPaths = new Set<string>();
   if (klDetect.needsRewrite) {
     const targets: RewriteTarget[] = klDetect.targets.map((cat) => ({
       path: `categoryResults.${cat}.killingLine`,
       currentText: result.categoryResults[cat].killingLine,
     }));
+    // killingLine 리라이트는 "구체적 새 명사"를 일부러 주입하는 게 목적 — 성씨 휴리스틱
+    // 환각 가드가 "이름/정작/조용히/심장은" 같은 평범한 단어를 성씨로 오인해 멀쩡한 교정을
+    // 스킵해버린다. killingLine은 A/B 이름이 항상 박혀 있고 12~30자라 제3의 인물명 환각이
+    // 사실상 불가능 → 이 경로만 이름 체크 스킵.
+    for (const t of targets) killingLineSkipPaths.add(t.path);
     const preservedCats = BATTLE_CATEGORIES.filter((c) => !klDetect.targets.includes(c));
     const preserved = preservedCats.map((c) => result.categoryResults[c].killingLine);
 
@@ -923,10 +958,11 @@ export async function surgicalRewriteBattle(
   const rewrites = await callRewrite(userPrompt, warnings);
   if (!rewrites) return result;
 
-  const myoSkipPaths = new Set(
-    myoExcessTargets?.map((t) => t.path) ?? [],
-  );
-  return patchResults(result, rewrites, warnings, names, myoSkipPaths);
+  const skipNameCheckPaths = new Set<string>([
+    ...(myoExcessTargets?.map((t) => t.path) ?? []),
+    ...killingLineSkipPaths,
+  ]);
+  return patchResults(result, rewrites, warnings, names, skipNameCheckPaths);
 }
 
 // ─── 메인 엔트리: 개인사주 ──────────────────────
