@@ -88,6 +88,10 @@ import { wonyoung } from "./data/wonyoung";
 import { yeonaePattern } from "./data/yeonae-pattern";
 import { zhangHao } from "./data/zhanghao";
 import { zodiacVsMyeongni } from "./data/zodiac-vs-myeongni";
+import { goonghapHapChung } from "./data/goonghap-hap-chung";
+import { gyeolhonSigi } from "./data/gyeolhon-sigi";
+import { jaehoeGoonghap } from "./data/jaehoe-goonghap";
+import { geuSaramMaeum } from "./data/geu-saram-maeum";
 import type { Story, StoryCategory } from "./types";
 
 const STORIES: Story[] = [
@@ -181,6 +185,10 @@ const STORIES: Story[] = [
   yeonaePattern,
   zhangHao,
   zodiacVsMyeongni,
+  goonghapHapChung,
+  gyeolhonSigi,
+  jaehoeGoonghap,
+  geuSaramMaeum,
 ];
 
 const SLUG_MAP: Record<string, Story> = STORIES.reduce<Record<string, Story>>(
