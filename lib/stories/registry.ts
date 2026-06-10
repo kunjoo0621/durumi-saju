@@ -92,6 +92,7 @@ import { goonghapHapChung } from "./data/goonghap-hap-chung";
 import { gyeolhonSigi } from "./data/gyeolhon-sigi";
 import { jaehoeGoonghap } from "./data/jaehoe-goonghap";
 import { geuSaramMaeum } from "./data/geu-saram-maeum";
+import { kimYongbin } from "./data/kimyongbin";
 import type { Story, StoryCategory } from "./types";
 
 const STORIES: Story[] = [
@@ -189,6 +190,7 @@ const STORIES: Story[] = [
   gyeolhonSigi,
   jaehoeGoonghap,
   geuSaramMaeum,
+  kimYongbin,
 ];
 
 const SLUG_MAP: Record<string, Story> = STORIES.reduce<Record<string, Story>>(
