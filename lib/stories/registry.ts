@@ -63,6 +63,7 @@ import { lastingCouple } from "./data/lasting-couple";
 import { leeChanwon } from "./data/leechanwon";
 import { marriageCaution } from "./data/marriage-caution";
 import { moneyDream } from "./data/money-dream";
+import { parkJihyeon } from "./data/parkjihyeon";
 import { pigDream } from "./data/pig-dream";
 import { poopDream } from "./data/poop-dream";
 import { pregnancyDream } from "./data/pregnancy-dream";
@@ -93,6 +94,16 @@ import { gyeolhonSigi } from "./data/gyeolhon-sigi";
 import { jaehoeGoonghap } from "./data/jaehoe-goonghap";
 import { geuSaramMaeum } from "./data/geu-saram-maeum";
 import { kimYongbin } from "./data/kimyongbin";
+import { dohwaYeonae } from "./data/dohwa-yeonae";
+import { wonjinGoonghap } from "./data/wonjin-goonghap";
+import { hongryeomMaeryeok } from "./data/hongryeom-maeryeok";
+import { baramgiSaju } from "./data/baramgi-saju";
+import { baeujabokSaju } from "./data/baeujabok-saju";
+import { ihonsuSaju } from "./data/ihonsu-saju";
+import { iljiChungGoonghap } from "./data/ilji-chung-goonghap";
+import { naichaGoonghap } from "./data/naicha-goonghap";
+import { goonghapJalsanun } from "./data/goonghap-jalsanun";
+import { cheotsarangSaju } from "./data/cheotsarang-saju";
 import type { Story, StoryCategory } from "./types";
 
 const STORIES: Story[] = [
@@ -161,6 +172,7 @@ const STORIES: Story[] = [
   leeChanwon,
   marriageCaution,
   moneyDream,
+  parkJihyeon,
   pigDream,
   poopDream,
   pregnancyDream,
@@ -191,6 +203,16 @@ const STORIES: Story[] = [
   jaehoeGoonghap,
   geuSaramMaeum,
   kimYongbin,
+  dohwaYeonae,
+  wonjinGoonghap,
+  hongryeomMaeryeok,
+  baramgiSaju,
+  baeujabokSaju,
+  ihonsuSaju,
+  iljiChungGoonghap,
+  naichaGoonghap,
+  goonghapJalsanun,
+  cheotsarangSaju,
 ];
 
 const SLUG_MAP: Record<string, Story> = STORIES.reduce<Record<string, Story>>(
