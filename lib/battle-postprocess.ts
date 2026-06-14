@@ -1,5 +1,32 @@
 import type { BattleLlmAnalysis } from "@/types/battle";
 
+// ─── 한자 병기 dedup ────────────────────────────────
+// 개인사주 surgical-rewrite.ts:dedupHanjaAnnotation 와 동일 로직 (출처: lib/surgical-rewrite.ts).
+// surgical-rewrite는 analysis.ts(Gemini SDK 전체)를 import하므로 린한 이 파일엔 8줄 순수 함수만 미러링.
+// 한 텍스트(섹션 단위) 내에서 같은 한글(한자) 용어가 반복되면 첫 등장만 병기 유지, 이후 한글만.
+function dedupHanjaAnnotation(text: string): string {
+  if (!text) return text;
+  const seen = new Set<string>();
+  return text.replace(/([가-힣]+)\(([一-鿿]+)\)/g, (match, kor) => {
+    if (seen.has(kor)) return kor;
+    seen.add(kor);
+    return match;
+  });
+}
+
+// ─── 캡처용 한자 전면 제거 (killingLine 전용) ──────────
+// killingLine은 캡처/공유용이라 spec상 "한자 0개"가 강제(battle-prompt.ts 규칙). dedup(반복만 제거)이
+// 아니라 첫 등장 병기까지 전부 제거: "정재(正財) 기운"→"정재 기운", "도화살(桃花殺)로"→"도화살로".
+function stripHanjaForCapture(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/([가-힣]+)\([一-鿿]+\)/g, "$1") // 한글(한자) 병기 → 한글만
+    .replace(/[一-鿿]/g, "") // 잔여 단독 한자 제거
+    .replace(/\(\s*\)/g, "") // 빈 괄호 정리
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 // ─── 자동 치환 ──────────────────────────────────────
 
 function fixSseusro(text: string): { text: string; count: number } {
@@ -600,6 +627,37 @@ function detectStructuralRepetition(
   return issues;
 }
 
+// ─── killingLine "추상 두 마디 대비" 감지 (모니터링) ────
+// "두 마디 대비"(A가 ~할 때 B는 ~해) 골격 자체는 죄가 아니다 — 양쪽 다 그림이 있으면 통과.
+// 진짜 문제는 그림 없이 승패/우열만 읊는 "추상 대비"("A가 이겼는데 정작 야근 독박은 A야")다.
+// 두 마디 골격 + 추상 판정어가 같이 있을 때만 잡는다.
+// 실제 리라이트는 surgical-rewrite.ts:detectKillingLinePattern이 수행, 여기선 경고 로깅만.
+function detectKillingLineTemplate(
+  killingLines: string[],
+  names: { nameA: string; nameB: string },
+): string[] {
+  const lines = killingLines.filter((l) => l && l.trim());
+  if (lines.length < 3) return [];
+
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const n = `(?:${esc(names.nameA)}|${esc(names.nameB)})`;
+  const contrastRes = [
+    new RegExp(`${n}[^]*?(?:때|동안|는데|지만)[^]*?${n}`), // 두 이름 + 대비 연결어
+    /지금은[^]*?(?:\d{2,4}\s*년|나중|뒤엔)/, // 시간 대비
+  ];
+  const abstractJudgmentRe =
+    /이겼|졌|이긴|이기|지는|진다|유리|불리|우세|열세|압도|압승|완승|밀려|밀린|밀리|강해|약해|판정|승리|승부|역전|앞서|뒤져|꺾|제압|정작|판가름|우열/;
+  const hits = lines.filter(
+    (l) => contrastRes.some((re) => re.test(l)) && abstractJudgmentRe.test(l),
+  );
+  if (hits.length >= 1) {
+    return [
+      `killingLine "추상 두 마디 대비"(승패만 읊고 그림 없음) ${hits.length}/${lines.length}개 — 구체 이미지 한 컷으로 써야 함`,
+    ];
+  }
+  return [];
+}
+
 // ─── 시뮬레이션 reasoning 복붙 감지 ────────────────
 
 function detectSimulationCopypaste(
@@ -940,7 +998,7 @@ export function postprocessBattleResult(
   // categoryResults
   const cats = result.categoryResults;
   for (const key of ["wealth", "love", "career", "health", "social"] as const) {
-    cats[key].killingLine = applyTextFixes(cats[key].killingLine, warnings, `${key}.killingLine`);
+    cats[key].killingLine = stripHanjaForCapture(applyTextFixes(cats[key].killingLine, warnings, `${key}.killingLine`));
     cats[key].detail = applyTextFixes(cats[key].detail, warnings, `${key}.detail`);
     detectIssues(cats[key].killingLine, `${key}.killingLine`, warnings);
     detectIssues(cats[key].detail, `${key}.detail`, warnings);
@@ -1025,6 +1083,23 @@ export function postprocessBattleResult(
   result.finalVerdict.verdict = applyTextFixes(result.finalVerdict.verdict, warnings, "finalVerdict.verdict");
   detectIssues(result.finalVerdict.verdict, "finalVerdict.verdict", warnings);
 
+  // ── 한자 병기 dedup (prose 필드 한정, 섹션 단위) ──
+  // 개인사주와 동일하게 첫 등장만 병기 유지, 반복은 한글만 → 시각적 부담 완화.
+  // punchline/killingLine은 프롬프트에서 한자 0개라 제외. futureOutlook은 이미 사주용어 전량 제거라 제외.
+  for (const key of ["wealth", "love", "career", "health", "social"] as const) {
+    result.categoryResults[key].detail = dedupHanjaAnnotation(result.categoryResults[key].detail);
+  }
+  result.chemistry.analysis = dedupHanjaAnnotation(result.chemistry.analysis);
+  for (const bs of result.chemistry.bonusScenarios) {
+    bs.analysis = dedupHanjaAnnotation(bs.analysis);
+  }
+  for (const sim of result.simulations) {
+    sim.reasoning = dedupHanjaAnnotation(sim.reasoning);
+  }
+  result.finalVerdict.verdictA = dedupHanjaAnnotation(result.finalVerdict.verdictA);
+  result.finalVerdict.verdictB = dedupHanjaAnnotation(result.finalVerdict.verdictB);
+  result.finalVerdict.verdict = dedupHanjaAnnotation(result.finalVerdict.verdict);
+
   // Length checks
   detectLengthIssues(result, warnings);
 
@@ -1075,6 +1150,14 @@ export function postprocessBattleResult(
       warnings.push(
         `[WARN] 구조적 반복: "${issue.phrase}" ${issue.count}회 — [${issue.sections.join(", ")}]`,
       );
+    }
+
+    // killingLine 대구 템플릿 붕괴 (killingLine 전용)
+    if (names) {
+      const killingLines = Object.values(result.categoryResults).map((c) => c.killingLine || "");
+      for (const msg of detectKillingLineTemplate(killingLines, names)) {
+        warnings.push(`[WARN] ${msg}`);
+      }
     }
   }
 
