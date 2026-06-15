@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
 import StoryCard from "@/components/stories/StoryCard";
+import TagBrowse from "@/components/stories/TagBrowse";
 import {
   getAllStories,
   getStoriesByCategory,
@@ -179,6 +180,13 @@ export default async function StoryCategoryPage({ params }: Props) {
             </p>
           </div>
         )}
+
+        <div className="mt-12 pt-6 border-t border-white/10">
+          <div className="text-[11px] tracking-[0.22em] text-text-tertiary font-semibold uppercase mb-5">
+            태그로 찾기
+          </div>
+          <TagBrowse />
+        </div>
 
         <div className="mt-12 pt-6 border-t border-white/10">
           <div className="text-[11px] tracking-[0.22em] text-text-tertiary font-semibold uppercase mb-4">

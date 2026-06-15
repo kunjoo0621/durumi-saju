@@ -135,6 +135,11 @@ export type Story = {
   /** SEO 키워드 (description fallback에 사용) */
   keywords?: string[];
   /**
+   * 브라우징/클러스터 태그. 단일 소스는 lib/stories/tags.ts의 STORY_TAGS.
+   * registry가 주입하므로 데이터 파일에 직접 쓰지 않는다.
+   */
+  tags?: string[];
+  /**
    * Hero 이미지 — 글 상단에 16:9 big 비주얼로 박힘. 두루미 chibi 3D Pixar 결 통일.
    * 없으면 fallback 없이 hero 영역 미렌더 (제목·excerpt만).
    * OG·JSON-LD에도 이 이미지 사용.

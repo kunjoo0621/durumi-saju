@@ -112,8 +112,9 @@ import { naichaGoonghap } from "./data/naicha-goonghap";
 import { goonghapJalsanun } from "./data/goonghap-jalsanun";
 import { cheotsarangSaju } from "./data/cheotsarang-saju";
 import type { Story, StoryCategory } from "./types";
+import { STORY_TAGS, TAG_META, TAG_ORDER, type TagMeta } from "./tags";
 
-const STORIES: Story[] = [
+const RAW_STORIES: Story[] = [
   anton,
   babyDream,
   bloodDream,
@@ -229,6 +230,12 @@ const STORIES: Story[] = [
   cheotsarangSaju,
 ];
 
+// tags.ts(단일 소스)의 태그를 각 글에 주입한다.
+const STORIES: Story[] = RAW_STORIES.map((s) => {
+  const tags = STORY_TAGS[s.slug];
+  return tags && tags.length ? { ...s, tags } : s;
+});
+
 const SLUG_MAP: Record<string, Story> = STORIES.reduce<Record<string, Story>>(
   (acc, story) => {
     acc[story.slug] = story;
@@ -302,4 +309,34 @@ export function getRelatedStories(story: Story, limit = 3): Story[] {
     (s) => s.slug !== story.slug && !picked.includes(s),
   );
   return [...picked, ...fallback].slice(0, limit);
+}
+
+export type TagWithCount = TagMeta & { tag: string; count: number };
+
+export function getStoriesByTag(tag: string): Story[] {
+  return getAllStories().filter((s) => s.tags?.includes(tag));
+}
+
+export function getTagMeta(tag: string): TagMeta | undefined {
+  return TAG_META[tag];
+}
+
+/** TAG_ORDER 순서로, 글이 1편 이상 달린 태그만 (메타 + 카운트 포함) */
+export function getAllTags(): TagWithCount[] {
+  const counts = new Map<string, number>();
+  for (const s of getAllStories()) {
+    for (const t of s.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  return TAG_ORDER.filter((t) => (counts.get(t) ?? 0) > 0 && TAG_META[t]).map(
+    (t) => ({ tag: t, ...TAG_META[t], count: counts.get(t)! }),
+  );
+}
+
+/** 한 글의 태그를 TAG_ORDER 순서로 정렬해 칩 렌더용 메타와 함께 반환 */
+export function getStoryTags(story: Story): { tag: string; label: string }[] {
+  const set = new Set(story.tags ?? []);
+  return TAG_ORDER.filter((t) => set.has(t) && TAG_META[t]).map((t) => ({
+    tag: t,
+    label: TAG_META[t].label,
+  }));
 }
