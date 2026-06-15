@@ -111,6 +111,9 @@ import { iljiChungGoonghap } from "./data/ilji-chung-goonghap";
 import { naichaGoonghap } from "./data/naicha-goonghap";
 import { goonghapJalsanun } from "./data/goonghap-jalsanun";
 import { cheotsarangSaju } from "./data/cheotsarang-saju";
+import { samjae } from "./data/samjae";
+import { yeokma } from "./data/yeokma";
+import { gongmang } from "./data/gongmang";
 import type { Story, StoryCategory } from "./types";
 import { STORY_TAGS, TAG_META, TAG_ORDER, type TagMeta } from "./tags";
 
@@ -228,6 +231,9 @@ const RAW_STORIES: Story[] = [
   naichaGoonghap,
   goonghapJalsanun,
   cheotsarangSaju,
+  samjae,
+  yeokma,
+  gongmang,
 ];
 
 // tags.ts(단일 소스)의 태그를 각 글에 주입한다.
