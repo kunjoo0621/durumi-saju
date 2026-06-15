@@ -9,6 +9,7 @@ import StoryCTA from "@/components/stories/StoryCTA";
 import StoryCard from "@/components/stories/StoryCard";
 import StoryViewCounter from "@/components/stories/StoryViewCounter";
 import CelebritySajuCard from "@/components/stories/CelebritySajuCard";
+import StoryTags from "@/components/stories/StoryTags";
 import {
   getAllStories,
   getFaqItems,
@@ -285,18 +286,7 @@ export default async function StoryDetailPage({ params }: Props) {
           />
         </div>
 
-        {story.keywords?.length ? (
-          <div className="mt-10 flex flex-wrap gap-2">
-            {story.keywords.map((k) => (
-              <span
-                key={k}
-                className="text-[12px] text-text-tertiary bg-white/[0.04] px-2.5 py-1 rounded-full"
-              >
-                #{k}
-              </span>
-            ))}
-          </div>
-        ) : null}
+        <StoryTags story={story} />
 
         {related.length > 0 && (
           <section className="mt-16 pt-8 border-t border-white/10">

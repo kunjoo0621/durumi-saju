@@ -3,9 +3,13 @@ import type { Metadata } from "next";
 import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
 import StoryCard from "@/components/stories/StoryCard";
+import TagBrowse from "@/components/stories/TagBrowse";
+import StorySearch, { type SearchItem } from "@/components/stories/StorySearch";
 import {
   getAllStories,
   getStoriesByCategory,
+  getReadingMinutes,
+  getStoryTags,
 } from "@/lib/stories/registry";
 import {
   STORY_CATEGORY_LABEL,
@@ -46,6 +50,18 @@ export default function StoriesHubPage() {
   const hero = all[0];
   const rest = all.slice(1);
   const issueDate = formatIssueDate();
+
+  // 클라이언트 검색 인덱스 — registry를 클라 번들에 끌어오지 않도록 서버에서 평탄화.
+  const searchItems: SearchItem[] = all.map((s) => ({
+    slug: s.slug,
+    title: s.title,
+    excerpt: s.excerpt,
+    category: s.category,
+    tagLabels: getStoryTags(s).map((t) => t.label),
+    keywords: s.keywords ?? [],
+    readingMin: getReadingMinutes(s),
+    hero: s.heroImage ? { src: s.heroImage.src, alt: s.heroImage.alt } : null,
+  }));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -111,12 +127,23 @@ export default function StoriesHubPage() {
           </p>
         </header>
 
-        <div className="h-px bg-white/10" aria-hidden="true" />
+        {/* 검색 — 발견 동선 최상단 */}
+        <section className="pb-2">
+          <StorySearch items={searchItems} />
+        </section>
+
+        {/* 태그로 찾기 */}
+        <section className="mt-9 pt-6 border-t border-white/10">
+          <div className="text-[11px] tracking-[0.22em] text-text-tertiary font-semibold uppercase mb-5">
+            태그로 찾기
+          </div>
+          <TagBrowse />
+        </section>
 
         {/* FEATURED */}
         {hero && (
-          <section>
-            <div className="pt-7 pb-1">
+          <section className="mt-12 pt-6 border-t border-white/10">
+            <div className="pb-1">
               <div className="text-[11px] tracking-[0.22em] text-[#FF6B6B] font-semibold uppercase">
                 이 주의 글
               </div>
