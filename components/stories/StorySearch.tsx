@@ -75,7 +75,7 @@ export default function StorySearch({ items }: { items: SearchItem[] }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder="제목·연예인·일주·태그로 검색 (예: 임영웅, 정화, 궁합)"
           aria-label="매거진 검색"
-          className="w-full rounded-2xl bg-white/[0.05] border border-white/10 focus:border-[#FF6B6B]/60 focus:bg-white/[0.07] outline-none pl-11 pr-10 py-3.5 text-[15px] text-text-primary placeholder:text-text-tertiary transition-colors"
+          className="w-full rounded-2xl bg-white/[0.05] border border-white/10 focus:border-[#FF6B6B]/60 focus:bg-white/[0.07] outline-none !pl-11 !pr-10 !py-3.5 text-[15px] text-text-primary placeholder:text-text-tertiary transition-colors"
         />
         {q && (
           <button
