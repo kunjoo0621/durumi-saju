@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
 import StoryCard from "@/components/stories/StoryCard";
+import StoryListMore from "@/components/stories/StoryListMore";
 import TagBrowse from "@/components/stories/TagBrowse";
 import StorySearch, { type SearchItem } from "@/components/stories/StorySearch";
 import {
@@ -160,11 +161,11 @@ export default function StoriesHubPage() {
                 최신 이야기
               </div>
             </div>
-            <div className="divide-y divide-white/[0.07]">
+            <StoryListMore>
               {rest.map((s) => (
                 <StoryCard key={s.slug} story={s} />
               ))}
-            </div>
+            </StoryListMore>
           </section>
         )}
 
