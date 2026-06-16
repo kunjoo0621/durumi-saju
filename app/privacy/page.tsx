@@ -159,7 +159,7 @@ export default function PrivacyPage() {
                       <td className="py-3">결제 관련 정보</td>
                     </tr>
                     <tr className="border-b border-white/[0.06]">
-                      <td className="py-3 pr-4">Anthropic (Claude AI)</td>
+                      <td className="py-3 pr-4">Google (Gemini API)</td>
                       <td className="py-3 pr-4">AI 사주 분석</td>
                       <td className="py-3">
                         사주 분석 입력 정보 (이름 제외, 익명화 처리)
