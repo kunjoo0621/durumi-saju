@@ -15,8 +15,11 @@ import type { InputPayload } from "@/lib/analysis";
 import { calculateSaju, formatEnrichedSajuText, enrichSajuData } from "@/lib/utils/saju";
 import { getPairRelation, STEM_ELEMENT, getTenStar, BRANCH_INFO, type PairRelation } from "@/lib/utils/saju-enrichment";
 import { calculateServerScoring } from "@/lib/utils/saju-scoring";
+import { computeDailyModifier, moodFromDaily, type DailyModifierResult } from "@/lib/today-daily-score";
 
-export const TODAY_SCORING_VERSION = 1;
+// v2 — 일진 가중 도입. 등급/composite/scores가 원국 고정값이 아니라
+// 그날 일진(지지 합충형·천간 생극·용신/기신)에 따라 날짜별로 변동.
+export const TODAY_SCORING_VERSION = 2;
 
 // ────────────────────────────────────────────────────────
 // 결과 타입
@@ -52,6 +55,8 @@ export interface TodayResult {
   sections: TodaySection[];
   todayMeta: TodayMeta;
   todayKeywords: string[];
+  baseComposite?: number;   // 원국 고정 composite (일진 보정 전) — 분석/추적용
+  dailyDelta?: number;      // 일진 보정폭 (±) — 분석/추적용
 }
 
 export interface TodayServerAnalysis {
@@ -85,17 +90,6 @@ function getStemRelation(ownerEl: string, todayEl: string): { label: string; imp
   if (GEUK[ownerEl] === todayEl) return { label: `${ownerEl}→${todayEl} 본인이 일진을 극함`, impact: "내가 우위 (주도 가능)" };
   if (GEUK[todayEl] === ownerEl) return { label: `${todayEl}→${ownerEl} 일진이 본인을 극함`, impact: "압박 받음 (수동·기다림)" };
   return { label: "관계 없음", impact: "평이" };
-}
-
-function decideMood(stemRel: string, pairType: PairRelation): "강세" | "보통" | "주의" | "위기" {
-  // 위기는 일지 충 + 일간 극이 동시 발현일 때만 (prompt v1.7 매핑 일치).
-  // 천간 극 단독 / 일지 충 단독은 "주의"로 약화 — 위기 빈도 ↓, 정관 일진 같은 길성도 적절히 분류.
-  const stemKuk = stemRel.includes("일진이 본인을 극함");
-  if (pairType === "chung" && stemKuk) return "위기";
-  if (pairType === "chung" || stemKuk) return "주의";
-  if (pairType === "hyung" || pairType === "wonjin") return "주의";
-  if (pairType === "hap" || stemRel.includes("일진이 본인을 생함")) return "강세";
-  return "보통";
 }
 
 const WEATHER_MAP = {
@@ -165,6 +159,9 @@ export async function analyzeTodayServer(input: InputPayload, targetDate: string
   ownerSajuText: string;
   todayContext: string;
   ownerEnriched: ReturnType<typeof enrichSajuData>;
+  masterTier: ReturnType<typeof calculateServerScoring>["tier"];
+  masterScores: ReturnType<typeof calculateServerScoring>["scores"];
+  daily: DailyModifierResult;
 }> {
   // 1. 본인 사주 enriched
   const birthYear = Number(input.birthYear);
@@ -203,10 +200,27 @@ export async function analyzeTodayServer(input: InputPayload, targetDate: string
 
   const pair = getPairRelation(ownerDayBranchHanja, todayDayBranchHanja);
   const stemRel = getStemRelation(ownerEl, todayEl);
-  const mood = decideMood(stemRel.label, pair.type);
-  const weather = WEATHER_MAP[mood];
   const tenStar = computeTenStar(ownerDayStemHanja, todayDayStemHanja);
   const twelveStage = ownerEnriched.twelveStages?.day?.korean || "";
+
+  // 원국 산식(변경 없음) → 그 위에 일진 가중을 얹어 그날 등급·점수 확정.
+  const { tier: masterTier, scores: masterScores } = calculateServerScoring(ownerEnriched);
+  const daily = computeDailyModifier({
+    masterComposite: masterTier.composite,
+    masterScores: masterScores as unknown as Record<string, number>,
+    branchRelationType: pair.type,
+    stemRelationLabel: stemRel.label,
+    todayStemElement: todayEl,
+    todayBranchElement: BRANCH_INFO[todayDayBranchHanja]?.element ?? todayEl,
+    todayTenStar: tenStar,
+    yongshin: ownerEnriched.yongshin?.eokbu,
+    gisin: ownerEnriched.yongshin?.gisin,
+  });
+
+  // mood/weather는 "그 사람 기준 오늘 변동폭(delta)"에 앵커 — 상대값.
+  // 원국 낮아도 좋은 일진 날엔 맑음, 원국 높아도 나쁜 날엔 폭풍.
+  const mood = moodFromDaily(daily.delta);
+  const weather = WEATHER_MAP[mood];
 
   const todayContext = `
 [오늘 일진 컨텍스트 — 서버 확정]
@@ -223,6 +237,7 @@ export async function analyzeTodayServer(input: InputPayload, targetDate: string
 본인 용신: ${ownerEnriched.yongshin?.eokbu || "-"} / 기신: ${ownerEnriched.yongshin?.gisin || "-"}
 본인 신강신약: ${ownerEnriched.strength?.result || "-"}
 
+오늘 일진 보정: 원국 ${masterTier.grade}/${masterTier.composite} → ${daily.delta >= 0 ? "+" : ""}${daily.delta}점 → 오늘 ${daily.dailyGrade}/${daily.dailyComposite}
 오늘 mood (서버 확정): **${mood}** → weather: ${weather.icon} "${weather.label}"
 `.trim();
 
@@ -243,7 +258,7 @@ export async function analyzeTodayServer(input: InputPayload, targetDate: string
     twelveStage,
   };
 
-  return { serverAnalysis, ownerSajuText, todayContext, ownerEnriched };
+  return { serverAnalysis, ownerSajuText, todayContext, ownerEnriched, masterTier, masterScores, daily };
 }
 
 // ────────────────────────────────────────────────────────
@@ -254,10 +269,7 @@ export async function runTodayAnalysis(input: InputPayload, targetDate: string):
   result: TodayResult;
   serverAnalysis: TodayServerAnalysis;
 }> {
-  const { serverAnalysis, ownerSajuText, todayContext, ownerEnriched } = await analyzeTodayServer(input, targetDate);
-
-  // 마스터 원칙 — 개인사주 산식으로 tier·scores 산출 (yearly와 동일)
-  const { tier: masterTier, scores: masterScores } = calculateServerScoring(ownerEnriched);
+  const { serverAnalysis, ownerSajuText, todayContext, masterTier, daily } = await analyzeTodayServer(input, targetDate);
 
   // 나이 + 나이대 산출
   const [ty, tm, td] = targetDate.split("-").map(Number);
@@ -276,13 +288,15 @@ ${ownerSajuText}
 
 ${todayContext}
 
-[★ 사주 마스터 값 — 서버 확정, LLM 변경 금지]
-사주 단일 분석 등급(grade): ${masterTier.grade}
-composite: ${masterTier.composite}
-percentileRank: ${masterTier.percentileRank}
-topPercent: ${masterTier.topPercent}
+[★ 오늘의 등급 — 서버 확정(원국 + 일진 가중), LLM 변경 금지]
+오늘의 등급(grade): ${daily.dailyGrade}
+composite: ${daily.dailyComposite}
+percentileRank: ${daily.dailyPercentileRank}
+topPercent: ${daily.dailyTopPercent}
 confidence: ${masterTier.confidence}
-5분야 점수: 재물 ${masterScores.재물운} / 연애 ${masterScores.연애운} / 직장 ${masterScores.직장운} / 건강 ${masterScores.건강운} / 대인 ${masterScores.대인운}
+5분야 점수: 재물 ${daily.dailyScores.재물운} / 연애 ${daily.dailyScores.연애운} / 직장 ${daily.dailyScores.직장운} / 건강 ${daily.dailyScores.건강운} / 대인 ${daily.dailyScores.대인운}
+${daily.focusCategory ? `오늘 일진이 특히 건드리는 분야: ${daily.focusCategory} ← 이 분야 섹션을 그날의 핵심으로 더 비중 있게 풀이 (점수도 이 분야가 가장 크게 움직임)` : ""}
+(참고: 원국 기본 등급 ${masterTier.grade}/${masterTier.composite} → 오늘 일진 보정 ${daily.delta >= 0 ? "+" : ""}${daily.delta}점 → 오늘 ${daily.dailyGrade}/${daily.dailyComposite}. title·description은 "오늘"의 등급·기운에 맞춰 작성)
 
 [입력값]
 이름: ${input.name || "(미입력)"}
@@ -298,7 +312,7 @@ confidence: ${masterTier.confidence}
 - 6 sections icon 정확한 순서: 💸 / 🧩 / 💞 / 💼 / 🩺 / 🎯 (누락·중복·순서 어긋남 시 시스템이 throw)
 - 6 section title 동적 생성 (8~25자, 비유·반전, 구체 명사 1개 이상)
 - ★ 본문 한자 0건 — 일진 음역어("기해", "갑인", "계수") 본문 사용 금지. 친화어로 풀이
-- ★ tier·scores → 위 사주 마스터 값 그대로 출력 (변경 금지). title·description은 LLM이 today 맥락 맞춰 생성하되 grade/composite 등 숫자는 마스터 그대로.
+- ★ tier·scores → 위 "오늘의 등급" 값 그대로 출력 (변경 금지). title·description은 LLM이 오늘 일진 맥락 맞춰 생성하되 grade/composite 등 숫자는 서버 확정값 그대로.
 `.trim();
 
   const text = await callGeminiFetch("gemini-3-flash-preview", systemPrompt, userInfo);
@@ -333,17 +347,19 @@ confidence: ${masterTier.confidence}
   // expected 순서로 강제 정렬 (LLM이 순서만 어겨도 sequence 보장)
   parsed.sections = EXPECTED_ICONS.map((icon) => byIcon.get(icon)!);
 
-  // ★ 서버 확정값으로 마스터 덮어쓰기 (LLM이 임시값 만들어도 마스터로 강제)
+  // ★ 서버 확정값(원국 + 일진 가중)으로 덮어쓰기 (LLM이 임시값 만들어도 강제)
   parsed.tier = {
-    grade: masterTier.grade,
-    composite: masterTier.composite,
-    percentileRank: masterTier.percentileRank,
-    topPercent: masterTier.topPercent,
-    confidence: masterTier.confidence,
+    grade: daily.dailyGrade,
+    composite: daily.dailyComposite,
+    percentileRank: daily.dailyPercentileRank,
+    topPercent: daily.dailyTopPercent,
+    confidence: masterTier.confidence,       // confidence는 원국 신뢰도 그대로 (시 미상 등)
     title: parsed.tier?.title || "",         // title·description은 LLM 생성 그대로
     description: parsed.tier?.description || "",
   };
-  parsed.scores = masterScores as unknown as Record<string, number>;
+  parsed.scores = daily.dailyScores;
+  parsed.baseComposite = masterTier.composite;
+  parsed.dailyDelta = daily.delta;
 
   // 서버 확정값으로 todayMeta 덮어쓰기 (LLM이 잘못 출력해도 보호)
   parsed.todayMeta = {

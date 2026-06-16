@@ -1,5 +1,5 @@
-// 내 사주 5분야 강도 — 사주 마스터 점수 (재물·연애·직장·건강·대인) 가로 막대.
-// today에서는 일생 단위 사주 정보를 풀이 컨텍스트로 함께 노출.
+// 내 사주 5분야 강도 — 재물·연애·직장·건강·대인 가로 막대.
+// today에서는 원국 점수에 그날 일진 보정(delta)을 얹은 "오늘 기준" 점수를 노출.
 
 const CATEGORY_LABELS: Record<string, string> = {
   재물운: "재물",
@@ -19,7 +19,7 @@ export default function ScoresBar({ scores }: { scores: Record<string, number> }
           내 사주 5분야 강도
         </div>
         <div className="text-[12px] text-text-tertiary">
-          일생 단위 (오늘과 무관)
+          오늘 기준
         </div>
       </div>
       <div className="space-y-3">
