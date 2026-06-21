@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Egg } from "@phosphor-icons/react";
 import { ButtonSpinner } from "@/components/loading";
 
 interface LoginFormProps {
@@ -20,16 +19,16 @@ export default function LoginForm({ callbackUrl = "/menu", onClose }: LoginFormP
 
   return (
     <div className="space-y-5">
-      {/* 이벤트 안내 */}
-      <div className="rounded-xl border border-[rgb(var(--c-brand))]/25 bg-[rgb(var(--c-brand))]/[0.08] px-4 py-3 text-center">
+      {/* 공유 보상 안내 */}
+      <div className="rounded-xl border border-[#6d5cff]/25 bg-[#6d5cff]/[0.10] px-4 py-3 text-center">
         <div className="flex items-center justify-center gap-1.5 text-[13px] font-semibold text-white">
-          <Egg size={16} weight="fill" className="text-[rgb(var(--c-brand))]" aria-hidden />
-          <span>지금 카카오 로그인하면</span>
-          <span className="rounded-full bg-[rgb(var(--c-brand))] px-2 py-0.5 text-[12px] font-bold text-white">
-            10알 무료
+          <span aria-hidden>🎁</span>
+          <span>결과를 친구에게 공유하면</span>
+          <span className="rounded-full bg-[#6d5cff] px-2 py-0.5 text-[12px] font-bold text-white">
+            5알 선물
           </span>
         </div>
-        <p className="mt-1 text-[11px] text-[rgb(var(--c-text-sub))]">신규 가입 1회 한정</p>
+        <p className="mt-1 text-[11px] text-[rgb(var(--c-text-sub))]">오늘의 운세 1회 분량</p>
       </div>
 
       <button
