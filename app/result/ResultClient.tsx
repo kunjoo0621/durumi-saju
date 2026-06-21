@@ -336,6 +336,8 @@ export default function ResultClient() {
   }, [resultIdParam, allowedByPayment, claimParam, session, router, status]);
 
   const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("결과 링크가 복사되었어요");
+  const shareRewardedRef = useRef(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingLeaveUrl, setPendingLeaveUrl] = useState<string | null>(null);
 
@@ -353,11 +355,29 @@ export default function ResultClient() {
     const shareUrl = `${window.location.origin}/result/share/${id}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2000);
     } catch {
-      // fallback ignored
+      // 복사 실패 시 공유가 안 된 것으로 보고 보상도 시도하지 않음
+      return;
     }
+
+    let msg = "결과 링크가 복사되었어요";
+    // 로그인 사용자 최초 1회 공유 → 5알 적립 (멱등은 서버 RPC가 보장)
+    if (status === "authenticated" && !shareRewardedRef.current) {
+      shareRewardedRef.current = true;
+      try {
+        const res = await fetch("/api/coins/share-reward", { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.granted) msg = "링크 복사 완료! 공유 보상 5알 적립 🎁";
+        }
+      } catch {
+        // 보상 실패는 무시 (공유 자체는 이미 완료)
+      }
+    }
+
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2600);
   };
 
   if (analysisStatus === "pending") {
@@ -528,7 +548,7 @@ export default function ResultClient() {
             aria-live="polite"
             className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           >
-            결과 링크가 복사되었어요
+            {toastMsg}
           </div>
 
           {/* 게스트용 하단 스티키 카카오 로그인 CTA */}

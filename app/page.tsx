@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CaretDown } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
+import ShareRewardBanner from "@/components/ShareRewardBanner";
 
 /* ─── scroll-reveal hook ─── */
 
@@ -217,6 +218,7 @@ function LandingPageInner() {
             isScrolled ? "bg-[rgb(var(--c-dark-bg))]" : "bg-transparent"
           }`}
         />
+        <ShareRewardBanner />
       </div>
 
       <main>
