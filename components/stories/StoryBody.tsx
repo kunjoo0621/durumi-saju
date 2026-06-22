@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import StoryCTA from "./StoryCTA";
 import type { Story, StoryBlock } from "@/lib/stories/types";
@@ -207,6 +208,28 @@ function BlockView({ block }: { block: StoryBlock }) {
             </span>
             {renderInline(block.text)}
           </blockquote>
+        </figure>
+      );
+    }
+
+    case "image": {
+      // 본문 사이 설명 이미지 — visu 카드(4:3). 표·콜아웃처럼 본문 흐름을 시각 정리.
+      return (
+        <figure className="not-prose my-6 sm:my-7 -mx-1 sm:mx-0">
+          <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-white/[0.03] border border-white/[0.06]">
+            <Image
+              src={block.src}
+              alt={block.alt}
+              fill
+              sizes="(min-width: 768px) 720px, 100vw"
+              className="object-cover"
+            />
+          </div>
+          {block.caption && (
+            <figcaption className="text-[12.5px] text-text-tertiary mt-3 px-1 leading-[1.5]">
+              {block.caption}
+            </figcaption>
+          )}
         </figure>
       );
     }

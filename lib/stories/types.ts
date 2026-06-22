@@ -77,6 +77,15 @@ export type StoryBlock =
       kind: "faq";
       title?: string;
       items: { q: string; a: string }[];
+    }
+  | {
+      /** 본문 사이 설명 이미지 — visu 카드(4:3, 1080×810). /stories/figures/{slug}-{n}.png */
+      kind: "image";
+      src: string;
+      /** SEO·접근성용 alt */
+      alt: string;
+      /** 이미지 아래 한 줄 설명 (선택) */
+      caption?: string;
     };
 
 export type StorySection = {

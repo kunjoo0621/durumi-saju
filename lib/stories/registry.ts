@@ -114,10 +114,20 @@ import { cheotsarangSaju } from "./data/cheotsarang-saju";
 import { samjae } from "./data/samjae";
 import { yeokma } from "./data/yeokma";
 import { gongmang } from "./data/gongmang";
+import { shoesDream } from "./data/shoes-dream";
+import { toiletDream } from "./data/toilet-dream";
+import { carDream } from "./data/car-dream";
+import { motaesoloSaju } from "./data/motaesolo-saju";
+import { yeonaeunSigi } from "./data/yeonaeun-sigi";
 import type { Story, StoryCategory } from "./types";
 import { STORY_TAGS, TAG_META, TAG_ORDER, type TagMeta } from "./tags";
 
 const RAW_STORIES: Story[] = [
+  shoesDream,
+  toiletDream,
+  carDream,
+  motaesoloSaju,
+  yeonaeunSigi,
   anton,
   babyDream,
   bloodDream,
