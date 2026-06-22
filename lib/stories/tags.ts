@@ -161,6 +161,8 @@ export const STORY_TAGS: Record<string, string[]> = {
   "wonjin-goonghap": ["궁합", "신살"],
   "yeonae-pattern": ["연애운"],
   "zodiac-vs-myeongni": ["궁합"],
+  "motaesolo-saju": ["연애운"],
+  "yeonaeun-sigi": ["연애운"],
 
   // ── 꿈해몽 ──
   "baby-dream": ["꿈해몽", "태몽"],
@@ -195,4 +197,7 @@ export const STORY_TAGS: Record<string, string[]> = {
   "tooth-dream": ["꿈해몽"],
   "water-dream": ["꿈해몽"],
   "wedding-dream": ["꿈해몽", "결혼운"],
+  "shoes-dream": ["꿈해몽"],
+  "toilet-dream": ["꿈해몽", "재물운"],
+  "car-dream": ["꿈해몽"],
 };
