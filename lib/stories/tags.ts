@@ -109,6 +109,12 @@ export const STORY_TAGS: Record<string, string[]> = {
   yangjieun: ["연예인", "트로트", "갑목"],
   youngtak: ["연예인", "트로트", "신금"],
   zhanghao: ["연예인", "아이돌", "갑목"],
+  // ── 리센느(RESCENE) ──
+  wony: ["연예인", "아이돌", "갑목"],
+  liv: ["연예인", "아이돌", "계수"],
+  minami: ["연예인", "아이돌", "임수"],
+  may: ["연예인", "아이돌", "신금"],
+  zena: ["연예인", "아이돌", "신금"],
 
   // ── 일간 가이드 (남/여) ──
   "gapmok-ilgan-man": ["갑목"],
