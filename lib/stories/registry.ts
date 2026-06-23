@@ -119,6 +119,11 @@ import { toiletDream } from "./data/toilet-dream";
 import { carDream } from "./data/car-dream";
 import { motaesoloSaju } from "./data/motaesolo-saju";
 import { yeonaeunSigi } from "./data/yeonaeun-sigi";
+import { wony } from "./data/wony";
+import { liv } from "./data/liv";
+import { minami } from "./data/minami";
+import { may } from "./data/may";
+import { zena } from "./data/zena";
 import type { Story, StoryCategory } from "./types";
 import { STORY_TAGS, TAG_META, TAG_ORDER, type TagMeta } from "./tags";
 
@@ -244,6 +249,11 @@ const RAW_STORIES: Story[] = [
   samjae,
   yeokma,
   gongmang,
+  wony,
+  liv,
+  minami,
+  may,
+  zena,
 ];
 
 // tags.ts(단일 소스)의 태그를 각 글에 주입한다.
