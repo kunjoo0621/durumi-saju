@@ -206,4 +206,7 @@ export const STORY_TAGS: Record<string, string[]> = {
   "shoes-dream": ["꿈해몽"],
   "toilet-dream": ["꿈해몽", "재물운"],
   "car-dream": ["꿈해몽"],
+  anyujin: ["연예인", "아이돌", "정화"],
+  "celebrity-dream": ["꿈해몽"],
+  "yeonae-gwontaegi": ["연애운"],
 };
