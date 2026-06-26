@@ -40,6 +40,9 @@ import { jeonghwaIlganMan } from "./data/jeonghwa-ilgan-man";
 import { gitoIlganMan } from "./data/gito-ilgan-man";
 import { gyeonggeumIlganMan } from "./data/gyeonggeum-ilgan-man";
 import { singeumIlganMan } from "./data/singeum-ilgan-man";
+import { anYujin } from "./data/anyujin";
+import { celebrityDream } from "./data/celebrity-dream";
+import { yeonaeGwontaegi } from "./data/yeonae-gwontaegi";
 import { imsuIlganMan } from "./data/imsu-ilgan-man";
 import { gyesuIlganMan } from "./data/gyesu-ilgan-man";
 import { imYoungwoong } from "./data/imyoungwoong";
@@ -254,6 +257,9 @@ const RAW_STORIES: Story[] = [
   minami,
   may,
   zena,
+  anYujin,
+  celebrityDream,
+  yeonaeGwontaegi,
 ];
 
 // tags.ts(단일 소스)의 태그를 각 글에 주입한다.
