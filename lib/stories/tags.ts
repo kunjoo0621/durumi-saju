@@ -209,4 +209,7 @@ export const STORY_TAGS: Record<string, string[]> = {
   anyujin: ["연예인", "아이돌", "정화"],
   "celebrity-dream": ["꿈해몽"],
   "yeonae-gwontaegi": ["연애운"],
+  "jaehon-saju": ["연애운", "결혼운"],
+  "jipchak-yeonae": ["연애운"],
+  "geumsappa-saju": ["연애운"],
 };
