@@ -46,6 +46,9 @@ import { yeonaeGwontaegi } from "./data/yeonae-gwontaegi";
 import { jaehonSaju } from "./data/jaehon-saju";
 import { jipchakYeonae } from "./data/jipchak-yeonae";
 import { geumsappaSaju } from "./data/geumsappa-saju";
+import { jangGiha } from "./data/janggiha";
+import { yunGai } from "./data/yungai";
+import { jeonYujin } from "./data/jeonyujin";
 import { imsuIlganMan } from "./data/imsu-ilgan-man";
 import { gyesuIlganMan } from "./data/gyesu-ilgan-man";
 import { imYoungwoong } from "./data/imyoungwoong";
@@ -266,6 +269,9 @@ const RAW_STORIES: Story[] = [
   jaehonSaju,
   jipchakYeonae,
   geumsappaSaju,
+  jangGiha,
+  yunGai,
+  jeonYujin,
 ];
 
 // tags.ts(단일 소스)의 태그를 각 글에 주입한다.

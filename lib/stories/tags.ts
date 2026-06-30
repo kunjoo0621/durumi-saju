@@ -212,4 +212,7 @@ export const STORY_TAGS: Record<string, string[]> = {
   "jaehon-saju": ["연애운", "결혼운"],
   "jipchak-yeonae": ["연애운"],
   "geumsappa-saju": ["연애운"],
+  janggiha: ["연예인", "갑목"],
+  yungai: ["연예인", "배우", "정화"],
+  jeonyujin: ["연예인", "트로트", "임수"],
 };
