@@ -123,6 +123,9 @@ import { cheotsarangSaju } from "./data/cheotsarang-saju";
 import { samjae } from "./data/samjae";
 import { yeokma } from "./data/yeokma";
 import { gongmang } from "./data/gongmang";
+import { baekho } from "./data/baekho";
+import { goegang } from "./data/goegang";
+import { hwagae } from "./data/hwagae";
 import { shoesDream } from "./data/shoes-dream";
 import { toiletDream } from "./data/toilet-dream";
 import { carDream } from "./data/car-dream";
@@ -258,6 +261,9 @@ const RAW_STORIES: Story[] = [
   samjae,
   yeokma,
   gongmang,
+  baekho,
+  goegang,
+  hwagae,
   wony,
   liv,
   minami,

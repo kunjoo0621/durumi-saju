@@ -145,6 +145,9 @@ export const STORY_TAGS: Record<string, string[]> = {
   "rich-2026-saju": ["재물운", "2026운세"],
   samjae: ["삼재", "2026운세"],
   yeokma: ["신살", "직업운"],
+  baekho: ["신살", "직업운"],
+  goegang: ["신살", "직업운"],
+  hwagae: ["신살", "직업운"],
   gongmang: ["공망"],
 
   // ── 연애·궁합 ──
