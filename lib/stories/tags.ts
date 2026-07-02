@@ -148,6 +148,9 @@ export const STORY_TAGS: Record<string, string[]> = {
   baekho: ["신살", "직업운"],
   goegang: ["신살", "직업운"],
   hwagae: ["신살", "직업운"],
+  "cheoneul-gwiin": ["신살"],
+  "munchang-gwiin": ["신살", "직업운"],
+  "taegeuk-gwiin": ["신살", "직업운"],
   gongmang: ["공망"],
 
   // ── 연애·궁합 ──

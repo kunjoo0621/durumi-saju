@@ -126,6 +126,9 @@ import { gongmang } from "./data/gongmang";
 import { baekho } from "./data/baekho";
 import { goegang } from "./data/goegang";
 import { hwagae } from "./data/hwagae";
+import { cheoneulGwiin } from "./data/cheoneul-gwiin";
+import { munchangGwiin } from "./data/munchang-gwiin";
+import { taegeukGwiin } from "./data/taegeuk-gwiin";
 import { shoesDream } from "./data/shoes-dream";
 import { toiletDream } from "./data/toilet-dream";
 import { carDream } from "./data/car-dream";
@@ -264,6 +267,9 @@ const RAW_STORIES: Story[] = [
   baekho,
   goegang,
   hwagae,
+  cheoneulGwiin,
+  munchangGwiin,
+  taegeukGwiin,
   wony,
   liv,
   minami,
