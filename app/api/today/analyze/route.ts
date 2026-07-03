@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
         todayMeta: result.todayMeta,
       };
 
-      const { error: updateError } = await supabaseAdmin
+      const { data: updatedRows, error: updateError } = await supabaseAdmin
         .from("today_results")
         .update({
           full_json: result,
@@ -164,7 +164,8 @@ export async function POST(request: NextRequest) {
           stem_relation_label: serverAnalysis.stemRelation.label,
           ten_star: serverAnalysis.tenStar,
         })
-        .eq("id", resultId);
+        .eq("id", resultId)
+        .select("id");
 
       if (updateError) {
         console.error("[TODAY_ANALYZE] update", updateError.message);
@@ -176,6 +177,19 @@ export async function POST(request: NextRequest) {
         await refundCoins(userId, TODAY_COST, refundRef);
         return NextResponse.json(
           { error: "결과 저장에 실패했습니다.", refunded: true },
+          { status: 500 },
+        );
+      }
+
+      // 0건 업데이트 = row 가 분석 도중 사라짐 → 조용한 손실 방지: 환불 + loud log.
+      // (row 가 없으므로 _error 마커·락 해제는 대상이 없어 생략)
+      if (!updatedRows || updatedRows.length === 0) {
+        console.error(
+          `[TODAY_ANALYZE] 결과 row 소실: update 0건 — 분석 도중 삭제됨. resultId=${resultId} userId=${userId} refundRef=${refundRef}`,
+        );
+        await refundCoins(userId, TODAY_COST, refundRef);
+        return NextResponse.json(
+          { error: "분석 결과를 저장할 수 없습니다. 알은 환불되었습니다.", refunded: true },
           { status: 500 },
         );
       }

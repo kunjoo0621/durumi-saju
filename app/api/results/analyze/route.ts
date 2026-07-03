@@ -88,11 +88,12 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // DB 업데이트
-      const { error: updateError } = await supabaseAdmin
+      // DB 업데이트 — .select() 로 실제 반영된 row 수를 확인한다.
+      const { data: updatedRows, error: updateError } = await supabaseAdmin
         .from("saju_results")
         .update({ full_json: full, teaser_json: teaser, saju_text: sajuText })
-        .eq("id", resultId);
+        .eq("id", resultId)
+        .select("id");
 
       if (updateError) {
         console.error("[ANALYZE] update failed", updateError.message);
@@ -102,6 +103,20 @@ export async function POST(request: NextRequest) {
           .eq("id", resultId);
         await refundCoins(userId, SAJU_COST, refundRef);
         return NextResponse.json({ error: "결과 저장에 실패했습니다.", refunded: true }, { status: 500 });
+      }
+
+      // 0건 업데이트 = row 가 SELECT 이후 분석 도중 사라짐. supabase 는 이걸 에러 없이
+      // 통과시켜 "돈 냄 → 결과 없음 → 환불 없음" 조용한 손실을 만든다(김효은 사건).
+      // 환불 + 원인추적용 loud log 로 전환. (row 가 없으므로 _error 마커는 생략)
+      if (!updatedRows || updatedRows.length === 0) {
+        console.error(
+          `[ANALYZE] 결과 row 소실: update 0건 — 분석 도중 삭제됨. resultId=${resultId} userId=${userId} refundRef=${refundRef}`,
+        );
+        await refundCoins(userId, SAJU_COST, refundRef);
+        return NextResponse.json(
+          { error: "분석 결과를 저장할 수 없습니다. 알은 환불되었습니다.", refunded: true },
+          { status: 500 },
+        );
       }
 
       return NextResponse.json({ status: "completed" });

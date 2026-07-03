@@ -83,14 +83,15 @@ export async function POST(request: NextRequest) {
         yearlyMeta: full.yearlyMeta,
       };
 
-      const { error: updateError } = await supabaseAdmin
+      const { data: updatedRows, error: updateError } = await supabaseAdmin
         .from("yearly_results")
         .update({
           full_json: full,
           teaser_json: teaser,
           yearly_pillar: full.yearlyMeta.pillar,
         })
-        .eq("id", resultId);
+        .eq("id", resultId)
+        .select("id");
 
       if (updateError) {
         console.error("[YEARLY_ANALYZE] update", updateError.message);
@@ -101,6 +102,18 @@ export async function POST(request: NextRequest) {
         await refundCoins(userId, YEARLY_COST, refundRef);
         return NextResponse.json(
           { error: "결과 저장에 실패했습니다.", refunded: true },
+          { status: 500 },
+        );
+      }
+
+      // 0건 업데이트 = row 가 분석 도중 사라짐 → 조용한 손실 방지: 환불 + loud log.
+      if (!updatedRows || updatedRows.length === 0) {
+        console.error(
+          `[YEARLY_ANALYZE] 결과 row 소실: update 0건 — 분석 도중 삭제됨. resultId=${resultId} userId=${userId} refundRef=${refundRef}`,
+        );
+        await refundCoins(userId, YEARLY_COST, refundRef);
+        return NextResponse.json(
+          { error: "분석 결과를 저장할 수 없습니다. 알은 환불되었습니다.", refunded: true },
           { status: 500 },
         );
       }
