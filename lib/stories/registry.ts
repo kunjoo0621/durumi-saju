@@ -56,6 +56,9 @@ import { jangMinho } from "./data/jangminho";
 import { kimHeejae } from "./data/kimheejae";
 import { jungDongwon } from "./data/jungdongwon";
 import { anSeonghun } from "./data/anseonghun";
+import { parkJihoon } from "./data/parkjihoon";
+import { goYunjeong } from "./data/goyunjeong";
+import { leeChaemin } from "./data/leechaemin";
 import { yangJieun } from "./data/yangjieun";
 import { parkSeojin } from "./data/parkseojin";
 import { hongja } from "./data/hongja";
@@ -197,6 +200,9 @@ const RAW_STORIES: Story[] = [
   kimHeejae,
   jungDongwon,
   anSeonghun,
+  parkJihoon,
+  goYunjeong,
+  leeChaemin,
   yangJieun,
   parkSeojin,
   hongja,
