@@ -108,22 +108,11 @@ export async function autoSetPrimaryIfNeeded(userId: string, inputHash: string) 
 // TODO: refund_coins RPC로 원자적 처리 필요 (현재 read-then-write race 가능성 있음)
 // 환불은 분석 실패 시에만 발생하므로 동시성 이슈 확률은 매우 낮음
 export async function refundCoins(userId: string, amount: number, referenceId: string) {
-  // 멱등성: 동일 reference_id 로 이미 환불된 이력이 있으면 재환불 금지.
-  // analyze 재시도(클라이언트 폴링)나 중복 호출 시 이중 환불되는 사고를 막는다.
-  // reference_id 는 모든 호출처에서 spend 1건당 유일(sessionId / order_id)하므로
-  // 이 체크가 정상 환불을 억제하지 않는다.
-  const { count: alreadyRefunded } = await supabaseAdmin
-    .from("coin_transactions")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("type", "refund")
-    .eq("reference_id", referenceId);
-
-  if ((alreadyRefunded ?? 0) > 0) {
-    console.warn(`[REFUND] 중복 환불 차단 user=${userId} ref=${referenceId} amount=${amount}`);
-    return;
-  }
-
+  // 주의: reference_id 기준 멱등 가드는 넣지 않는다. analyze 계열의 환불 refUnlock.order_id
+  // 는 "결과 1건당" 값이라 spend 1건당 유일하지 않다(같은 결과를 재분석하면 새 spend 가
+  // 같은 order_id 로 환불된다). reference_id 로 dedup 하면 재분석 2번째 실패의 정상 환불이
+  // 막혀 알이 사라진다. 순차 재시도의 이중환불은 analyze 라우트의 "row 없으면 404" 가드가
+  // 이미 막고, 동시 호출 이중환불은 드문 over-refund(사용자 손해 아님)로 감수한다.
   const { data } = await supabaseAdmin
     .from("profiles")
     .select("coin_balance")
