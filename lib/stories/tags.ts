@@ -73,6 +73,9 @@ export const TAG_ORDER: string[] = [
 export const STORY_TAGS: Record<string, string[]> = {
   // ── 연예인 (천간 = 일주 첫 글자) ──
   anseonghun: ["연예인", "트로트", "기토"],
+  parkjihoon: ["연예인", "배우", "신금"],
+  goyunjeong: ["연예인", "배우", "기토"],
+  leechaemin: ["연예인", "배우", "병화"],
   anton: ["연예인", "아이돌", "기토"],
   byeonwooseok: ["연예인", "배우", "갑목"],
   chaeunwoo: ["연예인", "아이돌", "배우", "신금"],
