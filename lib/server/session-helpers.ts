@@ -108,6 +108,22 @@ export async function autoSetPrimaryIfNeeded(userId: string, inputHash: string) 
 // TODO: refund_coins RPC로 원자적 처리 필요 (현재 read-then-write race 가능성 있음)
 // 환불은 분석 실패 시에만 발생하므로 동시성 이슈 확률은 매우 낮음
 export async function refundCoins(userId: string, amount: number, referenceId: string) {
+  // 멱등성: 동일 reference_id 로 이미 환불된 이력이 있으면 재환불 금지.
+  // analyze 재시도(클라이언트 폴링)나 중복 호출 시 이중 환불되는 사고를 막는다.
+  // reference_id 는 모든 호출처에서 spend 1건당 유일(sessionId / order_id)하므로
+  // 이 체크가 정상 환불을 억제하지 않는다.
+  const { count: alreadyRefunded } = await supabaseAdmin
+    .from("coin_transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("type", "refund")
+    .eq("reference_id", referenceId);
+
+  if ((alreadyRefunded ?? 0) > 0) {
+    console.warn(`[REFUND] 중복 환불 차단 user=${userId} ref=${referenceId} amount=${amount}`);
+    return;
+  }
+
   const { data } = await supabaseAdmin
     .from("profiles")
     .select("coin_balance")
