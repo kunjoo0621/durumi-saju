@@ -155,6 +155,9 @@ export const STORY_TAGS: Record<string, string[]> = {
   "munchang-gwiin": ["신살", "직업운"],
   "taegeuk-gwiin": ["신살", "직업운"],
   gongmang: ["공망"],
+  "yeonaeun-joeun": ["연애운"],
+  "jaeneung-saju": ["직업운"],
+  "seonggong-saju": ["직업운", "재물운"],
 
   // ── 연애·궁합 ──
   "baeujabok-saju": ["결혼운", "궁합"],
