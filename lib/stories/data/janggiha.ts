@@ -210,7 +210,7 @@ export const jangGiha: Story = {
   ],
   ctaAfter: 3,
   cta: {
-    label: "내 일주와 일간 무료로 확인",
+    label: "내 일주와 일간 확인",
     href: "/menu",
     tone: "brand",
   },

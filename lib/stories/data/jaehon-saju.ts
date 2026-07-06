@@ -296,7 +296,7 @@ export const jaehonSaju: Story = {
   ],
   ctaAfter: 6,
   cta: {
-    label: "내 인연·궁합 결 무료로 확인해보기",
+    label: "내 인연·궁합 결 확인해보기",
     href: "/menu",
     tone: "love",
   },
