@@ -218,7 +218,7 @@ export const jipchakYeonae: Story = {
   ],
   ctaAfter: 2,
   cta: {
-    label: "내 연애 기운·결 무료로 보기",
+    label: "내 연애 기운·결 보기",
     href: "/menu",
     tone: "love",
   },

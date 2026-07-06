@@ -255,7 +255,7 @@ export const geumsappaSaju: Story = {
   ],
   ctaAfter: 2,
   cta: {
-    label: "내 끌림·연애 기운 무료로 보기",
+    label: "내 끌림·연애 기운 보기",
     href: "/menu",
     tone: "love",
   },

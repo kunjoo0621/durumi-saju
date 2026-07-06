@@ -258,7 +258,7 @@ export const goYunjeong: Story = {
   ],
   ctaAfter: 3,
   cta: {
-    label: "내 일주와 일간도 무료로 확인해보기",
+    label: "내 일주와 일간도 확인해보기",
     href: "/menu",
     tone: "brand",
   },

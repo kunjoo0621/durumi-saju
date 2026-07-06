@@ -200,7 +200,7 @@ export const yeonaeGwontaegi: Story = {
   ],
   ctaAfter: 2,
   cta: {
-    label: "우리 궁합·연애 결 무료로 확인해보기",
+    label: "우리 궁합·연애 결 확인해보기",
     href: "/menu",
     tone: "love",
   },
