@@ -144,6 +144,9 @@ import { cheonylGwiin } from "./data/sinsal/cheonyl-gwiin";
 import { cheondeokGwiin } from "./data/sinsal/cheondeok-gwiin";
 import { woldeokGwiin } from "./data/sinsal/woldeok-gwiin";
 import { munchangGwiin } from "./data/sinsal/munchang-gwiin";
+import { taegeukGwiin } from "./data/sinsal/taegeuk-gwiin";
+import { mungokGwiin } from "./data/sinsal/mungok-gwiin";
+import { cheonuiSeong } from "./data/sinsal/cheonui-seong";
 import { hakdangGwiin } from "./data/sinsal/hakdang-gwiin";
 import { yangin as sinsalYangin } from "./data/sinsal/yangin";
 import { gwaegang as sinsalGwaegang } from "./data/sinsal/gwaegang";
@@ -376,6 +379,9 @@ const ENTRY_LIST: DictEntry[] = [
   cheondeokGwiin,
   woldeokGwiin,
   munchangGwiin,
+  taegeukGwiin,
+  mungokGwiin,
+  cheonuiSeong,
   hakdangGwiin,
   sinsalYangin,
   sinsalGwaegang,
