@@ -5,11 +5,11 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { hasRequiredInput, markSessionConsumed, autoSetPrimaryIfNeeded, formatBirthDate, formatBirthTime, refundCoins } from "@/lib/server/session-helpers";
-import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST, PET_COMPAT_LAUNCH_COST } from "@/lib/constants/coins";
 
 type SpendBody = {
   sessionId: string;
-  type: "analysis" | "battle";
+  type: "analysis" | "battle" | "pet";
 };
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     }
 
     const isBattle = body.type === "battle";
-    const cost = isBattle ? BATTLE_COST : SAJU_COST;
+    const isPet = body.type === "pet";
+    const cost = isPet ? PET_COMPAT_LAUNCH_COST : isBattle ? BATTLE_COST : SAJU_COST;
 
     // prepayment_sessions 조회
     const pendingSession = await supabaseAdmin
@@ -56,7 +57,18 @@ export async function POST(request: NextRequest) {
 
     const input = sessionRow.payload as InputPayload;
 
-    if (isBattle) {
+    if (isPet) {
+      const petPayload = sessionRow.payload as {
+        pet?: { name?: string; species?: string; birthTier?: number };
+        owner?: { birthYear?: string; gender?: string };
+      };
+      if (
+        !petPayload?.pet?.name || !petPayload?.pet?.species || !petPayload?.pet?.birthTier ||
+        !petPayload?.owner?.birthYear || !petPayload?.owner?.gender
+      ) {
+        return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
+      }
+    } else if (isBattle) {
       if (!input?.name || !input.birthYear || !input.birthMonth || !input.birthDay || !input.birthLocation || !input.gender) {
         return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
       }
@@ -82,6 +94,31 @@ export async function POST(request: NextRequest) {
         insufficient: true,
         balance: spendResult?.new_balance ?? 0,
         required: cost,
+      });
+    }
+
+    // ============ 펫 궁합: 알 차감만, 분석은 /api/pet-compat/analyze ============
+    if (isPet) {
+      const orderId = `egg_pet_${Date.now()}_${userId.slice(0, 8)}`;
+      await supabaseAdmin
+        .from("payment_transactions")
+        .upsert(
+          {
+            user_id: userId,
+            order_id: orderId,
+            method: "egg",
+            amount: 0,
+            status: "success",
+          },
+          { onConflict: "order_id", ignoreDuplicates: true }
+        );
+
+      await markSessionConsumed(body.sessionId, userId);
+      return NextResponse.json({
+        ok: true,
+        type: "pet",
+        orderId,
+        balance: spendResult.new_balance,
       });
     }
 
