@@ -6,11 +6,42 @@
 // v2 (2026-05-13): computeSync 페널티 diminishing returns 적용
 //   — 충+극 동시 발생 시 sync 18까지 추락하던 문제 완화.
 //   — 일지 페널티는 페어상 mutually exclusive (else-if), 일간 극과만 누적될 때 50% 적용.
+// v3 (2026-07-11): 등급 컷 사주 마스터 컷 동기화 (2026-05-24 결정 이행).
+//   — 펫 자체 컷(80/65/45/25) 폐기, COMPOSITE_GRADE_CUTOFFS(85/80/70/52) 단일 소스.
+//   — composite는 경계 보존 piecewise remap으로 사주 스케일에 사상 → v2 등급 인구 분포 그대로 유지.
 // 추후 실제 사주 enrichment 결과와 매핑 (현재는 minimal signals만 사용).
 
 import type { LabelGrade } from "./pet-compat";
+import { COMPOSITE_GRADE_CUTOFFS } from "./gradeSystem"; // 상대경로: tsx 스크립트가 alias 없이 실행 가능해야 함
 
-export const PET_COMPAT_SCORING_VERSION = 2;
+export const PET_COMPAT_SCORING_VERSION = 3;
+
+// v2에서 튜닝·검증된 펫 composite 분포(경계 25/45/65/80)를
+// 사주 마스터 컷(52/70/80/85) 스케일로 경계 보존 사상.
+// 등급 인구는 v2와 동일하게 유지되고, 점수의 의미만 사주와 통일된다.
+const REMAP_OLD = [0, 25, 45, 65, 80, 100];
+const REMAP_NEW = [
+  0,
+  COMPOSITE_GRADE_CUTOFFS.C,
+  COMPOSITE_GRADE_CUTOFFS.B,
+  COMPOSITE_GRADE_CUTOFFS.A,
+  COMPOSITE_GRADE_CUTOFFS.S,
+  100,
+];
+
+export function remapComposite(raw: number): number {
+  const r = Math.max(0, Math.min(100, raw));
+  for (let i = 1; i < REMAP_OLD.length; i++) {
+    if (r <= REMAP_OLD[i]) {
+      const t = (r - REMAP_OLD[i - 1]) / (REMAP_OLD[i] - REMAP_OLD[i - 1]);
+      const mapped = REMAP_NEW[i - 1] + t * (REMAP_NEW[i] - REMAP_NEW[i - 1]);
+      // 경계 보존: 구 경계 "미만"은 반올림 후에도 신 경계 미만이어야 한다
+      // (예: raw 79 → 84.x가 85로 반올림되면 A가 S로 넘어가는 버그)
+      return r < REMAP_OLD[i] ? Math.min(Math.round(mapped), REMAP_NEW[i] - 1) : Math.round(mapped);
+    }
+  }
+  return 100;
+}
 
 // ────────────────────────────────────────────────────────
 // 입력 신호 (사주 분석 결과에서 추출)
@@ -92,17 +123,17 @@ function isSpeciesIncompat(species: "dog" | "cat", ownerDayBranch: string): bool
 }
 
 // ────────────────────────────────────────────────────────
-// 등급 컷 (S 5%, A 20%, B 45%, C 27%, D 3%)
+// 등급 컷 — 사주 마스터 컷(COMPOSITE_GRADE_CUTOFFS) 단일 소스 (v3)
 // ────────────────────────────────────────────────────────
 
 function compositeToGrade(composite: number, signals: PetCompatSignals): LabelGrade {
   // fallback (tier 3·4)이면 D 부여 금지 (최저 C까지)
   const minGrade = signals.petBirthTier >= 3 ? "C" : "D";
 
-  if (composite >= 80) return "S";
-  if (composite >= 65) return "A";
-  if (composite >= 45) return "B";
-  if (composite >= 25) return "C";
+  if (composite >= COMPOSITE_GRADE_CUTOFFS.S) return "S";
+  if (composite >= COMPOSITE_GRADE_CUTOFFS.A) return "A";
+  if (composite >= COMPOSITE_GRADE_CUTOFFS.B) return "B";
+  if (composite >= COMPOSITE_GRADE_CUTOFFS.C) return "C";
   return minGrade;
 }
 
@@ -358,7 +389,7 @@ export function computePetCompatScores(signals: PetCompatSignals): PetCompatComp
   const loyalty = computeLoyalty(signals);
   const conflict = computeConflict(signals);
 
-  const composite = computeComposite({ sync, ruler, lover, loyalty, conflict });
+  const composite = remapComposite(computeComposite({ sync, ruler, lover, loyalty, conflict }));
   const grade = compositeToGrade(composite, signals);
   const labelText = pickLabelText(grade, { ruler, conflict, sync, lover, loyalty });
 
