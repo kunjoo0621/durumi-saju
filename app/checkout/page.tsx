@@ -6,13 +6,14 @@ import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { useAllInputs, useInputStore, hasInputHydrated } from "@/store/useInputStore";
 import { useBattleStore, hasBattleHydrated } from "@/store/useBattleStore";
+import { usePetCompatStore, hasPetCompatHydrated } from "@/store/usePetCompatStore";
 import { useCoinStore } from "@/store/useCoinStore";
 import { getQuickSajuTags, type SajuTag } from "./actions";
 import { FullScreenLoading, ButtonSpinner } from "@/components/loading";
 import BusinessFooter from "@/components/BusinessFooter";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import Modal from "@/components/Modal";
-import { SAJU_COST, BATTLE_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST, PET_COMPAT_COST, PET_COMPAT_LAUNCH_COST } from "@/lib/constants/coins";
 import {
   DEFAULT_RELATIONSHIP_STATUS,
   DEFAULT_EMPLOYMENT_STATUS,
@@ -20,7 +21,7 @@ import {
 } from "@/lib/constants/saju-defaults";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
 
-type CheckoutType = "analysis" | "battle";
+type CheckoutType = "analysis" | "battle" | "pet";
 
 const ELEMENT_TAG_COLORS: Record<string, { color: string; bg: string }> = {
   목: { color: "rgb(34 197 94)", bg: "rgb(34 197 94 / 0.12)" },
@@ -84,13 +85,15 @@ function CheckoutContent() {
   const { data: session, status } = useSession();
   const inputs = useAllInputs();
   const battleStore = useBattleStore();
+  const petStore = usePetCompatStore();
   const { login } = useKakaoLogin();
 
   const isAuthenticated = status === "authenticated";
 
   const checkoutType: CheckoutType = (searchParams?.get("type") as CheckoutType) || "analysis";
   const isBattle = checkoutType === "battle";
-  const eggCost = isBattle ? BATTLE_COST : SAJU_COST;
+  const isPet = checkoutType === "pet";
+  const eggCost = isPet ? PET_COMPAT_LAUNCH_COST : isBattle ? BATTLE_COST : SAJU_COST;
 
   // 기존 checkout state
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +118,17 @@ function CheckoutContent() {
     (!process.env.NEXT_PUBLIC_PORTONE_STORE_ID && !process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY);
 
   const hasRequiredInput = useMemo(() => {
+    if (isPet) {
+      const { pet, owner } = petStore;
+      if (!pet.name?.trim() || !pet.species || !pet.birthTier) return false;
+      if (pet.birthTier === 1 && (!pet.birthDate || !pet.birthTime)) return false;
+      if (pet.birthTier === 2 && !pet.birthDate) return false;
+      if (pet.birthTier === 3 && !pet.birthYearEstimated) return false;
+      if (pet.birthTier === 4 && !pet.adoptionDate) return false;
+      if (!owner.name?.trim() || !owner.birthYear || !owner.birthMonth || !owner.birthDay || !owner.birthLocation || !owner.gender) return false;
+      if (!owner.unknownBirthTime && (!owner.birthHour || owner.birthMinute === "")) return false;
+      return true;
+    }
     if (isBattle) {
       const { playerA, playerB, relationshipType } = battleStore;
       if (!playerA.name?.trim() || !playerA.birthYear || !playerA.birthMonth || !playerA.birthDay || !playerA.birthLocation || !playerA.gender) return false;
@@ -141,15 +155,15 @@ function CheckoutContent() {
       return false;
     }
     return true;
-  }, [inputs, battleStore, isBattle]);
+  }, [inputs, battleStore, isBattle, petStore, isPet]);
 
-  const redirectBack = isBattle ? "/battle/input" : "/start";
+  const redirectBack = isPet ? "/pet/input" : isBattle ? "/battle/input" : "/start";
 
   // store hydration 대기 후 입력 검증 실패 시 redirect
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     const checkBoth = () => {
-      if (hasInputHydrated() && hasBattleHydrated()) {
+      if (hasInputHydrated() && hasBattleHydrated() && hasPetCompatHydrated()) {
         setHydrated(true);
         return true;
       }
@@ -158,7 +172,8 @@ function CheckoutContent() {
     if (checkBoth()) return;
     const unsub1 = useInputStore.persist.onFinishHydration(() => checkBoth());
     const unsub2 = useBattleStore.persist.onFinishHydration(() => checkBoth());
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = usePetCompatStore.persist.onFinishHydration(() => checkBoth());
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   useEffect(() => {
@@ -280,9 +295,11 @@ function CheckoutContent() {
   }
 
   return <CheckoutForm
-    inputs={isBattle ? null : inputs}
+    inputs={isBattle || isPet ? null : inputs}
     battleStore={isBattle ? battleStore : null}
+    petStore={isPet ? petStore : null}
     isBattle={isBattle}
+    isPet={isPet}
     session={session}
     isAuthenticated={isAuthenticated}
     error={error}
@@ -301,7 +318,7 @@ function CheckoutContent() {
     setExistingResultId={setExistingResultId}
     showDuplicateModal={showDuplicateModal}
     setShowDuplicateModal={setShowDuplicateModal}
-    eggCost={isBattle ? BATTLE_COST : SAJU_COST}
+    eggCost={eggCost}
     coinBalance={coinBalance}
     showChargeSheet={showChargeSheet}
     setShowChargeSheet={setShowChargeSheet}
@@ -311,7 +328,7 @@ function CheckoutContent() {
 }
 
 function CheckoutForm({
-  inputs, battleStore, isBattle,
+  inputs, battleStore, petStore, isBattle, isPet,
   session, isAuthenticated, error, setError,
   paying, setPaying, confirming, setConfirming,
   sessionId, setSessionId,
@@ -351,7 +368,10 @@ function CheckoutForm({
     if (sessionId) return;
     const createSession = async () => {
       try {
-        const sessionBody = isBattle
+        const endpoint = isPet ? "/api/pet-compat/intake/session" : "/api/intake/session";
+        const sessionBody = isPet
+          ? { pet: petStore.pet, owner: petStore.owner }
+          : isBattle
           ? {
               name: battleStore.playerA.name,
               birthYear: battleStore.playerA.birthYear,
@@ -368,7 +388,7 @@ function CheckoutForm({
               unknownBirthTime: battleStore.playerA.unknownBirthTime,
             }
           : inputs;
-        const res = await fetch("/api/intake/session", {
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(sessionBody),
@@ -407,7 +427,7 @@ function CheckoutForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
-          type: isBattle ? "battle" : "analysis",
+          type: isPet ? "pet" : isBattle ? "battle" : "analysis",
         }),
       });
 
@@ -431,6 +451,25 @@ function CheckoutForm({
       // 잔액 갱신
       if (typeof data.balance === "number") {
         setBalance(data.balance);
+      }
+
+      if (isPet) {
+        // 펫 궁합: 알 차감 완료 → pet-compat/analyze 호출
+        setConfirming(true);
+        setPaying(false);
+
+        const analyzeRes = await fetch("/api/pet-compat/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, orderId: data.orderId }),
+        });
+        if (!analyzeRes.ok) {
+          const errData = await analyzeRes.json().catch(() => ({}));
+          throw new Error(errData?.error || "궁합 분석이 안 됐어. 다시 해볼까?");
+        }
+        const analyzeData = await analyzeRes.json();
+        router.replace(`/pet/result?id=${analyzeData.resultId}`);
+        return;
       }
 
       if (isBattle) {
@@ -497,9 +536,18 @@ function CheckoutForm({
     await executeSpend();
   };
 
-  const displayInputs = isBattle ? battleStore.playerA : inputs;
+  const displayInputs = isPet
+    ? { ...petStore.owner, gender: petStore.owner.gender === "male" ? "남성" : petStore.owner.gender === "female" ? "여성" : "" }
+    : isBattle ? battleStore.playerA : inputs;
 
-  const CONFIRM_STEPS = isBattle
+  const CONFIRM_STEPS = isPet
+    ? [
+        { message: "알을 사용하고 있어", delay: 0 },
+        { message: "너와 우리 아이 사주 비교 중", delay: 3000 },
+        { message: "두루미가 판정 작성 중", delay: 10000 },
+        { message: "마무리하고 있어", delay: 25000 },
+      ]
+    : isBattle
     ? [
         { message: "알을 사용하고 있어", delay: 0 },
         { message: "두 사람의 사주를 분석하고 있어", delay: 3000 },
@@ -525,7 +573,15 @@ function CheckoutForm({
 
       <main className="flex-1 px-5 pb-48">
         <div className="max-w-[640px] mx-auto pt-10 space-y-4">
-          {isBattle ? (
+          {isPet ? (
+            <div className="text-center">
+              <h2 className="text-[24px] font-bold font-aggro text-text-primary">반려동물 궁합</h2>
+              <p className="text-[13px] text-text-secondary mt-2">
+                출시 기념 🥚 <span className="line-through text-text-tertiary">{PET_COMPAT_COST}알</span>{" "}
+                <span className="font-semibold text-text-primary">{PET_COMPAT_LAUNCH_COST}알</span>
+              </p>
+            </div>
+          ) : isBattle ? (
             <div className="text-center">
               <h2 className="text-[24px] font-bold font-aggro text-text-primary">{BATTLE_CHECKOUT_TITLES[battleStore.relationshipType] || "사주 대결"}</h2>
             </div>
@@ -594,6 +650,17 @@ function CheckoutForm({
           ) : (
             <div className="rounded-2xl p-5 bg-background-secondary">
               <div className="text-sm text-text-tertiary mb-3">입력 정보 확인</div>
+              {isPet && (
+                <div className="flex justify-between py-3 border-b border-white/5">
+                  <dt className="text-sm text-text-secondary">우리 아이</dt>
+                  <dd className="text-sm text-text-primary font-medium">
+                    {petStore.pet.species === "dog" ? "🐶" : "🐱"} {petStore.pet.name}
+                    {petStore.pet.birthTier <= 2 && petStore.pet.birthDate ? ` · ${petStore.pet.birthDate}` : ""}
+                    {petStore.pet.birthTier === 3 && petStore.pet.birthYearEstimated ? ` · ${petStore.pet.birthYearEstimated}년생(추정)` : ""}
+                    {petStore.pet.birthTier === 4 && petStore.pet.adoptionDate ? ` · 가족 된 날 ${petStore.pet.adoptionDate}` : ""}
+                  </dd>
+                </div>
+              )}
               <dl>
                 {displayInputs.name && (
                   <div className="flex justify-between py-3 border-b border-white/5">
@@ -653,7 +720,7 @@ function CheckoutForm({
       <div className="fixed left-0 right-0 bottom-0 z-[120] bg-background-primary px-5 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="max-w-[640px] mx-auto">
           <p className="text-[12px] text-text-tertiary text-center mb-2">
-            {isAuthenticated ? "결과는 저장되니까 안심해" : "로그인하면 결과가 저장돼"} · 바로 사주 결과를 받아볼 수 있어
+            {isAuthenticated ? "결과는 저장되니까 안심해" : "로그인하면 결과가 저장돼"} · 바로 {isPet ? "궁합" : "사주"} 결과를 받아볼 수 있어
           </p>
 
           {isAuthenticated ? (
@@ -669,7 +736,7 @@ function CheckoutForm({
                 <ButtonSpinner message="분석 중..." />
               ) : !sessionId ? (
                 <span className="text-text-secondary"><ButtonSpinner message="준비 중..." /></span>
-              ) : isBattle ? `${eggCost}알로 대결하기` : `${eggCost}알로 사주보기`}
+              ) : isPet ? `${eggCost}알로 궁합보기` : isBattle ? `${eggCost}알로 대결하기` : `${eggCost}알로 사주보기`}
             </button>
           ) : (
             <button
@@ -678,7 +745,7 @@ function CheckoutForm({
               disabled={paying}
               className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
             >
-              {isBattle ? "카카오 로그인하고 대결하기" : "카카오 로그인하고 사주보기"}
+              {isPet ? "카카오 로그인하고 궁합보기" : isBattle ? "카카오 로그인하고 대결하기" : "카카오 로그인하고 사주보기"}
             </button>
           )}
         </div>
