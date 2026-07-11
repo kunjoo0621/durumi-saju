@@ -6,7 +6,8 @@ import { useSession } from "next-auth/react";
 import { Egg } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
-import { SAJU_COST, BATTLE_COST, YEARLY_COST, TODAY_COST } from "@/lib/constants/coins";
+import { usePetCompatStore } from "@/store/usePetCompatStore";
+import { SAJU_COST, BATTLE_COST, YEARLY_COST, TODAY_COST, PET_COMPAT_COST, PET_COMPAT_LAUNCH_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 
@@ -25,6 +26,7 @@ export default function MenuPage() {
   const { data: session, status } = useSession();
   const isBattleDisabled = false;
   const resetBattle = useBattleStore((s) => s.reset);
+  const resetPet = usePetCompatStore((s) => s.reset);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
 
@@ -290,12 +292,12 @@ export default function MenuPage() {
             </div>
           </button>
 
-          {/* 반려동물 궁합 카드 (준비중) */}
+          {/* 반려동물 궁합 카드 */}
           <button
             type="button"
-            disabled
-            className="group relative bg-[#141414] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-not-allowed opacity-55 transition-opacity duration-200 animate-[slideUp_0.5s_ease-out_0.2s_both] w-full text-left"
+            className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_0.2s_both] w-full text-left"
             style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            onClick={() => { resetPet(); router.push("/pet/input"); }}
           >
             <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
               style={{ background: 'rgba(52,211,153,0.08)' }} />
@@ -307,16 +309,18 @@ export default function MenuPage() {
                   반려동물 궁합
                 </span>
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold"
-                  style={{ background: 'rgba(161,161,170,0.08)', color: '#A1A1AA' }}>
-                  준비중
+                  style={{ background: 'rgba(52,211,153,0.14)', color: '#34D399' }}>
+                  NEW
                 </span>
               </div>
-              <h3 className="text-xl font-bold text-zinc-400 tracking-tight">반려동물 궁합 보기</h3>
+              <h3 className="text-xl font-bold text-white tracking-tight">반려동물 궁합 보기</h3>
               <p className="text-sm text-gray-400 leading-relaxed mt-2">
                 우리 아이와 나의 사주<br/>궁합을 분석해줄게
               </p>
-              <p className="text-lg font-bold mt-3.5 text-zinc-600">
-                준비중..
+              <p className="text-lg font-bold mt-3.5 flex items-center gap-1" style={{ color: '#34D399' }}>
+                <Egg size={18} weight="fill" />
+                <span className="line-through text-zinc-500 text-base font-semibold">{PET_COMPAT_COST}알</span>
+                {PET_COMPAT_LAUNCH_COST}알
               </p>
             </div>
 
