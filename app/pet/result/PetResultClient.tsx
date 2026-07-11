@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import { getGradeColor } from "@/lib/utils/grade-colors";
+import { displayGrade } from "@/lib/gradeSystem";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 
 interface ApiResponse {
@@ -123,7 +124,7 @@ export default function PetResultClient() {
               className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
               style={{ color: grade.text, background: "rgba(0,0,0,0.3)" }}
             >
-              {data.label_grade}등급
+              {displayGrade(data.label_grade)}등급
             </span>
             <span className="text-caption text-text-tertiary">{data.pet.name} × 너</span>
           </div>

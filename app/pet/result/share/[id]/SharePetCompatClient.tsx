@@ -6,6 +6,7 @@
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import { getGradeColor } from "@/lib/utils/grade-colors";
+import { displayGrade } from "@/lib/gradeSystem";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 
 interface Props {
@@ -45,7 +46,7 @@ export default function SharePetCompatClient({
               className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
               style={{ color: grade.text, background: "rgba(0,0,0,0.3)" }}
             >
-              {labelGrade}등급
+              {displayGrade(labelGrade)}등급
             </span>
             <span className="text-caption text-text-tertiary">
               {petName} × {petSpecies === "dog" ? "강아지" : "고양이"}
