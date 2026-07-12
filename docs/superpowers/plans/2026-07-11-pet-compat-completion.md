@@ -1,5 +1,27 @@
 # 반려동물 궁합 완성·출시 Implementation Plan
 
+> ## 🚦 진행 현황 (2026-07-12 갱신 — 인수인계용)
+>
+> **Task 1~9 전부 실행 완료. PR #84 오픈: https://github.com/kunjoo0621/durumi-saju/pull/84**
+> (커밋: 리베이스~PR까지 6f923d4…09508a6, 브랜치 `feat/pet-resume`, 워크트리 `~/projects/durumi-saju-pet`)
+>
+> 추가로 완료된 것 (계획 외 품질 게이트):
+> - 본문 품질 검수 2건(개·고양이): 명리 팩트 지어내기 0건(괴강·백호·공망·장성살·지살 전부 엔진 원국과 대조 일치), 톤·금지어 정합
+> - **한자 밀도 사고 수정(09508a6)**: 병기 15~18개 → 2개. lib/pet-compat.ts 프롬프트에 상한 3개·headline/finalLine 한자 0·신살 1개만 이름 공개 룰 강화
+>
+> ### 남은 일 (이 순서대로)
+> 1. **[운영자] Supabase SQL Editor에서 마이그레이션 실행** — Task 6 Step 3의 합본 SQL. loyalty_score 없으면 결과 insert 실패 = 출시 블로커
+> 2. **[누구든] 적용 확인**: `npx tsx scripts/check-pet-db-state.mts` → loyalty_score EXISTS, coat_color/neutered 없음이어야 함
+> 3. **[검증] dev 풀 플로우 1회**: `npm run dev` → 메뉴→/pet/input→mock 결제→분석→/pet/result→공유 화면. SS표기·단색 톤·카드 깨짐 확인
+> 4. **[검증] D등급 케이스 1건 강제 확인**: dev-test로 상극 조합을 넣어 D 카피가 선 넘지 않는지 + disclaimer(면책 1문장) 실출력 확인 — 아직 미실행
+> 5. **[운영자 승인 후] 일러스트 E2E 1회**: 사진 업로드→Gemini 이미지 변환(유료)→pet-illustrations 버킷 저장·화면 표시 확인
+> 6. **[운영자 승인 후] PR #84 머지 → Vercel 배포 → 프로덕션 스모크 1회** (메뉴 진입→10알 결제)
+>
+> 참고: dev-test(`/api/pet-compat/dev-test`)는 DB 미접촉이라 1번 전에도 실행 가능. 버킷 2개는 이미 생성됨.
+> 메모리 정본: `memory/project_pet_compatibility.md` (동일 내용 요약)
+
+---
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 봉인 중인 반려동물 궁합 v0.9를 현재 main 구조(charge-orders 신결제·등급 SS 표기)에 맞춰 완성하고 출시 가능한 PR 상태로 만든다.
