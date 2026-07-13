@@ -4,6 +4,7 @@
 // 명리학적 근거: 세종의소리 칼럼 (https://www.sjsori.com/news/articleView.html?idxno=59915)
 
 import { callGemini } from "./analysis";
+import { postprocessPetCompatResult } from "./pet-compat-postprocess";
 import type { PetCompatComputedScores } from "./pet-compat-scoring";
 
 // ────────────────────────────────────────────────────────
@@ -445,6 +446,9 @@ export async function runPetCompatAnalysis(
     };
     parsed.label.grade = input.precomputedScores.grade;
     parsed.label.text = input.precomputedScores.labelText;
+
+    // ★ 결정론적 후처리: 한자 병기 ≤3 강제 (프롬프트 지시만으론 tier1 rich 차트서 못 지킴)
+    postprocessPetCompatResult(parsed);
 
     return { ok: true, result: parsed, rawText: result.text };
   } catch (err: any) {
