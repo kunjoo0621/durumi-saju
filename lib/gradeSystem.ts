@@ -15,7 +15,7 @@ export const COMPOSITE_GRADE_CUTOFFS: GradeCutoffs = {
   S: 85,
   A: 80,
   B: 70,
-  C: 52,
+  C: 50,  // 2026-07-13 v18: 52→50 (버그①② 수정으로 인한 최하등급 증가 상쇄, 분포 안정)
   D: 0,
 };
 
@@ -50,8 +50,8 @@ export function gradeFromComposite(value: number, cutoffs: GradeCutoffs = COMPOS
 // 옵션 18 컷 (S85/A80/B70/C52) + 536명 unique 실측 누적 분포 기반.
 // D 10.4% / C 43.2% / B 26.4% / A 12.5% / S 7.4%.
 const PERCENTILE_PIECEWISE = [
-  { min: 0, max: 52, start: 1, end: 10 },    // D ~10%
-  { min: 52, max: 70, start: 10, end: 54 },  // C ~43%
+  { min: 0, max: 50, start: 1, end: 10 },    // D ~8% (v18 컷 50)
+  { min: 50, max: 70, start: 10, end: 54 },  // C ~45% (v18 컷 50)
   { min: 70, max: 80, start: 54, end: 80 },  // B ~26%
   { min: 80, max: 85, start: 80, end: 93 },  // A ~13%
   { min: 85, max: 100, start: 93, end: 99 }, // S ~7%

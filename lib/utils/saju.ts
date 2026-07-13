@@ -7,6 +7,7 @@ import {
   analyzeElementBalance,
   calculateElementDistribution,
   calculateTenStars,
+  calculateTenStarsFull,
   findRelationships,
   findShinsal,
   formatEnrichedSajuText,
@@ -499,6 +500,7 @@ export function enrichSajuData(saju: SajuData, opts?: { isTimeUnknown?: boolean 
     dayStem,
   });
   const tenStars = calculateTenStars(stems, branches);
+  const tenStarsFull = calculateTenStarsFull(stems, branches);
   const relationships = findRelationships(branches);
   const shinsal = findShinsal(dayBranch, dayStem, monthBranch, branches, isTimeUnknown, stems);
 
@@ -540,6 +542,7 @@ export function enrichSajuData(saju: SajuData, opts?: { isTimeUnknown?: boolean 
     elementAnalysis,
     strength,
     tenStars,
+    tenStarsFull,
     relationships,
     shinsal,
     twelveStages: {

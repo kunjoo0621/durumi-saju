@@ -9,9 +9,9 @@ import {
 import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichment";
 
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
-// v17: 등급 컷 조정 옵션 18 (S85/A80/B70/C52) + UI 라벨 격상 (SS/S/A/B/C) 동시 적용.
-// 산식 자체는 변경 없음. 컷·라벨 변경만이지만 SCORING_VERSION 올려 캐시 무효화.
-export const SCORING_VERSION = 17;
+// v18: ①비겁 개수보존(tenStarsFull) + ②axisAdj 단조성 수정 + C컷 52→50.
+// 산식 변경이므로 캐시 무효화 위해 버전 상향. 단 이미 언락된 결과는 grandfather(하향 금지)로 보호.
+export const SCORING_VERSION = 18;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;
@@ -32,6 +32,7 @@ export type ScoringInput = {
   elementDist: Record<string, number>;
   strength: "신강" | "신약" | "추정 신강" | "추정 신약" | undefined;
   tenStars: string[];
+  tenStarsFull: string[];
   relationships: { hap: string[]; chung: string[]; hyung: string[] };
   shinsal: string[];
   shinsalBadCount: number;
@@ -56,6 +57,7 @@ export function parseScoringInput(enriched: EnrichedSajuData | null | undefined)
       elementDist: { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 },
       strength: undefined,
       tenStars: [],
+      tenStarsFull: [],
       relationships: { hap: [], chung: [], hyung: [] },
       shinsal: [],
       shinsalBadCount: 0,
@@ -102,6 +104,7 @@ export function parseScoringInput(enriched: EnrichedSajuData | null | undefined)
     elementDist: enriched.elementDist as unknown as Record<string, number>,
     strength: ((enriched.strength as unknown as Record<string, unknown>)?.legacy ?? enriched.strength?.result) as ScoringInput["strength"],
     tenStars: Array.isArray(enriched.tenStars) ? enriched.tenStars : [],
+    tenStarsFull: Array.isArray(enriched.tenStarsFull) ? enriched.tenStarsFull : (Array.isArray(enriched.tenStars) ? enriched.tenStars : []),  // ①: 개수보존 십성(구캐시 없으면 유니크 fallback=무회귀)
     relationships: enriched.relationships || { hap: [], chung: [], hyung: [] },
     shinsal: Array.isArray(enriched.shinsal)
       ? enriched.shinsal                              // 구버전 string[] 캐시 대응
@@ -180,7 +183,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   const isSingang = input.strength === "신강" || input.strength === "추정 신강";
   const isSinyak = input.strength === "신약" || input.strength === "추정 신약";
 
-  const bigyeobCount = countStar(input.tenStars, "비견") + countStar(input.tenStars, "겁재");
+  const bigyeobCount = countStar(input.tenStarsFull, "비견") + countStar(input.tenStarsFull, "겁재");
   const hasBigyeobOverload = bigyeobCount >= 3;
 
   const hasSikSang = hasStar(input.tenStars, "식신") || hasStar(input.tenStars, "상관");
@@ -222,7 +225,7 @@ export function calculateScores(input: ScoringInput): ServerScores {
   if (hapCount >= 2) 연애운 += 4;
   if (balanced) 연애운 += 3;
   if ((input.shinsal || []).some((s) => String(s).includes("천을귀인"))) 연애운 += 3;
-  if (countStar(input.tenStars, "비견") >= 2) 연애운 -= 5; // A-2: 비견 2개 이상만 감점
+  if (countStar(input.tenStarsFull, "비견") >= 2) 연애운 -= 5; // A-2: 비견 2개 이상만 감점
   if (hasStar(input.tenStars, "겁재")) 연애운 -= 6;
   if (hasBigyeobOverload) 연애운 -= 4;
   if (hasChung) 연애운 -= 4; // A-4: -6 → -4
@@ -352,7 +355,7 @@ function calculateAxes(input: ScoringInput) {
   const hasChungOrHyung =
     (input.relationships?.chung?.length || 0) > 0 || (input.relationships?.hyung?.length || 0) > 0;
   const hasHap = (input.relationships?.hap?.length || 0) > 0;
-  const bigyeobCount = countStar(input.tenStars, "비견") + countStar(input.tenStars, "겁재");
+  const bigyeobCount = countStar(input.tenStarsFull, "비견") + countStar(input.tenStarsFull, "겁재");
 
   let potential = 50;
   if (hasStar(input.tenStars, "정관") || hasStar(input.tenStars, "편관")) potential += 7;
@@ -457,16 +460,11 @@ export function calculateTier(input: ScoringInput, scores: ServerScores): TierRe
     0.15 * scores.건강운 + 0.15 * scores.대인운
   );
   const rawAdj = Math.round(0.25 * (potential - 50) + 0.20 * (stability - 50) - 0.15 * (risk - 50));
-  // v6: 양수 유지 (+16), 음수 30% 증폭 (-20) — 나쁜 사주 바닥 복원
+  // v18 ②: 단조성 보존 — axisAdj 대칭 ±15 제한(기존 |diff|>15 평균-반감이 순서역전 유발 → 제거).
   const axisAdj = rawAdj >= 0
-    ? clampInt(rawAdj, 0, 16)
-    : clampInt(Math.round(rawAdj * 1.3), -20, 0);
+    ? clampInt(rawAdj, 0, 15)
+    : clampInt(Math.round(rawAdj * 1.3), -15, 0);
   let composite = clampInt(catAvg + axisAdj, 0, 95); // 사주학 이론적 천장 95
-
-  // 단조성: composite와 catAvg 차이 15 이내 강제
-  if (Math.abs(composite - catAvg) > 15) {
-    composite = Math.round((composite + catAvg) / 2);
-  }
 
   // 시간 미상 감점
   if (input.isTimeUnknown) composite -= 1;

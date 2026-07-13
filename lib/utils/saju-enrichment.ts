@@ -227,6 +227,30 @@ export function calculateTenStars(stems: string[], branches: string[]): string[]
   return Array.from(stars);
 }
 
+/** calculateTenStars의 중복포함(개수보존) 버전 — 비겁 과다 등 십성 "개수" 판정용(스코어링 전용).
+ *  Set 미사용. stems/branches는 호출부에서 시간미상 처리 완료된 배열을 받는다(=calculateTenStars와 동일 입력·동일 일간제외). */
+export function calculateTenStarsFull(stems: string[], branches: string[]): string[] {
+  const dayStem = stems[2];
+  const dayMaster = STEM_ELEMENT[dayStem];
+  if (!dayMaster) return [];
+  const out: string[] = [];
+  [0, 1, 3].forEach((i) => {
+    const targetStem = stems[i];
+    if (!targetStem) return;
+    const target = STEM_ELEMENT[targetStem];
+    if (!target) return;
+    out.push(getTenStar(dayMaster.element, dayMaster.yin_yang, target.element, target.yin_yang));
+  });
+  branches.forEach((branch) => {
+    const info = BRANCH_INFO[branch];
+    const mainHidden = info?.jijanggan?.[0];
+    const target = mainHidden ? STEM_ELEMENT[mainHidden.stem] : null;
+    if (!target) return;
+    out.push(getTenStar(dayMaster.element, dayMaster.yin_yang, target.element, target.yin_yang));
+  });
+  return out;
+}
+
 function findElementThatGenerates(dayMasterElement: KoreanElement): KoreanElement | null {
   const found = (Object.entries(GENERATES) as [KoreanElement, KoreanElement][]).find(
     ([_, v]) => v === dayMasterElement
@@ -1253,6 +1277,7 @@ export interface EnrichedSajuData {
   elementAnalysis: { deficient: KoreanElement[]; dominant: KoreanElement[] };
   strength: StrengthResult;
   tenStars: string[];
+  tenStarsFull: string[];
   relationships: { hap: string[]; chung: string[]; hyung: string[] };
   shinsal: ShinsalResult;
   twelveStages: {
