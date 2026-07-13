@@ -25,7 +25,7 @@ export const GRADE_MAX: Record<GradeLabel, number> = {
   A: COMPOSITE_GRADE_CUTOFFS.S - 1,  // 84
   B: COMPOSITE_GRADE_CUTOFFS.A - 1,  // 79
   C: COMPOSITE_GRADE_CUTOFFS.B - 1,  // 69
-  D: COMPOSITE_GRADE_CUTOFFS.C - 1,  // 51
+  D: COMPOSITE_GRADE_CUTOFFS.C - 1,  // 49 (v18 C컷 50 → 게이트1 카테고리-D 임계 ≤51→≤49로 이동)
 };
 
 export function clampValue(value: number, min: number, max: number) {
