@@ -14,7 +14,10 @@
 import type { LabelGrade } from "./pet-compat";
 import { COMPOSITE_GRADE_CUTOFFS } from "./gradeSystem"; // 상대경로: tsx 스크립트가 alias 없이 실행 가능해야 함
 
-export const PET_COMPAT_SCORING_VERSION = 3;
+// v4: 신살 검출 버그 수정 — 도화·홍염·역마·천을귀인이 항상 false로 잡히던 것을 교정
+//     (hasShinsalKey가 shinsal.matches[].label + pillar12Shinsal[*].name을 훑도록).
+//     영향: 해당 신살 보유 펫의 ruler/lover 보정이 이제 반영됨. 400건 시뮬 분포 이동 경미(D 0% 유지).
+export const PET_COMPAT_SCORING_VERSION = 4;
 
 // v2에서 튜닝·검증된 펫 composite 분포(경계 25/45/65/80)를
 // 사주 마스터 컷(52/70/80/85) 스케일로 경계 보존 사상.

@@ -205,13 +205,33 @@ function getOhaengRelation(ownerElement: string, petElement: string): OhaengRela
 // 신살 검출 (도화·홍염·역마·천을귀인)
 // ────────────────────────────────────────────────────────
 
-function hasShinsalKey(shinsal: any, keyword: string): boolean {
-  if (!shinsal) return false;
-  const keys = Object.keys(shinsal);
-  return keys.some((k) =>
-    k.includes(keyword) ||
-    (typeof shinsal[k] === "string" && shinsal[k].includes(keyword))
-  );
+// enriched의 신살을 keyword(한글)로 검사한다.
+// 신살은 두 필드에 나뉘어 있음 → 둘 다 훑어야 한다 (dual-field):
+//   ① 일반신살  enriched.shinsal.matches[].label  ("도화살(桃花殺)" 등)  ─ labels 배열도 동일
+//   ② 12신살    enriched.pillar12Shinsal.{year,month,day,hour}.name    ("역마살" 등)
+// (과거 버그: Object.keys(shinsal)="matches"만 검사 → 배열 안 label에 도달 못 해
+//  도화·홍염·역마·천을귀인이 전부 false로 검출됨. 홍염살 있는 펫도 petHasDohwa=false였음.)
+function hasShinsalKey(enriched: any, keyword: string): boolean {
+  if (!enriched) return false;
+  const labels: string[] = [];
+
+  const shinsal = enriched.shinsal;
+  if (shinsal) {
+    if (Array.isArray(shinsal.labels)) {
+      labels.push(...shinsal.labels);
+    } else if (Array.isArray(shinsal.matches)) {
+      for (const m of shinsal.matches) if (m?.label) labels.push(m.label);
+    }
+  }
+
+  const p12 = enriched.pillar12Shinsal;
+  if (p12) {
+    for (const p of [p12.year, p12.month, p12.day, p12.hour]) {
+      if (p?.name) labels.push(p.name);
+    }
+  }
+
+  return labels.some((l) => typeof l === "string" && l.includes(keyword));
 }
 
 // ────────────────────────────────────────────────────────
@@ -293,9 +313,9 @@ export function extractPetCompatSignals(
     petDayBranch,
     petYearBranch,
     petDayMasterElement,
-    petHasDohwa: hasShinsalKey(petEnriched.shinsal, "도화") || hasShinsalKey(petEnriched.shinsal, "홍염"),
-    petHasYeokma: hasShinsalKey(petEnriched.shinsal, "역마"),
-    petHasCheonEulGwiin: hasShinsalKey(petEnriched.shinsal, "천을"),
+    petHasDohwa: hasShinsalKey(petEnriched, "도화") || hasShinsalKey(petEnriched, "홍염"),
+    petHasYeokma: hasShinsalKey(petEnriched, "역마"),
+    petHasCheonEulGwiin: hasShinsalKey(petEnriched, "천을"),
     petTwelveStage: petEnriched.twelveStages?.day?.korean || "",
     petBirthTier: pet.birthTier,
 
