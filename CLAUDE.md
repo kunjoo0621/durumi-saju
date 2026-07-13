@@ -75,14 +75,20 @@ npx tsx scripts/...     # 테스트 스크립트 실행
 - 이 프로젝트는 Gemini API 사용 — Claude API로 착각하지 말 것
 - 응답 끝에 불필요한 요약 붙이지 말 것
 
-## 현재 설정값 (v12)
+## 현재 설정값 (v18)
 
-- **SCORING_VERSION**: 12
-- **등급 경계**: S≥86, A≥80, B≥69, C≥45, D<45
-- **등급 분포 (50k 시뮬레이션, v11 기준)**: S 5% / A 12% / B 39% / C 39% / D 5%
-- **실제 데이터 분포 (v11, 7일 115건)**: S 2.6% / A 9.6% / B 27% / C 54% / D 7%
-- **시간 미입력 보정**: isBalanced 완화(≥3), deficientCount 0.75 스케일링
-- **v11→v12 변경**: 건강운 결핍 페널티 `× 6` → `× 4` (D 비중 7%→2.6% 예상). 미해결 카테고리 격차는 memory/project_durumi_scoring.md 참조
+- **SCORING_VERSION**: 18
+- **등급 경계 (내부, `COMPOSITE_GRADE_CUTOFFS`)**: S≥85, A≥80, B≥70, C≥50, D<50
+- **화면 표기 라벨 격상**: 내부 S/A/B/C/D → 표시 SS/S/A/B/C (`displayGrade`). DB 저장값은 여전히 S/A/B/C/D
+- **분포 (2214명 전수 재시뮬, v18)**: 최하등급(표시 C) 약 10%. 라벨 격상 후 SS~C 완만 분포
+- **중립 기준점**: `SCORING_NEUTRAL = 58` / **composite 천장**: 95
+- **시간 미입력 보정**: isBalanced 완화(≥3), deficientCount 0.75 스케일링, composite −1
+- **v17→v18 변경**:
+  - ① 비겁 개수 정상화: `calculateTenStarsFull`(중복포함) 추가 → "비겁 과다(≥3)" 감점 데드코드 복구 (기존 `calculateTenStars`는 Set 중복제거라 개수 소실). 표시/배틀/LLM은 유니크 `tenStars` 유지
+  - ② axisAdj 단조성: `clamp(-15,15)` 대칭 제한(기존 `|diff|>15` 평균-반감이 순서역전 유발 → 제거)
+  - ③ C컷 52→50 (①②로 인한 최하등급 증가 상쇄) + `PERCENTILE_PIECEWISE` 경계 동반 조정
+- **grandfather (결제자 보호)**: 이미 언락된 결과는 stale이어도 재계산 안 함(하향 방지). `payment/complete`·`intake/session`의 재계산 지점을 재사용으로 변경 (단 `_error`/null 결과는 재분석 유지). 수정 산식은 신규 분석에만 적용. 배틀/today/yearly는 즉석 재계산이라 grandfather 미적용(즉시 반영)
+- 상세 이력: memory/project_durumi_scoring_bugs.md, project_durumi_scoring.md
 
 ## 디자인 시스템
 
