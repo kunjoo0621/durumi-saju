@@ -6,7 +6,7 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-const IMAGE_MODEL = "gemini-2.5-flash-image-preview";
+const IMAGE_MODEL = "gemini-2.5-flash-image";
 const STORAGE_BUCKET = "pet-illustrations";
 
 interface GenerateIllustrationInput {
@@ -28,7 +28,8 @@ interface GenerateIllustrationFailure {
   reason: string;
 }
 
-// Gemini SDK 클라이언트 (analysis.ts와 동일 dynamicImport 패턴 — webpack 정적 분석 회피)
+// Gemini SDK 클라이언트 (dynamicImport 패턴 — webpack 정적 분석 회피)
+// 프로젝트는 신 SDK @google/genai 사용 (구 @google/generative-ai 아님)
 let googleAiClientPromise: Promise<any | null> | null = null;
 async function getClient(): Promise<any | null> {
   if (!googleAiClientPromise) {
@@ -37,11 +38,11 @@ async function getClient(): Promise<any | null> {
         const dynamicImport = new Function("moduleName", "return import(moduleName)") as (
           moduleName: string,
         ) => Promise<any>;
-        const sdk = await dynamicImport("@google/generative-ai");
-        const GoogleGenerativeAI = sdk?.GoogleGenerativeAI;
+        const sdk = await dynamicImport("@google/genai");
+        const GoogleGenAI = sdk?.GoogleGenAI;
         const apiKey = process.env.GEMINI_API_KEY;
-        if (!GoogleGenerativeAI || !apiKey) return null;
-        return new GoogleGenerativeAI(apiKey);
+        if (!GoogleGenAI || !apiKey) return null;
+        return new GoogleGenAI({ apiKey });
       } catch {
         return null;
       }
@@ -99,16 +100,21 @@ export async function generatePetIllustration(
 
     // 2. Gemini Image 호출 (이미지 input + 텍스트 prompt → 이미지 output)
     const prompt = buildIllustrationPrompt(input.petName, input.petSpecies, input.petBreed);
-    const model = client.getGenerativeModel({ model: IMAGE_MODEL });
-
-    const result = await model.generateContent([
-      { text: prompt },
-      { inlineData: { mimeType: photoMime, data: photoBuffer.toString("base64") } },
-    ]);
+    const response = await client.models.generateContent({
+      model: IMAGE_MODEL,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { inlineData: { mimeType: photoMime, data: photoBuffer.toString("base64") } },
+            { text: prompt },
+          ],
+        },
+      ],
+    });
 
     // 응답에서 이미지 파트 추출
-    const candidates = (result?.response as any)?.candidates;
-    const parts = candidates?.[0]?.content?.parts || [];
+    const parts = (response as any)?.candidates?.[0]?.content?.parts || [];
     const imagePart = parts.find((p: any) => p?.inlineData?.data);
     if (!imagePart) {
       return { ok: false, reason: "Gemini 응답에 이미지 없음" };
