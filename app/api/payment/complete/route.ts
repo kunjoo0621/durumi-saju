@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         const storedVersion = (existingForVersion?.full_json as any)?.scoringVersion ?? 0;
         // v18 grandfather: 이미 언락된 결과는 stale이어도 재계산하지 않고 재사용(등급 하향 방지).
-        if (existingForVersion?.full_json) {
+        if (existingForVersion?.full_json && !(existingForVersion.full_json as any)._error) {
           if (storedVersion < SCORING_VERSION) {
             console.info("[GRANDFATHER] reuse stale unlocked result (no downgrade)", { resultId: existingUnlock.data.result_id, storedVersion, currentVersion: SCORING_VERSION });
           }
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
           .eq("input_hash", inputHash)
           .maybeSingle();
 
-        if (existingResult.data?.full_json) {
+        if (existingResult.data?.full_json && !(existingResult.data.full_json as any)._error) {
           // v18 grandfather: 언락된 결과는 stale이어도 재사용(등급 하향 방지). 결제 성공 이력 존재 → 재청구 없음(기존 >= 브랜치와 동일 처리).
           const storedVer = (existingResult.data.full_json as any)?.scoringVersion ?? 0;
           if (storedVer < SCORING_VERSION) console.info("[GRANDFATHER] reuse stale paid result", { resultId: existingResult.data.id, storedVer, currentVersion: SCORING_VERSION });

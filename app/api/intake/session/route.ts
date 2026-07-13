@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         if (existing?.id) {
           const storedVersion = (existing.full_json as any)?.scoringVersion ?? 0;
           // v18 grandfather: 게스트 언락 결과는 stale이어도 재사용(하향 방지).
-          if (existing.full_json) {
+          if (existing.full_json && !(existing.full_json as any)._error) {
             if (storedVersion < SCORING_VERSION) console.info("[GRANDFATHER] reuse stale guest result", { id: existing.id, storedVersion, currentVersion: SCORING_VERSION });
             const response = NextResponse.json({
               sessionId: "",
