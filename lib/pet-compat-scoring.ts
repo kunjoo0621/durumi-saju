@@ -11,7 +11,7 @@
 //   — composite는 경계 보존 piecewise remap으로 사주 스케일에 사상 → v2 등급 인구 분포 그대로 유지.
 // 추후 실제 사주 enrichment 결과와 매핑 (현재는 minimal signals만 사용).
 
-import type { LabelGrade } from "./pet-compat";
+import type { LabelGrade, PetSpecies } from "./pet-compat";
 import { COMPOSITE_GRADE_CUTOFFS } from "./gradeSystem"; // 상대경로: tsx 스크립트가 alias 없이 실행 가능해야 함
 
 // v4: 신살 검출 버그 수정 — 도화·홍염·역마·천을귀인이 항상 false로 잡히던 것을 교정
@@ -347,13 +347,14 @@ function computeComposite(scores: { sync: number; ruler: number; lover: number; 
 function pickLabelText(
   grade: LabelGrade,
   scores: { ruler: number; conflict: number; sync: number; lover: number; loyalty: number },
+  species: PetSpecies,
 ): string {
   const { ruler, conflict, sync, lover, loyalty } = scores;
   const affectionGap = lover - loyalty;  // 양수 = 보호자 일방, 음수 = 펫 일방
 
   if (grade === "S") {
     if (sync >= 85 && Math.abs(affectionGap) <= 15) return "사주가 맞춘 찰떡 인연";
-    if (affectionGap >= 25) return "네가 더 매달리는 운명의 인연";
+    if (affectionGap >= 25) return "네가 더 매달리는 팔자의 인연";  // "운명" 금지(프롬프트 룰)와 일치
     if (affectionGap <= -25) return "쭈가 너 없으면 안 되는 인연";
     return "사주가 맞춘 인연";
   }
@@ -377,8 +378,8 @@ function pickLabelText(
     if (affectionGap >= 30) return "네 짝사랑이 그리는 관계";
     return "사주는 다르지만 팔자가 묶었어";
   }
-  // D
-  return "사주가 멀리 본 묘연";
+  // D — "묘연(猫緣)"은 고양이 전용 → 강아지는 "인연"
+  return species === "cat" ? "사주가 멀리 본 묘연" : "사주가 멀리 본 인연";
 }
 
 // ────────────────────────────────────────────────────────
@@ -394,7 +395,7 @@ export function computePetCompatScores(signals: PetCompatSignals): PetCompatComp
 
   const composite = remapComposite(computeComposite({ sync, ruler, lover, loyalty, conflict }));
   const grade = compositeToGrade(composite, signals);
-  const labelText = pickLabelText(grade, { ruler, conflict, sync, lover, loyalty });
+  const labelText = pickLabelText(grade, { ruler, conflict, sync, lover, loyalty }, signals.petSpecies);
 
   return {
     composite,
