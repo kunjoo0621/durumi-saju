@@ -4,7 +4,7 @@
 // 명리학적 근거: 세종의소리 칼럼 (https://www.sjsori.com/news/articleView.html?idxno=59915)
 
 import { callGemini } from "./analysis";
-import { postprocessPetCompatResult, TROPE_BLACKLIST } from "./pet-compat-postprocess";
+import { postprocessPetCompatResult, validatePetCompatResult, TROPE_BLACKLIST } from "./pet-compat-postprocess";
 import type { PetCompatComputedScores, PetCompatSignals } from "./pet-compat-scoring";
 
 // ────────────────────────────────────────────────────────
@@ -217,6 +217,7 @@ ${isDog
 [사용설명서 형식]
 
 ★ manual.spec 은 입력의 "사양(서버 확정)" 값을 그대로 옮겨라. 나이·띠·오행을 직접 계산하지 마라 (서버가 이미 정확히 조립했다).
+★ manual.errorSignals 는 사주 신호 기반 "기분·불만의 행동 패턴"만 써라 (예: 특정 신살이 자극될 때 나오는 행동). 구토·설사·발작·경련 같은 질병 증상 나열 금지 — "진짜 아픈 신호(구토·기력 저하 등)면 사주가 아니라 병원 먼저"라는 취지 1문장을 담아라. warnings와 내용이 겹치지 마라.
 
 ────────────────────────────────
 [📍 미래 카피 (futureLine) — 관계의 시간성]
@@ -488,21 +489,11 @@ export async function runPetCompatAnalysis(
   options: { model?: string } = {},
 ): Promise<{ ok: true; result: PetCompatResult; rawText: string } | { ok: false; error: string }> {
   const model = options.model || DEFAULT_MODEL;
-  const userInfo = buildPetCompatUserInfo(input);
+  const systemPrompt = buildPetCompatSystemPrompt(input.pet.species);
+  const baseUserInfo = buildPetCompatUserInfo(input);
 
-  const result = await callGemini(model, userInfo, buildPetCompatSystemPrompt(input.pet.species), {
-    temperature: 0.85,
-    maxOutputTokens: 8192,
-  });
-
-  if (!result.ok) {
-    return { ok: false, error: `LLM 호출 실패: ${result.message}` };
-  }
-
-  try {
-    const parsed = JSON.parse(result.text) as PetCompatResult;
-
-    // ★ 안전장치: LLM이 서버 결정값 바꿨으면 강제 덮어쓰기
+  // 서버 결정값 강제 덮어쓰기 + 한자 후처리 (매 시도 공통)
+  const finalize = (parsed: PetCompatResult): PetCompatResult => {
     parsed.scores = {
       composite: input.precomputedScores.composite,
       sync: input.precomputedScores.sync,
@@ -513,13 +504,37 @@ export async function runPetCompatAnalysis(
     };
     parsed.label.grade = input.precomputedScores.grade;
     parsed.label.text = input.precomputedScores.labelText;
-    if (parsed.manual) parsed.manual.spec = input.petSpec;  // v0.3: spec 서버 결정값 강제 (子띠=金 오류 차단)
+    if (parsed.manual) parsed.manual.spec = input.petSpec;  // v0.3: spec 서버 결정값 (子띠=金 오류 차단)
+    postprocessPetCompatResult(parsed);                     // 한자 ≤ 정책
+    return parsed;
+  };
 
-    // ★ 결정론적 후처리: 한자 병기 ≤3 강제 (프롬프트 지시만으론 tier1 rich 차트서 못 지킴)
-    postprocessPetCompatResult(parsed);
+  // v0.3: QA 게이트 — 위반 시 위반 목록을 덧붙여 1회 재생성 (지시-only 신뢰 불가)
+  let lastError = "";
+  let extra = "";
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const result = await callGemini(model, baseUserInfo + extra, systemPrompt, {
+      temperature: 0.85,
+      maxOutputTokens: 8192,
+    });
+    if (!result.ok) { lastError = `LLM 호출 실패: ${result.message}`; continue; }
 
-    return { ok: true, result: parsed, rawText: result.text };
-  } catch (err: any) {
-    return { ok: false, error: `JSON 파싱 실패: ${err?.message || "unknown"}\nraw: ${result.text.slice(0, 500)}` };
+    let parsed: PetCompatResult;
+    try {
+      parsed = finalize(JSON.parse(result.text) as PetCompatResult);
+    } catch (err: any) {
+      lastError = `JSON 파싱 실패: ${err?.message || "unknown"}`;
+      continue;
+    }
+
+    const violations = validatePetCompatResult(parsed, { petTwelveStage: input.signals.petTwelveStage });
+    if (violations.length === 0 || attempt === 2) {
+      if (violations.length > 0) console.warn("[PET_COMPAT][QA] 잔존 위반:", violations.join(", "));
+      return { ok: true, result: parsed, rawText: result.text };
+    }
+    // 재생성: 위반을 명시해 다시 쓰게
+    extra = `\n\n[★ 직전 출력이 다음 룰을 위반했다. 아래 표현 없이 완전히 새로 써라: ${violations.join(" / ")}]`;
   }
+
+  return { ok: false, error: lastError || "분석 생성 실패" };
 }

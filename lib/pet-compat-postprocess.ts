@@ -46,6 +46,43 @@ export function stripHanjaKeepKorean(text: string): string {
     .trim();
 }
 
+// v0.3: QA 게이트 — 지시-only는 못 믿으니(한자 사고 교훈) 위반을 코드로 검출 → 재생성 1회.
+const FORBIDDEN = /운명|100%|절대|영원히|무조건|반드시|정답/;
+const MEDICAL = /구토|설사|발작|경련|혈뇨|탈수|토했|토함|식욕\s*부진/;
+const STAGES_2 = ["장생", "목욕", "관대", "건록", "제왕"]; // 12운성 두 글자 이름
+const STAGES_1 = ["쇠", "병", "사", "묘", "절", "태", "양"]; // 한 글자 (일반 단어 오매칭 주의)
+
+/** 한자 strip 후 본문을 검사해 위반 목록 반환(빈 배열=통과). label.text·manual.spec·name 제외. */
+export function validatePetCompatResult(result: PetCompatResult, ctx: { petTwelveStage: string }): string[] {
+  const v: string[] = [];
+  const m = result.manual;
+  const body = [
+    result.label?.headline, m?.recommendedEnv, m?.warnings, m?.chargeMethod, m?.errorSignals, m?.ownerMode,
+    result.ownerVerdict, result.petVerdict, result.futureLine, result.finalLine, result.disclaimer,
+    ...(result.simulations || []).map((s) => `${s.scene} ${s.prediction}`),
+  ].filter(Boolean).join(" \n ");
+
+  const fw = body.match(FORBIDDEN);
+  if (fw) v.push(`금지어 "${fw[0]}"`);
+  for (const t of TROPE_BLACKLIST) if (body.includes(t)) v.push(`소진 표현 "${t}"`);
+
+  // 12운성: futureLine에 petTwelveStage 아닌 다른 12운성 이름이 나오면 창작 의심
+  const fl = result.futureLine || "";
+  const stage = ctx.petTwelveStage;
+  for (const s of STAGES_2) if (s !== stage && fl.includes(s)) v.push(`12운성 불일치 "${s}" (실제 "${stage}")`);
+  for (const s of STAGES_1) {
+    if (s === stage) continue;
+    if (fl.includes(`12운성 ${s}`) || fl.includes(`${s}(`) || fl.includes(`${s}운`) || fl.includes(`${s}의 기운`) || fl.includes(`${s}에 들`)) {
+      v.push(`12운성 불일치 "${s}" (실제 "${stage}")`);
+    }
+  }
+
+  const med = (m?.errorSignals || "").match(MEDICAL);
+  if (med) v.push(`errorSignals 의료 증상 "${med[0]}" (질병은 병원 안내로)`);
+
+  return v;
+}
+
 /** 결과 전체에서 한자 제거 (manual.spec·name 제외). 원본을 변형해 반환. */
 export function postprocessPetCompatResult(result: PetCompatResult): PetCompatResult {
   const s = stripHanjaKeepKorean;
