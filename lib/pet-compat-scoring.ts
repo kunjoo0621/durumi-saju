@@ -352,34 +352,35 @@ function pickLabelText(
   const { ruler, conflict, sync, lover, loyalty } = scores;
   const affectionGap = lover - loyalty;  // 양수 = 보호자 일방, 음수 = 펫 일방
 
+  // v0.4: 위트 있는 공유형 라벨 (분기 조건·의미 무변경, 문자열만 교체). 한자·명리 용어·"운명" 금지
   if (grade === "S") {
-    if (sync >= 85 && Math.abs(affectionGap) <= 15) return "사주가 맞춘 찰떡 인연";
-    if (affectionGap >= 25) return "네가 더 매달리는 팔자의 인연";  // "운명" 금지(프롬프트 룰)와 일치
-    if (affectionGap <= -25) return "쭈가 너 없으면 안 되는 인연";
-    return "사주가 맞춘 인연";
+    if (sync >= 85 && Math.abs(affectionGap) <= 15) return "전생에 한 이불 쓰던 인연";
+    if (affectionGap >= 25) return "찰떡인데 더 빠진 쪽은 너";
+    if (affectionGap <= -25) return "공식 인증 껌딱지 인연";
+    return "팔자가 먼저 알아본 인연";
   }
   if (grade === "A") {
-    if (sync >= 75) return "찰떡 같은 콤비";
-    if (affectionGap >= 30) return "네 사랑이 더 큰 콤비";
-    if (affectionGap <= -30) return "이 아이가 너에게 헌신하는 콤비";
-    if (conflict >= 30) return "서로 좋아하지만 둘 다 정상은 아님";
-    return "찰떡 같은 콤비";
+    if (sync >= 75) return "손발 척척 환상의 복식조";
+    if (affectionGap >= 30) return "애정 지분은 네가 51%";
+    if (affectionGap <= -30) return "너에게 올인한 순정파";
+    if (conflict >= 30) return "서로 좋아 죽는데 둘 다 유난함";
+    return "손발 척척 환상의 복식조";
   }
   if (grade === "B") {
-    if (ruler >= 70 && affectionGap >= 20) return "밥 주는 사람과 귀여운 갑";
-    if (ruler <= 30) return "사랑인 줄 알았는데 운영 계약";
-    if (affectionGap >= 35) return "혼자 일방통행하는 사랑";
-    if (affectionGap <= -35) return "그 사이 더 많이 사랑하는 쪽은 아이야";
-    return "까칠한 룸메이트";
+    if (ruler >= 70 && affectionGap >= 20) return "간식 셔틀과 네 발 상전";
+    if (ruler <= 30) return "이 집 결재권자는 너";
+    if (affectionGap >= 35) return "너만 애가 타는 짝사랑";
+    if (affectionGap <= -35) return "현관 소리만 기다리는 순애보";
+    return "츤데레 룸메이트";
   }
   if (grade === "C") {
-    if (ruler >= 65 && affectionGap >= 20) return "집안 실세와 월급 없는 운영진";
-    if (conflict >= 50) return "어긋난 박자, 그래도 가족";
-    if (affectionGap >= 30) return "네 짝사랑이 그리는 관계";
-    return "사주는 다르지만 팔자가 묶었어";
+    if (ruler >= 65 && affectionGap >= 20) return "무급인데 평생직장";
+    if (conflict >= 50) return "투닥거려도 결국 한솥밥";
+    if (affectionGap >= 30) return "들이대는 너, 한 발 빼는 얘";
+    return "극과 극인데 한 지붕 아래";
   }
   // D — "묘연(猫緣)"은 고양이 전용 → 강아지는 "인연"
-  return species === "cat" ? "사주가 멀리 본 묘연" : "사주가 멀리 본 인연";
+  return species === "cat" ? "천천히 스며드는 묘연" : "천천히 스며드는 인연";
 }
 
 // ────────────────────────────────────────────────────────
