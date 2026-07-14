@@ -12,6 +12,7 @@ import { FullScreenLoading } from "@/components/loading";
 import { getGradeColor } from "@/lib/utils/grade-colors";
 import { displayGrade } from "@/lib/gradeSystem";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
+import type { PetResultData } from "@/lib/mockPetResult";
 
 interface ApiResponse {
   result: {
@@ -91,6 +92,15 @@ export default function PetResultClient() {
     );
   }
 
+  return <PetResultBody data={data} />;
+}
+
+// ────────────────────────────────────────────────────────
+// 프레젠테이션 본체 (mock 데모·리디자인 타깃)
+// ────────────────────────────────────────────────────────
+
+export function PetResultBody({ data }: { data: PetResultData }) {
+  const router = useRouter();
   const result = data.full_result;
   const grade = getGradeColor(data.label_grade);
 
