@@ -1,16 +1,19 @@
 "use client";
 
-// 펫 궁합 결과 페이지 — 사주/배틀과 동일 디자인 토큰 사용
-// 등급 색은 GRADE_COLORS 표준 사용 (사주와 동일)
-// 톤 통일: emerald/rose 사용 금지. 게이지·강조는 단색(white opacity)으로 표현.
+// 펫 궁합 결과 페이지 — 두루미 본 서비스(사주·배틀) 결로 통일 (Phase 2 리디자인)
+// 공유 컴포넌트 재사용: OverallGradeBadgeSlot · CategoryRadarChart(axes) · SectionList(meta)
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
-import { getGradeColor } from "@/lib/utils/grade-colors";
-import { displayGrade } from "@/lib/gradeSystem";
+import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
+import OverallGradeBadgeSlot, { GRADE_GLOWS } from "@/components/result/OverallGradeBadgeSlot";
+import CategoryRadarChart from "@/components/result/CategoryRadarChart";
+import SectionList, { type ResultSection, type SectionMeta } from "@/components/result/SectionList";
+import { Megaphone, PawPrint, GameController, MapPin, ClipboardText, Crown, Heart } from "@phosphor-icons/react";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 import type { PetResultData } from "@/lib/mockPetResult";
 
@@ -99,10 +102,15 @@ export default function PetResultClient() {
 // 프레젠테이션 본체 (mock 데모·리디자인 타깃)
 // ────────────────────────────────────────────────────────
 
+function metaOf(Icon: ComponentType<Record<string, unknown>>, label: string, color: string): SectionMeta {
+  return { Icon, label, color, bg: `${color}1F`, accent: color };
+}
+
 export function PetResultBody({ data }: { data: PetResultData }) {
   const router = useRouter();
   const result = data.full_result;
-  const grade = getGradeColor(data.label_grade);
+  const gc = getGradeColor(data.label_grade);
+  const wash = `linear-gradient(180deg, ${gc.main}24 0%, ${gc.main}10 42%, transparent 72%)`;
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/pet/result/share/${data.id}`;
@@ -119,155 +127,106 @@ export function PetResultBody({ data }: { data: PetResultData }) {
     alert("공유 링크가 복사됐어");
   };
 
+  // ② 궁합 레이더 — 전부 "높을수록 좋음"으로 정규화 (실세는 방향값이라 ③으로)
+  const radarAxes = [
+    { key: "호흡", score: data.sync_score, subLabel: `${data.sync_score}점` },
+    { key: "사랑", score: data.lover_score, subLabel: `${data.lover_score}점` },
+    { key: "충성", score: data.loyalty_score, subLabel: `${data.loyalty_score}점` },
+    { key: "조화", score: 100 - data.conflict_score, subLabel: `어긋남 ${data.conflict_score}` },
+  ];
+
+  // ⑤ 판정·시뮬·타임라인 — SectionList meta 오버라이드
+  const sections: ResultSection[] = [
+    { icon: "pet-owner", title: "너에게 솔직히", content: result.ownerVerdict, meta: metaOf(Megaphone, "보호자", "#F87171") },
+    { icon: "pet-pet", title: `${data.pet.name}에 대해`, content: result.petVerdict, meta: metaOf(PawPrint, "이 아이", "#4ADE80") },
+    ...(result.simulations ?? []).map((s, i) => ({
+      icon: `pet-sim-${i}`,
+      title: s.scene,
+      content: s.prediction,
+      meta: metaOf(GameController, "이런 상황", "#F59E0B"),
+    })),
+    ...(result.futureLine
+      ? [{ icon: "pet-future", title: "앞으로의 너희", content: result.futureLine, meta: metaOf(MapPin, "타임라인", "#A855F7") }]
+      : []),
+  ];
+
   return (
     <div className="min-h-screen bg-background-primary text-text-primary pb-32">
       <Header showBack sticky onBack={() => router.push("/menu")} />
 
-      <main className="max-w-[640px] mx-auto px-5 pt-6 space-y-5">
-        {/* HERO — 라벨 + 등급 + 헤드라인 + composite */}
-        <section
-          className="rounded-[28px] p-7"
-          style={{ background: grade.bg, boxShadow: `0 0 0 1px ${grade.glow}` }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <span
-              className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
-              style={{ color: grade.text, background: "rgba(0,0,0,0.3)" }}
-            >
-              {displayGrade(data.label_grade)}등급
-            </span>
-            <span className="text-caption text-text-tertiary">{data.pet.name} × 너</span>
-          </div>
+      <main className="max-w-[640px] mx-auto px-5 pt-6 space-y-4 animate-fadeIn durumi-stagger">
+        {/* ① HERO */}
+        <section className="relative overflow-hidden rounded-3xl p-6" style={{ backgroundColor: "#141414" }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ background: wash }} aria-hidden="true" />
+          <div className="relative flex flex-col items-center text-center">
+            <span className="text-caption text-text-tertiary mb-4">{data.pet.name} × 너</span>
 
-          {/* 일러스트 (있을 때만) */}
-          {data.illustration_url && (
-            <div className="mb-5 rounded-2xl overflow-hidden bg-background-tertiary/40">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={data.illustration_url}
-                alt={`${data.pet.name} 일러스트`}
-                className="w-full aspect-square object-cover"
-              />
+            {data.illustration_url && (
+              <div className="w-full mb-5 rounded-2xl overflow-hidden bg-background-tertiary/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={data.illustration_url} alt={`${data.pet.name} 일러스트`} className="w-full aspect-square object-cover" />
+              </div>
+            )}
+
+            <OverallGradeBadgeSlot grade={data.label_grade} badgeSrc={getGradeBadge(data.label_grade)} size={88} />
+            <div className="mt-2 text-caption font-semibold tracking-wide" style={{ color: gc.text }}>
+              {safeDisplayGrade(data.label_grade)}등급 · {data.composite_score}점
             </div>
-          )}
 
-          <h1
-            className="text-[26px] leading-[1.3] font-bold tracking-tight mb-3 font-aggro"
-            style={{ color: grade.text }}
-          >
-            {data.label_text}
-          </h1>
-          <p className="text-body-1 text-text-secondary leading-relaxed mb-7">
-            {`"${result.label.headline}"`}
-          </p>
-          <div className="flex items-end gap-3">
-            <div className="text-[56px] leading-none font-bold font-aggro" style={{ color: grade.text }}>
-              {data.composite_score}
-            </div>
-            <div className="text-caption text-text-tertiary pb-2">/ 100점</div>
+            <h1 className="mt-3 font-aggro text-[24px] leading-[1.3] tracking-tight text-text-primary">
+              {data.label_text}
+            </h1>
+            <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.75]">
+              {result.label.headline}
+            </p>
           </div>
         </section>
 
-        {/* 4지표 게이지 */}
-        <section className="rounded-[24px] bg-background-tertiary p-6">
-          <h2 className="text-body-2 font-semibold text-text-secondary mb-5">관계 지표</h2>
-          <div className="space-y-5">
-            <Gauge icon="🐾" label="호흡 지수" desc="둘이 얼마나 동기화됐는지" value={data.sync_score} />
-            <Gauge icon="👑" label="집안 실세 지수" desc={data.ruler_score >= 50 ? `${data.pet.name}가 우위` : "네가 우위"} value={data.ruler_score} />
-            <Gauge icon="⚡" label="사주 어긋남" desc="어디서 부딪히는지" value={data.conflict_score} inverted />
-          </div>
-        </section>
-
-        {/* 양방향 정 흐름 — 사랑 vs 충성 (v0.8) */}
-        <AffectionFlow
-          lover={data.lover_score}
-          loyalty={data.loyalty_score}
-          petName={data.pet.name}
-        />
-
-        {/* 사용설명서 — 펫 사양표 */}
-        <section className="rounded-[24px] bg-background-tertiary p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-body-2 font-semibold text-text-secondary">{data.pet.name} 사용설명서</h2>
-            <span className="text-caption text-text-tertiary">PRODUCT MANUAL</span>
-          </div>
-          <div className="space-y-4">
-            <ManualRow label="제품명" value={result.manual.name} />
-            <ManualRow label="사양" value={result.manual.spec} />
-            <ManualRow label="권장 환경" value={result.manual.recommendedEnv} />
-            <ManualRow label="주의사항" value={result.manual.warnings} />
-            <ManualRow label="충전 방법" value={result.manual.chargeMethod} />
-            <ManualRow label="오류 신호" value={result.manual.errorSignals} />
-            <ManualRow label="권장 보호자 모드" value={result.manual.ownerMode} highlight />
-          </div>
-        </section>
-
-        {/* 보호자 판정 */}
-        <section className="rounded-[24px] bg-background-tertiary p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[18px]">📛</span>
-            <h2 className="text-body-2 font-semibold text-text-secondary">너에게 솔직히</h2>
-          </div>
-          <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
-            {result.ownerVerdict}
-          </p>
-        </section>
-
-        {/* 펫 판정 */}
-        <section className="rounded-[24px] bg-background-tertiary p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[18px]">🐾</span>
-            <h2 className="text-body-2 font-semibold text-text-secondary">{data.pet.name}에 대해</h2>
-          </div>
-          <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
-            {result.petVerdict}
-          </p>
-        </section>
-
-        {/* 시뮬레이션 3장면 */}
+        {/* ② 궁합 레이더 */}
         <section className="space-y-3">
-          <h2 className="text-body-2 font-semibold text-text-secondary px-1">이런 상황이라면</h2>
-          {result.simulations?.map((sim, idx) => (
-            <div key={idx} className="rounded-[20px] bg-background-tertiary p-6">
-              <div className="text-caption font-semibold text-text-tertiary mb-2 tracking-wide">📍 {sim.scene}</div>
-              <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
-                {sim.prediction}
-              </p>
-            </div>
-          ))}
+          <h2 className="px-1 text-title-3 text-text-primary">궁합 리포트</h2>
+          <CategoryRadarChart axes={radarAxes} />
         </section>
 
-        {/* 관계 시간성 — 펫 12운성 + 보호자 대운 (v0.8) */}
-        {result.futureLine && (
-          <section className="rounded-[24px] bg-background-tertiary p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-body-2 font-semibold text-text-secondary">📍 앞으로의 너희</h2>
-              <span className="text-caption text-text-tertiary">RELATIONSHIP TIMELINE</span>
-            </div>
-            <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
-              {result.futureLine}
+        {/* ③ 관계 역학 — 실세 tug-bar */}
+        <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Crown weight="duotone" size={24} color="#F5C451" aria-hidden="true" />
+            <h2 className="text-title-3 text-text-primary">집안 실세</h2>
+          </div>
+          <TugBar ruler={data.ruler_score} petName={data.pet.name} />
+        </section>
+
+        {/* ③ 관계 역학 — 양방향 정 */}
+        <AffectionFlow lover={data.lover_score} loyalty={data.loyalty_score} petName={data.pet.name} accent={gc.main} />
+
+        {/* ④ 사용설명서 */}
+        <ManualSpecSheet manual={result.manual} petName={data.pet.name} />
+
+        {/* ⑤ 판정 · 시뮬 · 타임라인 */}
+        <section className="pt-1">
+          <SectionList sections={sections} initialExpandedCount={2} />
+        </section>
+
+        {/* ⑥ VERDICT */}
+        <section className="relative overflow-hidden rounded-3xl bg-background-secondary border border-white/[0.08] p-7 text-center">
+          <div className="absolute inset-0 pointer-events-none opacity-70" style={{ background: GRADE_GLOWS[data.label_grade] }} aria-hidden="true" />
+          <div className="relative">
+            <div className="text-caption text-text-tertiary mb-4 tracking-wide">두루미의 한 줄</div>
+            <p className="text-[20px] leading-[1.5] font-bold text-text-primary font-aggro">
+              {`"${result.finalLine}"`}
             </p>
-          </section>
-        )}
-
-        {/* 종합 한 줄 */}
-        <section className="rounded-[28px] bg-background-tertiary p-7 text-center">
-          <div className="text-caption text-text-tertiary mb-4 tracking-widest">VERDICT</div>
-          <p className="text-[20px] leading-[1.5] font-bold text-text-primary font-aggro">
-            {`"${result.finalLine}"`}
-          </p>
+          </div>
         </section>
 
-        {/* 면책 (D등급만) */}
+        {/* ⑦ 면책(D등급) + 메타 */}
         {result.disclaimer && (
-          <section className="rounded-2xl bg-background-tertiary p-5">
-            <p className="text-body-2 text-text-secondary leading-relaxed">
-              ※ {result.disclaimer}
-            </p>
+          <section className="rounded-2xl bg-background-secondary border border-white/[0.06] p-5">
+            <p className="text-body-2 text-text-secondary leading-relaxed">※ {result.disclaimer}</p>
           </section>
         )}
 
-        <div className="text-center text-caption text-text-tertiary mt-6">
+        <div className="text-center text-caption text-text-tertiary pt-2">
           scoring v{data.scoring_version} · {new Date(data.created_at).toLocaleDateString("ko-KR")}
         </div>
       </main>
@@ -299,36 +258,36 @@ export function PetResultBody({ data }: { data: PetResultData }) {
 }
 
 // ────────────────────────────────────────────────────────
-// 게이지 컴포넌트 (4지표)
+// ③ 집안 실세 tug-bar (너 ↔ 펫, ruler_score 위치)
 // ────────────────────────────────────────────────────────
 
-interface GaugeProps {
-  icon: string;
-  label: string;
-  desc: string;
-  value: number;
-  inverted?: boolean;
-}
-
-function Gauge({ icon, label, desc, value, inverted: _inverted = false }: GaugeProps) {
-  const displayValue = Math.max(0, Math.min(100, value));
+function TugBar({ ruler, petName }: { ruler: number; petName: string }) {
+  const v = Math.max(0, Math.min(100, ruler));
+  const petSide = v >= 55;
+  const ownerSide = v <= 45;
+  const verdict = petSide ? `${petName}가 우위` : ownerSide ? "네가 우위" : "팽팽한 균형";
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[16px]">{icon}</span>
-          <div>
-            <div className="text-body-1 text-text-primary font-semibold">{label}</div>
-            <div className="text-caption text-text-tertiary mt-0.5">{desc}</div>
-          </div>
-        </div>
-        <div className="text-[24px] font-bold text-text-primary font-aggro tabular-nums">{displayValue}</div>
+      <div className="flex items-center justify-between text-body-2 mb-3">
+        <span className={ownerSide ? "text-text-primary font-semibold" : "text-text-tertiary"}>너</span>
+        <span className="text-caption text-text-tertiary">{verdict}</span>
+        <span className={petSide ? "text-text-primary font-semibold" : "text-text-tertiary"}>{petName}</span>
       </div>
-      <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
+      <div className="relative h-2.5 rounded-full bg-background-tertiary overflow-hidden">
+        {/* 중앙 50 눈금 */}
+        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/15 -translate-x-1/2" />
+        {/* 채움: 우위 쪽으로 */}
         <div
-          className="h-full bg-white/80 rounded-full transition-[width] duration-700 ease-out"
-          style={{ width: `${displayValue}%` }}
+          className="absolute top-0 bottom-0 bg-white/25 transition-[left,right] duration-700 ease-out"
+          style={v >= 50 ? { left: "50%", right: `${100 - v}%` } : { left: `${v}%`, right: "50%" }}
+        />
+      </div>
+      {/* 마커 */}
+      <div className="relative h-0">
+        <div
+          className="absolute -top-[13px] h-3 w-3 rounded-full bg-white ring-2 ring-background-secondary transition-[left] duration-700 ease-out"
+          style={{ left: `calc(${v}% - 6px)` }}
         />
       </div>
     </div>
@@ -336,78 +295,54 @@ function Gauge({ icon, label, desc, value, inverted: _inverted = false }: GaugeP
 }
 
 // ────────────────────────────────────────────────────────
-// 양방향 정 흐름 — 사랑(보호자) vs 충성(펫) 대비 (v0.8)
+// ③ 양방향 정 — 사랑(보호자) vs 충성(펫)
 // ────────────────────────────────────────────────────────
 
-function AffectionFlow({ lover, loyalty, petName }: { lover: number; loyalty: number; petName: string }) {
+function AffectionFlow({ lover, loyalty, petName, accent }: { lover: number; loyalty: number; petName: string; accent: string }) {
   const gap = lover - loyalty;
   const absGap = Math.abs(gap);
 
   let verdict: string;
   if (absGap <= 12) verdict = "양쪽이 비슷하게 빠져있어";
-  else if (gap > 0 && absGap < 30) verdict = `네가 조금 더 매달리는 중`;
-  else if (gap > 0) verdict = `네가 일방적으로 매달리는 중`;
+  else if (gap > 0 && absGap < 30) verdict = "네가 조금 더 매달리는 중";
+  else if (gap > 0) verdict = "네가 일방적으로 매달리는 중";
   else if (absGap < 30) verdict = `${petName}가 조금 더 의지하는 중`;
   else verdict = `${petName}가 너 없으면 안 되는 중`;
 
   return (
-    <section className="rounded-[24px] bg-background-tertiary p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-body-2 font-semibold text-text-secondary">사랑의 방향</h2>
-        <span className="text-caption text-text-tertiary">AFFECTION FLOW</span>
+    <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
+      <div className="flex items-center gap-2 mb-5">
+        <Heart weight="duotone" size={24} color={accent} aria-hidden="true" />
+        <h2 className="text-title-3 text-text-primary">사랑의 방향</h2>
       </div>
 
       <div className="space-y-4">
-        <FlowBar
-          icon="🐶"
-          label="너의 사랑"
-          desc={`${petName}한테 매달리는 정도`}
-          value={lover}
-          align="left"
-          highlight={gap > 5}
-        />
-        <FlowBar
-          icon="🐾"
-          label={`${petName}의 충성`}
-          desc={`너에게 의지하는 정도`}
-          value={loyalty}
-          align="right"
-          highlight={gap < -5}
-        />
+        <FlowBar label="너의 사랑" desc={`${petName}한테 쏟는 정도`} value={lover} accent={accent} highlight={gap > 5} />
+        <FlowBar label={`${petName}의 충성`} desc="너에게 의지하는 정도" value={loyalty} accent={accent} highlight={gap < -5} />
       </div>
 
-      <div className="mt-5 pt-4 border-t border-zinc-800/60">
-        <p className="text-body-1 text-text-primary text-center font-semibold">
-          {verdict}
-        </p>
+      <div className="mt-5 pt-4 border-t border-white/[0.08]">
+        <p className="text-body-1 text-text-primary text-center font-semibold">{verdict}</p>
       </div>
     </section>
   );
 }
 
-function FlowBar({
-  icon, label, desc, value, align, highlight,
-}: {
-  icon: string; label: string; desc: string; value: number; align: "left" | "right"; highlight: boolean;
-}) {
+function FlowBar({ label, desc, value, accent, highlight }: { label: string; desc: string; value: number; accent: string; highlight: boolean }) {
   const v = Math.max(0, Math.min(100, value));
-  const barColor = highlight ? "bg-white/85" : "bg-white/35";
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[16px]">{icon}</span>
-          <div>
-            <div className="text-body-1 text-text-primary font-semibold">{label}</div>
-            <div className="text-caption text-text-tertiary mt-0.5">{desc}</div>
-          </div>
+        <div>
+          <div className="text-body-1 text-text-primary font-semibold">{label}</div>
+          <div className="text-caption text-text-tertiary mt-0.5">{desc}</div>
         </div>
         <div className={`text-[22px] font-bold tabular-nums font-aggro ${highlight ? "text-text-primary" : "text-text-secondary"}`}>{v}</div>
       </div>
-      <div className={`h-2 bg-background-secondary rounded-full overflow-hidden ${align === "right" ? "flex flex-row-reverse" : ""}`}>
+      <div className="h-2 bg-background-tertiary rounded-full overflow-hidden">
         <div
-          className={`h-full ${barColor} rounded-full transition-[width] duration-700 ease-out`}
-          style={{ width: `${v}%` }}
+          className="h-full rounded-full transition-[width] duration-700 ease-out"
+          style={{ width: `${v}%`, backgroundColor: highlight ? accent : "rgba(255,255,255,0.22)" }}
         />
       </div>
     </div>
@@ -415,24 +350,42 @@ function FlowBar({
 }
 
 // ────────────────────────────────────────────────────────
-// 사용설명서 row
+// ④ 사용설명서 — 스펙시트 (7행 컨셉 유지)
 // ────────────────────────────────────────────────────────
 
-interface ManualRowProps {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}
+function ManualSpecSheet({ manual, petName }: { manual: PetCompatResult["manual"]; petName: string }) {
+  const rows: Array<{ label: string; value: string; highlight?: boolean }> = [
+    { label: "사양", value: manual.spec },
+    { label: "권장 환경", value: manual.recommendedEnv },
+    { label: "주의사항", value: manual.warnings },
+    { label: "충전 방법", value: manual.chargeMethod },
+    { label: "오류 신호", value: manual.errorSignals },
+    { label: "권장 보호자 모드", value: manual.ownerMode, highlight: true },
+  ];
 
-function ManualRow({ label, value, highlight }: ManualRowProps) {
   return (
-    <div className={`rounded-2xl p-4 ${highlight ? "bg-background-secondary ring-1 ring-white/15" : "bg-background-secondary"}`}>
-      <div className={`text-caption font-semibold mb-1.5 tracking-wide ${highlight ? "text-text-primary" : "text-text-tertiary"}`}>
-        {label}
+    <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <ClipboardText weight="duotone" size={24} color="#8FB8FF" aria-hidden="true" />
+          <h2 className="text-title-3 text-text-primary">{petName} 사용설명서</h2>
+        </div>
+        <span className="text-caption text-text-tertiary">제품 사양</span>
       </div>
-      <div className="text-body-1 leading-[1.6] text-text-primary">
-        {value}
+      <div className="divide-y divide-white/[0.06]">
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            className={`flex gap-4 py-3.5 ${r.highlight ? "bg-white/[0.03] -mx-3 px-3 rounded-xl relative" : ""}`}
+          >
+            {r.highlight && <div className="absolute left-0 top-3.5 bottom-3.5 w-1 rounded-full bg-[#F59E0B]" />}
+            <div className={`w-[92px] shrink-0 text-[12px] leading-[1.6] ${r.highlight ? "text-[#F5B45C] font-semibold" : "text-text-tertiary"}`}>
+              {r.label}
+            </div>
+            <div className="flex-1 text-[15px] leading-[1.6] text-text-primary whitespace-pre-line">{r.value}</div>
+          </div>
+        ))}
       </div>
-    </div>
+    </section>
   );
 }

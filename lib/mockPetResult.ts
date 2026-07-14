@@ -22,7 +22,7 @@ export interface PetResultData {
 }
 
 const DEMO_ILLUST =
-  "https://cfkijdafranpkgwnosfq.supabase.co/storage/v1/object/public/pet-illustrations/demo/placeholder.png";
+  "https://cfkijdafranpkgwnosfq.supabase.co/storage/v1/object/public/pet-illustrations/demo/dubu-pixar.png";
 
 // 개 · A(표시 S)등급 · 보호자가 더 매달림 · 펫 우위
 export const MOCK_PET_DOG_A: PetResultData = {
