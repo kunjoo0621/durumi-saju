@@ -5,8 +5,9 @@
 
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
-import { getGradeColor } from "@/lib/utils/grade-colors";
-import { displayGrade } from "@/lib/gradeSystem";
+import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
+import OverallGradeBadgeSlot, { GRADE_GLOWS } from "@/components/result/OverallGradeBadgeSlot";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 
 interface Props {
@@ -37,53 +38,37 @@ export default function SharePetCompatClient({
 
       <main className="max-w-[640px] mx-auto px-5 pt-6 space-y-5">
         {/* HERO */}
-        <section
-          className="rounded-[28px] p-7"
-          style={{ background: grade.bg, boxShadow: `0 0 0 1px ${grade.glow}` }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <span
-              className="px-2.5 py-1 rounded-lg text-[11px] font-bold"
-              style={{ color: grade.text, background: "rgba(0,0,0,0.3)" }}
-            >
-              {displayGrade(labelGrade)}등급
-            </span>
-            <span className="text-caption text-text-tertiary">
+        <section className="relative overflow-hidden rounded-3xl p-6" style={{ backgroundColor: "#141414" }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ background: `linear-gradient(180deg, ${grade.main}24 0%, ${grade.main}10 42%, transparent 72%)` }} aria-hidden="true" />
+          <div className="relative flex flex-col items-center text-center">
+            <span className="text-caption text-text-tertiary mb-4">
               {petName} × {petSpecies === "dog" ? "강아지" : "고양이"}
             </span>
-          </div>
 
-          {illustrationUrl && (
-            <div className="mb-5 rounded-2xl overflow-hidden bg-background-tertiary/40">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={illustrationUrl}
-                alt={`${petName} 일러스트`}
-                className="w-full aspect-square object-cover"
-              />
-            </div>
-          )}
+            {illustrationUrl && (
+              <div className="w-full mb-5 rounded-2xl overflow-hidden bg-background-tertiary/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={illustrationUrl} alt={`${petName} 일러스트`} className="w-full aspect-square object-cover" />
+              </div>
+            )}
 
-          <h1
-            className="text-[26px] leading-[1.3] font-bold tracking-tight mb-3 font-aggro"
-            style={{ color: grade.text }}
-          >
-            {labelText}
-          </h1>
-          <p className="text-body-1 text-text-secondary leading-relaxed mb-7">
-            {`"${result.label.headline}"`}
-          </p>
-          <div className="flex items-end gap-3">
-            <div className="text-[56px] leading-none font-bold font-aggro" style={{ color: grade.text }}>
-              {compositeScore}
+            <OverallGradeBadgeSlot grade={labelGrade} badgeSrc={getGradeBadge(labelGrade)} size={88} />
+            <div className="mt-2 text-caption font-semibold tracking-wide" style={{ color: grade.text }}>
+              {safeDisplayGrade(labelGrade)}등급 · {compositeScore}점
             </div>
-            <div className="text-caption text-text-tertiary pb-2">/ 100점</div>
+
+            <h1 className="mt-3 font-aggro text-[24px] leading-[1.3] tracking-tight text-text-primary">
+              {labelText}
+            </h1>
+            <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.75]">
+              {`"${result.label.headline}"`}
+            </p>
           </div>
         </section>
 
         {/* 5지표 — 압축 표시 */}
-        <section className="rounded-[24px] bg-background-tertiary p-6">
-          <h2 className="text-body-2 font-semibold text-text-secondary mb-5">관계 지표</h2>
+        <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
+          <h2 className="text-title-3 text-text-primary mb-5">관계 지표</h2>
           <div className="grid grid-cols-3 gap-3">
             <Mini icon="🐾" label="호흡" value={syncScore} />
             <Mini icon="👑" label="실세" value={rulerScore} />
@@ -107,30 +92,27 @@ export default function SharePetCompatClient({
         )}
 
         {/* 종합 한 줄 */}
-        <section className="rounded-[28px] bg-background-tertiary p-7 text-center">
-          <div className="text-caption text-text-tertiary mb-4 tracking-widest">VERDICT</div>
-          <p className="text-[20px] leading-[1.5] font-bold text-text-primary font-aggro">
-            {`"${result.finalLine}"`}
-          </p>
+        <section className="relative overflow-hidden rounded-3xl bg-background-secondary border border-white/[0.08] p-7 text-center">
+          <div className="absolute inset-0 pointer-events-none opacity-70" style={{ background: GRADE_GLOWS[labelGrade] }} aria-hidden="true" />
+          <div className="relative">
+            <div className="text-caption text-text-tertiary mb-4 tracking-wide">두루미의 한 줄</div>
+            <p className="text-[20px] leading-[1.5] font-bold text-text-primary font-aggro">
+              {`"${result.finalLine}"`}
+            </p>
+          </div>
         </section>
 
         {/* 펫 판정 */}
-        <section className="rounded-[24px] bg-background-tertiary p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[18px]">🐾</span>
-            <h2 className="text-body-2 font-semibold text-text-secondary">{petName}에 대해</h2>
-          </div>
+        <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
+          <h2 className="text-title-3 text-text-primary mb-4">{petName}에 대해</h2>
           <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
             {result.petVerdict}
           </p>
         </section>
 
         {/* 보호자 판정 */}
-        <section className="rounded-[24px] bg-background-tertiary p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-[18px]">📛</span>
-            <h2 className="text-body-2 font-semibold text-text-secondary">보호자에게</h2>
-          </div>
+        <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
+          <h2 className="text-title-3 text-text-primary mb-4">보호자에게</h2>
           <p className="text-body-1 leading-[1.7] text-text-primary whitespace-pre-line">
             {result.ownerVerdict}
           </p>
@@ -162,7 +144,7 @@ export default function SharePetCompatClient({
 
 function Mini({ icon, label, value, inverted: _inverted = false, highlight = false }: { icon: string; label: string; value: number; inverted?: boolean; highlight?: boolean }) {
   return (
-    <div className={`bg-background-secondary rounded-2xl p-4 ${highlight ? "ring-1 ring-white/15" : ""}`}>
+    <div className={`bg-background-tertiary rounded-2xl p-4 ${highlight ? "ring-1 ring-white/15" : ""}`}>
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[14px]">{icon}</span>
         <span className="text-caption text-text-tertiary truncate">{label}</span>
