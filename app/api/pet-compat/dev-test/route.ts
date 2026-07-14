@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // 4. LLM
     const startedAt = Date.now();
     const llmResult = await runPetCompatAnalysis({
-      owner, pet, ownerSajuText, petSajuText, precomputedScores: scores,
+      owner, pet, ownerSajuText, petSajuText, precomputedScores: scores, signals,
     });
     const elapsedMs = Date.now() - startedAt;
 

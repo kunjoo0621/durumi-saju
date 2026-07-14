@@ -180,6 +180,7 @@ async function main() {
   const input: PetCompatInput = {
     ...config.base,
     precomputedScores: scores,
+    signals,
   };
 
   const startedAt = Date.now();

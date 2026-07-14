@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
         ownerSajuText,
         petSajuText,
         precomputedScores: scores,
+        signals,
       }),
       photoSignedUrl
         ? generatePetIllustration({

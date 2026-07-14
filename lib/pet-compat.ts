@@ -5,7 +5,7 @@
 
 import { callGemini } from "./analysis";
 import { postprocessPetCompatResult } from "./pet-compat-postprocess";
-import type { PetCompatComputedScores } from "./pet-compat-scoring";
+import type { PetCompatComputedScores, PetCompatSignals } from "./pet-compat-scoring";
 
 // ────────────────────────────────────────────────────────
 // 타입 정의
@@ -54,6 +54,7 @@ export interface PetCompatInput {
   ownerSajuText: string;
   petSajuText: string;
   precomputedScores: PetCompatComputedScores;     // v0.2: 점수는 서버가 결정
+  signals: PetCompatSignals;                       // v0.3: LLM에 명리 근거로 승격 (트로프 방지)
 }
 
 export type LabelGrade = "S" | "A" | "B" | "C" | "D";
@@ -347,6 +348,78 @@ manual.spec 필드는 다음 형식: "[나이], [품종], [연주 12지](띠 한
 // 입력 빌더
 // ────────────────────────────────────────────────────────
 
+// v0.3: 서버가 계산한 관계 신호·펫 명리를 한글로 번역해 LLM에 "근거"로 전달.
+// 이게 없으면 모델이 명리 대신 트로프(집안 실세·생존형 협상…)로 채우고 점수를 부정한다.
+function buildRelationSignalBlock(s: PetCompatSignals, scores: PetCompatComputedScores, petName: string): string {
+  const lines: string[] = [];
+
+  // ── 두 사람의 관계 신호 (true인 것만) ──
+  const rel: string[] = [];
+  if (s.dayBranchSamhap) rel.push("일지 삼합 — 같은 목표를 바라보는 팀 기운 (호흡이 잘 맞는 핵심 근거)");
+  if (s.dayBranchHap) rel.push("일지 6합 — 서로 강하게 끌어당기는 짝 기운");
+  if (s.dayBranchBanghap) rel.push("일지 방합 — 같은 계절 기운, 함께 있으면 자연스럽고 편안함");
+  if (s.dayBranchChung) rel.push("일지 충 — 생활 리듬이 정면으로 부딪히는 자리 (어긋남·충돌의 근거)");
+  if (s.dayBranchHyeong) rel.push("일지 형 — 잔마찰이 조용히 쌓이는 자리");
+  if (s.dayBranchWonjin) rel.push("일지 원진 — 이유 없이 얄미운데 못 떨어지는 자리");
+  if (s.yearBranchHap) rel.push("띠(연지) 합 — 큰 흐름에서 성향이 잘 맞음");
+  if (s.yearBranchChung) rel.push("띠(연지) 충 — 큰 성향은 반대쪽");
+  const relMap: Record<string, string> = {
+    saeng_to_pet: `일간 오행 관계 — 보호자가 ${petName}에게 에너지를 주는 방향 (네 존재 자체가 이 아이의 영양제야)`,
+    saeng_to_owner: `일간 오행 관계 — ${petName}가 보호자에게 에너지를 주는 방향 (이 아이가 너를 채워주는 쪽)`,
+    geuk_to_pet: `일간 오행 관계 — 보호자가 ${petName}를 누르는 방향 (네가 통제하려 들수록 이 아이가 눌린다)`,
+    geuk_to_owner: `일간 오행 관계 — ${petName}가 보호자를 누르는 방향 (이 아이한테 네가 휘둘리는 구조)`,
+    bihwa: "일간 오행 관계 — 같은 기운 (고집 대 고집, 닮은꼴이라 부딪히면 안 물러남)",
+  };
+  if (relMap[s.dayMasterRelation]) rel.push(relMap[s.dayMasterRelation]);
+
+  lines.push("■ 두 사람의 관계 신호");
+  if (rel.length) rel.forEach((r) => lines.push(`- ${r}`));
+  else lines.push("- 특별한 합·충 없음 — 무난한 평지 관계. 극적인 명리 신호를 지어내지 말고 담백하게 서술하라.");
+
+  // ── 펫 자체 기운 ──
+  const lowReliability = !s.petDayMasterElement || !s.petTwelveStage; // tier 3·4 (petEnriched null)
+  lines.push("");
+  lines.push(`■ ${petName} 자체 기운`);
+  if (lowReliability) {
+    lines.push("- 펫 사주 신뢰도 낮음 (생일 정보 부족) — 세부 명리 신호(신살·12운성) 없음. 종 본성과 보호자 사주 중심으로 서술하고, 없는 신살·12운성을 지어내지 마라.");
+  } else {
+    const strengthTxt = s.petStrength === "strong" ? "신강 (자기 기운이 세다 — 주관 뚜렷·독립적)"
+      : s.petStrength === "weak" ? "신약 (주변 손길이 필요 — 의존적·섬세)"
+      : "중화 (균형 잡힘)";
+    lines.push(`- 신강약: ${strengthTxt}`);
+    const stars: string[] = [];
+    if (s.petGwanseong >= 1) stars.push(`관성 ${s.petGwanseong} (규율·질서를 받아들이는 기질, 훈련·복종에 강함)`);
+    if (s.petInseong >= 1) stars.push(`인성 ${s.petInseong} (보호자를 의지처로 삼는 기질)`);
+    if (s.petSikSang >= 1) stars.push(`식상 ${s.petSikSang} (자유롭게 표현하고 싶은 기질)`);
+    if (s.petBigeob >= 1) stars.push(`비겁 ${s.petBigeob} (자기 우선·마이웨이 기질)`);
+    if (s.petJaeseong >= 1) stars.push(`재성 ${s.petJaeseong} (원하는 걸 챙기는 실리 기질)`);
+    if (stars.length) lines.push(`- 성향(십성): ${stars.join(" / ")}`);
+    const shinsal: string[] = [];
+    if (s.petHasDohwa) shinsal.push("도화·홍염살 (치명적 매력, 사람을 끌어당기는 애교)");
+    if (s.petHasYeokma) shinsal.push("역마살 (돌아다니고 싶은 기운, 한자리에 못 있음)");
+    if (s.petHasCheonEulGwiin) shinsal.push("천을귀인 (위기 때 도움받는 귀한 별, 복덩이)");
+    if (shinsal.length) lines.push(`- 신살: ${shinsal.join(" / ")}`);
+    const elMap: Record<string, string> = { 목: "목 (자라나는·유연한)", 화: "화 (뜨겁고 활발한)", 토: "토 (진득하고 안정적인)", 금: "금 (단단하고 예민한)", 수: "수 (영리하고 유연한)" };
+    if (elMap[s.petDayMasterElement]) lines.push(`- 타고난 오행: ${elMap[s.petDayMasterElement]}`);
+    lines.push(`- 12운성(지금 기운): ${s.petTwelveStage} — ★futureLine에는 반드시 "${s.petTwelveStage}"만 써라. 다른 12운성 이름(장생·목욕·제왕·쇠·묘·태·양 등)을 지어내면 실패.`);
+  }
+
+  // ── 점수 해석 가이드 (서술이 이 방향과 어긋나면 실패) ──
+  const gap = scores.lover - scores.loyalty;
+  const rulerTxt = scores.ruler >= 60 ? `${petName}가 우위 — 집안 실세로 그려도 됨`
+    : scores.ruler <= 40 ? `보호자가 우위 — ${petName}를 "실세/폐하/갑"으로 그리지 마라, 네가 보스인 구조`
+    : "대체로 동등";
+  const gapTxt = gap >= 15 ? "보호자가 더 매달리는 쪽"
+    : gap <= -15 ? `${petName}가 더 매달리는 쪽`
+    : "양쪽이 비슷하게 좋아함";
+  lines.push("");
+  lines.push("■ 점수 해석 (서술 방향이 이와 어긋나면 실패)");
+  lines.push(`- 집안 실세(ruler ${scores.ruler}): ${rulerTxt}`);
+  lines.push(`- 사랑 방향: 보호자→${petName} ${scores.lover} vs ${petName}→보호자 ${scores.loyalty} → ${gapTxt}`);
+
+  return lines.join("\n");
+}
+
 export function buildPetCompatUserInfo(input: PetCompatInput): string {
   const { owner, pet, ownerSajuText, petSajuText, precomputedScores } = input;
 
@@ -399,10 +472,8 @@ ${petSajuText}
 - grade: ${precomputedScores.grade}
 - labelText: "${precomputedScores.labelText}"
 
-★ 양방향 정 흐름 (lover vs loyalty)
-- lover - loyalty 차이가 양수면 보호자가 더 매달림 → 보호자 판정/사용설명서/시뮬에 "네가 더 빠져있다" 톤
-- 음수면 펫이 더 의지함 → "쭈가 너 없으면 안 된다" 톤
-- 차이 작으면 → "양쪽이 비슷하게 빠진다" 톤
+[★ 관계의 명리 근거 — 서버가 계산했다. 모든 판정은 반드시 이 근거에서 출발하라. 여기 없는 신살·12운성·합충을 지어내면 실패]
+${buildRelationSignalBlock(input.signals, precomputedScores, pet.name)}
 
 위 입력값을 100% 반영해서 시스템 프롬프트의 JSON 스키마에 맞춰 결과만 출력해.
 점수·등급·라벨은 위 값 그대로 옮기고, 너는 헤드라인/사용설명서/판정/시뮬/종합 등 텍스트만 생성한다.
