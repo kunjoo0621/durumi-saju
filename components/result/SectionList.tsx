@@ -1,14 +1,24 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState, type ComponentType } from "react";
 import SectionHeader from "./SectionHeader";
 import SectionBody from "./SectionBody";
 import { SECTION_META, resolveKey } from "@/lib/constants/section-icons";
+
+// v0.3(펫): 전역 이모지 맵 오염 없이 섹션별 아이콘/컬러/라벨을 직접 지정 (미전달 시 기존 이모지 경로)
+export type SectionMeta = {
+  Icon: ComponentType<Record<string, unknown>>;
+  label: string;
+  color: string;
+  bg: string;
+  accent: string;
+};
 
 export type ResultSection = {
   icon: string;
   title: string;
   content?: string;
+  meta?: SectionMeta;
 };
 
 type SectionListProps = {
@@ -56,6 +66,7 @@ const SectionItem = memo(function SectionItem({
         <SectionHeader
           icon={section.icon}
           title={section.title}
+          meta={section.meta}
           expanded={expanded}
           onToggle={handleToggle}
           id={contentId}
@@ -121,7 +132,7 @@ function SectionListInner({
           locked={locked}
           onUnlock={onUnlock}
           unlockLabel={unlockLabel}
-          accentColor={SECTION_META[resolveKey(section.icon)]?.accent ?? DEFAULT_ACCENT}
+          accentColor={section.meta?.accent ?? SECTION_META[resolveKey(section.icon)]?.accent ?? DEFAULT_ACCENT}
         />
       ))}
     </div>
