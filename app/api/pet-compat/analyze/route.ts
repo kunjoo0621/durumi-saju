@@ -13,7 +13,7 @@ import { getSupabaseUserId } from "@/lib/server/user";
 import { calculateSaju, enrichSajuData, formatEnrichedSajuText } from "@/lib/utils/saju";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { buildFortunePromptBlock } from "@/lib/analysis";
-import { calculatePetEnrichedSaju, extractPetCompatSignals, buildPetSajuText } from "@/lib/pet-compat-saju";
+import { calculatePetEnrichedSaju, extractPetCompatSignals, buildPetSajuText, buildPetSpec } from "@/lib/pet-compat-saju";
 import { computePetCompatScores } from "@/lib/pet-compat-scoring";
 import { runPetCompatAnalysis } from "@/lib/pet-compat";
 import { generatePetIllustration } from "@/lib/pet-compat-illustration";
@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
         petSajuText,
         precomputedScores: scores,
         signals,
+        petSpec: buildPetSpec(pet, petCalc.enriched),
       }),
       photoSignedUrl
         ? generatePetIllustration({

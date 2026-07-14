@@ -128,6 +128,35 @@ function getYearBranchHanja(pillars: { year: string }): string {
   return pillars.year.length >= 2 ? pillars.year.slice(1, 2) : "";
 }
 
+// v0.3: manual.spec 서버 결정론화 — 연지→오행/동물을 서버가 매핑 (LLM "子띠 金" 오류 차단)
+const BRANCH_ELEMENT: Record<string, string> = {
+  子: "水", 丑: "土", 寅: "木", 卯: "木", 辰: "土", 巳: "火",
+  午: "火", 未: "土", 申: "金", 酉: "金", 戌: "土", 亥: "水",
+};
+const BRANCH_ANIMAL: Record<string, string> = {
+  子: "쥐", 丑: "소", 寅: "범", 卯: "토끼", 辰: "용", 巳: "뱀",
+  午: "말", 未: "양", 申: "원숭이", 酉: "닭", 戌: "개", 亥: "돼지",
+};
+
+/** 사용설명서 spec 문자열을 서버가 조립. 형식 "[나이], [품종], [연지](동물)띠 [오행] 기운" */
+export function buildPetSpec(pet: PetInput, petEnriched: EnrichedSajuData | null): string {
+  const nowYear = new Date().getFullYear();
+  let ageStr = "나이 미상";
+  if ((pet.birthTier === 1 || pet.birthTier === 2) && pet.birthDate) {
+    const y = parseInt(pet.birthDate.slice(0, 4), 10);
+    if (y) ageStr = `${Math.max(0, nowYear - y)}세`;
+  } else if (pet.birthTier === 3 && pet.birthYearEstimated) {
+    ageStr = `약 ${Math.max(0, nowYear - pet.birthYearEstimated)}세`;
+  }
+  const breed = pet.breed || "믹스";
+  const yb = petEnriched ? getYearBranchHanja(petEnriched.pillars) : "";
+  if (yb && BRANCH_ANIMAL[yb]) {
+    const suffix = pet.birthTier === 3 ? " (추정)" : "";
+    return `${ageStr}, ${breed}, ${yb}(${BRANCH_ANIMAL[yb]})띠 ${BRANCH_ELEMENT[yb]} 기운${suffix}`;
+  }
+  return `${ageStr}, ${breed}, (띠 미상, 가족 된 날 기준)`;
+}
+
 // ────────────────────────────────────────────────────────
 // 12지 관계 매트릭스 (정통 명리)
 // ────────────────────────────────────────────────────────

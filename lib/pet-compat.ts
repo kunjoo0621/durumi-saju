@@ -55,6 +55,7 @@ export interface PetCompatInput {
   petSajuText: string;
   precomputedScores: PetCompatComputedScores;     // v0.2: 점수는 서버가 결정
   signals: PetCompatSignals;                       // v0.3: LLM에 명리 근거로 승격 (트로프 방지)
+  petSpec: string;                                 // v0.3: manual.spec 서버 결정 (子띠=金 오류 차단)
 }
 
 export type LabelGrade = "S" | "A" | "B" | "C" | "D";
@@ -215,11 +216,7 @@ ${isDog
 ────────────────────────────────
 [사용설명서 형식]
 
-manual.spec 필드는 다음 형식: "[나이], [품종], [연주 12지](띠 한자) [해당 오행] 기운"
-예시:
-- "5세, 코숏, 寅(범)띠 木 기운"
-- "3세, 골든리트리버, 戌(개)띠 土 기운"
-- "0세, 시고르자브종, (띠 미상, 가족 된 날 기준)"
+★ manual.spec 은 입력의 "사양(서버 확정)" 값을 그대로 옮겨라. 나이·띠·오행을 직접 계산하지 마라 (서버가 이미 정확히 조립했다).
 
 ────────────────────────────────
 [📍 미래 카피 (futureLine) — 관계의 시간성]
@@ -454,6 +451,7 @@ ${ownerSajuText}
 - 생일 정보: ${petBirthLine}
 - 생일 신뢰도: tier ${pet.birthTier} — ${tierNote[pet.birthTier]}
 - 입양 경로: ${pet.adoptionRoute || "(미상)"}
+- ★ 사양(서버 확정 — manual.spec에 그대로 옮기고, 본문에서 띠·오행 언급 시 이 값과 어긋나지 마라): ${input.petSpec}
 
 [반려동물 사주 (만세력)]
 ${petSajuText}
@@ -515,6 +513,7 @@ export async function runPetCompatAnalysis(
     };
     parsed.label.grade = input.precomputedScores.grade;
     parsed.label.text = input.precomputedScores.labelText;
+    if (parsed.manual) parsed.manual.spec = input.petSpec;  // v0.3: spec 서버 결정값 강제 (子띠=金 오류 차단)
 
     // ★ 결정론적 후처리: 한자 병기 ≤3 강제 (프롬프트 지시만으론 tier1 rich 차트서 못 지킴)
     postprocessPetCompatResult(parsed);

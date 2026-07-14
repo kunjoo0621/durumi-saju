@@ -181,6 +181,7 @@ async function main() {
     ...config.base,
     precomputedScores: scores,
     signals,
+    petSpec: `나이 미상, ${config.base.pet.breed ?? "믹스"}, (테스트)`,
   };
 
   const startedAt = Date.now();

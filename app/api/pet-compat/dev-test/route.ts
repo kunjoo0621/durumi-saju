@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { calculateSaju, enrichSajuData, formatEnrichedSajuText } from "@/lib/utils/saju";
-import { calculatePetEnrichedSaju, extractPetCompatSignals, buildPetSajuText } from "@/lib/pet-compat-saju";
+import { calculatePetEnrichedSaju, extractPetCompatSignals, buildPetSajuText, buildPetSpec } from "@/lib/pet-compat-saju";
 import { computePetCompatScores } from "@/lib/pet-compat-scoring";
 import { runPetCompatAnalysis } from "@/lib/pet-compat";
 import type { PetInput, OwnerInput } from "@/lib/pet-compat";
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     const startedAt = Date.now();
     const llmResult = await runPetCompatAnalysis({
       owner, pet, ownerSajuText, petSajuText, precomputedScores: scores, signals,
+      petSpec: buildPetSpec(pet, petCalc.enriched),
     });
     const elapsedMs = Date.now() - startedAt;
 
