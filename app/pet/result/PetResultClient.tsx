@@ -205,7 +205,7 @@ export function PetResultBody({ data }: { data: PetResultData }) {
 
         {/* ⑤ 판정 · 시뮬 · 타임라인 */}
         <section className="pt-1">
-          <SectionList sections={sections} initialExpandedCount={2} />
+          <SectionList sections={sections} initialExpandedCount={sections.length} />
         </section>
 
         {/* ⑥ VERDICT */}

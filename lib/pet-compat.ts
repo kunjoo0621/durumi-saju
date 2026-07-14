@@ -274,10 +274,10 @@ ${isDog
     "errorSignals": string,
     "ownerMode": string
   },
-  "ownerVerdict": string,              // 4~6문장. 직설 + 죄책감 해소
-  "petVerdict": string,                // 4~6문장. 귀엽게 놀리기. viral 패턴 1개 이상
+  "ownerVerdict": string,              // 5~7문장. 직설 + 죄책감 해소. 관계 신호를 구체 장면으로 살 붙여 생생하게
+  "petVerdict": string,                // 5~7문장. 귀엽게 놀리기. 신살 리드 + 오감·구체 행동 디테일 1개 이상으로 그림 그려지게
   "simulations": [
-    { "scene": "산책 / 외출 / 만남", "prediction": string },  // 4~6문장. 도입부 변형
+    { "scene": "산책 / 외출 / 만남", "prediction": string },  // 4~6문장. 도입부 변형. 구체 행동·표정·소리 디테일 1개 이상으로 눈앞에 그려지게
     { "scene": "...", "prediction": string },
     { "scene": "...", "prediction": string }
   ],
@@ -328,6 +328,7 @@ ${isDog
 
 ★ label.text의 S등급 라벨도 "운명의 짝꿍"이 아닌 "사주가 맞춘 인연" 같은 변형으로.
 ★ headline·petVerdict·ownerVerdict·finalLine 어디에도 "운명" 박지 마.
+★ headline·finalLine·label.text에는 신살·12운성·오행·한자 등 명리 용어 이름을 넣지 마 (캡처·공유용이라 즉시 읽혀야 함). 명리는 본문(판정·설명서)에서만 풀어라.
 `;
 }
 
@@ -393,8 +394,8 @@ function buildRelationSignalBlock(s: PetCompatSignals, scores: PetCompatComputed
 
   // ── 점수 해석 가이드 (서술이 이 방향과 어긋나면 실패) ──
   const gap = scores.lover - scores.loyalty;
-  const rulerTxt = scores.ruler >= 60 ? `${petName}가 우위 — 집안 실세로 그려도 됨`
-    : scores.ruler <= 40 ? `보호자가 우위 — ${petName}를 "실세/폐하/갑"으로 그리지 마라, 네가 보스인 구조`
+  const rulerTxt = scores.ruler >= 60 ? `${petName}가 주도권 — 이 집 결정권이 펫 쪽으로 기운 구조로 그려도 됨`
+    : scores.ruler <= 40 ? `보호자가 주도권 — ${petName}를 상전·갑으로 그리지 마라, 네가 이끄는 구조`
     : "대체로 동등";
   const gapTxt = gap >= 15 ? "보호자가 더 매달리는 쪽"
     : gap <= -15 ? `${petName}가 더 매달리는 쪽`
@@ -466,8 +467,8 @@ ${buildRelationSignalBlock(input.signals, precomputedScores, pet.name)}
 위 입력값을 100% 반영해서 시스템 프롬프트의 JSON 스키마에 맞춰 결과만 출력해.
 점수·등급·라벨은 위 값 그대로 옮기고, 너는 헤드라인/사용설명서/판정/시뮬/종합 등 텍스트만 생성한다.
 ★ label.text / headline / finalLine은 서로 다른 내용이어야 한다 (같은 비유·같은 핵심 단어 재사용 금지):
-- headline(25~40자): 이 관계의 가장 강한 명리 신호 1개를 진단하는 한 줄 (labelText가 안 말한 것)
-- finalLine(25~50자): 판정 전체를 관통하는 감정의 마무리 한 줄 (labelText·headline과 다른 단어·다른 각도)
+- headline(25~40자): 이 관계의 핵심 역학을 한 방에 찌르는 위트 있는 카피 (labelText가 안 말한 각도). ★신살·12운성·한자 등 명리 용어 이름 절대 금지 — 그 신호가 만드는 '행동/상황'만 쉬운 말로. (❌ "두부 홍염살에 네가 무릎 꿇는 관계" → ✅ "애교 한 방이면 네가 지갑부터 여는 사이")
+- finalLine(25~50자): 판정을 관통하는 감정의 마무리 한 줄 (labelText·headline과 다른 단어·다른 각도). 여기도 명리 용어 이름 금지.
 `.trim();
 }
 
@@ -508,7 +509,7 @@ export async function runPetCompatAnalysis(
   for (let attempt = 1; attempt <= 2; attempt++) {
     const result = await callGemini(model, baseUserInfo + extra, systemPrompt, {
       temperature: 0.85,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 10240,  // v0.4: 판정 풍성화(5~7문장)로 상향
     });
     if (!result.ok) { lastError = `LLM 호출 실패: ${result.message}`; continue; }
 

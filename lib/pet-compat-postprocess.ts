@@ -49,6 +49,8 @@ export function stripHanjaKeepKorean(text: string): string {
 // v0.3: QA 게이트 — 지시-only는 못 믿으니(한자 사고 교훈) 위반을 코드로 검출 → 재생성 1회.
 const FORBIDDEN = /운명|100%|절대|영원히|무조건|반드시|정답/;
 const MEDICAL = /구토|설사|발작|경련|혈뇨|탈수|토했|토함|식욕\s*부진/;
+// v0.4: headline·finalLine에 명리 용어 이름 금지(캡처·공유용) — 본문은 허용
+const MYEONGRI_IN_TITLE = /홍염살|도화살|역마살|화개살|백호살|양인살|공망|천을귀인|문창귀인|괴강|제왕|장생|목욕|관대|건록|비겁|식상|재성|관성|십성|삼합|방합/;
 const STAGES_2 = ["장생", "목욕", "관대", "건록", "제왕"]; // 12운성 두 글자 이름
 const STAGES_1 = ["쇠", "병", "사", "묘", "절", "태", "양"]; // 한 글자 (일반 단어 오매칭 주의)
 
@@ -79,6 +81,10 @@ export function validatePetCompatResult(result: PetCompatResult, ctx: { petTwelv
 
   const med = (m?.errorSignals || "").match(MEDICAL);
   if (med) v.push(`errorSignals 의료 증상 "${med[0]}" (질병은 병원 안내로)`);
+
+  const titleText = `${result.label?.headline ?? ""} ${result.finalLine ?? ""}`;
+  const term = titleText.match(MYEONGRI_IN_TITLE);
+  if (term) v.push(`헤드라인/마무리에 명리 용어 "${term[0]}" (제목엔 쉬운 말만)`);
 
   return v;
 }
