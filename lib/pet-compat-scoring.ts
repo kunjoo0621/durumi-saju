@@ -109,6 +109,7 @@ export interface PetCompatComputedScores {
   conflict: number;        // ⚡ 사주 어긋남 지수 (낮을수록 좋음)
   grade: LabelGrade;
   labelText: string;       // 서버 결정 라벨 (LLM과 일러스트가 병렬로 사용)
+  archetype: PetArchetype; // v0.4(Track B): 관계 일러스트 장면 선택용 (라벨 분기와 동일 결정)
   scoringVersion: number;
 }
 
@@ -344,43 +345,48 @@ function computeComposite(scores: { sync: number; ruler: number; lover: number; 
 // → LLM과 일러스트 병렬 처리 가능 (사주 단일 분석의 score → grade 패턴 응용)
 // ────────────────────────────────────────────────────────
 
-function pickLabelText(
+// v0.4(Track B): 라벨을 정하는 같은 분기에서 일러스트 아키타입도 동시 결정 → 타이틀↔그림 일치 보장.
+// 라벨 문자열·분기 조건 무변경(점수 회귀 0). archetype은 관계 일러스트 장면(SCENE_BLOCKS) 선택에만 사용.
+export type PetArchetype =
+  | "HARMONY" | "OWNER_DEVOTION" | "PET_DEVOTION" | "PET_THRONE"
+  | "OWNER_MANAGER" | "OFFBEAT" | "ROOMMATE" | "DISTANT_FATE";
+
+function pickLabelAndArchetype(
   grade: LabelGrade,
   scores: { ruler: number; conflict: number; sync: number; lover: number; loyalty: number },
   species: PetSpecies,
-): string {
+): { text: string; archetype: PetArchetype } {
   const { ruler, conflict, sync, lover, loyalty } = scores;
   const affectionGap = lover - loyalty;  // 양수 = 보호자 일방, 음수 = 펫 일방
 
-  // v0.4: 위트 있는 공유형 라벨 (분기 조건·의미 무변경, 문자열만 교체). 한자·명리 용어·"운명" 금지
   if (grade === "S") {
-    if (sync >= 85 && Math.abs(affectionGap) <= 15) return "전생에 한 이불 쓰던 인연";
-    if (affectionGap >= 25) return "찰떡인데 더 빠진 쪽은 너";
-    if (affectionGap <= -25) return "공식 인증 껌딱지 인연";
-    return "팔자가 먼저 알아본 인연";
+    if (sync >= 85 && Math.abs(affectionGap) <= 15) return { text: "전생에 한 이불 쓰던 인연", archetype: "HARMONY" };
+    if (affectionGap >= 25) return { text: "찰떡인데 더 빠진 쪽은 너", archetype: "OWNER_DEVOTION" };
+    if (affectionGap <= -25) return { text: "공식 인증 껌딱지 인연", archetype: "PET_DEVOTION" };
+    return { text: "팔자가 먼저 알아본 인연", archetype: "HARMONY" };
   }
   if (grade === "A") {
-    if (sync >= 75) return "손발 척척 환상의 복식조";
-    if (affectionGap >= 30) return "애정 지분은 네가 51%";
-    if (affectionGap <= -30) return "너에게 올인한 순정파";
-    if (conflict >= 30) return "서로 좋아 죽는데 둘 다 유난함";
-    return "손발 척척 환상의 복식조";
+    if (sync >= 75) return { text: "손발 척척 환상의 복식조", archetype: "HARMONY" };
+    if (affectionGap >= 30) return { text: "애정 지분은 네가 51%", archetype: "OWNER_DEVOTION" };
+    if (affectionGap <= -30) return { text: "너에게 올인한 순정파", archetype: "PET_DEVOTION" };
+    if (conflict >= 30) return { text: "서로 좋아 죽는데 둘 다 유난함", archetype: "OFFBEAT" };
+    return { text: "손발 척척 환상의 복식조", archetype: "HARMONY" };
   }
   if (grade === "B") {
-    if (ruler >= 70 && affectionGap >= 20) return "간식 셔틀과 네 발 상전";
-    if (ruler <= 30) return "이 집 결재권자는 너";
-    if (affectionGap >= 35) return "너만 애가 타는 짝사랑";
-    if (affectionGap <= -35) return "현관 소리만 기다리는 순애보";
-    return "츤데레 룸메이트";
+    if (ruler >= 70 && affectionGap >= 20) return { text: "간식 셔틀과 네 발 상전", archetype: "PET_THRONE" };
+    if (ruler <= 30) return { text: "이 집 결재권자는 너", archetype: "OWNER_MANAGER" };
+    if (affectionGap >= 35) return { text: "너만 애가 타는 짝사랑", archetype: "OWNER_DEVOTION" };
+    if (affectionGap <= -35) return { text: "현관 소리만 기다리는 순애보", archetype: "PET_DEVOTION" };
+    return { text: "츤데레 룸메이트", archetype: "ROOMMATE" };
   }
   if (grade === "C") {
-    if (ruler >= 65 && affectionGap >= 20) return "무급인데 평생직장";
-    if (conflict >= 50) return "투닥거려도 결국 한솥밥";
-    if (affectionGap >= 30) return "들이대는 너, 한 발 빼는 얘";
-    return "극과 극인데 한 지붕 아래";
+    if (ruler >= 65 && affectionGap >= 20) return { text: "무급인데 평생직장", archetype: "PET_THRONE" };
+    if (conflict >= 50) return { text: "투닥거려도 결국 한솥밥", archetype: "OFFBEAT" };
+    if (affectionGap >= 30) return { text: "들이대는 너, 한 발 빼는 얘", archetype: "OWNER_DEVOTION" };
+    return { text: "극과 극인데 한 지붕 아래", archetype: "ROOMMATE" };
   }
   // D — "묘연(猫緣)"은 고양이 전용 → 강아지는 "인연"
-  return species === "cat" ? "천천히 스며드는 묘연" : "천천히 스며드는 인연";
+  return { text: species === "cat" ? "천천히 스며드는 묘연" : "천천히 스며드는 인연", archetype: "DISTANT_FATE" };
 }
 
 // ────────────────────────────────────────────────────────
@@ -396,7 +402,7 @@ export function computePetCompatScores(signals: PetCompatSignals): PetCompatComp
 
   const composite = remapComposite(computeComposite({ sync, ruler, lover, loyalty, conflict }));
   const grade = compositeToGrade(composite, signals);
-  const labelText = pickLabelText(grade, { ruler, conflict, sync, lover, loyalty }, signals.petSpecies);
+  const { text: labelText, archetype } = pickLabelAndArchetype(grade, { ruler, conflict, sync, lover, loyalty }, signals.petSpecies);
 
   return {
     composite,
@@ -407,6 +413,7 @@ export function computePetCompatScores(signals: PetCompatSignals): PetCompatComp
     conflict,
     grade,
     labelText,
+    archetype,
     scoringVersion: PET_COMPAT_SCORING_VERSION,
   };
 }

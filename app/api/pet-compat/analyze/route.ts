@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
             petSpecies: pet.species,
             petBreed: pet.breed,
             resultId: provisionalResultId,
+            archetype: scores.archetype,
           })
         : Promise.resolve({ ok: false as const, reason: "no photo" }),
     ]);

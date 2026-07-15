@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     const name = (form.get("name") as string) || "테스트";
     const species = ((form.get("species") as string) || "dog") as "dog" | "cat";
     const breed = (form.get("breed") as string) || undefined;
+    const archetype = (form.get("archetype") as string) || undefined;
 
     const ext = file.type.includes("png") ? "png" : file.type.includes("webp") ? "webp" : "jpg";
     const path = `dev-test/${Date.now()}.${ext}`;
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       petSpecies: species,
       petBreed: breed,
       resultId,
+      archetype: archetype as any,
     });
     const elapsedMs = Date.now() - startedAt;
 
