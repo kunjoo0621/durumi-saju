@@ -11,7 +11,6 @@ import { FullScreenLoading } from "@/components/loading";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import { safeDisplayGrade } from "@/lib/gradeSystem";
 import OverallGradeBadgeSlot, { GRADE_GLOWS } from "@/components/result/OverallGradeBadgeSlot";
-import CategoryRadarChart from "@/components/result/CategoryRadarChart";
 import SectionList, { type ResultSection, type SectionMeta } from "@/components/result/SectionList";
 import { Megaphone, PawPrint, GameController, MapPin, ClipboardText, Crown, Heart } from "@phosphor-icons/react";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
@@ -127,14 +126,6 @@ export function PetResultBody({ data }: { data: PetResultData }) {
     alert("공유 링크가 복사됐어");
   };
 
-  // ② 궁합 레이더 — 전부 "높을수록 좋음"으로 정규화 (실세는 방향값이라 ③으로)
-  const radarAxes = [
-    { key: "호흡", score: data.sync_score, subLabel: `${data.sync_score}점` },
-    { key: "사랑", score: data.lover_score, subLabel: `${data.lover_score}점` },
-    { key: "충성", score: data.loyalty_score, subLabel: `${data.loyalty_score}점` },
-    { key: "조화", score: 100 - data.conflict_score, subLabel: `어긋남 ${data.conflict_score}` },
-  ];
-
   // ⑤ 판정·시뮬·타임라인 — SectionList meta 오버라이드
   const sections: ResultSection[] = [
     { icon: "pet-owner", title: "너에게 솔직히", content: result.ownerVerdict, meta: metaOf(Megaphone, "보호자", "#F87171") },
@@ -182,19 +173,17 @@ export function PetResultBody({ data }: { data: PetResultData }) {
           </div>
         </section>
 
-        {/* ② 궁합 레이더 */}
-        <section className="space-y-3">
-          <h2 className="px-1 text-title-3 text-text-primary">궁합 리포트</h2>
-          <CategoryRadarChart axes={radarAxes} />
-        </section>
-
-        {/* ③ 관계 역학 — 실세 tug-bar */}
+        {/* ② 관계 역학 — 실세 tug-bar + 호흡·어긋남 */}
         <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
           <div className="flex items-center gap-2 mb-5">
             <Crown weight="duotone" size={24} color="#F5C451" aria-hidden="true" />
             <h2 className="text-title-3 text-text-primary">집안 실세</h2>
           </div>
           <TugBar ruler={data.ruler_score} petName={data.pet.name} />
+          <div className="mt-6 pt-5 border-t border-white/[0.08] grid grid-cols-2 gap-4">
+            <MiniStat icon="🐾" label="호흡 지수" desc="둘이 얼마나 잘 맞는지" value={data.sync_score} />
+            <MiniStat icon="⚡" label="사주 어긋남" desc="낮을수록 잘 맞음" value={data.conflict_score} />
+          </div>
         </section>
 
         {/* ③ 관계 역학 — 양방향 정 */}
@@ -290,6 +279,19 @@ function TugBar({ ruler, petName }: { ruler: number; petName: string }) {
           style={{ left: `calc(${v}% - 6px)` }}
         />
       </div>
+    </div>
+  );
+}
+
+function MiniStat({ icon, label, desc, value }: { icon: string; label: string; desc: string; value: number }) {
+  return (
+    <div className="rounded-2xl bg-background-tertiary p-4">
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-[14px]">{icon}</span>
+        <span className="text-caption text-text-secondary font-medium">{label}</span>
+      </div>
+      <div className="text-[26px] font-bold font-aggro tabular-nums text-text-primary leading-none">{value}</div>
+      <div className="text-caption text-text-tertiary mt-1.5">{desc}</div>
     </div>
   );
 }
