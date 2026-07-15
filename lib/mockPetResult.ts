@@ -22,13 +22,13 @@ export interface PetResultData {
 }
 
 const DEMO_ILLUST =
-  "https://cfkijdafranpkgwnosfq.supabase.co/storage/v1/object/public/pet-illustrations/demo/dubu-pixar.png";
+  "https://cfkijdafranpkgwnosfq.supabase.co/storage/v1/object/public/pet-illustrations/demo/dubu-throne.png";
 
 // 개 · A(표시 S)등급 · 보호자가 더 매달림 · 펫 우위
 export const MOCK_PET_DOG_A: PetResultData = {
   id: "mock-dog-a",
   label_grade: "A",
-  label_text: "밥 주는 사람과 귀여운 갑",
+  label_text: "간식 셔틀과 네 발 상전",
   composite_score: 79,
   sync_score: 55,
   ruler_score: 71,
@@ -41,21 +41,21 @@ export const MOCK_PET_DOG_A: PetResultData = {
   created_at: "2026-07-14T00:00:00.000Z",
   pet: { id: "p1", name: "두부", species: "dog", breed: "시츄", gender: "male", birth_tier: 1 },
   full_result: {
-    label: { grade: "A", text: "밥 주는 사람과 귀여운 갑", headline: "홍염살로 무장한 애교, 집안의 진짜 결정권자는 두부야" },
+    label: { grade: "A", text: "간식 셔틀과 네 발 상전", headline: "네가 챙기는 줄 알았지? 실은 두부 스케줄에 네 하루가 맞춰지는 사이" },
     scores: { composite: 79, sync: 55, ruler: 71, lover: 77, loyalty: 45, conflict: 22 },
     manual: {
       name: "두부",
       spec: "6세, 시츄, 子(쥐)띠 水 기운",
-      recommendedEnv: "두부는 뜨거운 화 기운을 타고났어. 늘 시원하고 조용한 구석 하나는 비워 둬. 제 페이스가 흐트러지면 예민해진다.",
-      warnings: "일지 방합으로 네 리듬에 두부가 스르륵 합류하는 구조야. 그래서 네가 무심코 다 맞춰주다 지친다. 선을 먼저 그어.",
+      recommendedEnv: "두부는 뜨거운 화 기운을 타고났어. 늘 시원하고 조용한 구석 하나는 비워 둬. 제 페이스가 흐트러지면 눈에 띄게 예민해진다.",
+      warnings: "일지 방합으로 네 리듬에 두부가 스르륵 합류하는 구조야. 그래서 네가 무심코 다 맞춰주다 지친다. 선을 먼저 그어야 오래간다.",
       chargeMethod: "잔소리보다 시원한 물 한 그릇, 짧은 산책이 두부를 움직이게 해. 부드럽지만 단호한 태도가 충전 스위치야.",
       errorSignals: "이유 없이 짖거나 우다다가 심해지면 관심이 필요하다는 신호야. 다만 구토·기력 저하 같은 진짜 아픈 신호면 사주가 아니라 병원 먼저.",
       ownerMode: "두부에게 휘둘리기 쉬운 구조라, 가끔은 단단하게 '안 돼'라고 말하는 연습이 필요해.",
     },
     ownerVerdict:
-      "너와 두부는 일지 방합으로 묶였어. 같은 계절 기운이라 함께 있으면 편한데, 그만큼 네가 두부 페이스에 스르륵 끌려간다. 신약한 네 사주가 두부에게 쏟는 만큼 스스로를 챙기는 데는 소홀해지기 쉬워. 그래도 이 관계가 너를 갉아먹는 건 아니야. 그냥 네가 좀 더 내주는 팔자다.",
+      "너와 두부는 일지 방합으로 묶인 사이야. 같은 계절 기운이라 함께 있으면 한없이 편한데, 문제는 그 편안함이 늘 두부 페이스로 흐른다는 거지. 산책 시간도, 간식 타이밍도, 심지어 소파 자리까지 어느새 두부 기준으로 정해져 있을 거야. 신약한 네 사주는 좋아하는 대상 앞에서 기준이 무너지기 쉬운 구조라, 두부에게 쏟는 만큼 정작 너를 챙기는 데는 소홀해진다. 그래도 이게 널 갉아먹는 관계는 아니야. 두부도 네 곁이 세상에서 제일 편한 자리니까. 그냥 네가 조금 더 내주는 팔자, 그뿐이다.",
     petVerdict:
-      "두부는 홍염살을 깔고 앉은 아이야. 눈 한 번 맞추고 앞발 슬쩍 얹는 것만으로 네 마음을 여는 데 도가 텄지. 신강한 사주라 겉으론 붙어 있어도 제 루틴과 공간은 확실히 지킨다. 뜨거운 화 기운이 강해서, 심심하면 온 집을 헤집는 탐험가 기질도 있어.",
+      "두부는 타고난 매력으로 세상 사람을 홀리는 기술을 장착하고 나왔어. 특히 좋아하는 사람 앞에서는 꼬리 흔들기부터 배 뒤집기까지 풀코스 애교를 펼치지. 하지만 그게 다가 아니야. 신강한 사주라 겉으론 네게 찰싹 붙어 있어도, 속으론 제 루틴과 공간을 확실히 지키는 소신파거든. 네 애정 공세가 살짝 과하다 싶으면 슬그머니 한 발 물러나 거리를 두는 밀당의 고수이기도 해. 뜨거운 화 기운이 강해서 심심한 건 못 참고, 눈 마주치면 '나 지금 심심해'라는 표정으로 온 집을 탐험하러 나설 거야.",
     simulations: [
       { scene: "산책", prediction: "현관에서 목줄만 들어도 두부는 꼬리부터 만렙으로 돈다. 그런데 조금만 덥거나 비가 오면 '왜 지금?' 하는 표정으로 너를 빤히 본다." },
       { scene: "낯선 사람", prediction: "초인종이 울리면 몸집보다 큰 소리로 경비를 선다. 그러다 간식 봉지 소리 한 번에 태세를 바꿔 바로 영접 모드로 들어간다." },
