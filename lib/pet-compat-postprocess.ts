@@ -51,6 +51,9 @@ const FORBIDDEN = /운명|100%|절대|영원히|무조건|반드시|정답/;
 const MEDICAL = /구토|설사|발작|경련|혈뇨|탈수|토했|토함|식욕\s*부진/;
 // v0.4: headline·finalLine에 명리 용어 이름 금지(캡처·공유용) — 본문은 허용
 const MYEONGRI_IN_TITLE = /홍염살|도화살|역마살|화개살|백호살|양인살|공망|천을귀인|문창귀인|괴강|제왕|장생|목욕|관대|건록|비겁|식상|재성|관성|십성|삼합|방합/;
+// v0.5: 시뮬레이션은 상황극이라 명리 용어 이름 0 (본문 판정/설명서는 허용).
+// 오탐 회피: "목욕"(시뮬 상황 풀)·한 글자 12운성(쇠·병·사·묘·절·태·양)·"인성"(일상어) 제외
+const MYEONGRI_IN_SIM = /비겁|비견|겁재|식상|식신|상관|재성|편재|정재|편관|정관|편인|정인|관성|십성|역마살|역마|도화살|도화|홍염살|홍염|화개살|화개|백호살|양인살|장성살|괴강|공망|천을귀인|문창귀인|신살|장생|건록|제왕|관대|12운성|신강|신약|삼합|방합|육합|원진|일간|일지|연지/;
 const STAGES_2 = ["장생", "목욕", "관대", "건록", "제왕"]; // 12운성 두 글자 이름
 const STAGES_1 = ["쇠", "병", "사", "묘", "절", "태", "양"]; // 한 글자 (일반 단어 오매칭 주의)
 
@@ -85,6 +88,11 @@ export function validatePetCompatResult(result: PetCompatResult, ctx: { petTwelv
   const titleText = `${result.label?.headline ?? ""} ${result.finalLine ?? ""}`;
   const term = titleText.match(MYEONGRI_IN_TITLE);
   if (term) v.push(`헤드라인/마무리에 명리 용어 "${term[0]}" (제목엔 쉬운 말만)`);
+
+  for (const sim of result.simulations || []) {
+    const simTerm = `${sim?.scene ?? ""} ${sim?.prediction ?? ""}`.match(MYEONGRI_IN_SIM);
+    if (simTerm) { v.push(`시뮬레이션에 명리 용어 "${simTerm[0]}" (시뮬은 용어 없이 행동으로만)`); break; }
+  }
 
   return v;
 }
