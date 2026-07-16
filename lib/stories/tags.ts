@@ -154,6 +154,7 @@ export const STORY_TAGS: Record<string, string[]> = {
   "cheoneul-gwiin": ["신살"],
   "cheondeok-woldeok-gwiin": ["신살"],
   "jeonggwan-husband": ["결혼운", "연애운"],
+  "san-ateez": ["연예인", "아이돌", "계수"],
   "yangin-sal": ["신살", "직업운"],
   "sinsal-guide": ["신살"],
   "wonjin-sal": ["신살", "궁합"],
