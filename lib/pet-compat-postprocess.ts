@@ -103,6 +103,9 @@ export function postprocessPetCompatResult(result: PetCompatResult): PetCompatRe
   }
   result.ownerVerdict = s(result.ownerVerdict);
   result.petVerdict = s(result.petVerdict);
+  if (result.ownerVerdictTitle) result.ownerVerdictTitle = s(result.ownerVerdictTitle);
+  if (result.petVerdictTitle) result.petVerdictTitle = s(result.petVerdictTitle);
+  if (result.futureLineTitle) result.futureLineTitle = s(result.futureLineTitle);
   if (Array.isArray(result.simulations)) {
     for (const sim of result.simulations) {
       sim.scene = s(sim.scene);

@@ -90,6 +90,11 @@ export interface PetCompatResult {
   ownerVerdict: string;
   petVerdict: string;
 
+  // v0.4: 섹션 제목도 펫마다 위트 있게 LLM 생성 (없으면 프론트가 고정 라벨 fallback — 옛 데이터 호환)
+  ownerVerdictTitle?: string;
+  petVerdictTitle?: string;
+  futureLineTitle?: string;
+
   simulations: Array<{
     scene: string;
     prediction: string;
@@ -274,19 +279,24 @@ ${isDog
     "errorSignals": string,
     "ownerMode": string
   },
+  "ownerVerdictTitle": string,         // 이 판정의 위트 있는 섹션 제목 (6~14자, 이 펫만의 것. "너에게 솔직히" 같은 뻔한 라벨 금지)
   "ownerVerdict": string,              // 5~7문장. 직설 + 죄책감 해소. 관계 신호를 구체 장면으로 살 붙여 생생하게
+  "petVerdictTitle": string,           // 위트 있는 섹션 제목 (6~14자, 이 펫 성격을 콕 집는 한마디)
   "petVerdict": string,                // 5~7문장. 귀엽게 놀리기. 신살 리드 + 오감·구체 행동 디테일 1개 이상으로 그림 그려지게
   "simulations": [
-    { "scene": "산책 / 외출 / 만남", "prediction": string },  // 4~6문장. 도입부 변형. 구체 행동·표정·소리 디테일 1개 이상으로 눈앞에 그려지게
-    { "scene": "...", "prediction": string },
-    { "scene": "...", "prediction": string }
+    // scene = 그 상황을 위트 있게 표현한 짧은 제목 (6~16자). "산책"·"낯선 사람" 같은 밋밋한 한 단어 금지 (예: "산책 가자니까 우주 정복하러 가는 표정")
+    { "scene": string, "prediction": string },  // prediction 4~6문장. 도입부 변형. 구체 행동·표정·소리 디테일 1개 이상으로 눈앞에 그려지게
+    { "scene": string, "prediction": string },
+    { "scene": string, "prediction": string }
   ],
+  "futureLineTitle": string,           // 위트 있는 섹션 제목 (6~14자, "앞으로의 너희" 같은 뻔한 라벨 금지)
   "futureLine": string,                // 관계의 시간성 (3~4문장, 펫 12운성 + 보호자 대운 기반)
   "finalLine": string,                 // 종합 한 줄 (25~50자, 공유용)
   "disclaimer": string                 // D등급일 때만 (다른 등급은 빈 문자열)
 }
 
-★ scene 텍스트는 LLM이 자유롭게 정해도 됨 (예: ${isDog ? '"산책", "낯선 사람", "혼자 있을 때", "혼냈을 때", "다른 동물 만났을 때"' : '"창밖 감시", "낯선 사람", "혼자 있을 때", "혼냈을 때", "빗질할 때"'} 등에서 3개 픽). 입력의 펫 종·신호에 가장 적합한 것 골라라.
+★ scene은 그 상황을 위트 있게 표현한 짧은 제목이다 (6~16자). 밋밋한 한 단어("산책", "낯선 사람") 금지 — 상황+반응을 콕 집어 재밌게. 상황 자체는 ${isDog ? "산책·낯선 사람·혼자 있을 때·혼냈을 때·다른 동물 만났을 때" : "창밖 감시·낯선 사람·혼자 있을 때·혼냈을 때·빗질할 때"} 등에서 펫에 맞게 3개 고르되, 제목은 그 장면의 웃긴 포인트로 지어라.
+★ 섹션 제목(ownerVerdictTitle·petVerdictTitle·futureLineTitle·scene)에도 신살·12운성·한자 등 명리 용어 이름 금지 — 쉬운 말로 위트 있게.
 
 ────────────────────────────────
 [절대 출력 규칙]

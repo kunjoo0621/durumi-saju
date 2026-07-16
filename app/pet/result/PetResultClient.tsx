@@ -128,8 +128,8 @@ export function PetResultBody({ data }: { data: PetResultData }) {
 
   // ⑤ 판정·시뮬·타임라인 — SectionList meta 오버라이드
   const sections: ResultSection[] = [
-    { icon: "pet-owner", title: "너에게 솔직히", content: result.ownerVerdict, meta: metaOf(Megaphone, "보호자", "#F87171") },
-    { icon: "pet-pet", title: `${data.pet.name}에 대해`, content: result.petVerdict, meta: metaOf(PawPrint, "이 아이", "#4ADE80") },
+    { icon: "pet-owner", title: result.ownerVerdictTitle || "너에게 솔직히", content: result.ownerVerdict, meta: metaOf(Megaphone, "보호자", "#F87171") },
+    { icon: "pet-pet", title: result.petVerdictTitle || `${data.pet.name}에 대해`, content: result.petVerdict, meta: metaOf(PawPrint, "이 아이", "#4ADE80") },
     ...(result.simulations ?? []).map((s, i) => ({
       icon: `pet-sim-${i}`,
       title: s.scene,
@@ -137,7 +137,7 @@ export function PetResultBody({ data }: { data: PetResultData }) {
       meta: metaOf(GameController, "이런 상황", "#F59E0B"),
     })),
     ...(result.futureLine
-      ? [{ icon: "pet-future", title: "앞으로의 너희", content: result.futureLine, meta: metaOf(MapPin, "타임라인", "#A855F7") }]
+      ? [{ icon: "pet-future", title: result.futureLineTitle || "앞으로의 너희", content: result.futureLine, meta: metaOf(MapPin, "타임라인", "#A855F7") }]
       : []),
   ];
 
