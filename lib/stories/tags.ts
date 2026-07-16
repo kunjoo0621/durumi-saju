@@ -152,6 +152,8 @@ export const STORY_TAGS: Record<string, string[]> = {
   goegang: ["신살", "직업운"],
   hwagae: ["신살", "직업운"],
   "cheoneul-gwiin": ["신살"],
+  "cheondeok-woldeok-gwiin": ["신살"],
+  "jeonggwan-husband": ["결혼운", "연애운"],
   "yangin-sal": ["신살", "직업운"],
   "sinsal-guide": ["신살"],
   "wonjin-sal": ["신살", "궁합"],
