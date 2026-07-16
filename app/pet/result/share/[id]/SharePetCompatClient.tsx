@@ -37,33 +37,25 @@ export default function SharePetCompatClient({
       <Header />
 
       <main className="max-w-[640px] mx-auto px-5 pt-6 space-y-5">
-        {/* HERO */}
-        <section className="relative overflow-hidden rounded-3xl p-6" style={{ backgroundColor: "#141414" }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ background: `linear-gradient(180deg, ${grade.main}24 0%, ${grade.main}10 42%, transparent 72%)` }} aria-hidden="true" />
-          <div className="relative flex flex-col items-center text-center">
-            <span className="text-caption text-text-tertiary mb-4">
-              {petName} × {petSpecies === "dog" ? "강아지" : "고양이"}
-            </span>
-
-            {illustrationUrl && (
-              <div className="w-full mb-5 rounded-2xl overflow-hidden bg-background-tertiary/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={illustrationUrl} alt={`${petName} 일러스트`} className="w-full aspect-square object-cover" />
-              </div>
-            )}
-
-            <OverallGradeBadgeSlot grade={labelGrade} badgeSrc={getGradeBadge(labelGrade)} size={88} />
-            <div className="mt-2 text-caption font-semibold tracking-wide" style={{ color: grade.text }}>
-              {safeDisplayGrade(labelGrade)}등급 · {compositeScore}점
-            </div>
-
-            <h1 className="mt-3 font-aggro text-[24px] leading-[1.3] tracking-tight text-text-primary">
-              {labelText}
-            </h1>
-            <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.75]">
-              {`"${result.label.headline}"`}
-            </p>
+        {/* HERO — 일러스트(블록 없이 이미지만) + 궁합 등급 */}
+        {illustrationUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={illustrationUrl} alt={`${petName} 일러스트`} className="w-full aspect-square object-cover rounded-3xl" />
+        )}
+        <section className="flex flex-col items-center text-center pt-2 pb-1">
+          <span className="text-caption text-text-tertiary mb-3">
+            {petName} × 너 궁합
+          </span>
+          <OverallGradeBadgeSlot grade={labelGrade} badgeSrc={getGradeBadge(labelGrade)} size={84} />
+          <div className="mt-2 text-body-2 font-bold tracking-wide" style={{ color: grade.text }}>
+            궁합 {safeDisplayGrade(labelGrade)}등급 · {compositeScore}점
           </div>
+          <h1 className="mt-3 font-aggro text-[24px] leading-[1.3] tracking-tight text-text-primary">
+            {labelText}
+          </h1>
+          <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.75]">
+            {`"${result.label.headline}"`}
+          </p>
         </section>
 
         {/* 5지표 — 압축 표시 */}

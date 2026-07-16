@@ -109,7 +109,6 @@ export function PetResultBody({ data }: { data: PetResultData }) {
   const router = useRouter();
   const result = data.full_result;
   const gc = getGradeColor(data.label_grade);
-  const wash = `linear-gradient(180deg, ${gc.main}24 0%, ${gc.main}10 42%, transparent 72%)`;
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/pet/result/share/${data.id}`;
@@ -146,31 +145,27 @@ export function PetResultBody({ data }: { data: PetResultData }) {
       <Header showBack sticky onBack={() => router.push("/menu")} />
 
       <main className="max-w-[640px] mx-auto px-5 pt-6 space-y-4 animate-fadeIn durumi-stagger">
-        {/* ① HERO */}
-        <section className="relative overflow-hidden rounded-3xl p-6" style={{ backgroundColor: "#141414" }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ background: wash }} aria-hidden="true" />
-          <div className="relative flex flex-col items-center text-center">
-            <span className="text-caption text-text-tertiary mb-4">{data.pet.name} × 너</span>
-
-            {data.illustration_url && (
-              <div className="w-full mb-5 rounded-2xl overflow-hidden bg-background-tertiary/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={data.illustration_url} alt={`${data.pet.name} 일러스트`} className="w-full aspect-square object-cover" />
-              </div>
-            )}
-
-            <OverallGradeBadgeSlot grade={data.label_grade} badgeSrc={getGradeBadge(data.label_grade)} size={88} />
-            <div className="mt-2 text-caption font-semibold tracking-wide" style={{ color: gc.text }}>
-              {safeDisplayGrade(data.label_grade)}등급 · {data.composite_score}점
-            </div>
-
-            <h1 className="mt-3 font-aggro text-[24px] leading-[1.3] tracking-tight text-text-primary">
-              {data.label_text}
-            </h1>
-            <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.75]">
-              {result.label.headline}
-            </p>
+        {/* ① HERO — 일러스트(블록 없이 이미지만) + 궁합 등급 */}
+        {data.illustration_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.illustration_url}
+            alt={`${data.pet.name} 일러스트`}
+            className="w-full aspect-square object-cover rounded-3xl"
+          />
+        )}
+        <section className="flex flex-col items-center text-center pt-2 pb-1">
+          <span className="text-caption text-text-tertiary mb-3">{data.pet.name} × 너 궁합</span>
+          <OverallGradeBadgeSlot grade={data.label_grade} badgeSrc={getGradeBadge(data.label_grade)} size={84} />
+          <div className="mt-2 text-body-2 font-bold tracking-wide" style={{ color: gc.text }}>
+            궁합 {safeDisplayGrade(data.label_grade)}등급 · {data.composite_score}점
           </div>
+          <h1 className="mt-3 font-aggro text-[24px] leading-[1.3] tracking-tight text-text-primary">
+            {data.label_text}
+          </h1>
+          <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.75]">
+            {result.label.headline}
+          </p>
         </section>
 
         {/* ② 관계 역학 — 실세 tug-bar + 호흡·어긋남 */}
