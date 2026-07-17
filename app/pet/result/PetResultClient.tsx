@@ -12,7 +12,7 @@ import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import { safeDisplayGrade } from "@/lib/gradeSystem";
 import OverallGradeBadgeSlot, { GRADE_GLOWS } from "@/components/result/OverallGradeBadgeSlot";
 import SectionList, { type ResultSection, type SectionMeta } from "@/components/result/SectionList";
-import { Megaphone, PawPrint, GameController, MapPin, ClipboardText, Heart, Lightning } from "@phosphor-icons/react";
+import { Megaphone, PawPrint, GameController, MapPin, ClipboardText } from "@phosphor-icons/react";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 import type { PetResultData } from "@/lib/mockPetResult";
 
@@ -168,18 +168,14 @@ export function PetResultBody({ data }: { data: PetResultData }) {
           </p>
         </section>
 
-        {/* ②③ 관계 역학 — 권력축 · 애정축을 하나의 '우리 사이' 카드로 통합 */}
-        <RelationshipCard
+        {/* ②③④ 우리 사이 + 사용설명서 → 하나의 '사용설명서' 카드로 통합 */}
+        <PetManualCard
           ruler={data.ruler_score}
           lover={data.lover_score}
           loyalty={data.loyalty_score}
-          sync={data.sync_score}
-          conflict={data.conflict_score}
+          manual={result.manual}
           petName={data.pet.name}
         />
-
-        {/* ④ 사용설명서 */}
-        <ManualSpecSheet manual={result.manual} petName={data.pet.name} />
 
         {/* ⑤ 판정 · 시뮬 · 타임라인 */}
         <section className="pt-1">
@@ -301,19 +297,19 @@ function RelationAxis({
   );
 }
 
-function RelationshipCard({
+// 통합 카드: '우리 사이'(관계 유형+축)를 '사용설명서' 틀이 흡수
+// — 관계 유형=이 아이가 어떤 사이인지, 근거=마커 축, 그래서 이렇게 다뤄라=취급법
+function PetManualCard({
   ruler,
   lover,
   loyalty,
-  sync,
-  conflict,
+  manual,
   petName,
 }: {
   ruler: number;
   lover: number;
   loyalty: number;
-  sync: number;
-  conflict: number;
+  manual: PetCompatResult["manual"];
   petName: string;
 }) {
   const gap = lover - loyalty; // >0 = 네가 더, <0 = 펫이 더
@@ -325,55 +321,8 @@ function RelationshipCard({
   const loveValue = clamp(50 + (loyalty - lover) * 0.6, 0, 100);
   const loveVerdict = gap >= 8 ? "네가 더 좋아해" : gap <= -8 ? `${petName}가 더 좋아해` : "비슷하게 좋아해";
 
-  return (
-    <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
-      <div className="mb-5 flex items-center gap-2">
-        <Heart weight="duotone" size={24} className="text-primary" aria-hidden="true" />
-        <h2 className="font-aggro text-title-3 text-text-primary">우리 사이</h2>
-      </div>
-
-      {/* 관계 유형 — 두 축의 조합에서 나온 히어로 콘텐츠 */}
-      <div className="mb-7">
-        <div className="text-caption text-text-tertiary mb-1.5">우리 관계 유형</div>
-        <div className="font-aggro text-[24px] leading-tight text-text-primary">{arche.label}</div>
-        <p className="mt-2.5 text-[15px] text-text-secondary leading-[1.7]">{arche.desc}</p>
-      </div>
-
-      {/* 두 축 — 유형의 근거 */}
-      <div className="space-y-6">
-        <RelationAxis question="누가 대장?" leftLabel="너" rightLabel={petName} value={clamp(ruler, 0, 100)} verdict={powerVerdict} />
-        <RelationAxis question="누가 더 좋아해?" leftLabel="너" rightLabel={petName} value={loveValue} verdict={loveVerdict} />
-      </div>
-
-      {/* 신호: 호흡 · 어긋남 */}
-      <div className="mt-7 pt-5 border-t border-white/[0.08] grid grid-cols-2 gap-4">
-        <MiniStat Icon={PawPrint} label="호흡 지수" desc="둘이 얼마나 잘 맞는지" value={sync} />
-        <MiniStat Icon={Lightning} label="사주 어긋남" desc="낮을수록 잘 맞음" value={conflict} />
-      </div>
-    </section>
-  );
-}
-
-function MiniStat({ Icon, label, desc, value }: { Icon: ComponentType<Record<string, unknown>>; label: string; desc: string; value: number }) {
-  return (
-    <div className="rounded-2xl bg-background-tertiary p-4">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon size={15} weight="duotone" className="text-text-secondary" aria-hidden="true" />
-        <span className="text-caption text-text-secondary font-medium">{label}</span>
-      </div>
-      <div className="text-[26px] font-bold font-aggro tabular-nums text-text-primary leading-none">{value}</div>
-      <div className="text-caption text-text-tertiary mt-1.5">{desc}</div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────
-// ④ 사용설명서 — 스펙시트 (7행 컨셉 유지)
-// ────────────────────────────────────────────────────────
-
-function ManualSpecSheet({ manual, petName }: { manual: PetCompatResult["manual"]; petName: string }) {
   const rows: Array<{ label: string; value: string; highlight?: boolean }> = [
-    { label: "사양", value: manual.spec },
+    { label: "기본 사양", value: manual.spec },
     { label: "권장 환경", value: manual.recommendedEnv },
     { label: "주의사항", value: manual.warnings },
     { label: "충전 방법", value: manual.chargeMethod },
@@ -383,25 +332,40 @@ function ManualSpecSheet({ manual, petName }: { manual: PetCompatResult["manual"
 
   return (
     <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <ClipboardText weight="duotone" size={24} color="#8FB8FF" aria-hidden="true" />
-          <h2 className="font-aggro text-title-3 text-text-primary">{petName} 사용설명서</h2>
-        </div>
-        <span className="text-caption text-text-tertiary">제품 사양</span>
+      <div className="mb-6 flex items-center gap-2">
+        <ClipboardText weight="duotone" size={24} className="text-primary" aria-hidden="true" />
+        <h2 className="font-aggro text-title-3 text-text-primary">{petName} 사용설명서</h2>
       </div>
-      <div className="divide-y divide-white/[0.06]">
-        {rows.map((r) => (
-          <div
-            key={r.label}
-            className={`flex gap-4 py-3.5 ${r.highlight ? "bg-white/[0.03] -mx-3 px-3 rounded-xl" : ""}`}
-          >
-            <div className={`w-[92px] shrink-0 text-[12px] leading-[1.6] ${r.highlight ? "text-[#F5B45C] font-semibold" : "text-text-tertiary"}`}>
-              {r.label}
+
+      {/* ① 우리 사이 — 관계 유형(히어로) */}
+      <div>
+        <div className="text-caption text-text-tertiary mb-1.5">우리 사이</div>
+        <div className="text-[20px] font-bold leading-tight text-text-primary">{arche.label}</div>
+        <p className="mt-2.5 text-[15px] text-text-secondary leading-[1.7]">{arche.desc}</p>
+      </div>
+
+      {/* ② 유형의 근거 — 마커 축 2개 */}
+      <div className="mt-6 space-y-6">
+        <RelationAxis question="누가 대장?" leftLabel="너" rightLabel={petName} value={clamp(ruler, 0, 100)} verdict={powerVerdict} />
+        <RelationAxis question="누가 더 좋아해?" leftLabel="너" rightLabel={petName} value={loveValue} verdict={loveVerdict} />
+      </div>
+
+      {/* ③ 취급법 — 설명서 divide-y */}
+      <div className="mt-7 pt-6 border-t border-white/[0.08]">
+        <div className="text-caption text-text-tertiary mb-2">{petName} 다루는 법</div>
+        <div className="divide-y divide-white/[0.06]">
+          {rows.map((r) => (
+            <div
+              key={r.label}
+              className={`flex gap-4 py-3.5 ${r.highlight ? "bg-white/[0.03] -mx-3 px-3 rounded-xl" : ""}`}
+            >
+              <div className={`w-[92px] shrink-0 text-[12px] leading-[1.6] font-medium ${r.highlight ? "text-primary" : "text-text-tertiary"}`}>
+                {r.label}
+              </div>
+              <div className="flex-1 text-[15px] leading-[1.6] text-text-primary whitespace-pre-line">{r.value}</div>
             </div>
-            <div className="flex-1 text-[15px] leading-[1.6] text-text-primary whitespace-pre-line">{r.value}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
