@@ -46,8 +46,11 @@ export default async function HomePage() {
       alt: st.heroImage!.alt,
     }));
 
-  // 매거진 — 조회수 상위 5 (인기순)
-  const magazineStories = [...getAllStories()].sort(byViews).slice(0, 5);
+  // 매거진 — 연예인 제외(위 섹션 중복 회피) + 조회수 상위 5
+  const magazineStories = getAllStories()
+    .filter((s) => s.category !== "celebrity")
+    .sort(byViews)
+    .slice(0, 5);
 
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[440px] bg-background-primary text-text-primary">
