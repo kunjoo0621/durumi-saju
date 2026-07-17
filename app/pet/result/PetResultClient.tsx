@@ -3,7 +3,7 @@
 // 펫 궁합 결과 페이지 — 두루미 본 서비스(사주·배틀) 결로 통일 (Phase 2 리디자인)
 // 공유 컴포넌트 재사용: OverallGradeBadgeSlot · CategoryRadarChart(axes) · SectionList(meta)
 
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -12,7 +12,7 @@ import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import { safeDisplayGrade } from "@/lib/gradeSystem";
 import OverallGradeBadgeSlot, { GRADE_GLOWS } from "@/components/result/OverallGradeBadgeSlot";
 import SectionList, { type ResultSection, type SectionMeta } from "@/components/result/SectionList";
-import { Megaphone, PawPrint, GameController, MapPin, ClipboardText, Crown, Heart, Lightning } from "@phosphor-icons/react";
+import { Megaphone, PawPrint, GameController, MapPin, ClipboardText, Heart, Lightning } from "@phosphor-icons/react";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 import type { PetResultData } from "@/lib/mockPetResult";
 
@@ -168,21 +168,16 @@ export function PetResultBody({ data }: { data: PetResultData }) {
           </p>
         </section>
 
-        {/* ② 관계 역학 — 실세 tug-bar + 호흡·어긋남 */}
-        <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Crown weight="duotone" size={24} color="#F5C451" aria-hidden="true" />
-            <h2 className="font-aggro text-title-3 text-text-primary">집안 실세</h2>
-          </div>
-          <TugBar ruler={data.ruler_score} petName={data.pet.name} />
-          <div className="mt-6 pt-5 border-t border-white/[0.08] grid grid-cols-2 gap-4">
-            <MiniStat Icon={PawPrint} label="호흡 지수" desc="둘이 얼마나 잘 맞는지" value={data.sync_score} />
-            <MiniStat Icon={Lightning} label="사주 어긋남" desc="낮을수록 잘 맞음" value={data.conflict_score} />
-          </div>
-        </section>
-
-        {/* ③ 관계 역학 — 양방향 정 */}
-        <AffectionFlow lover={data.lover_score} loyalty={data.loyalty_score} petName={data.pet.name} accent={gc.main} />
+        {/* ②③ 관계 역학 — 권력축 × 애정축을 하나의 관계 지도(사분면)로 통합 */}
+        <RelationshipMap
+          ruler={data.ruler_score}
+          lover={data.lover_score}
+          loyalty={data.loyalty_score}
+          sync={data.sync_score}
+          conflict={data.conflict_score}
+          petName={data.pet.name}
+          accent={gc.main}
+        />
 
         {/* ④ 사용설명서 */}
         <ManualSpecSheet manual={result.manual} petName={data.pet.name} />
@@ -242,39 +237,118 @@ export function PetResultBody({ data }: { data: PetResultData }) {
 }
 
 // ────────────────────────────────────────────────────────
-// ③ 집안 실세 tug-bar (너 ↔ 펫, ruler_score 위치)
+// ②③ 관계 지도 — 권력축(누가 대장) × 애정축(누가 더 좋아해) 사분면
 // ────────────────────────────────────────────────────────
 
-function TugBar({ ruler, petName }: { ruler: number; petName: string }) {
-  const v = Math.max(0, Math.min(100, ruler));
-  const petSide = v >= 55;
-  const ownerSide = v <= 45;
-  const verdict = petSide ? `${petName}가 우위` : ownerSide ? "네가 우위" : "팽팽한 균형";
+const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+
+// 두 축의 조합 → 관계 유형(아키타입) 카피
+function relationshipArchetype(ruler: number, gap: number, p: string): { label: string; desc: string } {
+  const power = ruler <= 42 ? "owner" : ruler >= 58 ? "pet" : "even";
+  const love = gap >= 8 ? "owner" : gap <= -8 ? "pet" : "both";
+  const M: Record<string, { label: string; desc: string }> = {
+    "owner-owner": { label: "다 퍼주는 대장", desc: `네가 관계를 이끌면서 애정도 네가 더 쏟아. ${p}는 그 사랑을 편히 누리는 중이야.` },
+    "owner-pet": { label: "든든한 보호자", desc: `네가 중심을 딱 잡아주고, ${p}는 너한테 폭 안겨 의지해. 안정적인 그림이야.` },
+    "owner-both": { label: "믿음직한 리더", desc: `주도권은 네 쪽이지만, 정은 서로 비슷하게 주고받는 사이야.` },
+    "even-owner": { label: "살짝 기우는 짝꿍", desc: `힘은 팽팽한데 마음은 네가 조금 더 기울어 있어.` },
+    "even-pet": { label: "너를 따르는 짝꿍", desc: `힘은 대등하지만 ${p}가 너를 한 뼘 더 따르는 사이야.` },
+    "even-both": { label: "찰떡 단짝", desc: `힘도 정도 딱 균형. 서로에게 제일 편한 짝꿍이야.` },
+    "pet-owner": { label: "상전 모시는 집사", desc: `${p}가 대장이고, 너는 기꺼이 다 맞춰주는 집사 포지션이야.` },
+    "pet-pet": { label: "츤데레 왕", desc: `${p}가 대장인 척하지만, 사실은 너 없으면 못 사는 타입이야.` },
+    "pet-both": { label: "귀여운 폭군", desc: `${p}가 주도권을 쥐었지만, 정은 서로 비슷하게 오가.` },
+  };
+  return M[`${power}-${love}`];
+}
+
+function AxisLabel({ className, children }: { className: string; children: ReactNode }) {
+  return (
+    <span
+      className={`absolute rounded-md bg-background-secondary/85 px-1.5 py-0.5 text-[13px] font-semibold leading-none text-text-secondary ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function RelationshipMap({
+  ruler,
+  lover,
+  loyalty,
+  sync,
+  conflict,
+  petName,
+  accent,
+}: {
+  ruler: number;
+  lover: number;
+  loyalty: number;
+  sync: number;
+  conflict: number;
+  petName: string;
+  accent: string;
+}) {
+  const gap = lover - loyalty; // >0 = 네가 더, <0 = 펫이 더
+  const arche = relationshipArchetype(ruler, gap, petName);
+
+  const x = clamp(ruler, 9, 91); // 좌=너 대장, 우=펫 대장
+  const y = clamp(50 + (loyalty - lover) * 0.6, 9, 91); // 상=네가 더, 하=펫이 더
+  const rightHalf = ruler >= 50;
+  const bottomHalf = loyalty > lover;
 
   return (
-    <div>
-      <div className="flex items-center justify-between text-body-2 mb-3">
-        <span className={ownerSide ? "text-text-primary font-semibold" : "text-text-tertiary"}>너</span>
-        <span className="text-caption text-text-tertiary">{verdict}</span>
-        <span className={petSide ? "text-text-primary font-semibold" : "text-text-tertiary"}>{petName}</span>
+    <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Heart weight="duotone" size={24} color={accent} aria-hidden="true" />
+        <h2 className="font-aggro text-title-3 text-text-primary">우리 사이</h2>
       </div>
-      <div className="relative h-2.5 rounded-full bg-background-tertiary overflow-hidden">
-        {/* 중앙 50 눈금 */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/15 -translate-x-1/2" />
-        {/* 채움: 우위 쪽으로 */}
+
+      {/* 관계 유형 히어로 (두 축의 조합에서 나온 새 콘텐츠) */}
+      <div className="mb-6">
+        <div className="font-aggro text-[22px] leading-tight text-text-primary">{arche.label}</div>
+        <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.7]">{arche.desc}</p>
+      </div>
+
+      {/* 관계 지도 (사분면) */}
+      <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl border border-white/[0.06] bg-background-tertiary/50">
+        {/* 활성 사분면 틴트 */}
         <div
-          className="absolute top-0 bottom-0 bg-white/25 transition-[left,right] duration-700 ease-out"
-          style={v >= 50 ? { left: "50%", right: `${100 - v}%` } : { left: `${v}%`, right: "50%" }}
+          className="absolute h-1/2 w-1/2 transition-all duration-500 ease-out"
+          style={{ left: rightHalf ? "50%" : 0, top: bottomHalf ? "50%" : 0, backgroundColor: `${accent}1A` }}
         />
-      </div>
-      {/* 마커 */}
-      <div className="relative h-0">
+        {/* 중앙 십자선 */}
+        <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/10" />
+        <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/10" />
+
+        {/* 축 라벨 */}
+        <AxisLabel className="top-2.5 left-1/2 -translate-x-1/2">네가 더 좋아해</AxisLabel>
+        <AxisLabel className="bottom-2.5 left-1/2 -translate-x-1/2">{petName}가 더 좋아해</AxisLabel>
+        <AxisLabel className="left-2.5 top-1/2 -translate-y-1/2">네가 대장</AxisLabel>
+        <AxisLabel className="right-2.5 top-1/2 -translate-y-1/2">{petName} 대장</AxisLabel>
+
+        {/* 우리 위치 점 */}
         <div
-          className="absolute -top-[13px] h-3 w-3 rounded-full bg-white ring-2 ring-background-secondary transition-[left] duration-700 ease-out"
-          style={{ left: `calc(${v}% - 6px)` }}
-        />
+          className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-out"
+          style={{ left: `${x}%`, top: `${y}%` }}
+        >
+          <div className="relative flex items-center justify-center">
+            <div className="absolute h-9 w-9 rounded-full" style={{ backgroundColor: `${accent}33` }} />
+            <div
+              className="relative h-5 w-5 rounded-full ring-4 ring-background-secondary"
+              style={{ backgroundColor: accent }}
+            />
+          </div>
+        </div>
       </div>
-    </div>
+      <p className="mt-3 text-center text-caption text-text-tertiary">
+        <span style={{ color: accent }}>●</span> 우리 위치
+      </p>
+
+      {/* 신호등: 호흡 · 어긋남 */}
+      <div className="mt-6 pt-5 border-t border-white/[0.08] grid grid-cols-2 gap-4">
+        <MiniStat Icon={PawPrint} label="호흡 지수" desc="둘이 얼마나 잘 맞는지" value={sync} />
+        <MiniStat Icon={Lightning} label="사주 어긋남" desc="낮을수록 잘 맞음" value={conflict} />
+      </div>
+    </section>
   );
 }
 
@@ -287,61 +361,6 @@ function MiniStat({ Icon, label, desc, value }: { Icon: ComponentType<Record<str
       </div>
       <div className="text-[26px] font-bold font-aggro tabular-nums text-text-primary leading-none">{value}</div>
       <div className="text-caption text-text-tertiary mt-1.5">{desc}</div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────
-// ③ 양방향 정 — 사랑(보호자) vs 충성(펫)
-// ────────────────────────────────────────────────────────
-
-function AffectionFlow({ lover, loyalty, petName, accent }: { lover: number; loyalty: number; petName: string; accent: string }) {
-  const gap = lover - loyalty;
-  const absGap = Math.abs(gap);
-
-  let verdict: string;
-  if (absGap <= 12) verdict = "양쪽이 비슷하게 빠져있어";
-  else if (gap > 0 && absGap < 30) verdict = "네가 조금 더 매달리는 중";
-  else if (gap > 0) verdict = "네가 일방적으로 매달리는 중";
-  else if (absGap < 30) verdict = `${petName}가 조금 더 의지하는 중`;
-  else verdict = `${petName}가 너 없으면 안 되는 중`;
-
-  return (
-    <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
-      <div className="flex items-center gap-2 mb-5">
-        <Heart weight="duotone" size={24} color={accent} aria-hidden="true" />
-        <h2 className="font-aggro text-title-3 text-text-primary">사랑의 방향</h2>
-      </div>
-
-      <div className="space-y-4">
-        <FlowBar label="너의 사랑" desc={`${petName}한테 쏟는 정도`} value={lover} accent={accent} highlight={gap > 5} />
-        <FlowBar label={`${petName}의 충성`} desc="너에게 의지하는 정도" value={loyalty} accent={accent} highlight={gap < -5} />
-      </div>
-
-      <div className="mt-5 pt-4 border-t border-white/[0.08]">
-        <p className="text-body-1 text-text-primary text-center font-semibold">{verdict}</p>
-      </div>
-    </section>
-  );
-}
-
-function FlowBar({ label, desc, value, accent, highlight }: { label: string; desc: string; value: number; accent: string; highlight: boolean }) {
-  const v = Math.max(0, Math.min(100, value));
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <div className="text-body-1 text-text-primary font-semibold">{label}</div>
-          <div className="text-caption text-text-tertiary mt-0.5">{desc}</div>
-        </div>
-        <div className={`text-[22px] font-bold tabular-nums font-aggro ${highlight ? "text-text-primary" : "text-text-secondary"}`}>{v}</div>
-      </div>
-      <div className="h-2 bg-background-tertiary rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-[width] duration-700 ease-out"
-          style={{ width: `${v}%`, backgroundColor: highlight ? accent : "rgba(255,255,255,0.22)" }}
-        />
-      </div>
     </div>
   );
 }
