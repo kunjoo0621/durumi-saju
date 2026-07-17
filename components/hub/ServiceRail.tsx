@@ -40,7 +40,7 @@ export default function ServiceRail() {
 
   const egg = <Egg size={14} weight="fill" className="shrink-0" />;
 
-  // 순서: 오늘의 운세 맨 앞(데일리 훅) → 올해·펫(덜 보이던 것) → 사주·배틀. 사주는 히어로에 이미 노출
+  // 순서: 오늘(데일리 훅) → 펫 → 올해 → 사주 → 배틀. 사주는 히어로에 이미 노출
   const cards: CardDef[] = [
     {
       id: "today",
@@ -51,6 +51,18 @@ export default function ServiceRail() {
         <>
           {egg}
           {TODAY_COST}알
+        </>
+      ),
+    },
+    {
+      id: "pet",
+      chip: "반려동물 궁합",
+      title: "우리 아이와 궁합",
+      desc: "우리 아인 날 어떻게 볼까",
+      price: (
+        <>
+          {egg}
+          {PET_COMPAT_COST}알
         </>
       ),
     },
@@ -70,18 +82,6 @@ export default function ServiceRail() {
           },
         ]
       : []),
-    {
-      id: "pet",
-      chip: "반려동물 궁합",
-      title: "우리 아이와 궁합",
-      desc: "우리 아인 날 어떻게 볼까",
-      price: (
-        <>
-          {egg}
-          {PET_COMPAT_COST}알
-        </>
-      ),
-    },
     {
       id: "saju",
       chip: "평생 사주",
