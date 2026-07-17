@@ -81,8 +81,11 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="relative mx-auto min-h-screen w-full max-w-[440px] overflow-hidden bg-background-primary text-text-primary">
-      <div className="pointer-events-none absolute -top-28 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-primary/[0.12] blur-[100px]" />
+    <div className="relative mx-auto min-h-screen w-full max-w-[440px] bg-background-primary text-text-primary">
+      {/* glow는 별도 래퍼에서 클리핑 — 메인에 overflow-hidden 두면 sticky 깨짐 */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-28 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-primary/[0.12] blur-[100px]" />
+      </div>
 
       <Header showBack sticky onBack={() => router.push("/")} />
 

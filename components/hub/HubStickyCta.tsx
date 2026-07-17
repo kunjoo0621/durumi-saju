@@ -35,7 +35,7 @@ export default function HubStickyCta() {
         <button
           type="button"
           onClick={() => router.push("/my/results")}
-          className={`btn-primary ${HUB_PRESS} ${DEPTH} w-full rounded-2xl py-4 text-[16px] font-bold`}
+          className={`btn-primary ${HUB_PRESS} ${DEPTH} w-full rounded-2xl py-3.5 text-[15px] font-bold`}
         >
           내 결과 보기
         </button>
@@ -43,7 +43,7 @@ export default function HubStickyCta() {
         <button
           type="button"
           onClick={() => signIn("kakao", { callbackUrl })}
-          className={`${HUB_PRESS} ${DEPTH} flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-kakao py-4 text-[16px] font-bold text-black/85`}
+          className={`${HUB_PRESS} ${DEPTH} flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-kakao py-3.5 text-[15px] font-bold text-black/85`}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.6-.8 3-.1.5.2.5.4.4.2-.1 2.6-1.8 3.7-2.5.6.1 1.3.1 1.9.1 5.5 0 10-3.6 10-8S17.5 3 12 3z" />
