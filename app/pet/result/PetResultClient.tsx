@@ -3,7 +3,7 @@
 // 펫 궁합 결과 페이지 — 두루미 본 서비스(사주·배틀) 결로 통일 (Phase 2 리디자인)
 // 공유 컴포넌트 재사용: OverallGradeBadgeSlot · CategoryRadarChart(axes) · SectionList(meta)
 
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -168,15 +168,14 @@ export function PetResultBody({ data }: { data: PetResultData }) {
           </p>
         </section>
 
-        {/* ②③ 관계 역학 — 권력축 × 애정축을 하나의 관계 지도(사분면)로 통합 */}
-        <RelationshipMap
+        {/* ②③ 관계 역학 — 권력축 · 애정축을 하나의 '우리 사이' 카드로 통합 */}
+        <RelationshipCard
           ruler={data.ruler_score}
           lover={data.lover_score}
           loyalty={data.loyalty_score}
           sync={data.sync_score}
           conflict={data.conflict_score}
           petName={data.pet.name}
-          accent={gc.main}
         />
 
         {/* ④ 사용설명서 */}
@@ -260,24 +259,55 @@ function relationshipArchetype(ruler: number, gap: number, p: string): { label: 
   return M[`${power}-${love}`];
 }
 
-function AxisLabel({ className, children }: { className: string; children: ReactNode }) {
+// 양방향 관계 축 — 앱 공용 '마커-축' 언어(OverallDistributionChart·TugBar 계열)
+function RelationAxis({
+  question,
+  leftLabel,
+  rightLabel,
+  value,
+  verdict,
+}: {
+  question: string;
+  leftLabel: string;
+  rightLabel: string;
+  value: number; // 0=완전 왼쪽, 50=중앙, 100=완전 오른쪽
+  verdict: string;
+}) {
+  const v = clamp(value, 0, 100);
   return (
-    <span
-      className={`absolute rounded-md bg-background-secondary/85 px-1.5 py-0.5 text-[13px] font-semibold leading-none text-text-secondary ${className}`}
-    >
-      {children}
-    </span>
+    <div>
+      <div className="mb-2.5 flex items-center justify-between">
+        <span className="text-[13px] font-semibold text-text-secondary">{question}</span>
+        <span className="text-caption text-text-tertiary">{verdict}</span>
+      </div>
+      <div className="relative h-2.5 overflow-hidden rounded-full bg-background-tertiary">
+        <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/15" />
+        <div
+          className="absolute top-0 bottom-0 bg-primary/30 transition-[left,right] duration-700 ease-out"
+          style={v >= 50 ? { left: "50%", right: `${100 - v}%` } : { left: `${v}%`, right: "50%" }}
+        />
+      </div>
+      <div className="relative h-0">
+        <div
+          className="absolute -top-[13px] h-3 w-3 rounded-full bg-primary ring-2 ring-background-secondary transition-[left] duration-700 ease-out"
+          style={{ left: `calc(${v}% - 6px)` }}
+        />
+      </div>
+      <div className="mt-2.5 flex items-center justify-between text-[12.5px] text-text-tertiary">
+        <span>{leftLabel}</span>
+        <span>{rightLabel}</span>
+      </div>
+    </div>
   );
 }
 
-function RelationshipMap({
+function RelationshipCard({
   ruler,
   lover,
   loyalty,
   sync,
   conflict,
   petName,
-  accent,
 }: {
   ruler: number;
   lover: number;
@@ -285,66 +315,38 @@ function RelationshipMap({
   sync: number;
   conflict: number;
   petName: string;
-  accent: string;
 }) {
   const gap = lover - loyalty; // >0 = 네가 더, <0 = 펫이 더
   const arche = relationshipArchetype(ruler, gap, petName);
 
-  const x = clamp(ruler, 9, 91); // 좌=너 대장, 우=펫 대장
-  const y = clamp(50 + (loyalty - lover) * 0.6, 9, 91); // 상=네가 더, 하=펫이 더
-  const rightHalf = ruler >= 50;
-  const bottomHalf = loyalty > lover;
+  // 대장 축: 0=너, 100=펫
+  const powerVerdict = ruler >= 58 ? `${petName} 우위` : ruler <= 42 ? "네가 우위" : "팽팽한 균형";
+  // 애정 축: 0=너가 더, 100=펫이 더
+  const loveValue = clamp(50 + (loyalty - lover) * 0.6, 0, 100);
+  const loveVerdict = gap >= 8 ? "네가 더 좋아해" : gap <= -8 ? `${petName}가 더 좋아해` : "비슷하게 좋아해";
 
   return (
     <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Heart weight="duotone" size={24} color={accent} aria-hidden="true" />
+      <div className="mb-5 flex items-center gap-2">
+        <Heart weight="duotone" size={24} className="text-primary" aria-hidden="true" />
         <h2 className="font-aggro text-title-3 text-text-primary">우리 사이</h2>
       </div>
 
-      {/* 관계 유형 히어로 (두 축의 조합에서 나온 새 콘텐츠) */}
-      <div className="mb-6">
-        <div className="font-aggro text-[22px] leading-tight text-text-primary">{arche.label}</div>
-        <p className="mt-2 text-[14.5px] text-text-secondary leading-[1.7]">{arche.desc}</p>
+      {/* 관계 유형 — 두 축의 조합에서 나온 히어로 콘텐츠 */}
+      <div className="mb-7">
+        <div className="text-caption text-text-tertiary mb-1.5">우리 관계 유형</div>
+        <div className="font-aggro text-[24px] leading-tight text-text-primary">{arche.label}</div>
+        <p className="mt-2.5 text-[15px] text-text-secondary leading-[1.7]">{arche.desc}</p>
       </div>
 
-      {/* 관계 지도 (사분면) */}
-      <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl border border-white/[0.06] bg-background-tertiary/50">
-        {/* 활성 사분면 틴트 */}
-        <div
-          className="absolute h-1/2 w-1/2 transition-all duration-500 ease-out"
-          style={{ left: rightHalf ? "50%" : 0, top: bottomHalf ? "50%" : 0, backgroundColor: `${accent}1A` }}
-        />
-        {/* 중앙 십자선 */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/10" />
-        <div className="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-white/10" />
-
-        {/* 축 라벨 */}
-        <AxisLabel className="top-2.5 left-1/2 -translate-x-1/2">네가 더 좋아해</AxisLabel>
-        <AxisLabel className="bottom-2.5 left-1/2 -translate-x-1/2">{petName}가 더 좋아해</AxisLabel>
-        <AxisLabel className="left-2.5 top-1/2 -translate-y-1/2">네가 대장</AxisLabel>
-        <AxisLabel className="right-2.5 top-1/2 -translate-y-1/2">{petName} 대장</AxisLabel>
-
-        {/* 우리 위치 점 */}
-        <div
-          className="absolute -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-out"
-          style={{ left: `${x}%`, top: `${y}%` }}
-        >
-          <div className="relative flex items-center justify-center">
-            <div className="absolute h-9 w-9 rounded-full" style={{ backgroundColor: `${accent}33` }} />
-            <div
-              className="relative h-5 w-5 rounded-full ring-4 ring-background-secondary"
-              style={{ backgroundColor: accent }}
-            />
-          </div>
-        </div>
+      {/* 두 축 — 유형의 근거 */}
+      <div className="space-y-6">
+        <RelationAxis question="누가 대장?" leftLabel="너" rightLabel={petName} value={clamp(ruler, 0, 100)} verdict={powerVerdict} />
+        <RelationAxis question="누가 더 좋아해?" leftLabel="너" rightLabel={petName} value={loveValue} verdict={loveVerdict} />
       </div>
-      <p className="mt-3 text-center text-caption text-text-tertiary">
-        <span style={{ color: accent }}>●</span> 우리 위치
-      </p>
 
-      {/* 신호등: 호흡 · 어긋남 */}
-      <div className="mt-6 pt-5 border-t border-white/[0.08] grid grid-cols-2 gap-4">
+      {/* 신호: 호흡 · 어긋남 */}
+      <div className="mt-7 pt-5 border-t border-white/[0.08] grid grid-cols-2 gap-4">
         <MiniStat Icon={PawPrint} label="호흡 지수" desc="둘이 얼마나 잘 맞는지" value={sync} />
         <MiniStat Icon={Lightning} label="사주 어긋남" desc="낮을수록 잘 맞음" value={conflict} />
       </div>
