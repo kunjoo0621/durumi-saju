@@ -44,7 +44,7 @@ export default function HubHeroCarousel() {
             type="button"
             onClick={() => run(s.id)}
             aria-label={s.alt}
-            className="relative snap-start w-[86%] shrink-0 overflow-hidden rounded-3xl bg-background-secondary"
+            className="relative snap-start w-[86%] shrink-0 overflow-hidden rounded-3xl border border-white/[0.04] bg-background-secondary"
             style={{ aspectRatio: "2 / 3" }}
           >
             <Image

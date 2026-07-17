@@ -10,14 +10,14 @@ export default function DictThumb({
 }) {
   if (thumbSrc) {
     return (
-      <div className="relative aspect-[4/3] w-[112px] shrink-0 overflow-hidden rounded-2xl bg-background-secondary">
+      <div className="relative aspect-[4/3] w-[112px] shrink-0 overflow-hidden rounded-2xl border border-white/[0.04] bg-background-secondary">
         <Image src={thumbSrc} alt="" fill sizes="112px" className="object-cover" />
       </div>
     );
   }
   const ch = label.trim().charAt(0) || "?";
   return (
-    <div className="grid aspect-[4/3] w-[112px] shrink-0 place-items-center rounded-2xl bg-white/[0.04]">
+    <div className="grid aspect-[4/3] w-[112px] shrink-0 place-items-center rounded-2xl border border-white/[0.04] bg-white/[0.04]">
       <span className="font-aggro text-[28px] text-text-secondary">{ch}</span>
     </div>
   );

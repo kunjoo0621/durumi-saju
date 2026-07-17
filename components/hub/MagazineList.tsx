@@ -22,7 +22,7 @@ export default function MagazineList({ stories }: { stories: Story[] }) {
             href={`/stories/${s.slug}`}
             className={`${HUB_PRESS} flex items-center gap-3.5 rounded-2xl px-1 py-2.5`}
           >
-            <div className="relative aspect-[4/3] w-[112px] shrink-0 overflow-hidden rounded-2xl bg-background-secondary">
+            <div className="relative aspect-[4/3] w-[112px] shrink-0 overflow-hidden rounded-2xl border border-white/[0.04] bg-background-secondary">
               {s.heroImage ? (
                 <Image
                   src={s.heroImage.src}

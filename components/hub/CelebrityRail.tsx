@@ -35,7 +35,7 @@ export default function CelebrityRail({ items }: { items: HubCelebrity[] }) {
             className={`${HUB_PRESS} snap-start w-[130px] shrink-0 text-left`}
           >
             <div
-              className="relative w-full overflow-hidden rounded-2xl bg-background-secondary"
+              className="relative w-full overflow-hidden rounded-2xl border border-white/[0.04] bg-background-secondary"
               style={{ aspectRatio: "3 / 4" }}
             >
               <Image src={c.src} alt={c.alt} fill sizes="130px" className="object-cover" />

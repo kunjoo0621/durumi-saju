@@ -125,7 +125,7 @@ export default function ServiceRail() {
             aria-label={c.title}
             className={`${HUB_PRESS} snap-start w-[150px] shrink-0 text-left`}
           >
-            <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-2xl bg-background-secondary">
+            <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-2xl border border-white/[0.04] bg-background-secondary">
               <Image
                 src={HUB_SERVICE_THUMB[c.id]}
                 alt=""
