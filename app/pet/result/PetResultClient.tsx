@@ -189,7 +189,7 @@ export function PetResultBody({ data }: { data: PetResultData }) {
 
         {/* ⑤ 판정 · 시뮬 · 타임라인 */}
         <section className="pt-1">
-          <SectionList sections={sections} initialExpandedCount={sections.length} />
+          <SectionList sections={sections} initialExpandedCount={sections.length} showAccentBar={false} />
         </section>
 
         {/* ⑥ VERDICT */}
@@ -373,9 +373,8 @@ function ManualSpecSheet({ manual, petName }: { manual: PetCompatResult["manual"
         {rows.map((r) => (
           <div
             key={r.label}
-            className={`flex gap-4 py-3.5 ${r.highlight ? "bg-white/[0.03] -mx-3 px-3 rounded-xl relative" : ""}`}
+            className={`flex gap-4 py-3.5 ${r.highlight ? "bg-white/[0.03] -mx-3 px-3 rounded-xl" : ""}`}
           >
-            {r.highlight && <div className="absolute left-0 top-3.5 bottom-3.5 w-1 rounded-full bg-[#F59E0B]" />}
             <div className={`w-[92px] shrink-0 text-[12px] leading-[1.6] ${r.highlight ? "text-[#F5B45C] font-semibold" : "text-text-tertiary"}`}>
               {r.label}
             </div>

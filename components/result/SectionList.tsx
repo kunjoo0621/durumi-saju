@@ -27,6 +27,8 @@ type SectionListProps = {
   onUnlock?: () => void;
   unlockLabel?: string;
   initialExpandedCount?: number;
+  /** 좌측 세로 악센트바 표시 (기본 true — 기존 화면 유지). 펫 결과는 false */
+  showAccentBar?: boolean;
 };
 
 const DEFAULT_ACCENT = '#D1D5DB';
@@ -41,6 +43,7 @@ type SectionItemProps = {
   onUnlock?: () => void;
   unlockLabel?: string;
   accentColor: string;
+  showAccentBar: boolean;
 };
 
 const SectionItem = memo(function SectionItem({
@@ -52,16 +55,19 @@ const SectionItem = memo(function SectionItem({
   onUnlock,
   unlockLabel,
   accentColor,
+  showAccentBar,
 }: SectionItemProps) {
   const contentId = `section-content-${index}`;
   const handleToggle = useCallback(() => onToggle(index), [onToggle, index]);
 
   return (
     <div className="flex bg-background-secondary rounded-2xl overflow-hidden">
-      <div
-        className="w-1 shrink-0 rounded-full my-2 ml-1.5"
-        style={{ backgroundColor: accentColor }}
-      />
+      {showAccentBar && (
+        <div
+          className="w-1 shrink-0 rounded-full my-2 ml-1.5"
+          style={{ backgroundColor: accentColor }}
+        />
+      )}
       <div className="flex-1 min-w-0">
         <SectionHeader
           icon={section.icon}
@@ -99,6 +105,7 @@ function SectionListInner({
   onUnlock,
   unlockLabel,
   initialExpandedCount = 0,
+  showAccentBar = true,
 }: SectionListProps) {
   const initialSet = useMemo(() => {
     const count = Math.max(0, Math.min(initialExpandedCount, sections.length));
@@ -133,6 +140,7 @@ function SectionListInner({
           onUnlock={onUnlock}
           unlockLabel={unlockLabel}
           accentColor={section.meta?.accent ?? SECTION_META[resolveKey(section.icon)]?.accent ?? DEFAULT_ACCENT}
+          showAccentBar={showAccentBar}
         />
       ))}
     </div>
