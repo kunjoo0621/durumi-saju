@@ -12,7 +12,7 @@ import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
 import { safeDisplayGrade } from "@/lib/gradeSystem";
 import OverallGradeBadgeSlot, { GRADE_GLOWS } from "@/components/result/OverallGradeBadgeSlot";
 import SectionList, { type ResultSection, type SectionMeta } from "@/components/result/SectionList";
-import { Megaphone, PawPrint, GameController, MapPin, ClipboardText, Crown, Heart } from "@phosphor-icons/react";
+import { Megaphone, PawPrint, GameController, MapPin, ClipboardText, Crown, Heart, Lightning } from "@phosphor-icons/react";
 import type { PetCompatResult, LabelGrade } from "@/lib/pet-compat";
 import type { PetResultData } from "@/lib/mockPetResult";
 
@@ -172,12 +172,12 @@ export function PetResultBody({ data }: { data: PetResultData }) {
         <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
           <div className="flex items-center gap-2 mb-5">
             <Crown weight="duotone" size={24} color="#F5C451" aria-hidden="true" />
-            <h2 className="text-title-3 text-text-primary">집안 실세</h2>
+            <h2 className="font-aggro text-title-3 text-text-primary">집안 실세</h2>
           </div>
           <TugBar ruler={data.ruler_score} petName={data.pet.name} />
           <div className="mt-6 pt-5 border-t border-white/[0.08] grid grid-cols-2 gap-4">
-            <MiniStat icon="🐾" label="호흡 지수" desc="둘이 얼마나 잘 맞는지" value={data.sync_score} />
-            <MiniStat icon="⚡" label="사주 어긋남" desc="낮을수록 잘 맞음" value={data.conflict_score} />
+            <MiniStat Icon={PawPrint} label="호흡 지수" desc="둘이 얼마나 잘 맞는지" value={data.sync_score} />
+            <MiniStat Icon={Lightning} label="사주 어긋남" desc="낮을수록 잘 맞음" value={data.conflict_score} />
           </div>
         </section>
 
@@ -278,11 +278,11 @@ function TugBar({ ruler, petName }: { ruler: number; petName: string }) {
   );
 }
 
-function MiniStat({ icon, label, desc, value }: { icon: string; label: string; desc: string; value: number }) {
+function MiniStat({ Icon, label, desc, value }: { Icon: ComponentType<Record<string, unknown>>; label: string; desc: string; value: number }) {
   return (
     <div className="rounded-2xl bg-background-tertiary p-4">
       <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-[14px]">{icon}</span>
+        <Icon size={15} weight="duotone" className="text-text-secondary" aria-hidden="true" />
         <span className="text-caption text-text-secondary font-medium">{label}</span>
       </div>
       <div className="text-[26px] font-bold font-aggro tabular-nums text-text-primary leading-none">{value}</div>
@@ -310,7 +310,7 @@ function AffectionFlow({ lover, loyalty, petName, accent }: { lover: number; loy
     <section className="rounded-3xl bg-background-secondary border border-white/[0.08] p-6">
       <div className="flex items-center gap-2 mb-5">
         <Heart weight="duotone" size={24} color={accent} aria-hidden="true" />
-        <h2 className="text-title-3 text-text-primary">사랑의 방향</h2>
+        <h2 className="font-aggro text-title-3 text-text-primary">사랑의 방향</h2>
       </div>
 
       <div className="space-y-4">
@@ -365,7 +365,7 @@ function ManualSpecSheet({ manual, petName }: { manual: PetCompatResult["manual"
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <ClipboardText weight="duotone" size={24} color="#8FB8FF" aria-hidden="true" />
-          <h2 className="text-title-3 text-text-primary">{petName} 사용설명서</h2>
+          <h2 className="font-aggro text-title-3 text-text-primary">{petName} 사용설명서</h2>
         </div>
         <span className="text-caption text-text-tertiary">제품 사양</span>
       </div>
