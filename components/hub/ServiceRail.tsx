@@ -40,8 +40,20 @@ export default function ServiceRail() {
 
   const egg = <Egg size={14} weight="fill" className="shrink-0" />;
 
-  // 순서: 사주가 히어로에 이미 노출되므로 서비스 레일은 올해·펫을 먼저 (덜 보이던 것 우선)
+  // 순서: 오늘의 운세 맨 앞(데일리 훅) → 올해·펫(덜 보이던 것) → 사주·배틀. 사주는 히어로에 이미 노출
   const cards: CardDef[] = [
+    {
+      id: "today",
+      chip: todayChip,
+      title: "오늘의 운세",
+      desc: "오늘 나에게 딱 맞는 하루",
+      price: (
+        <>
+          {egg}
+          {TODAY_COST}알
+        </>
+      ),
+    },
     ...(YEARLY_ENABLED
       ? [
           {
@@ -91,18 +103,6 @@ export default function ServiceRail() {
         <>
           {egg}
           {BATTLE_COST}알
-        </>
-      ),
-    },
-    {
-      id: "today",
-      chip: todayChip,
-      title: "오늘의 운세",
-      desc: "오늘 나에게 딱 맞는 하루",
-      price: (
-        <>
-          {egg}
-          {TODAY_COST}알
         </>
       ),
     },
