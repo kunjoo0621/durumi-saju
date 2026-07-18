@@ -328,21 +328,39 @@ function LandingPageInner() {
               <br />
               끝까지 깊게 파고드는 심층 검사
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FeatureCard
-                badge="결혼운·애정운"
-                title="내 결혼운, 배우자궁까지 깊게"
-                body="배우자성·배우자궁·인연이 열리는 시기를 원국에서 파고들어, 결혼과 애정을 심층 분석해줘"
-                imageSrc="/images/marriage/bg-love.webp"
-                imageAlt="결혼운 심층 검사 미리보기"
-              />
-              <FeatureCard
-                badge="재물운"
-                title="내 재물 그릇, 언제 돈이 붙나"
-                body="재성 구조·재를 담는 그릇·재물 흐름이 강해지는 시기를 파고들어, 재물운을 심층 분석해줘"
-                imageSrc="/images/wealth/bg-wealth.webp"
-                imageAlt="재물운 심층 검사 미리보기"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => router.push("/marriage")}
+                aria-label="결혼운·애정운 심층 검사 보러가기"
+                className="group relative overflow-hidden rounded-2xl transition-transform duration-200 hover:-translate-y-1 active:scale-[0.97]"
+              >
+                <div className="relative w-full" style={{ paddingTop: "150%" }}>
+                  <Image
+                    src="/images/marriage/marriage-poster.webp"
+                    alt="결혼운·애정운 심층 검사"
+                    fill
+                    sizes="(max-width: 640px) 50vw, 320px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/wealth")}
+                aria-label="재물운 심층 검사 보러가기"
+                className="group relative overflow-hidden rounded-2xl transition-transform duration-200 hover:-translate-y-1 active:scale-[0.97]"
+              >
+                <div className="relative w-full" style={{ paddingTop: "150%" }}>
+                  <Image
+                    src="/images/wealth/wealth-poster.webp"
+                    alt="재물운 심층 검사"
+                    fill
+                    sizes="(max-width: 640px) 50vw, 320px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                </div>
+              </button>
             </div>
           </div>
         </section>
