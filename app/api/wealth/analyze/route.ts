@@ -47,6 +47,12 @@ import { assertWealthConsistency } from "@/lib/wealth-consistency";
 import { buildWealthPrompt } from "@/lib/wealth-prompt";
 import { applyWealthGuards, validateWealthBlocks } from "@/lib/wealth-postprocess";
 import { WEALTH_COST } from "@/lib/constants/coins";
+import {
+  normalizeSelfInput,
+  computeSelfSaju,
+  deriveSelfScores,
+  type SelfSajuInput,
+} from "@/lib/self-input";
 
 // 크래시로 full_json 없이 남은 unlock을 "진행 중"으로 볼 유예 시간. 이 안이면 재차감을 막고
 // 409로 잠시 후 재시도를 안내한다(동시 요청 보호). 넘으면 orphan으로 보고 멱등 환불 후 재결제.
@@ -105,7 +111,7 @@ function normGender(g: string): "male" | "female" {
   return /여|female|f/i.test(g) ? "female" : "male";
 }
 
-type AnalyzeBody = { interest?: string };
+type AnalyzeBody = { interest?: string; source?: "primary" | "self"; selfInput?: SelfSajuInput };
 
 export async function POST(request: NextRequest) {
   try {
@@ -117,31 +123,43 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json().catch(() => ({}))) as AnalyzeBody;
+    const source = body.source === "self" ? "self" : "primary";
     const interest = body.interest as WealthInterest | undefined;
     if (!interest || !ALLOWED_INTEREST.includes(interest)) {
       return NextResponse.json({ error: "관심사를 다시 선택해 주세요." }, { status: 400 });
     }
 
-    const primary = await getPrimarySajuData(userId);
-    if (!primary) {
-      return NextResponse.json({ error: "먼저 사주 분석을 완료해 주세요." }, { status: 404 });
-    }
+    // 입력 출처 분기: self=방금 입력(대표사주 없이), primary=대표사주 재사용.
+    // primary는 아래 등급게이트·원국 재조립·프롬프트에서도 참조되므로 null 가드와 함께 상위 스코프에 둔다.
+    let input: InputPayload;
+    let primary: Awaited<ReturnType<typeof getPrimarySajuData>> = null;
 
-    const input: InputPayload = {
-      name: primary.name || "",
-      birthYear: primary.birthYear,
-      birthMonth: primary.birthMonth,
-      birthDay: primary.birthDay,
-      calendarType: primary.calendarType,
-      birthHour: primary.birthHour,
-      birthMinute: primary.birthMinute,
-      birthLocation: primary.birthLocation,
-      gender: primary.gender,
-      relationshipStatus: primary.relationshipStatus,
-      employmentStatus: primary.employmentStatus,
-      coreFearAxis: primary.coreFearAxis as InputPayload["coreFearAxis"],
-      unknownBirthTime: primary.unknownBirthTime,
-    };
+    if (source === "self") {
+      input = normalizeSelfInput(body.selfInput ?? {});
+      if (!input.birthYear || !input.birthMonth || !input.birthDay || !input.gender) {
+        return NextResponse.json({ error: "생년월일과 성별을 다시 확인해 주세요." }, { status: 400 });
+      }
+    } else {
+      primary = await getPrimarySajuData(userId);
+      if (!primary) {
+        return NextResponse.json({ error: "먼저 사주 분석을 완료해 주세요." }, { status: 404 });
+      }
+      input = {
+        name: primary.name || "",
+        birthYear: primary.birthYear,
+        birthMonth: primary.birthMonth,
+        birthDay: primary.birthDay,
+        calendarType: primary.calendarType,
+        birthHour: primary.birthHour,
+        birthMinute: primary.birthMinute,
+        birthLocation: primary.birthLocation,
+        gender: primary.gender,
+        relationshipStatus: primary.relationshipStatus,
+        employmentStatus: primary.employmentStatus,
+        coreFearAxis: primary.coreFearAxis as InputPayload["coreFearAxis"],
+        unknownBirthTime: primary.unknownBirthTime,
+      };
+    }
     const inputHash = buildInputHash(input);
 
     // teaser row(=/api/wealth/start 산출물)가 있어야 한다 — 없으면 결제 대상 row가 없다.
@@ -216,16 +234,26 @@ export async function POST(request: NextRequest) {
     //  · 재물운 결측을 0으로 뭉개 C를 만들지 않는다(extractWealthScore null → 500, 결제 없음).
     //  · 미리보기(start)가 저장한 등급과 지금 계산한 등급이 다르면(그 사이 개인사주 재분석으로
     //    사주가 바뀐 경우) 결제하지 않고 409 — 잘못된 등급으로 유료 리포트를 만들지 않는다.
-    const { data: srcRow, error: srcError } = await supabaseAdmin
-      .from("saju_results")
-      .select("full_json")
-      .eq("id", primary.sourceResultId)
-      .maybeSingle();
-    if (srcError) {
-      console.error("[WEALTH_ANALYZE] full_json 조회 실패", srcError.message);
-      return NextResponse.json({ error: "사주 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+    // self는 방금 입력한 생년월일로 원국을 즉석 계산(selfComputed)해 개인사주와 동일 산식으로
+    // 재물운 점수를 산출한다. 이 원국은 결제 후 4)에서 재사용해 중복 계산을 피한다.
+    // (computeSelfSaju 실패 시 throw → 바깥 try/catch가 결제 전 generic 500 처리.)
+    let wealthScore: number | null;
+    let selfComputed: Awaited<ReturnType<typeof computeSelfSaju>> | null = null;
+    if (source === "self") {
+      selfComputed = await computeSelfSaju(input);
+      wealthScore = extractWealthScore({ scores: deriveSelfScores(selfComputed.enriched) });
+    } else {
+      const { data: srcRow, error: srcError } = await supabaseAdmin
+        .from("saju_results")
+        .select("full_json")
+        .eq("id", primary!.sourceResultId)
+        .maybeSingle();
+      if (srcError) {
+        console.error("[WEALTH_ANALYZE] full_json 조회 실패", srcError.message);
+        return NextResponse.json({ error: "사주 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+      }
+      wealthScore = extractWealthScore(srcRow?.full_json);
     }
-    const wealthScore = extractWealthScore(srcRow?.full_json);
     if (wealthScore === null) {
       console.error("[WEALTH_ANALYZE] 재물운 점수 결측 — 결제 차단");
       return NextResponse.json({ error: "재물운 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
@@ -317,52 +345,69 @@ export async function POST(request: NextRequest) {
 
     // 4) facts 재조립 + grade, 5~8) 일관성 검증 → Gemini → 가드 → 저장
     try {
-      let calcYear = Number(primary.birthYear);
-      let calcMonth = Number(primary.birthMonth);
-      let calcDay = Number(primary.birthDay);
+      // self는 등급게이트에서 이미 계산한 원국(selfComputed)을 그대로 재사용(중복 계산 방지).
+      // primary는 저장된 대표사주로 원국을 재조립한다(기존 로직 — primary! 가드).
+      let saju: Awaited<ReturnType<typeof calculateSaju>>;
+      let enriched: ReturnType<typeof enrichSajuData>;
+      let fortune: Awaited<ReturnType<typeof calculateFortune>> | null;
+      let sajuText: string;
 
-      if (primary.calendarType === "lunar") {
-        const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
-        if (!converted) throw new Error("생년월일 변환 실패");
-        calcYear = converted.year;
-        calcMonth = converted.month;
-        calcDay = converted.day;
-      }
+      if (source === "self" && selfComputed) {
+        saju = selfComputed.saju;
+        enriched = selfComputed.enriched;
+        fortune = selfComputed.fortune;
+        sajuText = selfComputed.sajuText;
+      } else {
+        let calcYear = Number(primary!.birthYear);
+        let calcMonth = Number(primary!.birthMonth);
+        let calcDay = Number(primary!.birthDay);
 
-      const hour = primary.unknownBirthTime ? undefined : Number(primary.birthHour);
-      const minute = primary.unknownBirthTime ? undefined : Number(primary.birthMinute);
+        if (primary!.calendarType === "lunar") {
+          const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+          if (!converted) throw new Error("생년월일 변환 실패");
+          calcYear = converted.year;
+          calcMonth = converted.month;
+          calcDay = converted.day;
+        }
 
-      const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute, {
-        birthLocation: primary.birthLocation,
-      });
-      if (!saju) throw new Error("사주 계산 실패");
+        const hour = primary!.unknownBirthTime ? undefined : Number(primary!.birthHour);
+        const minute = primary!.unknownBirthTime ? undefined : Number(primary!.birthMinute);
 
-      const enriched = enrichSajuData(saju, { isTimeUnknown: primary.unknownBirthTime });
-      const gender = normGender(primary.gender);
-
-      let fortune = null;
-      try {
-        fortune = await calculateFortune({
-          birthYear: calcYear,
-          birthMonth: calcMonth,
-          birthDay: calcDay,
-          birthHour: hour,
-          birthMinute: minute,
-          gender,
-          birthLocation: primary.birthLocation,
-          yearPillar: saju.year.heavenlyStem + saju.year.earthlyBranch,
-          monthPillar: saju.month.heavenlyStem + saju.month.earthlyBranch,
-          dayPillar: saju.day.heavenlyStem + saju.day.earthlyBranch,
-          hourPillar: saju.hour.heavenlyStem + saju.hour.earthlyBranch,
-          isTimeUnknown: primary.unknownBirthTime,
+        const calcSaju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute, {
+          birthLocation: primary!.birthLocation,
         });
-      } catch (fortuneError) {
-        console.error("[WEALTH_ANALYZE] fortune 계산 실패 (타이밍 없이 진행)", fortuneError);
+        if (!calcSaju) throw new Error("사주 계산 실패");
+
+        enriched = enrichSajuData(calcSaju, { isTimeUnknown: primary!.unknownBirthTime });
+        const gender = normGender(primary!.gender);
+
+        let calcFortune: Awaited<ReturnType<typeof calculateFortune>> | null = null;
+        try {
+          calcFortune = await calculateFortune({
+            birthYear: calcYear,
+            birthMonth: calcMonth,
+            birthDay: calcDay,
+            birthHour: hour,
+            birthMinute: minute,
+            gender,
+            birthLocation: primary!.birthLocation,
+            yearPillar: calcSaju.year.heavenlyStem + calcSaju.year.earthlyBranch,
+            monthPillar: calcSaju.month.heavenlyStem + calcSaju.month.earthlyBranch,
+            dayPillar: calcSaju.day.heavenlyStem + calcSaju.day.earthlyBranch,
+            hourPillar: calcSaju.hour.heavenlyStem + calcSaju.hour.earthlyBranch,
+            isTimeUnknown: primary!.unknownBirthTime,
+          });
+        } catch (fortuneError) {
+          console.error("[WEALTH_ANALYZE] fortune 계산 실패 (타이밍 없이 진행)", fortuneError);
+        }
+
+        saju = calcSaju;
+        fortune = calcFortune;
+        sajuText = formatSajuText(calcSaju, { isTimeUnknown: primary!.unknownBirthTime });
       }
 
       const currentYear = new Date().getFullYear();
-      const facts = deriveWealthFacts(enriched, fortune, saju, interest, currentYear);
-      const sajuText = formatSajuText(saju, { isTimeUnknown: primary.unknownBirthTime });
+      const facts = deriveWealthFacts(enriched, fortune, saju!, interest, currentYear);
 
       // wealthScore·grade는 결제 전 게이트(2-2)에서 이미 확정됐다(storedGrade와 동일 보장). 재조회 없이 그대로 사용.
       // 5) 일관성 검증 — 실패하면 Gemini도 호출하지 않고 즉시 환불.
@@ -386,7 +431,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 6) Gemini 호출 (analysis.ts 모델 fallback 체인 미러) → JSON5 파싱
-      const prompt = buildWealthPrompt(facts, grade, sajuText, primary.employmentStatus);
+      const prompt = buildWealthPrompt(facts, grade, sajuText, input.employmentStatus);
       const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
       const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;
 
