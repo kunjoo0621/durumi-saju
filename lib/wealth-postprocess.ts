@@ -173,3 +173,21 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
 
   return { blocks, violations };
 }
+
+// Phase 5: 총량 soft 하한 — REQUIRED_TEXT_BLOCKS(빈 리포트 방지 hard 하한)와 별개로,
+// "채워졌지만 얇은" 리포트를 QA 재생성 루프(softValidate)로 한 번 더 쓰게 만든다.
+// 원칙: 분량은 재료(궁위·타이밍)로만 늘린다 — 이슈 문장 자체가 재생성 프롬프트에 실리므로
+// 채움경로를 여기 명시한다. 최종 출고는 절대 막지 않는다(환불 사유 아님).
+const WEALTH_PROSE_KEYS = ["jaeseongDiagnosis", "jaeGripDiagnosis", "savingStyle", "riskAndPace", "timingFlow"] as const;
+const WEALTH_RICHNESS_MIN_TOTAL = 1900; // 5블록 합 (상향된 목표범위 350~550×5의 바닥 근처)
+
+export function validateWealthRichness(blocks: any): string[] {
+  const total = WEALTH_PROSE_KEYS.reduce(
+    (sum, k) => sum + (typeof blocks?.[k] === "string" ? blocks[k].trim().length : 0),
+    0,
+  );
+  if (total >= WEALTH_RICHNESS_MIN_TOTAL) return [];
+  return [
+    `본문 5블록 총량 부족(${total}자 < ${WEALTH_RICHNESS_MIN_TOTAL}자) — 같은 말 반복·패러프레이즈로 늘리지 말고, [재성 궁위 해석]의 인생 국면 번역과 [타이밍 창]·[대운 중 재성이 들어오는 구간]의 구체 연도를 근거로 각 블록에 새 정보를 1~2문장씩 추가하라. 재미 기법(생생한 비유·펀치라인)도 아직 얇은 블록에 더 얹어라`,
+  ];
+}

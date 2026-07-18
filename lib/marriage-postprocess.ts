@@ -116,3 +116,18 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
 
   return { blocks, violations };
 }
+
+// Phase 5: 총량 soft 하한 (wealth와 동일 구조). 채움경로=지장간 층위·타이밍·대운.
+const MARRIAGE_PROSE_KEYS = ["spousePalace", "spouseStar", "partnerProfile", "relationshipPattern", "timingFlow"] as const;
+const MARRIAGE_RICHNESS_MIN_TOTAL = 1900;
+
+export function validateMarriageRichness(blocks: any): string[] {
+  const total = MARRIAGE_PROSE_KEYS.reduce(
+    (sum, k) => sum + (typeof blocks?.[k] === "string" ? blocks[k].trim().length : 0),
+    0,
+  );
+  if (total >= MARRIAGE_RICHNESS_MIN_TOTAL) return [];
+  return [
+    `본문 5블록 총량 부족(${total}자 < ${MARRIAGE_RICHNESS_MIN_TOTAL}자) — 같은 말 반복·패러프레이즈로 늘리지 말고, [일지 지장간 구조]의 본기/중기/여기 층위와 [타이밍 창]·[대운 중 배우자성이 들어오는 구간]의 구체 연도를 근거로 각 블록에 새 정보를 1~2문장씩 추가하라. 재미 기법(생생한 비유·펀치라인)도 아직 얇은 블록에 더 얹어라`,
+  ];
+}

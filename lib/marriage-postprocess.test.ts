@@ -203,3 +203,19 @@ test("marriage-prompt 긍정 예시 블록이 status별 가드 금지 패턴에 
     assert.equal(violations.length, 0, `${status}에서 위반: ${violations.join(", ")}`);
   }
 });
+
+// ── Phase 5: 총량 soft 하한 (2026-07-19) ──
+import { validateMarriageRichness } from "./marriage-postprocess";
+test("결혼 본문 총량 얇으면 채움경로(지장간·타이밍) 명시 이슈 반환", () => {
+  const thin: any = { spousePalace: "짧.", spouseStar: "짧.", partnerProfile: "짧.", relationshipPattern: "짧.", timingFlow: "짧." };
+  const issues = validateMarriageRichness(thin);
+  assert.equal(issues.length, 1);
+  assert.ok(issues[0].includes("지장간"));
+  assert.ok(issues[0].includes("타이밍"));
+});
+test("결혼 총량 충분하면 이슈 없음", () => {
+  const fat: any = Object.fromEntries(
+    ["spousePalace","spouseStar","partnerProfile","relationshipPattern","timingFlow"].map((k) => [k, "가".repeat(400)]),
+  );
+  assert.equal(validateMarriageRichness(fat).length, 0);
+});

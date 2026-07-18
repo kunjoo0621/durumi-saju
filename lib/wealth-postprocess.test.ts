@@ -255,3 +255,20 @@ test("F-2 advice tag 없음 → minAdvice 미달", () => {
 test("F-2 루트가 배열이면 즉시 반려", () => {
   assert.deepEqual(validateWealthBlocks([]), ["루트가 객체 아님"]);
 });
+
+// ── Phase 5: 총량 soft 하한 (2026-07-19) ──
+import { validateWealthRichness } from "./wealth-postprocess";
+test("본문 총량 얇으면 채움경로 명시된 이슈 반환(soft)", () => {
+  const thin: any = { jaeseongDiagnosis: "짧다.", jaeGripDiagnosis: "짧다.", savingStyle: "짧다.", riskAndPace: "짧다.", timingFlow: "짧다." };
+  const issues = validateWealthRichness(thin);
+  assert.equal(issues.length, 1);
+  assert.ok(issues[0].includes("궁위"));
+  assert.ok(issues[0].includes("타이밍"));
+  assert.ok(issues[0].includes("패러프레이즈"));
+});
+test("총량 충분하면 이슈 없음", () => {
+  const fat: any = Object.fromEntries(
+    ["jaeseongDiagnosis","jaeGripDiagnosis","savingStyle","riskAndPace","timingFlow"].map((k) => [k, "가".repeat(400)]),
+  );
+  assert.equal(validateWealthRichness(fat).length, 0);
+});

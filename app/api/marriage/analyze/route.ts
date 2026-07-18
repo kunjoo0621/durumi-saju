@@ -45,7 +45,7 @@ import { deriveMarriageFacts, type MaritalStatus } from "@/lib/marriage-facts";
 import { computeMarriageGrade, extractLoveScore } from "@/lib/marriage-grade";
 import { assertMarriageConsistency } from "@/lib/marriage-consistency";
 import { buildMarriagePrompt } from "@/lib/marriage-prompt";
-import { applyMarriageGuards, validateMarriageBlocks } from "@/lib/marriage-postprocess";
+import { applyMarriageGuards, validateMarriageBlocks, validateMarriageRichness } from "@/lib/marriage-postprocess";
 import { generateWithQaRegen } from "@/lib/qa-regen";
 import { buildMarriageTimeline } from "@/lib/fortune-timeline";
 import { MARRIAGE_COST } from "@/lib/constants/coins";
@@ -448,6 +448,7 @@ export async function POST(request: NextRequest) {
         parse: (text) => parseJson5Loose<any>(text),
         validateBlocks: (candidate) => validateMarriageBlocks(candidate),
         applyGuards: (candidate) => applyMarriageGuards(candidate, facts, sajuText),
+        softValidate: (b) => validateMarriageRichness(b),
       });
 
       if (!gen.ok) {

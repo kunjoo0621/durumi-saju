@@ -347,8 +347,9 @@ const SYSTEM_RULES = `
 const OUTPUT_SCHEMA = `
 ────────────────────────────────
 [분량·문체]
-- gradeHeadline: **35자 이내 한 문장**(화면 최상단 대표 문구, 짧고 임팩트). jaeseongDiagnosis·jaeGripDiagnosis: 각 250~400자.
-- 관심사별 3블록(savingStyle·riskAndPace·timingFlow): 각 300~450자.
+- gradeHeadline: **35자 이내 한 문장**(화면 최상단 대표 문구, 짧고 임팩트). jaeseongDiagnosis·jaeGripDiagnosis: 각 350~500자.
+- 관심사별 3블록(savingStyle·riskAndPace·timingFlow): 각 400~550자.
+- ★늘어난 분량은 반드시 새 정보(궁위 국면·구체 연도·대운 구간)로 채워라 — 같은 진단을 다른 말로 반복해 분량을 채우면 실패다. 재미 기법(비유·펀치라인·장면)으로 밀도를 올려도 좋다.
 - advice 각 항목 text: 40~90자.
 - yearlyCta: 80~150자.
 - 각 블록은 1~2문단. 줄바꿈 남발 금지.

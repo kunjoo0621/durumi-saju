@@ -45,7 +45,7 @@ import { deriveWealthFacts, type WealthInterest } from "@/lib/wealth-facts";
 import { computeWealthGrade, extractWealthScore } from "@/lib/wealth-grade";
 import { assertWealthConsistency } from "@/lib/wealth-consistency";
 import { buildWealthPrompt } from "@/lib/wealth-prompt";
-import { applyWealthGuards, validateWealthBlocks } from "@/lib/wealth-postprocess";
+import { applyWealthGuards, validateWealthBlocks, validateWealthRichness } from "@/lib/wealth-postprocess";
 import { generateWithQaRegen } from "@/lib/qa-regen";
 import { buildWealthTimeline } from "@/lib/fortune-timeline";
 import { WEALTH_COST } from "@/lib/constants/coins";
@@ -457,6 +457,7 @@ export async function POST(request: NextRequest) {
         parse: (text) => parseJson5Loose<any>(text),
         validateBlocks: (candidate) => validateWealthBlocks(candidate),
         applyGuards: (candidate) => applyWealthGuards(candidate, facts, sajuText),
+        softValidate: (b) => validateWealthRichness(b),
       });
 
       if (!gen.ok) {
