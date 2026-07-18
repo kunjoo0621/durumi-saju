@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { Egg } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
-import { SAJU_COST, BATTLE_COST, YEARLY_COST, TODAY_COST, MARRIAGE_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST, YEARLY_COST, TODAY_COST, MARRIAGE_COST, WEALTH_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 
@@ -280,6 +280,47 @@ export default function MenuPage() {
                 <circle cx="80" cy="24" r="3" fill="#FB7185" fillOpacity="0.5"/>
                 <circle cx="16" cy="54" r="2.5" fill="#FB7185" fillOpacity="0.3"/>
                 <path d="M76 52l1.2 3.5 3.5 1.2-3.5 1.2-1.2 3.5-1.2-3.5-3.5-1.2 3.5-1.2z" fill="#FB7185" fillOpacity="0.35"/>
+              </svg>
+            </div>
+          </button>
+
+          {/* 재물운 카드 */}
+          <button
+            type="button"
+            className="group relative bg-[#141414] hover:bg-[#1A1A1A] rounded-2xl py-7 pl-8 pr-4 flex items-center overflow-hidden cursor-pointer active:scale-[0.97] active:bg-[#111111] transition-[transform,background-color,color] duration-200 animate-[slideUp_0.5s_ease-out_0.098s_both] w-full text-left"
+            style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            onClick={() => router.push("/wealth")}
+          >
+            <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[180px] h-[180px] rounded-full blur-[60px] z-[1] pointer-events-none"
+              style={{ background: 'rgba(245,179,76,0.10)' }} />
+
+            <div className="relative z-[2] flex-1 min-w-0">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold mb-3"
+                style={{ background: 'rgba(245,179,76,0.10)', color: '#F5B34C' }}>
+                심층 풀이
+              </span>
+              <h3 className="text-xl font-bold text-white tracking-tight">재물운 보러가기</h3>
+              <p className="text-sm text-gray-400 leading-relaxed mt-2">
+                돈이 붙는 시기와 그릇까지<br/>깊이 들여다봐줄게
+              </p>
+              <p className="text-lg font-bold mt-3.5 flex items-center gap-1" style={{ color: '#F5B34C' }}>
+                <Egg size={18} weight="fill" />{WEALTH_COST}알
+              </p>
+            </div>
+
+            <div className="relative z-[2] w-[120px] h-[120px] shrink-0 ml-2 flex items-center justify-center">
+              <svg className="w-[112px] h-[112px] transition-transform duration-300 group-active:scale-110 group-active:-rotate-2" style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }} viewBox="0 0 96 96" fill="none">
+                <ellipse cx="48" cy="84" rx="22" ry="4" fill="#F5B34C" fillOpacity="0.1"/>
+                <ellipse cx="48" cy="66" rx="24" ry="9" fill="#F5B34C" fillOpacity="0.15" stroke="#F5B34C" strokeOpacity="0.35" strokeWidth="2"/>
+                <ellipse cx="48" cy="56" rx="24" ry="9" fill="#F5B34C" fillOpacity="0.15" stroke="#F5B34C" strokeOpacity="0.4" strokeWidth="2"/>
+                <ellipse cx="48" cy="38" rx="24" ry="18" fill="#F5B34C" fillOpacity="0.18"/>
+                <ellipse cx="48" cy="38" rx="24" ry="18" stroke="#F5B34C" strokeOpacity="0.5" strokeWidth="2.5"/>
+                <text x="48" y="45" textAnchor="middle" fill="#F5B34C" fillOpacity="0.75" fontSize="20" fontWeight="900" fontFamily="Pretendard">₩</text>
+                <ellipse cx="38" cy="28" rx="8" ry="4.5" fill="white" fillOpacity="0.14" transform="rotate(-20, 38, 28)"/>
+                <path d="M48 8l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#F5B34C" fillOpacity="0.6"/>
+                <circle cx="80" cy="24" r="3" fill="#F5B34C" fillOpacity="0.5"/>
+                <circle cx="16" cy="54" r="2.5" fill="#F5B34C" fillOpacity="0.3"/>
+                <path d="M76 52l1.2 3.5 3.5 1.2-3.5 1.2-1.2 3.5-1.2-3.5-3.5-1.2 3.5-1.2z" fill="#F5B34C" fillOpacity="0.35"/>
               </svg>
             </div>
           </button>
