@@ -504,8 +504,20 @@ function OpeningScene({
   const gc = getGradeColor(internalGrade);
   return (
     <section className="relative flex min-h-[82vh] flex-col items-center justify-center overflow-hidden px-6 text-center">
+      {/* 애정운 전용 배경 일러스트 — 매번 생성이 아니라 고정 자산 1장을 은은하게 깖 */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/marriage/love-hero.webp"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top opacity-50"
+      />
       <div
-        className="pointer-events-none absolute left-1/2 top-[42%] h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px]"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background-primary/55 via-background-primary/45 to-background-primary"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute left-1/2 top-[42%] h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px] opacity-70"
         style={{ background: GRADE_GLOWS[internalGrade] }}
         aria-hidden="true"
       />
