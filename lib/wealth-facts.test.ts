@@ -18,7 +18,7 @@ const mixedChart: SajuData = {
 
 test("정재+편재 존재 → jaeseongType 재성혼재, jaeseongAbsent false, jaeseongStrength>0", () => {
   const enriched = enrichSajuData(mixedChart, { isTimeUnknown: false });
-  const facts = deriveWealthFacts(enriched, null, mixedChart, "목돈 모으기", 2026);
+  const facts = deriveWealthFacts(enriched, null, mixedChart, "목돈·노후 준비", 2026);
   assert.equal(facts.jaeseongType, "재성혼재");
   assert.equal(facts.jaeseongAbsent, false);
   assert.ok(facts.jaeseong.some((h) => h.star === "정재"));
@@ -125,7 +125,7 @@ test("타이밍: 세운 tenStar 재성/식상/비겁 → 트리거 매칭 (신�
       { year: 2029, age: 35, pillar: "甲子", stem: "甲", branch: "子", tenStar: "비견", twelveStage: "목욕" },
     ],
   };
-  const facts = deriveWealthFacts(enriched, fortune, mixedChart, "목돈 모으기", 2026);
+  const facts = deriveWealthFacts(enriched, fortune, mixedChart, "목돈·노후 준비", 2026);
 
   const w2027 = facts.timingWindows.find((w) => w.year === 2027);
   assert.ok(w2027);
@@ -169,7 +169,7 @@ test("타이밍: 신강 차트의 비겁 세운 → 비겁손재 라벨(반전 �
       { year: 2029, age: 35, pillar: "甲子", stem: "甲", branch: "子", tenStar: "비견", twelveStage: "목욕" },
     ],
   };
-  const facts = deriveWealthFacts(enriched, fortune, strongAbundantChart, "목돈 모으기", 2026);
+  const facts = deriveWealthFacts(enriched, fortune, strongAbundantChart, "목돈·노후 준비", 2026);
   const w2029 = facts.timingWindows.find((w) => w.year === 2029);
   assert.ok(w2029);
   assert.ok(w2029!.triggers.includes("비겁손재"));
@@ -178,7 +178,7 @@ test("타이밍: 신강 차트의 비겁 세운 → 비겁손재 라벨(반전 �
 
 test("그릇(jaeGrip): 신강+weighted 재성 강(≥6) → 신왕재왕, 군겁쟁재는 false(상호배타)", () => {
   const enriched = enrichSajuData(strongAbundantChart, { isTimeUnknown: false });
-  const facts = deriveWealthFacts(enriched, null, strongAbundantChart, "목돈 모으기", 2026);
+  const facts = deriveWealthFacts(enriched, null, strongAbundantChart, "목돈·노후 준비", 2026);
   assert.equal(facts.jaeGrip, "신왕재왕");
   assert.equal(facts.jaeseongStrength, 7);
   // 비겁도 weighted 강(7.75, 임계 6 이상)이지만 재도 왕성해 "다툴 이유가 없음"
@@ -206,7 +206,7 @@ const gunggeobChart: SajuData = {
 
 test("군겁쟁재(v2): 비겁 weighted 왕 + 재성 존재하되 약 + 관성 구제 없음 → true, jaeGrip 신왕재쇠", () => {
   const enriched = enrichSajuData(gunggeobChart, { isTimeUnknown: false });
-  const facts = deriveWealthFacts(enriched, null, gunggeobChart, "목돈 모으기", 2026);
+  const facts = deriveWealthFacts(enriched, null, gunggeobChart, "목돈·노후 준비", 2026);
   assert.equal(facts.jaeGrip, "신왕재쇠");
   assert.ok(facts.bigeopStrength >= 6, `비겁 강도 실측 (${facts.bigeopStrength})`);
   assert.equal(facts.jaeseongAbsent, false, "무재가 아니라 '재 존재하되 약'이어야 함");
@@ -236,7 +236,7 @@ test("용신이 식상(재물 생산 경로)을 반기면 yongshinFavorsWealth t
 
 test("fortune null이면 타이밍/대운 재성 구간 빈 배열", () => {
   const enriched = enrichSajuData(mixedChart, { isTimeUnknown: false });
-  const facts = deriveWealthFacts(enriched, null, mixedChart, "목돈 모으기", 2026);
+  const facts = deriveWealthFacts(enriched, null, mixedChart, "목돈·노후 준비", 2026);
   assert.deepEqual(facts.timingWindows, []);
   assert.deepEqual(facts.daeunWealthYears, []);
 });

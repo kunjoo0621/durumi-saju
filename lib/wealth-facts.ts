@@ -11,7 +11,7 @@ import type { SajuData } from "./utils/saju";
 import type { FortuneResult } from "./utils/saju-fortune";
 
 export type WealthInterest =
-  | "목돈 모으기"
+  | "목돈·노후 준비"
   | "투자로 불리기"
   | "사업·수입 키우기"
   | "지출·빚 관리";
