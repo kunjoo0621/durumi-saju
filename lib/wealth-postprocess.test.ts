@@ -33,6 +33,24 @@ test("금지 신살(과숙살) 언급 제거", () => {
   assert.ok(!blocks.jaeseongDiagnosis.includes("과숙살"));
 });
 
+test("금지 신살(괴강살) 언급 제거 — 일주 파생 지어내기 2차 안전망", () => {
+  const parsed = { jaeseongDiagnosis: "일주가 경진이라 괴강살이 있어 재물 그릇이 크다.", advice: [] };
+  const { blocks, violations } = applyWealthGuards(parsed, facts, "");
+  assert.ok(violations.some((v) => v.includes("금지신살")));
+  assert.ok(!blocks.jaeseongDiagnosis.includes("괴강살"));
+});
+
+test("금지 신살(백호살·양인살) 언급 제거", () => {
+  const parsed = {
+    jaeGripDiagnosis: "일지에 백호살이 있고 시주엔 양인살도 겹칩니다.",
+    advice: [],
+  };
+  const { blocks, violations } = applyWealthGuards(parsed, facts, "");
+  assert.ok(violations.filter((v) => v.includes("금지신살")).length >= 2);
+  assert.ok(!blocks.jaeGripDiagnosis.includes("백호살"));
+  assert.ok(!blocks.jaeGripDiagnosis.includes("양인살"));
+});
+
 test("advice가 아닌 중첩 객체 속 단정 예언/재무자문도 재귀적으로 제거", () => {
   const parsed = {
     extraSection: { sub: { text: "이 사주는 거지 사주라 부동산에 투자하면 안 됩니다." } },

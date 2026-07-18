@@ -24,6 +24,24 @@ test("금지 신살(과숙살) 언급 제거", () => {
   assert.ok(!blocks.spousePalace.includes("과숙살"));
 });
 
+test("금지 신살(괴강살) 언급 제거 — 일주 파생 지어내기 2차 안전망", () => {
+  const parsed = { spouseStar: "일주가 경진이라 괴강살이 있어 기가 세다.", advice: [] };
+  const { blocks, violations } = applyMarriageGuards(parsed, facts, "");
+  assert.ok(violations.some(v => v.includes("금지신살")));
+  assert.ok(!blocks.spouseStar.includes("괴강살"));
+});
+
+test("금지 신살(백호살·양인살) 언급 제거", () => {
+  const parsed = {
+    spousePalace: "일지에 백호살이 있고 시주엔 양인살도 겹칩니다.",
+    advice: [],
+  };
+  const { blocks, violations } = applyMarriageGuards(parsed, facts, "");
+  assert.ok(violations.filter(v => v.includes("금지신살")).length >= 2);
+  assert.ok(!blocks.spousePalace.includes("백호살"));
+  assert.ok(!blocks.spousePalace.includes("양인살"));
+});
+
 test("advice가 아닌 중첩 객체 속 단정 예언도 재귀적으로 제거", () => {
   const parsed = { extraSection: { sub: { text: "과숙살이 있고 이혼수도 보입니다." } }, advice: [] };
   const { blocks, violations } = applyMarriageGuards(parsed, facts, "");
