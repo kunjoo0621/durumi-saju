@@ -1,6 +1,6 @@
 "use client";
 
-// ② "두루미가 봐드릴게요" — 서비스 가로 캐러셀. 포스터 이미지 썸네일(1:1, 캐릭터 크롭 = 제목 제외).
+// ② "두루미가 봐드릴게요" — 서비스 가로 캐러셀. 포스터 썸네일(2:3 전체 노출).
 import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
 import { Egg } from "@phosphor-icons/react";
@@ -152,13 +152,13 @@ export default function ServiceRail() {
             aria-label={c.title}
             className={`${HUB_PRESS} snap-start w-[150px] shrink-0 text-left`}
           >
-            <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-2xl border border-white/[0.04] bg-background-secondary">
+            <div className="relative mb-2 aspect-[2/3] w-full overflow-hidden rounded-2xl border border-white/[0.04] bg-background-secondary">
               <Image
                 src={HUB_SERVICE_THUMB[c.id]}
                 alt=""
                 fill
                 sizes="150px"
-                className="object-cover object-bottom"
+                className="object-cover"
               />
             </div>
             <span className="text-[11px] font-semibold text-text-secondary">{c.chip}</span>

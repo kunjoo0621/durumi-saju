@@ -60,9 +60,11 @@ export default async function HomePage() {
         <div className="absolute -top-28 left-1/2 h-[320px] w-[320px] -translate-x-1/2 rounded-full bg-primary/[0.14] blur-[100px]" />
       </div>
 
-      <Header sticky />
-      {/* 결과 공유 5알 보상 안내 — 가입보너스 종료 후 유입 배너(origin/main에서 허브로 복원) */}
-      <ShareRewardBanner />
+      {/* 헤더 + 공유 5알 배너를 한 블록으로 sticky (origin/main 배치 복원) */}
+      <div className="sticky top-0 z-[100]">
+        <Header />
+        <ShareRewardBanner />
+      </div>
 
       <main className="pb-[120px]">
         <HubHeroCarousel />

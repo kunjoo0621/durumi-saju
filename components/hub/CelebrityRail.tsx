@@ -32,13 +32,13 @@ export default function CelebrityRail({ items }: { items: HubCelebrity[] }) {
           <Link
             key={c.slug}
             href={`/stories/${c.slug}`}
-            className={`${HUB_PRESS} snap-start w-[130px] shrink-0 text-left`}
+            className={`${HUB_PRESS} snap-start w-[150px] shrink-0 text-left`}
           >
             <div
               className="relative w-full overflow-hidden rounded-2xl border border-white/[0.04] bg-background-secondary"
               style={{ aspectRatio: "3 / 4" }}
             >
-              <Image src={c.src} alt={c.alt} fill sizes="130px" className="object-cover" />
+              <Image src={c.src} alt={c.alt} fill sizes="150px" className="object-cover" />
             </div>
             <h3 className="mt-2 text-[15px] font-bold leading-tight">{c.name}</h3>
             <p className="mt-0.5 text-[12px] text-text-tertiary">{c.occupation}</p>
