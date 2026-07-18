@@ -8,7 +8,7 @@ import { Egg } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { useBattleStore } from "@/store/useBattleStore";
 import { usePetCompatStore } from "@/store/usePetCompatStore";
-import { SAJU_COST, BATTLE_COST, YEARLY_COST, TODAY_COST, PET_COMPAT_COST } from "@/lib/constants/coins";
+import { SAJU_COST, BATTLE_COST, YEARLY_COST, TODAY_COST, PET_COMPAT_COST, MARRIAGE_COST, WEALTH_COST } from "@/lib/constants/coins";
 import BusinessFooter from "@/components/BusinessFooter";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 import { HUB_PRESS } from "@/components/hub/services";
@@ -28,6 +28,8 @@ const THUMB = {
   today: "/images/hub/today.webp",
   battle: "/images/hub/battle.webp",
   yearly: "/images/hub/yearly.webp",
+  marriage: "/images/marriage/marriage-poster.webp",
+  wealth: "/images/wealth/wealth-poster.webp",
 } as const;
 
 function RowThumb({ src }: { src: string }) {
@@ -141,6 +143,46 @@ export default function MenuPage() {
               </div>
             </div>
           )}
+
+          {/* 결혼운·애정운 (NEW · 심층) — 사주 옆 그룹핑, 최종 배치는 운영자 결정(§7-3) */}
+          <button
+            type="button"
+            onClick={() => router.push("/marriage")}
+            className={`${HUB_PRESS} flex w-full items-center gap-4 py-4 text-left`}
+          >
+            <div className="min-w-0 flex-1">
+              <span className="text-[11px] font-semibold text-text-secondary">심층 풀이</span>
+              <h3 className="mt-0.5 text-[18px] font-bold leading-tight">결혼운·애정운</h3>
+              <p className="mt-1 break-keep text-[13px] leading-snug text-text-secondary">
+                배우자궁까지 깊이 들여다보고 인연이 강해지는 때를 짚어봐요
+              </p>
+              <p className="mt-2 flex items-center gap-1 text-[15px] font-bold">
+                <Egg size={15} weight="fill" className="shrink-0" />
+                {MARRIAGE_COST}알
+              </p>
+            </div>
+            <RowThumb src={THUMB.marriage} />
+          </button>
+
+          {/* 재물운 (NEW · 심층) */}
+          <button
+            type="button"
+            onClick={() => router.push("/wealth")}
+            className={`${HUB_PRESS} flex w-full items-center gap-4 py-4 text-left`}
+          >
+            <div className="min-w-0 flex-1">
+              <span className="text-[11px] font-semibold text-text-secondary">심층 풀이</span>
+              <h3 className="mt-0.5 text-[18px] font-bold leading-tight">재물운</h3>
+              <p className="mt-1 break-keep text-[13px] leading-snug text-text-secondary">
+                돈이 붙는 시기와 내 재물 그릇까지 깊이 봐요
+              </p>
+              <p className="mt-2 flex items-center gap-1 text-[15px] font-bold">
+                <Egg size={15} weight="fill" className="shrink-0" />
+                {WEALTH_COST}알
+              </p>
+            </div>
+            <RowThumb src={THUMB.wealth} />
+          </button>
 
           {/* 펫 (NEW) */}
           <button

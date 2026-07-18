@@ -14,6 +14,8 @@ import {
   YEARLY_COST,
   TODAY_COST,
   PET_COMPAT_COST,
+  MARRIAGE_COST,
+  WEALTH_COST,
 } from "@/lib/constants/coins";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 
@@ -40,7 +42,8 @@ export default function ServiceRail() {
 
   const egg = <Egg size={14} weight="fill" className="shrink-0" />;
 
-  // 순서: 오늘(데일리 훅) → 펫 → 올해 → 사주 → 배틀. 사주는 히어로에 이미 노출
+  // 순서: 오늘(데일리 훅) → 펫 → 올해 → 사주 → 결혼운 → 재물운 → 배틀. 사주는 히어로에 이미 노출
+  // (결혼운·재물운은 신규 유료 심층 상품 — 사주 옆에 그룹핑. 최종 배치는 운영자 결정, §7-3)
   const cards: CardDef[] = [
     {
       id: "today",
@@ -91,6 +94,30 @@ export default function ServiceRail() {
         <>
           {egg}
           {SAJU_COST}알
+        </>
+      ),
+    },
+    {
+      id: "marriage",
+      chip: "심층 풀이",
+      title: "결혼운·애정운",
+      desc: "배우자궁과 인연의 때를 깊이",
+      price: (
+        <>
+          {egg}
+          {MARRIAGE_COST}알
+        </>
+      ),
+    },
+    {
+      id: "wealth",
+      chip: "심층 풀이",
+      title: "재물운",
+      desc: "돈이 붙는 시기와 그릇까지",
+      price: (
+        <>
+          {egg}
+          {WEALTH_COST}알
         </>
       ),
     },

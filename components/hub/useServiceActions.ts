@@ -60,6 +60,12 @@ export function useServiceActions() {
         case "yearly":
           router.push("/yearly");
           return;
+        case "marriage":
+          router.push("/marriage");
+          return;
+        case "wealth":
+          router.push("/wealth");
+          return;
       }
     },
     [runSaju, resetBattle, resetPet, router],
