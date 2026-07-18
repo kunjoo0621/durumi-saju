@@ -98,6 +98,9 @@ export default function PetInputPage() {
 
   const [hydrated, setHydrated] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  // 로그인 후 돌아올 위치 — 트리거 지점마다 다르게 설정.
+  // 사진 업로드 유도는 입력 화면으로, 마지막 결제 CTA는 결제 화면으로 바로.
+  const [loginCallback, setLoginCallback] = useState("/pet/input");
   const [loadingMySaju, setLoadingMySaju] = useState(false);
   const [mySajuError, setMySajuError] = useState("");
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
@@ -119,10 +122,6 @@ export default function PetInputPage() {
     const unsub = usePetCompatStore.persist.onFinishHydration(() => setHydrated(true));
     return unsub;
   }, []);
-
-  useEffect(() => {
-    if (status === "unauthenticated") setShowLoginModal(true);
-  }, [status]);
 
   const steps: StepId[] = ownerMode === "new" ? STEPS_NEW : STEPS_EXISTING;
   const currentStepId = steps[step] ?? "petIntro";
@@ -168,6 +167,7 @@ export default function PetInputPage() {
       const res = await fetch("/api/battle/my-saju");
       if (!res.ok) {
         if (res.status === 401) {
+          setLoginCallback("/pet/input");
           setShowLoginModal(true);
           return;
         }
@@ -305,6 +305,13 @@ export default function PetInputPage() {
   };
 
   const handlePhotoUpload = async (file: File) => {
+    // 사진은 userId 기준 스토리지 경로가 필요 → 미인증이면 여기서 로그인 유도.
+    // 로그인은 카카오 리다이렉트라 이 페이지로 복귀 후 다시 업로드하면 됨(입력값은 persist 유지).
+    if (status !== "authenticated") {
+      setLoginCallback("/pet/input");
+      setShowLoginModal(true);
+      return;
+    }
     setPhotoUploading(true);
     setPhotoError("");
     try {
@@ -332,6 +339,13 @@ export default function PetInputPage() {
 
   const handleNext = () => {
     if (isLastStep) {
+      // 결제 진입 직전에만 로그인 요구(게스트가 여기까지 자유롭게 입력).
+      // 미인증이면 로그인 후 바로 결제 화면으로(입력값은 persist 유지).
+      if (status !== "authenticated") {
+        setLoginCallback("/checkout?type=pet");
+        setShowLoginModal(true);
+        return;
+      }
       router.push("/checkout?type=pet");
     } else {
       actions.setStep(step + 1);
@@ -952,7 +966,7 @@ export default function PetInputPage() {
             로그인하면 결과가 저장돼
           </p>
           <LoginForm
-            callbackUrl="/pet/input"
+            callbackUrl={loginCallback}
             onClose={() => setShowLoginModal(false)}
           />
         </div>
