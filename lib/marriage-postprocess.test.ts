@@ -191,3 +191,15 @@ test("기혼(비-다시혼자): '재혼'·'사별' 단어 자체가 기존대로
   const { blocks } = applyMarriageGuards(parsed, f, "");
   assert.ok(!blocks.timingFlow.includes("재혼"));
 });
+
+// ── Phase 3+재미: marriage-prompt 긍정 예시 블록이 가드 금지 패턴에 안 걸리는지 (fs, 엔진 불필요) ──
+import { readFileSync } from "node:fs";
+test("marriage-prompt 긍정 예시 블록이 status별 가드 금지 패턴에 안 걸린다", () => {
+  const src = readFileSync(new URL("./marriage-prompt.ts", import.meta.url), "utf8");
+  const block = src.match(/\[좋은 문장 예시[^\]]*\]([\s\S]*?)────/)?.[1] ?? "";
+  assert.ok(block.length > 100, "예시 블록 추출 실패");
+  for (const status of ["솔로", "연애중", "기혼", "다시 혼자"]) {
+    const { violations } = applyMarriageGuards({ probe: block }, { maritalStatus: status }, "");
+    assert.equal(violations.length, 0, `${status}에서 위반: ${violations.join(", ")}`);
+  }
+});
