@@ -105,8 +105,9 @@ export default function PetResultClient() {
 const EYEBROW = "text-[13px] font-semibold tracking-wide text-primary";
 const BODY = "text-[16px] leading-[1.85] text-text-secondary break-keep";
 
-export function PetResultBody({ data }: { data: PetResultData }) {
+export function PetResultBody({ data, variant = "own" }: { data: PetResultData; variant?: "own" | "share" }) {
   const router = useRouter();
+  const isShare = variant === "share";
   const result = data.full_result;
   const gc = getGradeColor(data.label_grade);
   const petName = data.pet.name;
@@ -145,7 +146,7 @@ export function PetResultBody({ data }: { data: PetResultData }) {
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary pb-32">
-      <Header showBack sticky onBack={() => router.push("/menu")} />
+      {isShare ? <Header /> : <Header showBack sticky onBack={() => router.push("/menu")} />}
 
       <main className="max-w-[640px] mx-auto animate-fadeIn">
         {/* ① 오프닝 — 등급 공개 (풀블리드) */}
@@ -156,7 +157,7 @@ export function PetResultBody({ data }: { data: PetResultData }) {
           <section className="px-6 pt-16">
             <p className={EYEBROW}>이 아이는</p>
             <h2 className="mt-3 font-aggro text-[26px] leading-[1.32] break-keep text-text-primary">
-              {result.petVerdictTitle || `${petName}라는 아이`}
+              {result.petVerdictTitle || `${petName} 이야기`}
             </h2>
             {chips.length > 0 && (
               <div className="mt-5 flex flex-wrap gap-2">
@@ -301,20 +302,32 @@ export function PetResultBody({ data }: { data: PetResultData }) {
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
       >
         <div className="max-w-[640px] mx-auto flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/pet/input")}
-            className="btn-secondary flex-1 h-[54px] rounded-xl text-[15px] font-semibold"
-          >
-            다른 아이도 보기
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
-          >
-            결과 공유하기
-          </button>
+          {isShare ? (
+            <button
+              type="button"
+              onClick={() => router.push("/pet/input")}
+              className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
+            >
+              나도 우리 아이 궁합 보기
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => router.push("/pet/input")}
+                className="btn-secondary flex-1 h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                다른 아이도 보기
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                결과 공유하기
+              </button>
+            </>
+          )}
         </div>
       </footer>
     </div>
@@ -430,21 +443,59 @@ const ELEMENT_MAP: Record<string, { label: string; dot: string }> = {
   土: { label: "흙의 기운", dot: "bg-saju-earth" },
 };
 
+// 괄호 안의 콤마는 무시하고 최상위 콤마로만 분리 (tier4 "(띠 미상, 가족 된 날 기준)" 보존)
+function splitTopLevel(s: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of s) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === "," && depth === 0) {
+      out.push(cur);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
 function parseSpec(spec: string): Array<{ text: string; dot?: string }> {
   const chips: Array<{ text: string; dot?: string }> = [];
-  spec
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .forEach((part) => {
-      const zodiac = part.match(/\(([^)]+)\)띠/); // "子(쥐)띠" → "쥐"
-      const elChar = part.match(/[水火木金土]/);
-      if (zodiac) chips.push({ text: `${zodiac[1]}띠` });
-      if (elChar && ELEMENT_MAP[elChar[0]]) {
-        chips.push({ text: ELEMENT_MAP[elChar[0]].label, dot: ELEMENT_MAP[elChar[0]].dot });
-      }
-      if (!zodiac && !elChar) chips.push({ text: part });
-    });
+
+  // tier3: "... 水 기운 (추정)" — "(추정)" 꼬리표를 띠 칩에 붙인다 (칩에서 떨어지지 않게)
+  let est = "";
+  let body = spec;
+  const estMatch = body.match(/\s*\(추정\)\s*$/);
+  if (estMatch) {
+    est = "(추정)";
+    body = body.slice(0, estMatch.index ?? body.length).trim();
+  }
+
+  const pushPart = (raw: string) => {
+    const part = raw.trim();
+    if (!part) return;
+    // tier4 fallback "(띠 미상, 가족 된 날 기준)" — 괄호를 벗겨 안쪽을 다시 분해 (깨진 괄호 칩 방지)
+    if (part.startsWith("(") && part.endsWith(")")) {
+      splitTopLevel(part.slice(1, -1)).forEach(pushPart);
+      return;
+    }
+    const zodiac = part.match(/\(([^)]+)\)띠/); // "子(쥐)띠" → "쥐"
+    const elChar = part.match(/[水火木金土]/);
+    if (zodiac) chips.push({ text: `${zodiac[1]}띠${est}` });
+    if (elChar && ELEMENT_MAP[elChar[0]]) {
+      chips.push({ text: ELEMENT_MAP[elChar[0]].label, dot: ELEMENT_MAP[elChar[0]].dot });
+    }
+    if (!zodiac && !elChar) {
+      // 괄호 유실/불균형 토큰 방지: 남은 괄호 문자 제거
+      const clean = part.replace(/[()]/g, "").trim();
+      if (clean) chips.push({ text: clean });
+    }
+  };
+
+  splitTopLevel(body).forEach(pushPart);
   return chips;
 }
 

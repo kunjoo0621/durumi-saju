@@ -7,10 +7,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Camera } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { ButtonSpinner } from "@/components/loading";
 import Modal from "@/components/Modal";
 import LoginForm from "@/components/LoginForm";
+import { PET_COMPAT_LAUNCH_COST } from "@/lib/constants/coins";
 import {
   usePetCompatStore,
   usePetCompatActions,
@@ -97,9 +99,14 @@ export default function PetInputPage() {
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
   const [birthTimeDisplay, setBirthTimeDisplay] = useState("");
   const [petBirthDateDisplay, setPetBirthDateDisplay] = useState("");
+  const [petBirthTimeDisplay, setPetBirthTimeDisplay] = useState("");
   const [petAdoptionDateDisplay, setPetAdoptionDateDisplay] = useState("");
   const [birthDateError, setBirthDateError] = useState("");
   const [birthTimeError, setBirthTimeError] = useState("");
+  const [petBirthDateError, setPetBirthDateError] = useState("");
+  const [petBirthTimeError, setPetBirthTimeError] = useState("");
+  const [petAdoptionDateError, setPetAdoptionDateError] = useState("");
+  const [petEstimateError, setPetEstimateError] = useState("");
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
 
@@ -223,10 +230,36 @@ export default function PetInputPage() {
     else formatted = `${value.slice(0, 4)} / ${value.slice(4, 6)} / ${value.slice(6, 8)}`;
     setPetBirthDateDisplay(formatted);
 
+    const y = value.slice(0, 4);
+    const m = value.slice(4, 6);
+    const d = value.slice(6, 8);
     if (value.length >= 8) {
-      actions.setPet({ birthDate: `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}` });
+      const err = validateBirthDate(y, m, d);
+      setPetBirthDateError(err);
+      actions.setPet({ birthDate: err ? "" : `${y}-${m}-${d}` });
     } else {
+      setPetBirthDateError("");
       actions.setPet({ birthDate: "" });
+    }
+  };
+
+  // 펫 태어난 시간 — HH:MM 정규화 (보호자 시간 마스크와 동일 방식).
+  // "9:30" 같이 두 자리가 아닌 입력이 조용히 무시(시주 미상 처리)되던 버그 방지.
+  const handlePetBirthTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
+    let formatted = value;
+    if (value.length > 2) formatted = `${value.slice(0, 2)} : ${value.slice(2, 4)}`;
+    setPetBirthTimeDisplay(formatted);
+
+    const h = value.slice(0, 2);
+    const min = value.slice(2, 4);
+    if (h.length === 2 && min.length === 2) {
+      const err = validateBirthTime(h, min);
+      setPetBirthTimeError(err);
+      actions.setPet({ birthTime: err ? "" : `${h}:${min}` });
+    } else {
+      setPetBirthTimeError("");
+      actions.setPet({ birthTime: "" });
     }
   };
 
@@ -238,11 +271,30 @@ export default function PetInputPage() {
     else formatted = `${value.slice(0, 4)} / ${value.slice(4, 6)} / ${value.slice(6, 8)}`;
     setPetAdoptionDateDisplay(formatted);
 
+    const y = value.slice(0, 4);
+    const m = value.slice(4, 6);
+    const d = value.slice(6, 8);
     if (value.length >= 8) {
-      actions.setPet({ adoptionDate: `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}` });
+      const err = validateBirthDate(y, m, d);
+      setPetAdoptionDateError(err);
+      actions.setPet({ adoptionDate: err ? "" : `${y}-${m}-${d}` });
     } else {
+      setPetAdoptionDateError("");
       actions.setPet({ adoptionDate: "" });
     }
+  };
+
+  // 추정 연·월(tier 3) 범위 검증 — 13월 등 차단
+  const validatePetEstimate = (year: string, month: string): string => {
+    if (year && year.length === 4) {
+      const y = Number(year);
+      if (y < 1900 || y > new Date().getFullYear()) return "올바른 연도를 입력해줘";
+    }
+    if (month) {
+      const m = Number(month);
+      if (m < 1 || m > 12) return "월은 1~12 사이여야 해";
+    }
+    return "";
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -310,10 +362,10 @@ export default function PetInputPage() {
         return pet.species === "dog" || pet.species === "cat";
       case "petBirth":
         if (pet.birthTier === 0) return false;
-        if (pet.birthTier === 1) return !!pet.birthDate && !!pet.birthTime;
-        if (pet.birthTier === 2) return !!pet.birthDate;
-        if (pet.birthTier === 3) return !!pet.birthYearEstimated;
-        if (pet.birthTier === 4) return !!pet.adoptionDate;
+        if (pet.birthTier === 1) return !!pet.birthDate && !!pet.birthTime && !petBirthDateError && !petBirthTimeError;
+        if (pet.birthTier === 2) return !!pet.birthDate && !petBirthDateError;
+        if (pet.birthTier === 3) return !!pet.birthYearEstimated && !petEstimateError;
+        if (pet.birthTier === 4) return !!pet.adoptionDate && !petAdoptionDateError;
         return false;
       case "petPhoto":
         return !photoUploading;  // 사진 업로드 중 아니면 진행 OK (사진 없어도 통과)
@@ -564,18 +616,21 @@ export default function PetInputPage() {
                     className="w-full text-[15px] h-[52px]"
                     onFocus={handleInputFocus}
                   />
+                  {petBirthDateError && <p className="mt-2 text-[13px] text-primary">{petBirthDateError}</p>}
                 </div>
                 <div>
                   <label className="block text-[12px] text-text-secondary mb-2">태어난 시간</label>
                   <input
                     type="text"
-                    value={pet.birthTime}
-                    onChange={(e) => actions.setPet({ birthTime: e.target.value })}
-                    placeholder="예: 14:30"
-                    maxLength={5}
+                    inputMode="numeric"
+                    value={petBirthTimeDisplay}
+                    onChange={handlePetBirthTimeChange}
+                    placeholder="예: 09 : 30"
+                    maxLength={7}
                     className="w-full text-[15px] h-[52px]"
                     onFocus={handleInputFocus}
                   />
+                  {petBirthTimeError && <p className="mt-2 text-[13px] text-primary">{petBirthTimeError}</p>}
                 </div>
               </div>
             )}
@@ -593,37 +648,49 @@ export default function PetInputPage() {
                   className="w-full text-[15px] h-[52px]"
                   onFocus={handleInputFocus}
                 />
+                {petBirthDateError && <p className="mt-2 text-[13px] text-primary">{petBirthDateError}</p>}
               </div>
             )}
 
             {pet.birthTier === 3 && (
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">추정 연도</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={pet.birthYearEstimated}
-                    onChange={(e) => actions.setPet({ birthYearEstimated: e.target.value.replace(/[^0-9]/g, "").slice(0, 4) })}
-                    placeholder="2022"
-                    maxLength={4}
-                    className="w-full text-[15px] h-[52px]"
-                    onFocus={handleInputFocus}
-                  />
+              <div className="pt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] text-text-secondary mb-2">추정 연도</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={pet.birthYearEstimated}
+                      onChange={(e) => {
+                        const year = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
+                        actions.setPet({ birthYearEstimated: year });
+                        setPetEstimateError(validatePetEstimate(year, pet.birthMonthEstimated));
+                      }}
+                      placeholder="2022"
+                      maxLength={4}
+                      className="w-full text-[15px] h-[52px]"
+                      onFocus={handleInputFocus}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] text-text-secondary mb-2">추정 월 (선택)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={pet.birthMonthEstimated}
+                      onChange={(e) => {
+                        const month = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                        actions.setPet({ birthMonthEstimated: month });
+                        setPetEstimateError(validatePetEstimate(pet.birthYearEstimated, month));
+                      }}
+                      placeholder="6"
+                      maxLength={2}
+                      className="w-full text-[15px] h-[52px]"
+                      onFocus={handleInputFocus}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[12px] text-text-secondary mb-2">추정 월 (선택)</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={pet.birthMonthEstimated}
-                    onChange={(e) => actions.setPet({ birthMonthEstimated: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) })}
-                    placeholder="6"
-                    maxLength={2}
-                    className="w-full text-[15px] h-[52px]"
-                    onFocus={handleInputFocus}
-                  />
-                </div>
+                {petEstimateError && <p className="mt-2 text-[13px] text-primary">{petEstimateError}</p>}
               </div>
             )}
 
@@ -640,6 +707,7 @@ export default function PetInputPage() {
                   className="w-full text-[15px] h-[52px]"
                   onFocus={handleInputFocus}
                 />
+                {petAdoptionDateError && <p className="mt-2 text-[13px] text-primary">{petAdoptionDateError}</p>}
                 <p className="text-[12px] text-text-secondary mt-2">
                   정식 생일이 아니라 신뢰도 낮음. 큰 흐름만 분석돼.
                 </p>
@@ -683,8 +751,15 @@ export default function PetInputPage() {
                     if (file) handlePhotoUpload(file);
                   }}
                 />
-                <div className="text-[14px] text-text-secondary mb-1">
-                  {photoUploading ? "업로드 중..." : "📷 사진 선택"}
+                <div className="flex items-center justify-center gap-1.5 text-[14px] text-text-secondary mb-1">
+                  {photoUploading ? (
+                    "업로드 중..."
+                  ) : (
+                    <>
+                      <Camera size={18} weight="regular" aria-hidden="true" />
+                      사진 선택
+                    </>
+                  )}
                 </div>
                 <div className="text-[12px] text-text-tertiary">jpg / png / webp · 5MB 이하</div>
               </label>
@@ -735,6 +810,29 @@ export default function PetInputPage() {
               </select>
             </div>
 
+            <div>
+              <div className="text-[12px] text-text-secondary mb-2">어떻게 가족이 됐어?</div>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="입양 경로">
+                {[
+                  { v: "purchase", l: "구매" },
+                  { v: "rescue", l: "입양" },
+                  { v: "gift", l: "선물" },
+                  { v: "unknown", l: "모름" },
+                ].map((r) => (
+                  <button
+                    key={r.v}
+                    type="button"
+                    onClick={() => actions.setPet({ adoptionRoute: r.v as "purchase" | "rescue" | "gift" | "unknown" })}
+                    className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
+                      pet.adoptionRoute === r.v ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
+                    }`}
+                  >
+                    {r.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
           </div>
         );
       }
@@ -768,7 +866,7 @@ export default function PetInputPage() {
               </div>
             </div>
             <p className="text-center text-[13px] text-text-secondary">
-              다음 화면에서 결제 후 분석 시작 (10알)
+              다음 화면에서 결제 후 분석 시작 ({PET_COMPAT_LAUNCH_COST}알)
             </p>
           </div>
         );

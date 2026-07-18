@@ -1,6 +1,9 @@
 // 펫 궁합 v5 — D/S/tier 2/4 등 엣지 케이스 점수 검증 (LLM 미호출, 결정론만)
 // 목적: v5 리밸런스 후 양 극단 + fallback 케이스의 등급/지표가 의도대로 나오는지 sanity check
 //       (tier≥3 최저 C 가드, S/D 케이스 보존)
+// WS2(F2): tier 3·4는 extractPetCompatSignals가 일주 파생 신호를 중화한 뒤에야 스코어러에 도달한다.
+//   아래 #7은 스코어러 자체의 D-가드(원신호 그대로)를 검증하고, #9는 '중화 후(extract 반영)'
+//   tier4 펫이 실제로 중간 등급으로 수렴하는지(최저 C 가드 포함)를 검증한다.
 
 const mod = await import("../lib/pet-compat-scoring");
 const m: typeof import("../lib/pet-compat-scoring") = ((mod as any).default ?? mod) as any;
@@ -23,6 +26,21 @@ function base(): Signals {
     yearBranchHap: false, yearBranchChung: false,
     petSpecies: "dog",
     isSpeciesIncompat: false,
+  };
+}
+
+// lib/pet-compat-saju.ts extractPetCompatSignals의 tier 3·4 중화를 그대로 미러링.
+// (연주(띠)·종·isSpeciesIncompat만 유지, 일주 파생 전부 무효화)
+function neutralizeLowTier(s: Signals): Signals {
+  return {
+    ...s,
+    petStrength: "balanced",
+    petInseong: 0, petSikSang: 0, petBigeob: 0, petJaeseong: 0, petGwanseong: 0,
+    petDayBranch: "", petDayMasterElement: "",
+    petHasDohwa: false, petHasYeokma: false, petHasCheonEulGwiin: false, petTwelveStage: "",
+    dayBranchHap: false, dayBranchSamhap: false, dayBranchBanghap: false,
+    dayBranchChung: false, dayBranchHyeong: false, dayBranchWonjin: false,
+    dayMasterRelation: "none",
   };
 }
 
@@ -111,6 +129,26 @@ const cases: Array<{ name: string; expect: string; s: Signals }> = [
     name: "[v2 효과] 충+극 동시 발생",
     expect: "sync 29 (v1 23 → +6)",
     s: { ...base(), dayBranchChung: true, dayMasterRelation: "geuk_to_pet", petSpecies: "dog" },
+  },
+
+  // 9. WS2(F2): tier 4 '중화 후'(extract 반영) — #7의 충+극 원국이지만 extract가 일주 파생을 무효화.
+  //    실제 tier4 펫이 스코어러에 넣는 신호 = 연지·종·isSpeciesIncompat만. 충·극·신강약이 사라져
+  //    conflict/sync 극단이 걷히고 중간 등급으로 수렴한다(껍데기 D-충돌 누출 없음, 최저 C 가드).
+  {
+    name: "tier 4 중화 후 (extract 반영, #7 원국)",
+    expect: "충·극 무효화 → 중간 등급(B~C)으로 수렴, D 불가·conflict 극단 사라짐",
+    s: neutralizeLowTier({
+      ...base(),
+      ownerDayBranch: "辰", ownerDayMasterElement: "토",
+      petStrength: "weak", petBigeob: 3, petSikSang: 3,
+      petDayBranch: "戌", petYearBranch: "未", petDayMasterElement: "수",
+      petBirthTier: 4,
+      dayBranchChung: true,
+      dayMasterRelation: "geuk_to_pet",
+      yearBranchChung: false,
+      petSpecies: "cat",
+      isSpeciesIncompat: true,
+    }),
   },
 ];
 

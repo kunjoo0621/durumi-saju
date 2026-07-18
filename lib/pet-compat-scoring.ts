@@ -19,6 +19,7 @@ import { COMPOSITE_GRADE_CUTOFFS } from "./gradeSystem"; // 상대경로: tsx �
 //     영향: 해당 신살 보유 펫의 ruler/lover 보정이 이제 반영됨. 400건 시뮬 분포 이동 경미(D 0% 유지).
 // v5 (2026-07-18): 격자 실측(보호자 36×펫 40, 1,440쌍) 기반 리밸런스.
 //   — N1: tier3(추정 생일) 일주 파생 신호 중화 (진짜 생일 대비 등급 61% 뒤바뀜 제거).
+//     · WS2(F2, 2026-07): tier4(가족 된 날)도 동일하게 중화(중화는 lib/pet-compat-saju.ts extractPetCompatSignals에서). VERSION 5 유지(배포 전·캐시 없음).
 //   — N3: isSpeciesIncompat를 신호로 승격 (conflict 점수와 LLM 근거 블록이 같은 신호를 봄).
 //   — computeRuler/Lover/Loyalty 계수 리밸런스 (ruler mean 60.7→51.3, affectionGap +16.6→+6.1).
 //   — pickLabelAndArchetype 재설계 (라벨 top1 편중 완화, 아키타입 8종 전부 발생).

@@ -46,11 +46,73 @@ export function stripHanjaKeepKorean(text: string): string {
     .trim();
 }
 
+// ────────────────────────────────────────────────────────
+// v1.0(F4): 신살 환각 결정론 차단
+// 왜: 실측에서 "백호살"(펫이 실제로 보유하지 않는 신살) 환각이 QA 2회 재생성 안에서도
+//     안 잡혀 출고되는 케이스 관측. 지시-only(프롬프트)·QA 재생성만으론 못 막는다(한자·종혼입 교훈).
+//     → 서버가 보유 신호(signals)를 알고 있으니, 본문에 나온 '미보유 신살 이름'을 코드로 제거·치환한다.
+// 정책: 허용 신살(홍염살/도화살=petHasDohwa, 역마살=petHasYeokma, 천을귀인=petHasCheonEulGwiin)만 이름 유지.
+//       그 외 신살 이름(백호살·장성살·지살·공망·괴강·양인살·화개살·문창귀인 등)은 이름 없이 '기질/기운'으로 치환.
+//       허용 신살이라도 해당 signal이 false면 미보유 → 치환.
+// ────────────────────────────────────────────────────────
+
+/** 신살 보유 여부 신호 (validate·postprocess가 미보유 신살 판정에 사용) */
+export interface ShinsalSignals {
+  petHasDohwa: boolean;          // 홍염살/도화살 허용
+  petHasYeokma: boolean;         // 역마살 허용
+  petHasCheonEulGwiin: boolean;  // 천을귀인 허용
+}
+
+// 신살 이름 → 이름 없이 푼 '기질/기운' 치환어 (한자 병기는 stripHanjaKeepKorean이 먼저 제거하므로 한글 이름만 매칭)
+const SHINSAL_PLAIN: Record<string, string> = {
+  // 항상 미보유(LLM 환각 단골) — 무조건 치환
+  백호살: "낯선 걸 경계하는 기질",
+  장성살: "앞장서서 이끄는 기질",
+  지살: "자리를 자주 옮기고 싶어 하는 기운",
+  공망: "붙잡기 어려운 결",
+  괴강: "강단 있는 기질",
+  양인살: "날이 선 기질",
+  화개살: "혼자만의 시간을 즐기는 기질",
+  문창귀인: "영리하고 눈치 빠른 기질",
+  // 조건부 허용 — 해당 signal이 false면 아래 치환어로
+  홍염살: "사람을 끌어당기는 매력",
+  도화살: "사람을 끌어당기는 매력",
+  역마살: "돌아다니고 싶어 하는 기운",
+  천을귀인: "복이 따르는 기운",
+};
+
+// 이름 유지가 허용되는 신살 집합을 signals에서 계산
+function allowedShinsalSet(sig: ShinsalSignals): Set<string> {
+  const s = new Set<string>();
+  if (sig.petHasDohwa) { s.add("홍염살"); s.add("도화살"); }
+  if (sig.petHasYeokma) s.add("역마살");
+  if (sig.petHasCheonEulGwiin) s.add("천을귀인");
+  return s;
+}
+
+/** 본문에서 '미보유 신살 이름'을 결정론적으로 제거·치환. 허용 신살(signals)은 그대로 둔다. */
+export function stripHallucinatedShinsal(text: string, sig: ShinsalSignals): string {
+  if (!text) return text;
+  const allowed = allowedShinsalSet(sig);
+  let out = text;
+  for (const [name, plain] of Object.entries(SHINSAL_PLAIN)) {
+    if (allowed.has(name)) continue;      // 보유 신살은 이름 유지
+    if (!out.includes(name)) continue;
+    out = out.split(name).join(plain);    // 결정론적 치환 (정규식 특수문자 걱정 없음)
+  }
+  return out.replace(/\s{2,}/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+}
+
+// 미보유 신살 이름 검출용 정규식 후보 (validate의 방어적 백업 검사에 사용)
+const ALL_SHINSAL_NAMES = Object.keys(SHINSAL_PLAIN);
+
 // v0.3: QA 게이트 — 지시-only는 못 믿으니(한자 사고 교훈) 위반을 코드로 검출 → 재생성 1회.
 const FORBIDDEN = /운명|100%|절대|영원히|무조건|반드시|정답/;
 const MEDICAL = /구토|설사|발작|경련|혈뇨|탈수|토했|토함|식욕\s*부진/;
 // v0.4: headline·finalLine에 명리 용어 이름 금지(캡처·공유용) — 본문은 허용
-const MYEONGRI_IN_TITLE = /홍염살|도화살|역마살|화개살|백호살|양인살|공망|천을귀인|문창귀인|괴강|제왕|장생|목욕|관대|건록|비겁|식상|재성|관성|십성|삼합|방합/;
+// v1.0(F4): 구조 용어(일지·일간·연지·신강·신약·원진·삼합·방합·비화·12운성)도 헤드라인/마무리 금지어에 추가.
+//   오탐 회피: 충/합/형 단독은 흔한 일상어("충성"·"합격"·"형")라 제외 — 위 결합어/두 글자 이상만.
+const MYEONGRI_IN_TITLE = /홍염살|도화살|역마살|화개살|백호살|양인살|공망|천을귀인|문창귀인|괴강|제왕|장생|목욕|관대|건록|비겁|식상|재성|관성|십성|삼합|방합|원진|비화|12운성|신강|신약|일지|일간|연지/;
 // v0.5: 시뮬레이션은 상황극이라 명리 용어 이름 0 (본문 판정/설명서는 허용).
 // 오탐 회피: "목욕"(시뮬 상황 풀)·한 글자 12운성(쇠·병·사·묘·절·태·양)·"인성"(일상어) 제외
 const MYEONGRI_IN_SIM = /비겁|비견|겁재|식상|식신|상관|재성|편재|정재|편관|정관|편인|정인|관성|십성|역마살|역마|도화살|도화|홍염살|홍염|화개살|화개|백호살|양인살|장성살|괴강|공망|천을귀인|문창귀인|신살|장생|건록|제왕|관대|12운성|신강|신약|삼합|방합|육합|원진|일간|일지|연지/;
@@ -63,7 +125,10 @@ const MYEONGRI_IN_BODY = /일지|일간|연지|12운성|삼합|방합|원진|비
 const SCORE_IN_BODY = /\d{2}\s*점|ruler/i;
 
 /** 한자 strip 후 본문을 검사해 위반 목록 반환(빈 배열=통과). label.text·manual.spec·name 제외. */
-export function validatePetCompatResult(result: PetCompatResult, ctx: { petTwelveStage: string }): string[] {
+export function validatePetCompatResult(
+  result: PetCompatResult,
+  ctx: { petTwelveStage: string } & ShinsalSignals,
+): string[] {
   const v: string[] = [];
   const m = result.manual;
   const body = [
@@ -109,12 +174,21 @@ export function validatePetCompatResult(result: PetCompatResult, ctx: { petTwelv
   const scoreLeak = prose.match(SCORE_IN_BODY);
   if (scoreLeak) v.push(`본문 점수 노출 "${scoreLeak[0]}" (숫자 대신 방향으로)`);
 
+  // v1.0(F4): 미보유 신살 이름 방어 검사. postprocess가 결정론적으로 제거하므로 여기서 걸리면 안 되지만,
+  //   후처리 우회 시(직접 validate 호출 등) 백업으로 검출. 허용 신살(signals)은 제외.
+  const allowed = allowedShinsalSet(ctx);
+  for (const name of ALL_SHINSAL_NAMES) {
+    if (allowed.has(name)) continue;
+    if (body.includes(name)) { v.push(`미보유 신살 이름 "${name}" (보유하지 않은 신살 — 제거/치환 필요)`); break; }
+  }
+
   return v;
 }
 
-/** 결과 전체에서 한자 제거 (manual.spec·name 제외). 원본을 변형해 반환. */
-export function postprocessPetCompatResult(result: PetCompatResult): PetCompatResult {
-  const s = stripHanjaKeepKorean;
+/** 결과 전체에서 한자 제거 + 미보유 신살 이름 결정론 치환 (manual.spec·name 제외). 원본을 변형해 반환. */
+export function postprocessPetCompatResult(result: PetCompatResult, sig: ShinsalSignals): PetCompatResult {
+  // 한자 strip 후 미보유 신살 이름 치환 (순서 중요: "백호살(白虎殺)" → "백호살" → 치환)
+  const s = (t: string): string => stripHallucinatedShinsal(stripHanjaKeepKorean(t), sig);
 
   if (result.manual) {
     // spec·name은 보존, 나머지 본문만 strip

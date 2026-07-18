@@ -150,6 +150,11 @@ export function buildPetSpec(pet: PetInput, petEnriched: EnrichedSajuData | null
     ageStr = `약 ${Math.max(0, nowYear - pet.birthYearEstimated)}세`;
   }
   const breed = pet.breed || "믹스";
+  // F1(WS2): tier 4(가족 된 날)는 연지가 펫의 '실제 띠'가 아니라 입양연도 지지 → 띠·오행을 확정처럼 쓰지 않는다.
+  //          (tier 4 사주 신호는 extractPetCompatSignals에서도 중화됨.)
+  if (pet.birthTier === 4) {
+    return `${ageStr}, ${breed} (가족 된 날 기준 · 정확한 띠 미상)`;
+  }
   const yb = petEnriched ? getYearBranchHanja(petEnriched.pillars) : "";
   if (yb && BRANCH_ANIMAL[yb]) {
     const suffix = pet.birthTier === 3 ? " (추정)" : "";
@@ -367,10 +372,11 @@ export function extractPetCompatSignals(
     isSpeciesIncompat: isSpeciesIncompat(pet.species, ownerDayBranch),
   };
 
-  // v5(N1): tier 3(추정 생일)는 일주가 "그 달 15일 정오" 근사 → 일주 파생 신호가 허구.
-  // 실측: 유지 시 진짜 생일 대비 등급 61% 뒤바뀜, |Δruler| 평균 19. 연주(띠)·종 신호만 남기고 중화.
+  // v5(N1)→WS2(F2): tier 3(추정 생일=그 달 15일 정오 근사)·tier 4(가족 된 날 대체)는
+  // 일주가 근사치라 일주 파생 신호가 허구. 두 티어 모두 연주(띠)·종·isSpeciesIncompat만 남기고 중화한다.
+  // 실측(tier3): 유지 시 진짜 생일 대비 등급 61% 뒤바뀜, |Δruler| 평균 19. tier4는 그 연장(가족 된 날≠생일).
   // 중화 결과 petDayMasterElement/petTwelveStage가 ""가 되어 pet-compat.ts lowReliability=true → 프롬프트 가드 자동 작동.
-  if (pet.birthTier === 3) {
+  if (pet.birthTier === 3 || pet.birthTier === 4) {
     return {
       ...signals,
       petStrength: "balanced",
@@ -422,18 +428,21 @@ ${extras.length > 0 ? extras.join("\n") + "\n" : ""}※ 사주 데이터 없음 
     low: "낮음 (참고용)",
   }[reliability];
 
-  const sajuBlock = formatEnrichedSajuText(enriched);
-
-  // v5(N1): tier 3(추정 생일)은 일주가 '그 달 15일 정오' 근사 → 일주(일간·일지)는 허구.
-  // 연주(띠)·월주의 큰 흐름만 해석하고, 일주 파생(일지 합충·신살·12운성)은 지어내지 말라고 명시.
-  const tier3Guard = pet.birthTier === 3
-    ? "\n※ 일주(일간·일지)는 추정 근사치 — 해석 금지. 연주(띠)·월주의 큰 흐름만 담백하게 서술하고, 일지 합충·신살·12운성은 지어내지 마라.\n"
-    : "";
+  // F3(WS2): tier 3(추정 생일=그 달 15일 정오 근사)·tier 4(가족 된 날)은 일주가 근사치라
+  // 일주 파생(일간·일지·신살·12운성)과 그에 오염된 전체 집계(오행분포·신강·십성·합충형)가 허구다.
+  // 지시-only 가드로는 LLM이 fabricated 사주블록을 그대로 읽어 새어나가므로, 서버에서
+  // 사주블록을 연주·월주만 남기고 실제 절삭한다(종 본성은 아래 [종/품종 본성]에서 유지).
+  const isLowTier = pet.birthTier === 3 || pet.birthTier === 4;
+  const sajuBlock = isLowTier
+    ? [
+        `년주: ${enriched.pillars.year} / 월주: ${enriched.pillars.month}`,
+        "※ 일주(일간·일지)는 추정 근사치라 제외됨 — 연주(띠)·월주의 큰 흐름만 담백하게 서술하고, 일지 합충·신살·12운성·일간 오행은 지어내지 마라.",
+      ].join("\n")
+    : formatEnrichedSajuText(enriched);
 
   return `
 [펫 사주 — ${pet.name}]
 신뢰도: ${reliabilityLabel} — ${note}
-${tier3Guard}
 ${sajuBlock}
 
 [종/품종 본성]

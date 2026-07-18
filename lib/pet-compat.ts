@@ -596,7 +596,7 @@ export async function runPetCompatAnalysis(
     parsed.label.grade = input.precomputedScores.grade;
     parsed.label.text = input.precomputedScores.labelText;
     if (parsed.manual) parsed.manual.spec = input.petSpec;  // v0.3: spec 서버 결정값 (子띠=金 오류 차단)
-    postprocessPetCompatResult(parsed);                     // 한자 ≤ 정책
+    postprocessPetCompatResult(parsed, input.signals);      // 한자 ≤ 정책 + 미보유 신살 결정론 치환(F4)
     return parsed;
   };
 
@@ -618,7 +618,12 @@ export async function runPetCompatAnalysis(
       continue;
     }
 
-    const violations = validatePetCompatResult(parsed, { petTwelveStage: input.signals.petTwelveStage });
+    const violations = validatePetCompatResult(parsed, {
+      petTwelveStage: input.signals.petTwelveStage,
+      petHasDohwa: input.signals.petHasDohwa,
+      petHasYeokma: input.signals.petHasYeokma,
+      petHasCheonEulGwiin: input.signals.petHasCheonEulGwiin,
+    });
     if (violations.length === 0 || attempt === 2) {
       if (violations.length > 0) console.warn("[PET_COMPAT][QA] 잔존 위반:", violations.join(", "));
       return { ok: true, result: parsed, rawText: result.text };

@@ -17,6 +17,8 @@ import { calculatePetEnrichedSaju, extractPetCompatSignals, buildPetSajuText, bu
 import { computePetCompatScores } from "@/lib/pet-compat-scoring";
 import { runPetCompatAnalysis } from "@/lib/pet-compat";
 import { generatePetIllustration } from "@/lib/pet-compat-illustration";
+import { refundCoins } from "@/lib/server/session-helpers";
+import { PET_COMPAT_LAUNCH_COST } from "@/lib/constants/coins";
 import type { PetInput, OwnerInput } from "@/lib/pet-compat";
 
 const PHOTO_BUCKET = "pet-uploads";
@@ -32,10 +34,33 @@ interface PetCompatPayload {
 }
 
 export async function POST(request: NextRequest) {
+  // 결제 견고성용 외부 스코프 변수 (실패 경로 환불 + 재호출 가드에서 참조)
+  let userId: string | null = null;
+  let sessionId: string | undefined;
+  // 알은 /api/coins/spend(type=pet)에서 이미 차감됨 (p_reference_id=sessionId).
+  // 이 라우트는 알을 새로 차감하지 않는다 → 재호출해도 재청구는 원천적으로 없음.
+  // chargedContext: 검증을 모두 통과해 "차감된 세션의 실제 분석"에 진입했는지 표시.
+  //   실패 시 이 시점 이후에만 환불한다(검증 거부 단계는 환불하지 않음 — 미검증 세션 보호).
+  let chargedContext = false;
+  let refunded = false;
+
+  // 환불은 사주 spend 흐름의 refundCoins 패턴을 그대로 재사용한다.
+  // reference_id = sessionId 로 spend 의 p_reference_id 와 일관되게 맞춘다.
+  // 한 번만 실행되도록 refunded 플래그로 이중 환불을 막는다.
+  async function doRefund() {
+    if (refunded || !chargedContext || !userId || !sessionId) return;
+    refunded = true;
+    try {
+      await refundCoins(userId, PET_COMPAT_LAUNCH_COST, sessionId);
+    } catch (e: any) {
+      console.error("[PET_COMPAT] refund failed", e?.message || e);
+    }
+  }
+
   try {
     // 1. 인증
     const session = await getServerSession(authOptions);
-    const userId = await getSupabaseUserId(session);
+    userId = await getSupabaseUserId(session);
     if (!userId) {
       return NextResponse.json({ error: "로그인이 필요해." }, { status: 401 });
     }
@@ -44,6 +69,7 @@ export async function POST(request: NextRequest) {
     if (!body.sessionId) {
       return NextResponse.json({ error: "세션 정보가 필요해." }, { status: 400 });
     }
+    sessionId = body.sessionId;
 
     // 2. prepayment_sessions에서 페이로드 조회 (알 차감은 이미 끝남 → status='consumed')
     const sessionLookup = await supabaseAdmin
@@ -68,7 +94,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "보호자 사주 정보가 부족해." }, { status: 400 });
     }
 
+    // 2-b. ★재호출 가드 — 세션당 결과 1개.
+    //   이 결제(orderId)로 이미 pet_compat_results row 가 있으면 기존 resultId 를 반환하고
+    //   신규 생성·재분석을 하지 않는다 → "1결제 무한생성" 차단.
+    //   (알 재청구는 이 라우트가 spend_coins 를 호출하지 않아 애초에 없음.)
+    //   무거운 사주 계산·LLM·일러스트 호출 전에 배치해 비용을 절약한다.
+    //   주의: order_id 에 UNIQUE 제약이 없어 "동시 중복 호출"까지는 못 막는다(순차 재호출만
+    //   차단). 완전한 원자성은 order_id UNIQUE 인덱스가 필요 — 운영자 결정 사항으로 보고.
+    if (body.orderId) {
+      const existing = await supabaseAdmin
+        .from("pet_compat_results")
+        .select("id, pet_id")
+        .eq("user_id", userId)
+        .eq("order_id", body.orderId)
+        .maybeSingle();
+      if (existing.data?.id) {
+        return NextResponse.json({
+          ok: true,
+          reused: true,
+          resultId: existing.data.id,
+          petId: existing.data.pet_id,
+        });
+      }
+    }
+
     const { pet, owner } = payload;
+
+    // 여기서부터 "차감된 세션의 실제 분석" — 이후 실패는 알만 빠지고 결과 없음 → 환불.
+    chargedContext = true;
 
     // 3. 보호자 사주 계산
     const ownerSajuData = await calculateSaju(
@@ -82,7 +135,8 @@ export async function POST(request: NextRequest) {
 
     if (!ownerSajuData) {
       console.error("[PET_COMPAT] owner saju calc failed");
-      return NextResponse.json({ error: "보호자 사주 계산 실패했어." }, { status: 500 });
+      await doRefund();
+      return NextResponse.json({ error: "보호자 사주 계산 실패했어.", refunded: true }, { status: 500 });
     }
 
     const ownerEnriched = enrichSajuData(ownerSajuData, { isTimeUnknown: Boolean(owner.unknownBirthTime) });
@@ -157,7 +211,8 @@ export async function POST(request: NextRequest) {
 
     if (!llmResult.ok) {
       console.error("[PET_COMPAT] LLM failed", llmResult.error);
-      return NextResponse.json({ error: "분석 중 오류가 발생했어. 다시 시도해줘." }, { status: 500 });
+      await doRefund();
+      return NextResponse.json({ error: "분석 중 오류가 발생했어. 다시 시도해줘.", refunded: true }, { status: 500 });
     }
 
     if (!illustrationResult.ok) {
@@ -187,7 +242,8 @@ export async function POST(request: NextRequest) {
 
     if (petProfileInsert.error || !petProfileInsert.data?.id) {
       console.error("[PET_COMPAT] pet_profiles insert error", petProfileInsert.error);
-      return NextResponse.json({ error: "펫 프로필 저장 실패." }, { status: 500 });
+      await doRefund();
+      return NextResponse.json({ error: "펫 프로필 저장 실패.", refunded: true }, { status: 500 });
     }
 
     const petId = petProfileInsert.data.id;
@@ -218,7 +274,8 @@ export async function POST(request: NextRequest) {
 
     if (resultInsert.error || !resultInsert.data?.id) {
       console.error("[PET_COMPAT] result insert error", resultInsert.error);
-      return NextResponse.json({ error: "결과 저장 실패." }, { status: 500 });
+      await doRefund();
+      return NextResponse.json({ error: "결과 저장 실패.", refunded: true }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -228,6 +285,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("[PET_COMPAT] unexpected error", error?.message || error);
-    return NextResponse.json({ error: "예상치 못한 오류가 발생했어." }, { status: 500 });
+    // 검증 통과 후(chargedContext) 예외면 알만 빠지고 결과 없음 → 환불.
+    await doRefund();
+    return NextResponse.json(
+      { error: "예상치 못한 오류가 발생했어.", refunded },
+      { status: 500 },
+    );
   }
 }

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getSharedPetCompat } from "@/lib/share-pet-compat";
 import type { PetCompatResult } from "@/lib/pet-compat";
+import type { PetResultData } from "@/lib/mockPetResult";
 import SharePetCompatClient from "./SharePetCompatClient";
 
 export async function generateMetadata({
@@ -61,23 +62,33 @@ export default async function SharePetCompatPage({
   const data = await getSharedPetCompat(id);
   if (!data?.full_result) notFound();
 
-  const result = data.full_result as PetCompatResult;
   const petInfo: any = Array.isArray(data.pet) ? data.pet[0] : data.pet;
 
-  return (
-    <SharePetCompatClient
-      result={result}
-      petName={petInfo?.name || "우리 아이"}
-      petSpecies={petInfo?.species || "dog"}
-      compositeScore={data.composite_score}
-      labelGrade={data.label_grade as any}
-      labelText={data.label_text}
-      syncScore={data.sync_score}
-      rulerScore={data.ruler_score}
-      loverScore={data.lover_score}
-      loyaltyScore={(data as any).loyalty_score ?? 50}
-      conflictScore={data.conflict_score}
-      illustrationUrl={data.illustration_url || null}
-    />
-  );
+  // getSharedPetCompat → PetResultBody 가 요구하는 shape(PetResultData)로 조립
+  const resultData: PetResultData = {
+    id: data.id,
+    label_grade: data.label_grade as PetResultData["label_grade"],
+    label_text: data.label_text,
+    composite_score: data.composite_score,
+    sync_score: data.sync_score,
+    ruler_score: data.ruler_score,
+    lover_score: data.lover_score,
+    loyalty_score: (data as any).loyalty_score ?? 50,
+    conflict_score: data.conflict_score,
+    illustration_key: (data as any).illustration_key ?? null,
+    illustration_url: data.illustration_url || null,
+    full_result: data.full_result as PetCompatResult,
+    scoring_version: (data as any).scoring_version ?? 0,
+    created_at: data.created_at,
+    pet: {
+      id: petInfo?.id || "",
+      name: petInfo?.name || "우리 아이",
+      species: (petInfo?.species || "dog") as "dog" | "cat",
+      breed: petInfo?.breed ?? null,
+      gender: petInfo?.gender ?? null,
+      birth_tier: petInfo?.birth_tier ?? 1,
+    },
+  };
+
+  return <SharePetCompatClient data={resultData} />;
 }

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Dog, Cat, Egg } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { useAllInputs, useInputStore, hasInputHydrated } from "@/store/useInputStore";
 import { useBattleStore, hasBattleHydrated } from "@/store/useBattleStore";
@@ -576,8 +577,8 @@ function CheckoutForm({
           {isPet ? (
             <div className="text-center">
               <h2 className="text-[24px] font-bold font-aggro text-text-primary">반려동물 궁합</h2>
-              <p className="text-[13px] text-text-secondary mt-2">
-                출시 기념 🥚 <span className="line-through text-text-tertiary">{PET_COMPAT_COST}알</span>{" "}
+              <p className="flex items-center justify-center gap-1 text-[13px] text-text-secondary mt-2">
+                출시 기념 <Egg size={15} weight="fill" aria-hidden="true" /> <span className="line-through text-text-tertiary">{PET_COMPAT_COST}알</span>{" "}
                 <span className="font-semibold text-text-primary">{PET_COMPAT_LAUNCH_COST}알</span>
               </p>
             </div>
@@ -653,11 +654,14 @@ function CheckoutForm({
               {isPet && (
                 <div className="flex justify-between py-3 border-b border-white/5">
                   <dt className="text-sm text-text-secondary">우리 아이</dt>
-                  <dd className="text-sm text-text-primary font-medium">
-                    {petStore.pet.species === "dog" ? "🐶" : "🐱"} {petStore.pet.name}
-                    {petStore.pet.birthTier <= 2 && petStore.pet.birthDate ? ` · ${petStore.pet.birthDate}` : ""}
-                    {petStore.pet.birthTier === 3 && petStore.pet.birthYearEstimated ? ` · ${petStore.pet.birthYearEstimated}년생(추정)` : ""}
-                    {petStore.pet.birthTier === 4 && petStore.pet.adoptionDate ? ` · 가족 된 날 ${petStore.pet.adoptionDate}` : ""}
+                  <dd className="flex items-center justify-end gap-1 text-sm text-text-primary font-medium">
+                    {petStore.pet.species === "dog" ? <Dog size={16} aria-hidden="true" /> : <Cat size={16} aria-hidden="true" />}
+                    <span>
+                      {petStore.pet.name}
+                      {petStore.pet.birthTier <= 2 && petStore.pet.birthDate ? ` · ${petStore.pet.birthDate}` : ""}
+                      {petStore.pet.birthTier === 3 && petStore.pet.birthYearEstimated ? ` · ${petStore.pet.birthYearEstimated}년생(추정)` : ""}
+                      {petStore.pet.birthTier === 4 && petStore.pet.adoptionDate ? ` · 가족 된 날 ${petStore.pet.adoptionDate}` : ""}
+                    </span>
                   </dd>
                 </div>
               )}
