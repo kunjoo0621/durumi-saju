@@ -76,25 +76,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });
     }
 
-    // spend_coins RPC 호출
-    const spendRpc = await supabaseAdmin.rpc("spend_coins", {
-      p_user_id: userId,
-      p_amount: cost,
-      p_reference_id: body.sessionId,
-    });
-
-    if (spendRpc.error) {
-      console.error("[SPEND] rpc error", spendRpc.error.message);
-      return NextResponse.json({ error: "알 차감 중 오류가 발생했습니다." }, { status: 500 });
+    // ★ 재차감 가드 (pet/battle 한정, refund 대조형): consumed 세션에 "미환불 spend"가
+    //   남아 있으면 다시 차감하지 않고 흐름만 계속 태운다 (orderId 재발급 → analyze 재시도).
+    //   - 환불까지 끝난 세션(spend건수==refund건수)은 현행대로 재차감 (재시도=신규 결제 정책 유지).
+    //   - analysis 타입 제외: consumed 재-spend하는 정상 클라 경로가 없고, analyze 계열 환불이
+    //     order_id 기준이라 sessionId 대조가 어긋남. today/yearly는 별도 라우트라 무관.
+    //   실측(fable): spend_coins가 type='spend'·reference_id=sessionId, refundCoins가 type='refund'·
+    //   reference_id=sessionId로 기록 → 대조 정확. 과거 코인 중복충전 사고 방지 취지.
+    let skipSpend = false;
+    if ((isPet || isBattle) && sessionRow.status !== "pending") {
+      const { data: txs, error: txError } = await supabaseAdmin
+        .from("coin_transactions")
+        .select("type")
+        .eq("user_id", userId)
+        .eq("reference_id", body.sessionId)
+        .in("type", ["spend", "refund"]);
+      if (txError) {
+        console.error("[SPEND] tx lookup error", txError.message);
+        return NextResponse.json({ error: "세션 조회 중 오류가 발생했습니다." }, { status: 500 });
+      }
+      const spends = (txs ?? []).filter((t) => t.type === "spend").length;
+      const refunds = (txs ?? []).filter((t) => t.type === "refund").length;
+      skipSpend = spends > refunds;
     }
 
-    const spendResult = Array.isArray(spendRpc.data) ? spendRpc.data[0] : spendRpc.data;
-    if (!spendResult?.success) {
-      return NextResponse.json({
-        insufficient: true,
-        balance: spendResult?.new_balance ?? 0,
-        required: cost,
+    // spend_coins RPC 호출 (skipSpend면 차감 없이 현재 잔액만 조회)
+    let newBalance: number;
+    if (skipSpend) {
+      const { data: prof } = await supabaseAdmin
+        .from("profiles")
+        .select("coin_balance")
+        .eq("user_id", userId)
+        .maybeSingle();
+      newBalance = prof?.coin_balance ?? 0;
+    } else {
+      const spendRpc = await supabaseAdmin.rpc("spend_coins", {
+        p_user_id: userId,
+        p_amount: cost,
+        p_reference_id: body.sessionId,
       });
+
+      if (spendRpc.error) {
+        console.error("[SPEND] rpc error", spendRpc.error.message);
+        return NextResponse.json({ error: "알 차감 중 오류가 발생했습니다." }, { status: 500 });
+      }
+
+      const spendResult = Array.isArray(spendRpc.data) ? spendRpc.data[0] : spendRpc.data;
+      if (!spendResult?.success) {
+        return NextResponse.json({
+          insufficient: true,
+          balance: spendResult?.new_balance ?? 0,
+          required: cost,
+        });
+      }
+      newBalance = spendResult.new_balance;
     }
 
     // ============ 펫 궁합: 알 차감만, 분석은 /api/pet-compat/analyze ============
@@ -118,7 +153,7 @@ export async function POST(request: NextRequest) {
         ok: true,
         type: "pet",
         orderId,
-        balance: spendResult.new_balance,
+        balance: newBalance,
       });
     }
 
@@ -142,7 +177,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         type: "battle",
-        balance: spendResult.new_balance,
+        balance: newBalance,
       });
     }
 
@@ -182,7 +217,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             ok: true,
             resultId: existingResultId,
-            balance: spendResult.new_balance,
+            balance: newBalance,
             pending: true,
           });
         }
@@ -193,7 +228,7 @@ export async function POST(request: NextRequest) {
           ok: true,
           reused: true,
           resultId: existingResultId,
-          balance: spendResult.new_balance,
+          balance: newBalance,
         });
       }
 
@@ -259,7 +294,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         resultId,
-        balance: spendResult.new_balance,
+        balance: newBalance,
         pending: true,
       });
     } catch (err: any) {
