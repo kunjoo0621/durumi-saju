@@ -15,7 +15,7 @@ export interface QaGenOptions<T> {
     systemPrompt: string,
     cfg: { temperature: number },
   ) => Promise<{ ok: boolean; text?: string; status?: number; apiStatus?: string; message?: string }>;
-  shouldFallback: (status?: number, apiStatus?: string) => boolean;
+  shouldFallback: (status: number, apiStatus?: string) => boolean;
   parse: (text: string) => unknown;
   validateBlocks: (parsed: unknown) => string[];
   applyGuards: (parsed: unknown) => { blocks: T; violations: string[] };
@@ -58,7 +58,7 @@ export async function generateWithQaRegen<T>(opts: QaGenOptions<T>): Promise<QaG
         }
       }
       lastError = res.message ?? "LLM 호출 실패";
-      if (!opts.shouldFallback(res.status, res.apiStatus)) break;
+      if (!opts.shouldFallback(res.status ?? 500, res.apiStatus)) break;
     }
     if (parsed === null) continue; // 이번 attempt 전체 실패 → 재시도
 

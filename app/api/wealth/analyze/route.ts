@@ -46,6 +46,7 @@ import { computeWealthGrade, extractWealthScore } from "@/lib/wealth-grade";
 import { assertWealthConsistency } from "@/lib/wealth-consistency";
 import { buildWealthPrompt } from "@/lib/wealth-prompt";
 import { applyWealthGuards, validateWealthBlocks } from "@/lib/wealth-postprocess";
+import { generateWithQaRegen } from "@/lib/qa-regen";
 import { WEALTH_COST } from "@/lib/constants/coins";
 import {
   normalizeSelfInput,
@@ -442,48 +443,33 @@ export async function POST(request: NextRequest) {
       const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
       const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;
 
-      let parsed: any = null;
-      let lastError: { status?: number; apiStatus?: string; message?: string } | null = null;
+      // 6)+7) Gemini 호출 + 가드 — QA 재생성 루프(가드 위반 시 위반 목록을 프롬프트에 덧붙여
+      // 1회 재생성, lib/qa-regen.ts). 종전에는 위반 문장을 삭제만 해 걸릴수록 리포트가 짧아졌다.
+      // 모델 폴백·F-2 블록검증·파싱은 헬퍼 안에서 동일 의미로 수행된다.
+      const gen = await generateWithQaRegen<any>({
+        prompt,
+        systemPrompt: WEALTH_SYSTEM_PROMPT,
+        models,
+        temperature: 0.75,
+        callModel: (model, p, sys, cfg) => callGemini(model, p, sys, cfg),
+        shouldFallback,
+        parse: (text) => parseJson5Loose<any>(text),
+        validateBlocks: (candidate) => validateWealthBlocks(candidate),
+        applyGuards: (candidate) => applyWealthGuards(candidate, facts, sajuText),
+      });
 
-      for (const model of models) {
-        const res = await callGemini(model, prompt, WEALTH_SYSTEM_PROMPT, { temperature: 0.75 });
-        if (res.ok) {
-          try {
-            const candidate = parseJson5Loose<any>(res.text);
-            // F-2: 필수 블록이 다 찼는지 파싱 직후 검증 — 비거나 스키마를 어긴 응답이면
-            // 다음 모델로 폴백(빈 유료 리포트가 저장되는 걸 막는다).
-            const blockIssues = validateWealthBlocks(candidate);
-            if (blockIssues.length > 0) {
-              console.error("[WEALTH_ANALYZE] 블록 검증 실패 — 폴백", blockIssues);
-              lastError = { status: 502, apiStatus: "INVALID_BLOCKS", message: "분석 결과 형식이 불완전합니다." };
-              continue;
-            }
-            parsed = candidate;
-            lastError = null;
-            break;
-          } catch (parseError: any) {
-            console.error("[WEALTH_ANALYZE] JSON 파싱 실패", parseError?.message, res.text?.slice(0, 300));
-            lastError = { status: 502, apiStatus: "INVALID_JSON", message: "분석 결과 형식이 불완전합니다." };
-            continue;
-          }
-        }
-        lastError = res;
-        if (!shouldFallback(res.status, res.apiStatus)) break;
-      }
-
-      if (!parsed) {
-        console.error("[WEALTH_ANALYZE] gemini 실패", lastError);
+      if (!gen.ok) {
+        console.error("[WEALTH_ANALYZE] gemini 실패", gen.error);
         await refundAndCleanup();
         return NextResponse.json(
           { error: "분석에 실패했어. 알은 환불됐어.", refunded: true },
           { status: 500 },
         );
       }
-
-      // 7) 가드
-      const { blocks, violations } = applyWealthGuards(parsed, facts, sajuText);
+      const blocks = gen.blocks;
+      const violations = gen.violations;
       if (violations.length > 0) {
-        console.warn("[WEALTH_ANALYZE] guard violations", violations);
+        console.warn(`[WEALTH_ANALYZE] guard violations (재생성 ${gen.attempts}회 후 잔존)`, violations);
       }
 
       // F-2 후단: 가드가 문장을 스크럽한 뒤 필수 블록이 비었는지 재검증(무료/빈 리포트 방지).
