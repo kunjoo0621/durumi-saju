@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useAllInputs, useStoreActions } from "@/store/useInputStore";
+import { useAllInputs, useStoreActions, type CoreFearAxis } from "@/store/useInputStore";
 import { trackFormStep, trackFormComplete, type FormName } from "@/lib/analytics";
-import Header from "@/components/layout/Header";
 import Modal from "@/components/Modal";
 import LoginForm from "@/components/LoginForm";
+import OptionCardGroup from "@/components/saju-input/OptionCardGroup";
+import QuestionStepScaffold from "@/components/saju-input/QuestionStepScaffold";
 
 /* 공통 사주 입력 흐름 컴포넌트
  * /start (개인사주) + /yearly/input (올해 운세 단독) 양쪽에서 사용.
@@ -58,6 +59,11 @@ const CORE_FEAR_OPTIONS = [
   { label: "인간관계", value: "DISMISS" as const },
   { label: "건강·컨디션", value: "LOSS_OF_CONTROL" as const },
 ] as const;
+
+// OptionCardGroup용 { value, label } 카드 배열 (모듈 레벨 — 렌더마다 재생성 방지)
+const RELATIONSHIP_OPTION_CARDS = RELATIONSHIP_OPTIONS.map((v) => ({ value: v, label: v }));
+const EMPLOYMENT_OPTION_CARDS = EMPLOYMENT_OPTIONS.map((v) => ({ value: v, label: v }));
+const CORE_FEAR_OPTION_CARDS = CORE_FEAR_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
 
 export default function SajuInputFlow({
   onComplete,
@@ -453,68 +459,32 @@ export default function SajuInputFlow({
 
       case "relationshipStatus":
         return (
-          <div className="space-y-3" role="radiogroup" aria-label="연애 상태">
-            {RELATIONSHIP_OPTIONS.map((status) => (
-              <button
-                key={status}
-                onClick={() => setField("relationshipStatus", status)}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
-                  formData.relationshipStatus === status
-                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                    : ""
-                }`}
-                role="radio"
-                aria-checked={formData.relationshipStatus === status}
-              >
-                {formData.relationshipStatus === status && <span className="mr-2" aria-hidden="true">✓</span>}
-                {status}
-              </button>
-            ))}
-          </div>
+          <OptionCardGroup
+            name="연애 상태"
+            options={RELATIONSHIP_OPTION_CARDS}
+            selected={formData.relationshipStatus}
+            onSelect={(value) => setField("relationshipStatus", value)}
+          />
         );
 
       case "employmentStatus":
         return (
-          <div className="space-y-3" role="radiogroup" aria-label="현재 상태">
-            {EMPLOYMENT_OPTIONS.map((status) => (
-              <button
-                key={status}
-                onClick={() => setField("employmentStatus", status)}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
-                  formData.employmentStatus === status
-                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                    : ""
-                }`}
-                role="radio"
-                aria-checked={formData.employmentStatus === status}
-              >
-                {formData.employmentStatus === status && <span className="mr-2" aria-hidden="true">✓</span>}
-                {status}
-              </button>
-            ))}
-          </div>
+          <OptionCardGroup
+            name="현재 상태"
+            options={EMPLOYMENT_OPTION_CARDS}
+            selected={formData.employmentStatus}
+            onSelect={(value) => setField("employmentStatus", value)}
+          />
         );
 
       case "coreFearAxis":
         return (
-          <div className="space-y-3" role="radiogroup" aria-label="핵심 공포 축">
-            {CORE_FEAR_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setField("coreFearAxis", option.value)}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
-                  formData.coreFearAxis === option.value
-                    ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]"
-                    : ""
-                }`}
-                role="radio"
-                aria-checked={formData.coreFearAxis === option.value}
-              >
-                {formData.coreFearAxis === option.value && <span className="mr-2" aria-hidden="true">✓</span>}
-                {option.label}
-              </button>
-            ))}
-          </div>
+          <OptionCardGroup
+            name="핵심 공포 축"
+            options={CORE_FEAR_OPTION_CARDS}
+            selected={formData.coreFearAxis}
+            onSelect={(value) => setField("coreFearAxis", value as CoreFearAxis)}
+          />
         );
 
       default:
@@ -524,57 +494,17 @@ export default function SajuInputFlow({
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
-      <Header
-        showBack
+      <QuestionStepScaffold
+        title={filteredQuestions[currentStep].title}
         onBack={currentStep > 0 ? handleBack : () => router.push(backUrl)}
-      />
-
-      {/* 메인 콘텐츠 */}
-      <main className="flex-1 min-h-0 px-5 pb-6 overflow-y-auto">
-        <div className="max-w-[640px] w-full mx-auto pt-10">
-          {/* 질문 */}
-          <div>
-            <h2 className="text-[24px] font-semibold text-white text-center font-aggro mb-6">
-              {filteredQuestions[currentStep].title}
-            </h2>
-          </div>
-
-          {/* 입력 영역 */}
-          <div>{renderQuestion()}</div>
-        </div>
-      </main>
-
-      {/* 하단 영역 (프로그레스바 + 다음 버튼) */}
-      <footer
-        className="shrink-0 bg-[#0D0D0D] px-5 py-4"
-        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }}
+        stepIndex={currentStep}
+        stepTotal={totalSteps}
+        canProceed={!!canProceed()}
+        onProceed={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
+        ctaLabel={currentStep === totalSteps - 1 ? submitLabel : "다음"}
       >
-        <div className="max-w-[640px] mx-auto space-y-4">
-          <div className="flex items-center">
-            <span className="text-[14px] text-text-secondary">{currentStep + 1} / {totalSteps}</span>
-            <div
-              className="ml-3 flex-1 h-1 bg-background-tertiary rounded-full overflow-hidden"
-              role="progressbar"
-              aria-valuenow={currentStep + 1}
-              aria-valuemin={1}
-              aria-valuemax={totalSteps}
-            >
-              <div
-                className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
-                style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
-            disabled={!canProceed()}
-            className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
-          >
-            {currentStep === totalSteps - 1 ? submitLabel : "다음"}
-          </button>
-        </div>
-      </footer>
+        {renderQuestion()}
+      </QuestionStepScaffold>
 
       <Modal
         isOpen={showLoginModal}
