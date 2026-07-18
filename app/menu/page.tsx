@@ -34,8 +34,8 @@ const THUMB = {
 
 function RowThumb({ src }: { src: string }) {
   return (
-    <div className="relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl bg-background-secondary">
-      <Image src={src} alt="" fill sizes="80px" className="object-cover object-bottom" />
+    <div className="relative aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-xl bg-background-secondary">
+      <Image src={src} alt="" fill sizes="80px" className="object-cover" />
     </div>
   );
 }
