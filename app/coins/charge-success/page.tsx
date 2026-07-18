@@ -19,7 +19,7 @@ import { FullScreenLoading } from "@/components/loading";
 const AD_SEND_TO = "AW-18186268670/_rXuCOX2yrMcEP7f8d9D";
 
 // open redirect 방지 — 허용된 entry 복귀 경로만.
-const RETURN_WHITELIST = ["/coins", "/teaser", "/yearly", "/yearly/input", "/today", "/today/input"];
+const RETURN_WHITELIST = ["/coins", "/teaser", "/yearly", "/yearly/input", "/today", "/today/input", "/marriage", "/marriage/input"];
 
 const RETURN_LABEL: Record<string, string> = {
   "/coins": "확인",
@@ -28,6 +28,8 @@ const RETURN_LABEL: Record<string, string> = {
   "/yearly/input": "올해 운세 보기",
   "/today": "오늘 운세 보기",
   "/today/input": "오늘 운세 보기",
+  "/marriage": "결혼운 보기",
+  "/marriage/input": "결혼운 보기",
 };
 
 function fireConversion(orderId: string, value: number) {

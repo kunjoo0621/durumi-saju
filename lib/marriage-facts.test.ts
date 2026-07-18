@@ -1,0 +1,121 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { deriveMarriageFacts } from "./marriage-facts";
+import { enrichSajuData } from "./utils/saju";
+import type { SajuData } from "./utils/saju";
+import type { FortuneResult } from "./utils/saju-fortune";
+
+// 일간 甲(목/양). 辛(금/음)=정관, 庚(금/양)=편관 → 관살혼잡. 여명.
+const chart: SajuData = {
+  year:  { heavenlyStem: "辛", earthlyBranch: "酉", hiddenStems: ["辛"] },       // 辛=정관
+  month: { heavenlyStem: "庚", earthlyBranch: "申", hiddenStems: ["庚","壬","戊"] }, // 庚=편관
+  day:   { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },        // 일간 甲, 일지 子
+  hour:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲","丙","戊"] },
+};
+
+test("여명: 정관+편관 존재 → 관성 배우자성 탐지 + 관살혼잡", () => {
+  const enriched = enrichSajuData(chart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, chart, "female", "솔로", 2026);
+  assert.equal(facts.spouseStarType, "관성");
+  assert.equal(facts.spouseStarAbsent, false);
+  assert.equal(facts.gwansalHonjap, true);
+  assert.ok(facts.spouseStars.some((s) => s.star === "정관"));
+  assert.ok(facts.spouseStars.some((s) => s.star === "편관"));
+});
+
+test("남명: 재성이 배우자성", () => {
+  const enriched = enrichSajuData(chart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, chart, "male", "기혼", 2026);
+  assert.equal(facts.spouseStarType, "재성");
+});
+
+test("일지 지장간 십성 산출", () => {
+  const enriched = enrichSajuData(chart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, chart, "female", "솔로", 2026);
+  // 일지 子 지장간 癸(수/음) vs 일간 甲(목/양) → 정인
+  assert.ok(facts.spousePalaceHiddenStars.includes("정인"));
+});
+
+const fortune: FortuneResult = {
+  daeun: {
+    gender: "female", isForward: true, startAge: 5,
+    startAgeDetail: { years: 5, months: 0, days: 0 }, daysToTerm: 0,
+    pillars: [
+      { index: 0, startAge: 25, endAge: 34, pillar: "辛酉", stem: "辛", branch: "酉", tenStar: "정관", twelveStage: "제왕" },
+    ],
+  },
+  seun: [
+    // 일간 甲, 일지 子. 丑=子와 육합(子丑合) → 세운합일지. 辛=정관 투출 → 배우자성투출.
+    { year: 2027, age: 33, pillar: "辛丑", stem: "辛", branch: "丑", tenStar: "정관", twelveStage: "관대" },
+  ],
+};
+
+test("타이밍: 세운 지지 일지합 + 배우자성 투출 → 트리거 2종", () => {
+  const enriched = enrichSajuData(chart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, fortune, chart, "female", "솔로", 2026);
+  const w = facts.timingWindows.find((x) => x.year === 2027);
+  assert.ok(w, "2027 창이 있어야 함");
+  assert.ok(w!.triggers.includes("세운합일지"));
+  assert.ok(w!.triggers.includes("배우자성투출"));
+  assert.equal(w!.isPast, false);
+});
+
+// 배우자궁(일지) 안정도 — 일지 子 기준 다른 지지를 바꿔가며 합/충 유무만 다르게 구성.
+// 寅은 子와 6합·6충 어느 쪽에도 해당하지 않는 중립 지지(필러용).
+const dayBranchChungChart: SajuData = {
+  year:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  month: { heavenlyStem: "庚", earthlyBranch: "午", hiddenStems: ["丁", "己"] }, // 子午沖
+  day:   { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+const dayBranchHapChart: SajuData = {
+  year:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  month: { heavenlyStem: "己", earthlyBranch: "丑", hiddenStems: ["己", "癸", "辛"] }, // 子丑合
+  day:   { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+const dayBranchNeutralChart: SajuData = {
+  year:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  month: { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  day:   { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+test("배우자궁 안정도: 일지 충 있으면 불안정", () => {
+  const enriched = enrichSajuData(dayBranchChungChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchChungChart, "female", "솔로", 2026);
+  assert.ok(facts.dayBranchChung.length > 0, "일지 충이 탐지돼야 함");
+  assert.equal(facts.spousePalaceStability, "불안정");
+});
+
+test("배우자궁 안정도: 충 없이 일지 합 있으면 안정", () => {
+  const enriched = enrichSajuData(dayBranchHapChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchHapChart, "female", "솔로", 2026);
+  assert.equal(facts.dayBranchChung.length, 0);
+  assert.ok(facts.dayBranchHap.length > 0, "일지 합이 탐지돼야 함");
+  assert.equal(facts.spousePalaceStability, "안정");
+});
+
+test("배우자궁 안정도: 합도 충도 없으면 보통", () => {
+  const enriched = enrichSajuData(dayBranchNeutralChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchNeutralChart, "female", "솔로", 2026);
+  assert.equal(facts.dayBranchChung.length, 0);
+  assert.equal(facts.dayBranchHap.length, 0);
+  assert.equal(facts.spousePalaceStability, "보통");
+});
+
+test("무관/무재 폴백: 배우자성 없으면 대운 배우자성 구간 수집", () => {
+  // 배우자성 없는 차트: 일간 甲, 배우자성(정/편관) 천간·지장간 전무하게 구성
+  const noStar: SajuData = {
+    year:  { heavenlyStem: "甲", earthlyBranch: "寅", hiddenStems: ["甲","丙","戊"] },
+    month: { heavenlyStem: "丙", earthlyBranch: "午", hiddenStems: ["丁","己"] },
+    day:   { heavenlyStem: "甲", earthlyBranch: "寅", hiddenStems: ["甲","丙","戊"] },
+    hour:  { heavenlyStem: "戊", earthlyBranch: "辰", hiddenStems: ["戊","乙","癸"] },
+  };
+  const en = enrichSajuData(noStar, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(en, fortune, noStar, "female", "솔로", 2026);
+  assert.equal(facts.spouseStarAbsent, true);
+  assert.ok(facts.daeunSpouseYears.length >= 1, "대운 정관(辛酉) 구간이 잡혀야 함");
+});
