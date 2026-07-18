@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Coins, Vault, CalendarBlank } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { SkeletonBar } from "@/components/loading";
 
@@ -22,23 +23,61 @@ type FromPrimaryData = {
   sourceResultId: string;
 };
 
+// 재물운이 실제로 짚어주는 것 — 재물 관점의 원국 해석 3축. 일반 운세 한 줄과 다른 값어치를
+// 구체적으로 보여준다(클리셰·제네릭 금지). 명리 근거: 재성(정재·편재), 재를 담는 그릇(신강·신약),
+// 세운 타이밍.
+const WEALTH_VALUES = [
+  {
+    Icon: Coins,
+    title: "타고난 재물의 결",
+    desc: "정재·편재 어느 쪽이 강한지, 꾸준히 버는 결인지 크게 당기는 결인지 봐.",
+  },
+  {
+    Icon: Vault,
+    title: "재물을 담는 그릇",
+    desc: "그 재물을 감당하는 그릇이 얼마나 되는지, 신강·신약과 재성의 균형으로 짚어.",
+  },
+  {
+    Icon: CalendarBlank,
+    title: "재물운이 열리는 때",
+    desc: "언제 돈이 붙고, 언제 지출·투자를 조심해야 하는지 시기를 짚어.",
+  },
+] as const;
+
 // 재물운으로 무엇을 봐주는지 — 모든 정상 상태에서 공통 노출(설명 열람은 비로그인도 가능).
 function AboutCard({ wealthScore }: { wealthScore?: number }) {
   return (
-    <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 space-y-4">
-      <div className="space-y-2.5">
-        <h2 className="text-[17px] font-bold text-text-primary">이런 걸 봐줘</h2>
-        <ul className="space-y-2 text-body-2 text-text-secondary">
-          <li>· 재성(정재·편재)이 어디에 있고 어떤 유형인지</li>
-          <li>· 그 재물을 담는 그릇이 얼마나 되는지</li>
-          <li>· 재물 흐름이 강해지는 시기와 관리가 필요한 시기</li>
-        </ul>
+    <div className="space-y-5">
+      <div className="space-y-5">
+        {WEALTH_VALUES.map(({ Icon, title, desc }) => (
+          <div key={title} className="flex gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+              <Icon size={22} weight="duotone" className="text-primary" />
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <h3 className="text-[16px] font-bold leading-snug text-text-primary break-keep">
+                {title}
+              </h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-text-secondary break-keep">
+                {desc}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
-      {typeof wealthScore === "number" && wealthScore > 0 && (
-        <p className="text-[13px] text-text-tertiary border-t border-white/5 pt-3">
-          지난 사주 분석에서 재물운 {wealthScore}점이 나왔었지. 그 점수 뒤에 있는 이유를 더 파볼게.
+      <div className="rounded-2xl bg-background-secondary border border-white/5 px-5 py-4 space-y-2">
+        <p className="text-[13px] leading-relaxed text-text-tertiary break-keep">
+          가벼운 운세 한 줄이 아니야. 사주 원국을 그대로 계산한 뒤,{" "}
+          <span className="font-medium text-text-secondary">재물 관점만 따로 깊이</span> 풀어줘.
         </p>
-      )}
+        {typeof wealthScore === "number" && wealthScore > 0 && (
+          <p className="text-[13px] leading-relaxed text-text-tertiary break-keep">
+            지난 분석에서 재물운{" "}
+            <span className="font-medium text-text-secondary">{wealthScore}점</span>이 나왔지. 그
+            점수 뒤에 있는 이유를 파볼게.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { HouseLine, Heart, Clock } from "@phosphor-icons/react";
 import Header from "@/components/layout/Header";
 import { SkeletonBar } from "@/components/loading";
 
@@ -22,23 +23,60 @@ type FromPrimaryData = {
   sourceResultId: string;
 };
 
+// 결혼운이 실제로 짚어주는 것 — 배우자 관점의 원국 해석 3축. 일반 운세 한 줄과 다른 값어치를
+// 구체적으로 보여준다(클리셰·제네릭 금지). 명리 근거: 배우자궁=일지, 배우자성, 세운 타이밍.
+const MARRIAGE_VALUES = [
+  {
+    Icon: HouseLine,
+    title: "배우자궁이 지금 어떤 상태인지",
+    desc: "타고난 배우자 자리(일지)가 안정적으로 받쳐주는지, 흔들리는지 짚어.",
+  },
+  {
+    Icon: Heart,
+    title: "나에게 오는 인연의 결",
+    desc: "어떤 사람에게 끌리고, 관계에서 어떤 패턴이 반복되는지 풀어.",
+  },
+  {
+    Icon: Clock,
+    title: "인연이 무르익는 때",
+    desc: "언제 인연이 강해지고, 언제 한 박자 쉬어야 하는지 시기를 봐.",
+  },
+] as const;
+
 // 결혼운으로 무엇을 봐주는지 — 모든 정상 상태에서 공통 노출(설명 열람은 비로그인도 가능).
 function AboutCard({ loveScore }: { loveScore?: number }) {
   return (
-    <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 space-y-4">
-      <div className="space-y-2.5">
-        <h2 className="text-[17px] font-bold text-text-primary">이런 걸 봐줘</h2>
-        <ul className="space-y-2 text-body-2 text-text-secondary">
-          <li>· 배우자궁(일지)이 지금 어떤 상태인지</li>
-          <li>· 나에게 끌리는 배우자상과 연애·관계 패턴</li>
-          <li>· 인연이 강해지는 시기와 조심할 시기</li>
-        </ul>
+    <div className="space-y-5">
+      <div className="space-y-5">
+        {MARRIAGE_VALUES.map(({ Icon, title, desc }) => (
+          <div key={title} className="flex gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+              <Icon size={22} weight="duotone" className="text-primary" />
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <h3 className="text-[16px] font-bold leading-snug text-text-primary break-keep">
+                {title}
+              </h3>
+              <p className="mt-1 text-[14px] leading-relaxed text-text-secondary break-keep">
+                {desc}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
-      {typeof loveScore === "number" && loveScore > 0 && (
-        <p className="text-[13px] text-text-tertiary border-t border-white/5 pt-3">
-          지난 사주 분석에서 연애운 {loveScore}점이 나왔었지. 그 점수 뒤에 있는 이유를 더 파볼게.
+      <div className="rounded-2xl bg-background-secondary border border-white/5 px-5 py-4 space-y-2">
+        <p className="text-[13px] leading-relaxed text-text-tertiary break-keep">
+          가벼운 운세 한 줄이 아니야. 사주 원국을 그대로 계산한 뒤,{" "}
+          <span className="font-medium text-text-secondary">배우자 관점만 따로 깊이</span> 풀어줘.
         </p>
-      )}
+        {typeof loveScore === "number" && loveScore > 0 && (
+          <p className="text-[13px] leading-relaxed text-text-tertiary break-keep">
+            지난 분석에서 연애운{" "}
+            <span className="font-medium text-text-secondary">{loveScore}점</span>이 나왔지. 그 점수
+            뒤에 있는 이유를 파볼게.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
