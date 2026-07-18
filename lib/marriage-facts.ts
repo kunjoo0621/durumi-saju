@@ -18,6 +18,7 @@ export interface MarriageFacts {
   spouseStarType: "관성"|"재성"; spouseStars: SpouseStarHit[]; spouseStarAbsent: boolean;
   gwansalHonjap: boolean; spousePalaceHiddenStars: string[];
   dayBranchHap: string[]; dayBranchChung: string[]; dayBranchGongmang: boolean;
+  spousePalaceStability: "안정" | "보통" | "불안정";
   dohwa: boolean; hongyeom: boolean;
   timingWindows: TimingWindow[];
   daeunSpouseYears: Array<{ startAge: number; endAge: number; star: string }>;
@@ -98,6 +99,12 @@ export function deriveMarriageFacts(
   const dohwa = matches.some(m => m.label.includes("도화"));
   const hongyeom = matches.some(m => m.label.includes("홍염"));
 
+  // 4-1) 배우자궁(일지) 안정도 — 일지 합/충 실측만으로 결정론 산출(dayBranchGongmang은
+  // 위 주석대로 이 엔진에서 항상 false라 판단축에서 제외). 충이 하나라도 있으면 불안정이
+  // 최우선(합보다 충의 영향이 크다는 통설), 충 없이 합이 있으면 안정, 둘 다 없으면 보통.
+  const spousePalaceStability: MarriageFacts["spousePalaceStability"] =
+    dayBranchChung.length > 0 ? "불안정" : dayBranchHap.length > 0 ? "안정" : "보통";
+
   // 5) 타이밍 — Task 2에서 채움
   const { timingWindows, daeunSpouseYears } = deriveTiming(
     fortune, dayStem, dayBranch, spouseSet, currentYear, spouseStarAbsent,
@@ -106,7 +113,7 @@ export function deriveMarriageFacts(
   return {
     sex, maritalStatus, dayStem, dayBranch, spouseStarType,
     spouseStars, spouseStarAbsent, gwansalHonjap, spousePalaceHiddenStars,
-    dayBranchHap, dayBranchChung, dayBranchGongmang, dohwa, hongyeom,
+    dayBranchHap, dayBranchChung, dayBranchGongmang, spousePalaceStability, dohwa, hongyeom,
     timingWindows, daeunSpouseYears,
   };
 }

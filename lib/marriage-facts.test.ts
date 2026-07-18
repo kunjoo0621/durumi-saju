@@ -60,6 +60,52 @@ test("타이밍: 세운 지지 일지합 + 배우자성 투출 → 트리거 2�
   assert.equal(w!.isPast, false);
 });
 
+// 배우자궁(일지) 안정도 — 일지 子 기준 다른 지지를 바꿔가며 합/충 유무만 다르게 구성.
+// 寅은 子와 6합·6충 어느 쪽에도 해당하지 않는 중립 지지(필러용).
+const dayBranchChungChart: SajuData = {
+  year:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  month: { heavenlyStem: "庚", earthlyBranch: "午", hiddenStems: ["丁", "己"] }, // 子午沖
+  day:   { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+const dayBranchHapChart: SajuData = {
+  year:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  month: { heavenlyStem: "己", earthlyBranch: "丑", hiddenStems: ["己", "癸", "辛"] }, // 子丑合
+  day:   { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+const dayBranchNeutralChart: SajuData = {
+  year:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  month: { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+  day:   { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour:  { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+test("배우자궁 안정도: 일지 충 있으면 불안정", () => {
+  const enriched = enrichSajuData(dayBranchChungChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchChungChart, "female", "솔로", 2026);
+  assert.ok(facts.dayBranchChung.length > 0, "일지 충이 탐지돼야 함");
+  assert.equal(facts.spousePalaceStability, "불안정");
+});
+
+test("배우자궁 안정도: 충 없이 일지 합 있으면 안정", () => {
+  const enriched = enrichSajuData(dayBranchHapChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchHapChart, "female", "솔로", 2026);
+  assert.equal(facts.dayBranchChung.length, 0);
+  assert.ok(facts.dayBranchHap.length > 0, "일지 합이 탐지돼야 함");
+  assert.equal(facts.spousePalaceStability, "안정");
+});
+
+test("배우자궁 안정도: 합도 충도 없으면 보통", () => {
+  const enriched = enrichSajuData(dayBranchNeutralChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchNeutralChart, "female", "솔로", 2026);
+  assert.equal(facts.dayBranchChung.length, 0);
+  assert.equal(facts.dayBranchHap.length, 0);
+  assert.equal(facts.spousePalaceStability, "보통");
+});
+
 test("무관/무재 폴백: 배우자성 없으면 대운 배우자성 구간 수집", () => {
   // 배우자성 없는 차트: 일간 甲, 배우자성(정/편관) 천간·지장간 전무하게 구성
   const noStar: SajuData = {

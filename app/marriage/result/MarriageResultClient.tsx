@@ -59,6 +59,7 @@ interface ApiResponse {
   spouseStarType?: "관성" | "재성";
   gwansalHonjap?: boolean;
   spouseStarAbsent?: boolean;
+  spousePalaceStability?: "안정" | "보통" | "불안정";
   result?: MarriageBlocks;
   teaser?: TeaserFacts | null;
   createdAt: string;
@@ -324,7 +325,7 @@ function MarriageResultBody({
   const cardLabels = STATUS_CARD_LABELS[data.maritalStatus] ?? STATUS_CARD_LABELS["솔로"];
 
   const starGauge = deriveStarGauge(spouseStarAbsent, gwansalHonjap, spouseStarType);
-  const palaceGauge = derivePalaceGauge(result.spousePalace);
+  const palaceGauge = derivePalaceGauge(data.spousePalaceStability);
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary pb-32">
@@ -581,18 +582,18 @@ function deriveStarGauge(
   return { value: 88, verdict: `${starType}이 또렷하게 있어요` };
 }
 
-// 배우자궁 안정도 — 일지 합/충 원시 값은 서버에서 프롬프트 조립에만 쓰이고 API 응답에는
-// 내려오지 않는다(marriage_results 테이블에 별도 컬럼 없음, lib/marriage-facts.ts 참고).
-// 그래서 이 축은 이미 명리 가드(lib/marriage-postprocess.ts)를 통과한 spousePalace 본문
-// 텍스트에서 "안정/불안정" 신호만 가볍게 읽어 3단계 포지션을 잡는 소프트 휴리스틱이다 —
-// 새 명리값을 만들어내는 게 아니라 이미 생성된 문장을 시각적으로 요약할 뿐이고, 바로 아래에
-// 원문 전체가 그대로 노출되므로 모순 리스크는 낮다. (운영자 검수 시 문구 톤 재확인 권장)
-function derivePalaceGauge(spousePalaceText: string): { value: number; verdict: string } {
-  const text = spousePalaceText || "";
-  const unstable = /불안정|흔들리|흔들려|깨지/.test(text);
-  const stable = /안정적|안정된|든든/.test(text);
-  if (unstable && !stable) return { value: 25, verdict: "흔들리는 결이 보여요" };
-  if (stable && !unstable) return { value: 80, verdict: "안정적인 결이에요" };
+// 배우자궁 안정도 — 엔진 확정값(spousePalaceStability, lib/marriage-facts.ts 일지 6합/6충
+// 실측 기반)만으로 결정론 산출. deriveStarGauge와 동일하게 3단계 고정 포지션이지 연속
+// 퍼센트가 아니다(fabrication 방지). 이전에는 LLM 산문에서 "흔들리"/"안정적" 등 키워드를
+// 정규식으로 긁어와 판정했으나, "크게 흔들릴 걱정은 없어요" 같은 부정문에서 "흔들리"만
+// 매치돼 안정 서술을 불안정으로 오분류하는 버그가 있었다 — 실데이터로 교체.
+// spousePalaceStability가 없는(마이그레이션 이전) row는 판별 불가이므로 중립 "보통"으로
+// 폴백한다 — 절대 옛 정규식 휴리스틱으로 되돌아가지 않는다.
+function derivePalaceGauge(
+  stability: "안정" | "보통" | "불안정" | undefined,
+): { value: number; verdict: string } {
+  if (stability === "불안정") return { value: 25, verdict: "흔들리는 결이 보여요" };
+  if (stability === "안정") return { value: 80, verdict: "안정적인 결이에요" };
   return { value: 50, verdict: "결이 섞여 있어요" };
 }
 

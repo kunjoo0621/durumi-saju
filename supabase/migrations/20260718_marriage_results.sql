@@ -17,6 +17,7 @@ create table if not exists public.marriage_results (
   spouse_star_type text,               -- 관성/재성
   gwansal_honjap boolean,
   spouse_star_absent boolean,
+  spouse_palace_stability text,        -- 안정/보통/불안정 (일지 6합/6충 결정론 산출, lib/marriage-facts.ts)
   teaser_json jsonb,
   full_json jsonb,
   unlocked_at timestamptz default now(),
@@ -72,3 +73,4 @@ alter table public.marriage_result_unlocks enable row level security;
 comment on table public.marriage_results is '결혼운/애정운 심층 검사 결과. 관계상태별 row.';
 comment on column public.marriage_results.marital_status is '솔로/연애중/기혼/다시 혼자 (검사 내부 4분법).';
 comment on column public.marriage_results.marriage_grade is '연애운 점수 결정론 매핑 등급 SS~C.';
+comment on column public.marriage_results.spouse_palace_stability is '배우자궁(일지) 안정도 — 일지 6합/6충 실측 기반 결정론 산출(안정/보통/불안정). prose 키워드 휴리스틱 아님.';

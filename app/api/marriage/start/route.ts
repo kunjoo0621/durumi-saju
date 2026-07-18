@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
           spouse_star_type: facts.spouseStarType,
           gwansal_honjap: facts.gwansalHonjap,
           spouse_star_absent: facts.spouseStarAbsent,
+          spouse_palace_stability: facts.spousePalaceStability,
           teaser_json: teaserJson,
         },
         { onConflict: "user_id,input_hash,marital_status" },

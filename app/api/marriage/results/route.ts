@@ -14,7 +14,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
 
 const SELECT_COLUMNS =
-  "id, user_id, marital_status, marriage_grade, spouse_star_type, gwansal_honjap, spouse_star_absent, teaser_json, full_json, created_at";
+  "id, user_id, marital_status, marriage_grade, spouse_star_type, gwansal_honjap, spouse_star_absent, spouse_palace_stability, teaser_json, full_json, created_at";
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
       spouseStarType: row.spouse_star_type,
       gwansalHonjap: row.gwansal_honjap,
       spouseStarAbsent: row.spouse_star_absent,
+      spousePalaceStability: row.spouse_palace_stability,
       result: row.full_json,
       teaser: row.teaser_json,
       createdAt: row.created_at,
