@@ -3,6 +3,7 @@ import {
   BRANCH_INFO,
   getTenStar,
   getPairRelation,
+  DOHWA,
   type EnrichedSajuData,
 } from "./utils/saju-enrichment";
 import type { SajuData } from "./utils/saju";
@@ -110,10 +111,36 @@ export function deriveMarriageFacts(
   };
 }
 
-// Task 2에서 실제 구현. 여기선 컴파일용 스텁.
+// 세운 3트리거(세운합일지·배우자성투출·도화홍염) + 대운 배우자성 구간(무관/무재 폴백용) 산출.
+// 실측: FortuneResult.seun[].tenStar / .daeun.pillars[].tenStar 는 @gracefullight/saju
+// getTenGodForStem(...).korean 값으로 이미 bare("정관", 하니자 미포함) — bareStar()는 no-op이지만
+// 브리프의 안전장치 의도를 살려 그대로 적용(형식이 바뀌어도 깨지지 않도록).
 function deriveTiming(
-  _fortune: FortuneResult | null, _dayStem: string, _dayBranch: string,
-  _spouseSet: Set<string>, _currentYear: number, _absent: boolean,
+  fortune: FortuneResult | null, _dayStem: string, dayBranch: string,
+  spouseSet: Set<string>, currentYear: number, _absent: boolean,
 ): { timingWindows: TimingWindow[]; daeunSpouseYears: MarriageFacts["daeunSpouseYears"] } {
-  return { timingWindows: [], daeunSpouseYears: [] };
+  const timingWindows: TimingWindow[] = [];
+  const daeunSpouseYears: MarriageFacts["daeunSpouseYears"] = [];
+  if (!fortune) return { timingWindows, daeunSpouseYears };
+
+  const dohwaBranch = DOHWA[dayBranch]; // 일지 기준 도화 지지
+
+  for (const s of fortune.seun ?? []) {
+    const triggers: TimingWindow["triggers"] = [];
+    const rel = getPairRelation(dayBranch, s.branch);
+    if (rel.type === "hap") triggers.push("세운합일지");
+    if (spouseSet.has(bareStar(s.tenStar))) triggers.push("배우자성투출");
+    if (dohwaBranch && s.branch === dohwaBranch) triggers.push("도화홍염");
+    if (triggers.length > 0) {
+      timingWindows.push({ year: s.year, age: s.age, triggers, isPast: s.year < currentYear });
+    }
+  }
+
+  for (const d of fortune.daeun?.pillars ?? []) {
+    if (spouseSet.has(bareStar(d.tenStar))) {
+      daeunSpouseYears.push({ startAge: d.startAge, endAge: d.endAge, star: bareStar(d.tenStar) });
+    }
+  }
+
+  return { timingWindows, daeunSpouseYears };
 }
