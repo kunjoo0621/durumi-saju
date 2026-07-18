@@ -1,11 +1,28 @@
 // 단정 예언 금지어 — 문장 단위로만 컷하므로(scrubForbiddenPredictions) 긍정 맥락 문장은
 // 안전하다. 예: "이별의 아픔을 딛고"는 /이별수/에 안 걸린다. 결측/빈 블록은 F-2가 후단에서 잡는다.
-const FORBIDDEN_PREDICTIONS = [
-  /이혼수?/, /사별/, /외도/, /바람(을|이|날)/, /혼자 늙/, /팔자가 세/,
-  /이별수/, /곧\s*헤어/, /헤어질\s*(수|운명|팔자)/, /파혼/, /갈라서|갈라설/, /재혼/,
+// ★관계상태 분기(2026-07-19): "다시 혼자"(이혼·사별) 사용자에게 /재혼/·/사별/·/이혼/ 무조건
+// 컷은 정당 문맥(재혼 타이밍 = 이 세그먼트의 핵심 콘텐츠, "이혼 후"라는 상태 서술)까지 잘라
+// 리포트를 얇게 만들던 구멍 — 예언·낙인형 패턴만 남기고 상태 서술은 허용한다.
+const FORBIDDEN_PREDICTIONS_BASE = [
+  /외도/, /바람(을|이|날)/, /혼자 늙/, /팔자가 세/,
+  /이별수/, /곧\s*헤어/, /헤어질\s*(수|운명|팔자)/, /파혼/, /갈라서|갈라설/,
   /결혼\s*운이?\s*없/, /불임/, /자식\s*(이|은|을)?\s*없/, /자식\s*복이?\s*없/,
   /바람\s*(기|피)/, /과부/, /독수공방/, /(일찍|먼저)\s*(떠나|떠날|여의)/,
 ];
+// 기본(솔로·연애중·기혼): 이 단어들이 등장할 정당 맥락이 없다 — 단어 자체를 컷(기존 동작 유지).
+const FORBIDDEN_DEFAULT_EXTRA = [/이혼수?/, /사별/, /재혼/];
+// 다시 혼자: 예언·낙인형만 컷. "재혼 시기", "이혼 후", "사별의 아픔을 딛고"는 정당 문맥.
+const FORBIDDEN_REMARRIED_EXTRA = [
+  /이혼수/,                       // 예언형만 ("이혼 후"는 통과)
+  /사별(수|할|하게)/,             // 예언형만 ("사별의 아픔"은 통과)
+  /재혼.{0,6}(못|없|힘들|어렵)/,  // "재혼 못 한다" 낙인만 (재혼 자체는 핵심 소재)
+];
+
+export function forbiddenPredictionsFor(maritalStatus?: string): RegExp[] {
+  return maritalStatus === "다시 혼자"
+    ? [...FORBIDDEN_PREDICTIONS_BASE, ...FORBIDDEN_REMARRIED_EXTRA]
+    : [...FORBIDDEN_PREDICTIONS_BASE, ...FORBIDDEN_DEFAULT_EXTRA];
+}
 // 괴강살·백호살·양인살은 일주/일지만 보면 계산 가능해 보여 LLM이 학습 데이터에서 끌어와 지어내기 쉬운
 // 일주 파생 신살이다(프롬프트 절대 규칙 1이 1차 방어). 여기선 그 누수를 잡는 2차 안전망.
 const FORBIDDEN_SHINSAL = [/과숙살/, /고신살/, /상부살/, /홍란/, /천희/, /괴강살/, /백호살/, /양인살/];
@@ -40,12 +57,13 @@ export function validateMarriageBlocks(parsed: any, opts?: { minAdvice?: number 
 export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: string): MarriageGuardResult {
   const violations: string[] = [];
   const blocks = JSON.parse(JSON.stringify(parsed ?? {}));
+  const forbidden = forbiddenPredictionsFor(facts?.maritalStatus); // ★ status-aware
 
   // 1) 조언: 근거 태그 필수 + 단정 예언이 있는 항목은 통째로 컷 (원문 기준 판정)
   if (Array.isArray(blocks.advice)) {
     blocks.advice = blocks.advice.filter((a: any) => {
       const text = String(a?.text ?? "");
-      if (FORBIDDEN_PREDICTIONS.some(re => re.test(text))) { violations.push(`단정 예언 제거: ${text.slice(0,20)}`); return false; }
+      if (forbidden.some(re => re.test(text))) { violations.push(`단정 예언 제거: ${text.slice(0,20)}`); return false; }
       if (!a?.tag || !/\[근거:.+\]/.test(a.tag)) { violations.push(`근거태그 없음 컷: ${text.slice(0,20)}`); return false; }
       return true;
     });
@@ -69,7 +87,7 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
       const allBlank = sentences.every((sent) => sent.trim() === "");
       const keptSentences = sentences.filter((sent) => {
         if (sent.trim() === "") return true;
-        if (FORBIDDEN_PREDICTIONS.some((re) => re.test(sent))) {
+        if (forbidden.some((re) => re.test(sent))) {
           violations.push(`단정 예언 제거(${label})`);
           return false;
         }

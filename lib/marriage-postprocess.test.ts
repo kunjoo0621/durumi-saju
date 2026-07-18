@@ -155,3 +155,39 @@ test("validateMarriageBlocks: advice 유효 항목 부족(minAdvice 기본 2)", 
   // minAdvice:1 이면 통과
   assert.deepEqual(validateMarriageBlocks(p, { minAdvice: 1 }), []);
 });
+
+// ── Task 2: 금지어 status-aware 분리 (2026-07-19) ──
+test("다시 혼자: '재혼' 정당 문맥(앞으로의 시기)은 보존", () => {
+  const f: any = { sex: "female", maritalStatus: "다시 혼자" };
+  const parsed = { timingFlow: "재혼을 생각한다면 2027년 이후의 인연 창을 살펴보면 좋아.", advice: [] };
+  const { blocks, violations } = applyMarriageGuards(parsed, f, "");
+  assert.ok(blocks.timingFlow.includes("재혼"));
+  assert.equal(violations.filter((v: string) => v.includes("단정")).length, 0);
+});
+
+test("다시 혼자: '이혼 후'(과거 언급)는 보존, '이혼수'(예언형)는 컷", () => {
+  const f: any = { sex: "female", maritalStatus: "다시 혼자" };
+  const parsed = {
+    partnerProfile: "이혼 후 다시 시작하는 인연은 서두르지 않는 게 좋아. 이혼수가 또 보인다.",
+    advice: [],
+  };
+  const { blocks } = applyMarriageGuards(parsed, f, "");
+  assert.ok(blocks.partnerProfile.includes("이혼 후"));
+  assert.ok(!blocks.partnerProfile.includes("이혼수"));
+});
+
+test("다시 혼자: '재혼 못 한다' 낙인·'사별수' 예언은 여전히 컷", () => {
+  const f: any = { sex: "male", maritalStatus: "다시 혼자" };
+  const parsed = { timingFlow: "너는 재혼 못 할 팔자야. 사별수도 보여.", advice: [] };
+  const { blocks, violations } = applyMarriageGuards(parsed, f, "");
+  assert.ok(!blocks.timingFlow.includes("재혼 못"));
+  assert.ok(!blocks.timingFlow.includes("사별수"));
+  assert.ok(violations.length >= 2);
+});
+
+test("기혼(비-다시혼자): '재혼'·'사별' 단어 자체가 기존대로 컷", () => {
+  const f: any = { sex: "female", maritalStatus: "기혼" };
+  const parsed = { timingFlow: "재혼 이야기가 나올 수 있어.", advice: [] };
+  const { blocks } = applyMarriageGuards(parsed, f, "");
+  assert.ok(!blocks.timingFlow.includes("재혼"));
+});
