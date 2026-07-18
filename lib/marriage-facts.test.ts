@@ -106,6 +106,84 @@ test("배우자궁 안정도: 합도 충도 없으면 보통", () => {
   assert.equal(facts.spousePalaceStability, "보통");
 });
 
+// ── 배우자성 손상(비겁극재/상관견관/충거) ──────────────────────────────
+// 실제 운영자 개인사주 메인 리포트가 "겁재 탈재/손재 구조"로 읽는 실사용자 차트
+// (lib/wealth-facts.test.ts의 userChart와 동일 원국). 일간 癸(수/음).
+// 월간 壬(수/양)=겁재(같은 오행, 다른 음양) 직접 투출 + 월지 午 정기 丁(화/음)=
+// 편재(CONTROLS[수]=화, sameYY(음,음)=true → 편재, 남명 배우자성) — 겁재가
+// 배우자성 지지 바로 위에 앉은 "개두" 형태.
+const spouseKeukMaleChart: SajuData = {
+  year: { heavenlyStem: "乙", earthlyBranch: "亥", hiddenStems: ["戊", "甲", "壬"] },
+  month: { heavenlyStem: "壬", earthlyBranch: "午", hiddenStems: ["丙", "己", "丁"] },
+  day: { heavenlyStem: "癸", earthlyBranch: "未", hiddenStems: ["丁", "乙", "己"] },
+  hour: { heavenlyStem: "庚", earthlyBranch: "申", hiddenStems: ["戊", "壬", "庚"] },
+};
+
+test("배우자성 손상(남명, 실사용자 차트): 월간 壬(겁재)이 월지 午 정기 丁(편재=배우자성) 위에 개두 → spouseStarDamaged true, 비겁극재", () => {
+  const enriched = enrichSajuData(spouseKeukMaleChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, spouseKeukMaleChart, "male", "기혼", 2026);
+  assert.equal(facts.spouseStarType, "재성");
+  assert.equal(facts.spouseStarDamaged, true);
+  assert.ok(
+    facts.spouseStarDamageReason.includes("비겁극재"),
+    `실측 reason=${JSON.stringify(facts.spouseStarDamageReason)}`,
+  );
+  // 이 차트는 배우자궁(일지 未) 자체는 충이 없어 spousePalaceStability가 "안정"에 가까울 수
+  // 있다(합충 없으면 "보통") — 배우자성 손상은 궁 안정도와 독립된 축임을 확인.
+  assert.equal(facts.dayBranchChung.length, 0, "일지 충 없음(독립 판정 확인용)");
+});
+
+// 여명 상관견관: 일간 甲(목/양). CONTROLS-역(금)이 관성(배우자성) — 월간 丁(화/음)=상관
+// (GENERATES[목]=화, sameYY(양,음)=false→상관) 직접 투출 + 월지 酉 정기 辛(금/음)=정관
+// (CONTROLS[금]=목=dayMaster, sameYY(양,음)=false→정관, 여명 배우자성) — 상관이 배우자성
+// 지지 바로 위에 앉은 개두 형태. 년지 丑·시지 寅은 충 관계를 만들지 않는 중립 필러.
+const spouseKeukFemaleChart: SajuData = {
+  year: { heavenlyStem: "己", earthlyBranch: "丑", hiddenStems: ["己", "癸", "辛"] },
+  month: { heavenlyStem: "丁", earthlyBranch: "酉", hiddenStems: ["辛"] },
+  day: { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour: { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+test("배우자성 손상(여명): 월간 丁(상관)이 월지 酉 정기 辛(정관=배우자성) 위에 개두 → spouseStarDamaged true, 상관견관", () => {
+  const enriched = enrichSajuData(spouseKeukFemaleChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, spouseKeukFemaleChart, "female", "솔로", 2026);
+  assert.equal(facts.spouseStarType, "관성");
+  assert.equal(facts.spouseStarDamaged, true);
+  assert.ok(
+    facts.spouseStarDamageReason.includes("상관견관"),
+    `실측 reason=${JSON.stringify(facts.spouseStarDamageReason)}`,
+  );
+});
+
+// 충거 단독 케이스: 일지 충만 있고(개두/인접 극은 없음) → "충거"만 발화.
+// dayBranchChungChart(위에서 이미 배우자궁 안정도 테스트에 쓰인 차트)를 재사용 —
+// 子午沖(월지 午 vs 일지 子)만 있고 비겁/식상 공격자 개두는 구성상 없음.
+test("배우자성 손상: 일지 충만 있으면 충거만 발화(극 없음)", () => {
+  const enriched = enrichSajuData(dayBranchChungChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchChungChart, "female", "솔로", 2026);
+  assert.equal(facts.spouseStarDamaged, true);
+  assert.deepEqual(facts.spouseStarDamageReason, ["충거"]);
+});
+
+// 클린 네거티브: 배우자성(정관, 년간 辛)은 존재하되 극/충 어느 쪽도 없는 차트.
+// 일간 甲(목/양). 배우자성을 담은 지지가 전무하도록(금 지지 酉·戌·申 회피) 구성 —
+// 관성은 오직 년간 천간 투출로만 존재하고, 어떤 지지도 정기·중기로 관성을 담지 않아
+// 극·충 판정축(지지 기반) 자체가 구조적으로 트리거되지 않는다.
+const spouseCleanChart: SajuData = {
+  year: { heavenlyStem: "辛", earthlyBranch: "卯", hiddenStems: ["乙"] },
+  month: { heavenlyStem: "戊", earthlyBranch: "巳", hiddenStems: ["丙", "庚", "戊"] },
+  day: { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour: { heavenlyStem: "丙", earthlyBranch: "寅", hiddenStems: ["甲", "丙", "戊"] },
+};
+
+test("배우자성 손상 클린 네거티브: 배우자성 존재하되 극/충 없으면 spouseStarDamaged false", () => {
+  const enriched = enrichSajuData(spouseCleanChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, spouseCleanChart, "female", "솔로", 2026);
+  assert.equal(facts.spouseStarAbsent, false, "정관(년간 辛) 투출로 배우자성은 존재해야 함");
+  assert.equal(facts.spouseStarDamaged, false);
+  assert.deepEqual(facts.spouseStarDamageReason, []);
+});
+
 test("무관/무재 폴백: 배우자성 없으면 대운 배우자성 구간 수집", () => {
   // 배우자성 없는 차트: 일간 甲, 배우자성(정/편관) 천간·지장간 전무하게 구성
   const noStar: SajuData = {

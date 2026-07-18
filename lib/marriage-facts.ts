@@ -12,6 +12,8 @@ import type { FortuneResult } from "./utils/saju-fortune";
 export type MaritalStatus = "솔로" | "연애중" | "기혼" | "다시 혼자";
 export interface SpouseStarHit { pillar: "year"|"month"|"day"|"hour"; source: "천간"|"지장간"; star: "정관"|"편관"|"정재"|"편재"; }
 export interface TimingWindow { year: number; age: number; triggers: Array<"세운합일지"|"배우자성투출"|"도화홍염">; isPast: boolean; }
+export type SpouseStarDamageReason = "비겁극재" | "상관견관" | "충거";
+
 export interface MarriageFacts {
   sex: "male"|"female"; maritalStatus: MaritalStatus;
   dayStem: string; dayBranch: string;
@@ -19,6 +21,12 @@ export interface MarriageFacts {
   gwansalHonjap: boolean; spousePalaceHiddenStars: string[];
   dayBranchHap: string[]; dayBranchChung: string[]; dayBranchGongmang: boolean;
   spousePalaceStability: "안정" | "보통" | "불안정";
+  // 배우자성 손상(위치 극/충) — spousePalaceStability(일지 합충)·spouseStars(존재/강도)와
+  // 독립된 별도 축. "배우자성 또렷 + 배우자궁 안정"이어도 배우자성 자체가 극당하거나
+  // 충으로 깨지면 별도로 발화한다(개인사주 메인 리포트가 극/충 구조로 읽는 경우와 정합
+  // 맞추기 위함 — lib/wealth-facts.ts의 bigeopTaljae와 동일 클래스의 수정).
+  spouseStarDamaged: boolean;
+  spouseStarDamageReason: SpouseStarDamageReason[];
   dohwa: boolean; hongyeom: boolean;
   timingWindows: TimingWindow[];
   daeunSpouseYears: Array<{ startAge: number; endAge: number; star: string }>;
@@ -35,6 +43,99 @@ function tenStarOf(dayStem: string, targetStem: string): string | null {
 }
 
 const PILLARS = ["year","month","day","hour"] as const;
+
+const BIGEOP_SET = new Set(["비견", "겁재"]); // 남명 배우자성(재성) 공격자
+const SIKSSANG_SET = new Set(["식신", "상관"]); // 여명 배우자성(관성) 공격자 — 브리프상 식신도 포함, 라벨은 "상관견관"으로 통일
+
+// 인접 기둥 정의 — lib/wealth-facts.ts의 ADJACENT_PILLARS와 동일 구조(개두·인접만 보는
+// 순수 위치 판정 — 비겁/식상 오행은 정의상 배우자성 오행을 그대로 극하므로 같은/인접
+// 기둥에 있다는 사실 자체가 이미 "극이 실제로 부딪힌다"는 뜻).
+const ADJACENT_PILLARS: Record<
+  (typeof PILLARS)[number],
+  (typeof PILLARS)[number][]
+> = {
+  year: ["month"],
+  month: ["year", "day"],
+  day: ["month", "hour"],
+  hour: ["day"],
+};
+
+// 지지의 배우자성 판정 — 정기(index0)·중기(index1)만 "극이 실제로 부딪히는" 신호로 인정.
+// 여기(index2, 가장 약한 지장간)만 스쳐가는 경우는 제외 — wealth-facts.ts의
+// branchHasStrongJae와 동일 철학(과발화 방지).
+function branchHasStrongSpouseStar(
+  dayStem: string,
+  branch: string | undefined,
+  spouseSet: Set<string>,
+): boolean {
+  if (!branch) return false;
+  const info = BRANCH_INFO[branch];
+  if (!info) return false;
+  return info.jijanggan.slice(0, 2).some((j) => {
+    const st = tenStarOf(dayStem, j.stem);
+    return st ? spouseSet.has(st) : false;
+  });
+}
+
+// 공격자(비겁/식상) 천간 존재 여부 — day 천간(일간 자기 자신)은 제외
+// (wealth-facts.ts의 isBigeopStem과 동일 정책: 자기 자신과 비교하면 항상 비견/식신급이
+// 잡혀 허위 발화하는 것을 방지).
+function isAttackerStem(
+  dayStem: string,
+  pos: (typeof PILLARS)[number],
+  sajuData: SajuData,
+  attackerSet: Set<string>,
+): boolean {
+  if (pos === "day") return false;
+  const stem = sajuData[pos]?.heavenlyStem;
+  if (!stem) return false;
+  const st = tenStarOf(dayStem, stem);
+  return st ? attackerSet.has(st) : false;
+}
+
+// 극(剋) 감지 — 공격자 천간이 배우자성 지지 바로 위(개두) 또는 인접 기둥에 앉아 있는지.
+function detectSpouseStarKeuk(
+  dayStem: string,
+  sajuData: SajuData,
+  attackerSet: Set<string>,
+  spouseSet: Set<string>,
+): boolean {
+  for (const pos of PILLARS) {
+    if (!isAttackerStem(dayStem, pos, sajuData, attackerSet)) continue;
+    if (branchHasStrongSpouseStar(dayStem, sajuData[pos]?.earthlyBranch, spouseSet)) return true;
+    for (const adj of ADJACENT_PILLARS[pos]) {
+      if (branchHasStrongSpouseStar(dayStem, sajuData[adj]?.earthlyBranch, spouseSet)) return true;
+    }
+  }
+  return false;
+}
+
+// 충거(沖去) 감지 — (a) 일지 자체가 충당하는 경우(dayBranchChung, 배우자궁 자체가
+// 흔들리는 케이스를 배우자성 손상에도 반영) 또는 (b) 배우자성을 정기로 담은 지지가
+// 다른 지지와 충 관계인 경우(일지 여부와 무관하게 어느 기둥이든).
+function detectChungeo(
+  dayStem: string,
+  sajuData: SajuData,
+  spouseSet: Set<string>,
+  dayBranchChung: string[],
+): boolean {
+  if (dayBranchChung.length > 0) return true;
+  const branches = PILLARS.map((pos) => sajuData[pos]?.earthlyBranch).filter(
+    (b): b is string => !!b,
+  );
+  for (let i = 0; i < branches.length; i++) {
+    const a = branches[i];
+    const jeonggi = BRANCH_INFO[a]?.jijanggan[0];
+    if (!jeonggi) continue;
+    const st = tenStarOf(dayStem, jeonggi.stem);
+    if (!st || !spouseSet.has(st)) continue;
+    for (let j = 0; j < branches.length; j++) {
+      if (i === j || branches[j] === a) continue;
+      if (getPairRelation(a, branches[j]).type === "chung") return true;
+    }
+  }
+  return false;
+}
 
 export function deriveMarriageFacts(
   enriched: EnrichedSajuData,
@@ -105,6 +206,23 @@ export function deriveMarriageFacts(
   const spousePalaceStability: MarriageFacts["spousePalaceStability"] =
     dayBranchChung.length > 0 ? "불안정" : dayBranchHap.length > 0 ? "안정" : "보통";
 
+  // 4-2) 배우자성 손상 — spousePalaceStability(궁 안정도)·spouseStars(존재/강도)와 독립된
+  // 축. 남명은 비겁(비견·겁재)이 재성(배우자성) 지지를 개두·인접으로 극하면 "비겁극재",
+  // 여명은 식상(식신·상관)이 관성(배우자성) 지지를 같은 방식으로 극하면 "상관견관"으로
+  // 판정한다("특히 상관"이지만 브리프 정의상 식신도 공격자에 포함). 여기에 충거(배우자성을
+  // 담은 지지가 충으로 깨지는 경우, 일지 충 포함)를 더한다. 배우자성이 또렷하고 궁이
+  // 안정이어도 이 신호는 별도로 발화할 수 있다(co-exist — gunggeobJaengjae류 상호배타 아님).
+  const attackerSet = sex === "male" ? BIGEOP_SET : SIKSSANG_SET;
+  const keukReason: SpouseStarDamageReason = sex === "male" ? "비겁극재" : "상관견관";
+  const spouseStarDamageReason: SpouseStarDamageReason[] = [];
+  if (detectSpouseStarKeuk(dayStem, sajuData, attackerSet, spouseSet)) {
+    spouseStarDamageReason.push(keukReason);
+  }
+  if (detectChungeo(dayStem, sajuData, spouseSet, dayBranchChung)) {
+    spouseStarDamageReason.push("충거");
+  }
+  const spouseStarDamaged = spouseStarDamageReason.length > 0;
+
   // 5) 타이밍 — Task 2에서 채움
   const { timingWindows, daeunSpouseYears } = deriveTiming(
     fortune, dayStem, dayBranch, spouseSet, currentYear, spouseStarAbsent,
@@ -113,7 +231,9 @@ export function deriveMarriageFacts(
   return {
     sex, maritalStatus, dayStem, dayBranch, spouseStarType,
     spouseStars, spouseStarAbsent, gwansalHonjap, spousePalaceHiddenStars,
-    dayBranchHap, dayBranchChung, dayBranchGongmang, spousePalaceStability, dohwa, hongyeom,
+    dayBranchHap, dayBranchChung, dayBranchGongmang, spousePalaceStability,
+    spouseStarDamaged, spouseStarDamageReason,
+    dohwa, hongyeom,
     timingWindows, daeunSpouseYears,
   };
 }
