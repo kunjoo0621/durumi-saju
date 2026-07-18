@@ -13,7 +13,8 @@ export interface MarriageGuardResult { blocks: any; violations: string[]; }
 // F-2: Gemini 출력이 필수 블록을 다 채웠는지 검증. 가드가 문장을 스크럽한 뒤 빈 블록이 남는
 // 경우(무료 리포트 취약점)와 모델이 스키마를 어긴 경우를 잡는다. 이슈 배열이 비면 통과.
 const REQUIRED_TEXT_BLOCKS: Array<[string, number]> = [
-  ["teaserSummary", 10], ["gradeHeadline", 80], ["spousePalace", 80], ["spouseStar", 80],
+  // gradeHeadline은 35자 이내 짧은 한 문장(재물운과 통일) → 최소길이는 "빈칸 감지" 바닥만(8자).
+  ["teaserSummary", 10], ["gradeHeadline", 8], ["spousePalace", 80], ["spouseStar", 80],
   ["partnerProfile", 80], ["relationshipPattern", 80], ["timingFlow", 80], ["gunghapCta", 30],
 ];
 

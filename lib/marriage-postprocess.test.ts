@@ -103,6 +103,12 @@ test("validateMarriageBlocks: 완전한 객체는 이슈 0", () => {
   assert.deepEqual(validateMarriageBlocks(fullValidParsed()), []);
 });
 
+test("validateMarriageBlocks: 35자 이내 짧은 gradeHeadline 통과(재물운과 통일, minLen 8)", () => {
+  const p = fullValidParsed();
+  p.gradeHeadline = "가".repeat(20);   // 20자 — 옛 minLen 80이면 반려됐을 정상 헤드라인
+  assert.deepEqual(validateMarriageBlocks(p), []);
+});
+
 test("validateMarriageBlocks: 루트가 객체 아니면 즉시 실패", () => {
   assert.deepEqual(validateMarriageBlocks(null), ["루트가 객체 아님"]);
   assert.deepEqual(validateMarriageBlocks([]), ["루트가 객체 아님"]);
