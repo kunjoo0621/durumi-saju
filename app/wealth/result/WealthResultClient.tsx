@@ -42,6 +42,24 @@ interface AdviceItem {
   tag: string; // "[근거:...]" — postprocess에서 이 형식이 아니면 이미 컷됨
 }
 
+interface TimelineEntryView {
+  year: number;
+  age: number;
+  pillarKorean: string;
+  tenStar: string;
+  twelveStage: string;
+  mood: "강세" | "보통" | "주의";
+  triggers: string[];
+  hint: string;
+  isPast: boolean;
+  isCurrent: boolean;
+}
+interface ServerTimelineView {
+  version: 1;
+  entries: TimelineEntryView[];
+  daeun: Array<{ startAge: number; endAge: number; star: string }>;
+}
+
 interface WealthBlocks {
   teaserSummary?: string;
   gradeHeadline: string;
@@ -52,6 +70,7 @@ interface WealthBlocks {
   timingFlow: string;
   advice: AdviceItem[];
   yearlyCta: string;
+  serverTimeline?: ServerTimelineView;
 }
 
 type JaeseongType = "정재우세" | "편재우세" | "재성혼재" | "무재";
@@ -381,6 +400,25 @@ function WealthResultBody({
           </section>
         </Reveal>
 
+        {/* ②.5 재물 날씨 타임라인 — 서버 결정론(serverTimeline). 과거 결제분엔 키 없음 → 스킵 */}
+        {result.serverTimeline && result.serverTimeline.entries.length > 0 && (
+          <Reveal>
+            <section className="px-6 pt-16">
+              <p className={EYEBROW}>앞으로 5년</p>
+              <h2 className="mt-3 font-aggro text-[26px] leading-[1.3] break-keep text-text-primary">
+                재물 날씨 타임라인
+              </h2>
+              <div className="mt-8">
+                <FortuneWeatherTimeline
+                  title="해마다 달라지는 재물 기류"
+                  daeunLabel={(d) => `${d.startAge}~${d.endAge}세 · ${d.star} 대운`}
+                  timeline={result.serverTimeline}
+                />
+              </div>
+            </section>
+          </Reveal>
+        )}
+
         {/* ③ 관심사별 강조 — 카드 3장 (savingStyle / riskAndPace / timingFlow) */}
         <Reveal>
           <section className="px-6 pt-16">
@@ -655,6 +693,112 @@ function ReportCard({ index, eyebrow, title, text }: { index: number; eyebrow: s
         <p className="text-[16px] leading-[1.85] text-text-secondary break-keep whitespace-pre-line">{text}</p>
       </div>
     </article>
+  );
+}
+
+// ────────────────────────────────────────────────────────
+// 5년 날씨 타임라인 — 전부 서버 결정론 값(full_json.serverTimeline) 렌더.
+// app/yearly/result/[id]/YearlyResultClient.tsx MOOD_STYLE/MonthQuickCell/MonthRow 문법의
+// 연(年) 단위 번안. 무드 3단(위기/폭풍 배제 — 유료 리포트 공포 프레임 금지).
+// ────────────────────────────────────────────────────────
+const TIMELINE_MOOD_STYLE: Record<string, { label: string; color: string; icon: string }> = {
+  강세: { label: "맑음", color: "text-saju-wood-muted", icon: "/icons/weather/sun.svg" },
+  보통: { label: "흐림", color: "text-text-secondary", icon: "/icons/weather/cloud.svg" },
+  주의: { label: "비 예보", color: "text-saju-earth-muted", icon: "/icons/weather/rain.svg" },
+};
+
+function FortuneWeatherTimeline({
+  title,
+  daeunLabel,
+  timeline,
+}: {
+  title: string;
+  daeunLabel: (d: { startAge: number; endAge: number; star: string }) => string;
+  timeline: ServerTimelineView;
+}) {
+  return (
+    <section className="rounded-3xl bg-background-secondary p-6">
+      <h3 className="text-[18px] font-bold text-text-primary mb-5">{title}</h3>
+
+      {/* 연 셀 가로 스크롤 — 지나간 해는 회색 맥락 */}
+      <div className="relative -mx-6">
+        <div className="overflow-x-auto scrollbar-hide px-6" style={{ scrollSnapType: "x mandatory" }}>
+          <div className="flex gap-2" style={{ width: "max-content" }}>
+            {timeline.entries.map((e) => {
+              const mood = TIMELINE_MOOD_STYLE[e.mood] ?? TIMELINE_MOOD_STYLE["보통"];
+              return (
+                <div
+                  key={e.year}
+                  className={`shrink-0 rounded-xl py-3 flex flex-col items-center justify-center gap-1.5 ${
+                    e.isCurrent ? "bg-background-tertiary ring-1 ring-white/15" : ""
+                  } ${e.isPast ? "opacity-40" : ""}`}
+                  style={{ width: "76px", scrollSnapAlign: "start" }}
+                >
+                  <span className="font-aggro tabular-nums text-text-secondary" style={{ fontSize: "14px" }}>
+                    {e.year}
+                  </span>
+                  <img src={mood.icon} alt="" aria-hidden style={{ width: "44px", height: "44px" }} />
+                  <span className={`text-[11px] font-semibold ${mood.color} whitespace-nowrap`}>
+                    {e.isPast ? "지남" : mood.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div
+          className="pointer-events-none absolute top-0 bottom-0 right-0 w-14"
+          style={{ background: "linear-gradient(to left, rgb(var(--bg-secondary)) 0%, rgba(20,20,20,0) 100%)" }}
+          aria-hidden
+        />
+      </div>
+
+      {/* 연 상세 row — 미래 해만(과거는 맥락 셀로 충분) */}
+      <div className="mt-6 pt-5 border-t border-white/5 divide-y divide-white/5">
+        {timeline.entries
+          .filter((e) => !e.isPast)
+          .map((e) => {
+            const mood = TIMELINE_MOOD_STYLE[e.mood] ?? TIMELINE_MOOD_STYLE["보통"];
+            return (
+              <article key={e.year} className="py-3.5 first:pt-3 last:pb-2">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="font-aggro text-text-primary tabular-nums leading-none"
+                      style={{ fontSize: "17px" }}
+                    >
+                      {e.year}
+                    </span>
+                    <img src={mood.icon} alt="" aria-hidden style={{ width: "36px", height: "36px" }} />
+                  </div>
+                  <span className={`text-[13px] font-semibold ${mood.color}`}>{mood.label}</span>
+                </div>
+                <p className="text-[15.5px] text-text-primary leading-relaxed font-medium break-keep">{e.hint}</p>
+                <p className="text-[12px] text-text-tertiary mt-1.5">
+                  만 {e.age}세 · {e.pillarKorean}년 · {e.tenStar}운 · {e.twelveStage}
+                </p>
+              </article>
+            );
+          })}
+      </div>
+
+      {/* 대운 — 띠에 섞지 않는 별도 굵은 요소 */}
+      {timeline.daeun.length > 0 && (
+        <div className="mt-5 rounded-2xl bg-background-tertiary px-5 py-4">
+          <div className="text-[12px] font-semibold text-text-tertiary mb-2">10년 단위 큰 흐름</div>
+          <div className="flex flex-wrap gap-2">
+            {timeline.daeun.map((d, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center rounded-full bg-white/[0.06] px-3 py-1.5 text-[13px] font-semibold text-text-primary"
+              >
+                {daeunLabel(d)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
