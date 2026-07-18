@@ -56,6 +56,11 @@ const MYEONGRI_IN_TITLE = /홍염살|도화살|역마살|화개살|백호살|양
 const MYEONGRI_IN_SIM = /비겁|비견|겁재|식상|식신|상관|재성|편재|정재|편관|정관|편인|정인|관성|십성|역마살|역마|도화살|도화|홍염살|홍염|화개살|화개|백호살|양인살|장성살|괴강|공망|천을귀인|문창귀인|신살|장생|건록|제왕|관대|12운성|신강|신약|삼합|방합|육합|원진|일간|일지|연지/;
 const STAGES_2 = ["장생", "목욕", "관대", "건록", "제왕"]; // 12운성 두 글자 이름
 const STAGES_1 = ["쇠", "병", "사", "묘", "절", "태", "양"]; // 한 글자 (일반 단어 오매칭 주의)
+// v0.9: 본문(판정·설명서·미래) 구조 용어 누수 검사. 신살 이름(홍염살·역마살·천을귀인)은 1회 허용이라 제외.
+// 오탐 회피: 흔한 단어(합격·충성·형태·재정)와 겹치는 한 글자 용어는 넣지 않음.
+const MYEONGRI_IN_BODY = /일지|일간|연지|12운성|삼합|방합|원진|비화|신강|신약|장성살|백호살|공망|지살|화개살|괴강|양인살|합화|진술충|묘술합/;
+// v0.9: 내부 점수 숫자 노출 검사 (점수는 2자리라 "\d{2}점" + "ruler")
+const SCORE_IN_BODY = /\d{2}\s*점|ruler/i;
 
 /** 한자 strip 후 본문을 검사해 위반 목록 반환(빈 배열=통과). label.text·manual.spec·name 제외. */
 export function validatePetCompatResult(result: PetCompatResult, ctx: { petTwelveStage: string }): string[] {
@@ -93,6 +98,16 @@ export function validatePetCompatResult(result: PetCompatResult, ctx: { petTwelv
     const simTerm = `${sim?.scene ?? ""} ${sim?.prediction ?? ""}`.match(MYEONGRI_IN_SIM);
     if (simTerm) { v.push(`시뮬레이션에 명리 용어 "${simTerm[0]}" (시뮬은 용어 없이 행동으로만)`); break; }
   }
+
+  // v0.9: 본문 prose(판정·설명서·미래)에 구조 용어/점수 숫자 누수
+  const prose = [
+    m?.recommendedEnv, m?.warnings, m?.chargeMethod, m?.errorSignals, m?.ownerMode,
+    result.ownerVerdict, result.petVerdict, result.futureLine,
+  ].filter(Boolean).join(" \n ");
+  const bodyTerm = prose.match(MYEONGRI_IN_BODY);
+  if (bodyTerm) v.push(`본문 구조 용어 "${bodyTerm[0]}" (쉬운 말로 번역할 것)`);
+  const scoreLeak = prose.match(SCORE_IN_BODY);
+  if (scoreLeak) v.push(`본문 점수 노출 "${scoreLeak[0]}" (숫자 대신 방향으로)`);
 
   return v;
 }
