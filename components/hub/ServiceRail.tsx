@@ -42,61 +42,9 @@ export default function ServiceRail() {
 
   const egg = <Egg size={14} weight="fill" className="shrink-0" />;
 
-  // 순서: 오늘(데일리 훅) → 펫 → 올해 → 사주 → 결혼운 → 재물운 → 배틀. 사주는 히어로에 이미 노출
-  // (결혼운·재물운은 신규 유료 심층 상품 — 사주 옆에 그룹핑. 최종 배치는 운영자 결정, §7-3)
+  // 순서: 결혼운 → 재물운 → 펫 → 오늘 → 사주 → 올해 → 배틀. 사주 계열은 히어로 캐러셀에 이미 노출되므로
+  // 신규·다른 서비스(결혼운·재물운·펫·오늘)를 레일 앞쪽에 먼저 배치 (메뉴 페이지와는 다른 순서)
   const cards: CardDef[] = [
-    {
-      id: "today",
-      chip: todayChip,
-      title: "오늘의 운세",
-      desc: "오늘 나에게 딱 맞는 하루",
-      price: (
-        <>
-          {egg}
-          {TODAY_COST}알
-        </>
-      ),
-    },
-    {
-      id: "pet",
-      chip: "반려동물 궁합",
-      title: "우리 아이와 궁합",
-      desc: "우리 아인 날 어떻게 볼까",
-      price: (
-        <>
-          {egg}
-          {PET_COMPAT_COST}알
-        </>
-      ),
-    },
-    ...(YEARLY_ENABLED
-      ? [
-          {
-            id: "yearly" as const,
-            chip: yearChip,
-            title: "올해 운세",
-            desc: "올해 나에게 무슨 일이",
-            price: (
-              <>
-                {egg}
-                {YEARLY_COST}알
-              </>
-            ),
-          },
-        ]
-      : []),
-    {
-      id: "saju",
-      chip: "평생 사주",
-      title: "내 사주 분석",
-      desc: "타고난 기질과 운의 흐름",
-      price: (
-        <>
-          {egg}
-          {SAJU_COST}알
-        </>
-      ),
-    },
     {
       id: "marriage",
       chip: "심층 풀이",
@@ -121,6 +69,58 @@ export default function ServiceRail() {
         </>
       ),
     },
+    {
+      id: "pet",
+      chip: "반려동물 궁합",
+      title: "우리 아이와 궁합",
+      desc: "우리 아인 날 어떻게 볼까",
+      price: (
+        <>
+          {egg}
+          {PET_COMPAT_COST}알
+        </>
+      ),
+    },
+    {
+      id: "today",
+      chip: todayChip,
+      title: "오늘의 운세",
+      desc: "오늘 나에게 딱 맞는 하루",
+      price: (
+        <>
+          {egg}
+          {TODAY_COST}알
+        </>
+      ),
+    },
+    {
+      id: "saju",
+      chip: "평생 사주",
+      title: "내 사주 분석",
+      desc: "타고난 기질과 운의 흐름",
+      price: (
+        <>
+          {egg}
+          {SAJU_COST}알
+        </>
+      ),
+    },
+    ...(YEARLY_ENABLED
+      ? [
+          {
+            id: "yearly" as const,
+            chip: yearChip,
+            title: "올해 운세",
+            desc: "올해 나에게 무슨 일이",
+            price: (
+              <>
+                {egg}
+                {YEARLY_COST}알
+              </>
+            ),
+          },
+        ]
+      : []),
     {
       id: "battle",
       chip: "둘이서",

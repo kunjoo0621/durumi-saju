@@ -144,6 +144,51 @@ export default function MenuPage() {
             </div>
           )}
 
+          {/* 올해 (FEATURE_FLAG) */}
+          {YEARLY_ENABLED && (
+            <button
+              type="button"
+              onClick={() => router.push("/yearly")}
+              className={`${HUB_PRESS} flex w-full items-center gap-4 py-4 text-left`}
+            >
+              <div className="min-w-0 flex-1">
+                <span className="text-[11px] font-semibold text-text-secondary">{CURRENT_YEAR}년</span>
+                <h3 className="mt-0.5 text-[18px] font-bold leading-tight">올해 운세</h3>
+                <p className="mt-1 break-keep text-[13px] leading-snug text-text-secondary">
+                  올해 남은 흐름을 월별로 미리 봐요
+                </p>
+                <p className="mt-2 flex items-center gap-1 text-[15px] font-bold">
+                  <Egg size={15} weight="fill" className="shrink-0" />
+                  {YEARLY_COST}알
+                </p>
+              </div>
+              <RowThumb src={THUMB.yearly} />
+            </button>
+          )}
+
+          {/* 배틀 */}
+          <button
+            type="button"
+            onClick={() => {
+              resetBattle();
+              router.push("/battle/input");
+            }}
+            className={`${HUB_PRESS} flex w-full items-center gap-4 py-4 text-left`}
+          >
+            <div className="min-w-0 flex-1">
+              <span className="text-[11px] font-semibold text-text-secondary">둘이서</span>
+              <h3 className="mt-0.5 text-[18px] font-bold leading-tight">사주 배틀</h3>
+              <p className="mt-1 break-keep text-[13px] leading-snug text-text-secondary">
+                두 사람 사주를 나란히 놓고 궁합을 겨뤄봐요
+              </p>
+              <p className="mt-2 flex items-center gap-1 text-[15px] font-bold">
+                <Egg size={15} weight="fill" className="shrink-0" />
+                {BATTLE_COST}알
+              </p>
+            </div>
+            <RowThumb src={THUMB.battle} />
+          </button>
+
           {/* 결혼운·애정운 (NEW · 심층) — 사주 옆 그룹핑, 최종 배치는 운영자 결정(§7-3) */}
           <button
             type="button"
@@ -226,51 +271,6 @@ export default function MenuPage() {
             </div>
             <RowThumb src={THUMB.today} />
           </button>
-
-          {/* 배틀 */}
-          <button
-            type="button"
-            onClick={() => {
-              resetBattle();
-              router.push("/battle/input");
-            }}
-            className={`${HUB_PRESS} flex w-full items-center gap-4 py-4 text-left`}
-          >
-            <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-semibold text-text-secondary">둘이서</span>
-              <h3 className="mt-0.5 text-[18px] font-bold leading-tight">사주 배틀</h3>
-              <p className="mt-1 break-keep text-[13px] leading-snug text-text-secondary">
-                두 사람 사주를 나란히 놓고 궁합을 겨뤄봐요
-              </p>
-              <p className="mt-2 flex items-center gap-1 text-[15px] font-bold">
-                <Egg size={15} weight="fill" className="shrink-0" />
-                {BATTLE_COST}알
-              </p>
-            </div>
-            <RowThumb src={THUMB.battle} />
-          </button>
-
-          {/* 올해 (FEATURE_FLAG) */}
-          {YEARLY_ENABLED && (
-            <button
-              type="button"
-              onClick={() => router.push("/yearly")}
-              className={`${HUB_PRESS} flex w-full items-center gap-4 py-4 text-left`}
-            >
-              <div className="min-w-0 flex-1">
-                <span className="text-[11px] font-semibold text-text-secondary">{CURRENT_YEAR}년</span>
-                <h3 className="mt-0.5 text-[18px] font-bold leading-tight">올해 운세</h3>
-                <p className="mt-1 break-keep text-[13px] leading-snug text-text-secondary">
-                  올해 남은 흐름을 월별로 미리 봐요
-                </p>
-                <p className="mt-2 flex items-center gap-1 text-[15px] font-bold">
-                  <Egg size={15} weight="fill" className="shrink-0" />
-                  {YEARLY_COST}알
-                </p>
-              </div>
-              <RowThumb src={THUMB.yearly} />
-            </button>
-          )}
         </div>
       </main>
 
