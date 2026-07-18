@@ -1,11 +1,15 @@
 "use client";
 
-// 재물운 심층 검사 진입 화면 — app/marriage/MarriageEntryClient.tsx 미러.
-// marriage와 차이: 대표사주 없으면 여전히 404지만(app/api/wealth/from-primary/route.ts:31),
-// 여기서 읽는 필드는 loveScore가 아니라 wealthScore(개인사주 재물운 점수)다. 관심사(interest)는
-// 아직 선택 전이라 이 화면에서는 프리필하지 않는다 — 관심사 선택은 /wealth/input의 몫.
-// 결제(10알)는 여기서 하지 않는다 — wealth/start는 무료 teaser, wealth/analyze에서만 차감
-// (app/api/wealth/analyze/route.ts 주석 참고).
+// 재물운 심층 검사 진입 화면 — app/marriage/MarriageEntryClient.tsx 2-경로 패턴 미러.
+// marriage와 차이:
+//  · 로그인 강제 없음(app/wealth/page.tsx가 requireSession 게이트를 제거) — 비로그인도 진입해
+//    설명을 보고 자체입력 경로로 들어갈 수 있다. 로그인은 SajuInputFlow 제출 시점에만.
+//  · 대표사주 응답에서 읽는 값은 loveScore가 아니라 wealthScore(개인사주 재물운 점수)다.
+//  · 결제(10알)는 여기서 하지 않는다 — wealth/start는 무료 teaser, wealth/analyze에서만 차감.
+// 2-경로:
+//  · 대표사주 있음(로그인 + from-primary 200) → 지름길(/wealth/input, source:"primary")
+//    + 다른 사주로 보기(/wealth/self, source:"self")
+//  · 대표사주 없음/신규(비로그인 포함) → 자체입력(/wealth/self)
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,6 +22,27 @@ type FromPrimaryData = {
   sourceResultId: string;
 };
 
+// 재물운으로 무엇을 봐주는지 — 모든 정상 상태에서 공통 노출(설명 열람은 비로그인도 가능).
+function AboutCard({ wealthScore }: { wealthScore?: number }) {
+  return (
+    <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 space-y-4">
+      <div className="space-y-2.5">
+        <h2 className="text-[17px] font-bold text-text-primary">이런 걸 봐줘</h2>
+        <ul className="space-y-2 text-body-2 text-text-secondary">
+          <li>· 재성(정재·편재)이 어디에 있고 어떤 유형인지</li>
+          <li>· 그 재물을 담는 그릇이 얼마나 되는지</li>
+          <li>· 재물 흐름이 강해지는 시기와 관리가 필요한 시기</li>
+        </ul>
+      </div>
+      {typeof wealthScore === "number" && wealthScore > 0 && (
+        <p className="text-[13px] text-text-tertiary border-t border-white/5 pt-3">
+          지난 사주 분석에서 재물운 {wealthScore}점이 나왔었지. 그 점수 뒤에 있는 이유를 더 파볼게.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function WealthEntryClient() {
   const router = useRouter();
   const { status } = useSession();
@@ -28,7 +53,9 @@ export default function WealthEntryClient() {
   const [primaryError, setPrimaryError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status === "loading") return;
     if (!isAuthenticated) {
+      // 비로그인 — 대표사주 조회 없이 자체입력 경로 안내로 바로 진입.
       setPrimaryLoading(false);
       return;
     }
@@ -39,7 +66,7 @@ export default function WealthEntryClient() {
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (res.status === 404) {
-          // 대표사주 없음 — 에러가 아니라 "먼저 사주 분석"으로 안내할 정상 상태.
+          // 대표사주 없음 — 에러가 아니라 자체입력으로 안내할 정상 상태.
           setPrimary(null);
         } else if (!res.ok) {
           setPrimaryError(data?.error || "재물운 정보를 못 불러왔어.");
@@ -58,7 +85,7 @@ export default function WealthEntryClient() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [status, isAuthenticated]);
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary flex flex-col">
@@ -77,7 +104,7 @@ export default function WealthEntryClient() {
             </p>
           </div>
 
-          {primaryLoading ? (
+          {status === "loading" || primaryLoading ? (
             <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 space-y-3">
               <SkeletonBar className="h-5 w-40" />
               <SkeletonBar className="h-4 w-full" />
@@ -94,44 +121,35 @@ export default function WealthEntryClient() {
                 메뉴로 가기
               </button>
             </div>
-          ) : !primary ? (
-            <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 text-center space-y-4">
-              <p className="text-body-2 text-text-secondary">
-                재물운 검사는 이미 본 사주 분석 결과를 확장해서 풀어줘.
-                <br />
-                먼저 사주 분석부터 마쳐야 볼 수 있어.
-              </p>
-              <button
-                onClick={() => router.push("/start")}
-                className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
-              >
-                내 사주 분석 먼저 하기
-              </button>
-            </div>
-          ) : (
+          ) : primary ? (
+            // 대표사주 있음 — 지름길(primary) + 다른 사주로 보기(self)
             <>
-              <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 space-y-4">
-                <div className="space-y-2.5">
-                  <h2 className="text-[17px] font-bold text-text-primary">이런 걸 봐줘</h2>
-                  <ul className="space-y-2 text-body-2 text-text-secondary">
-                    <li>· 재성(정재·편재)이 어디에 있고 어떤 유형인지</li>
-                    <li>· 그 재물을 담는 그릇이 얼마나 되는지</li>
-                    <li>· 재물 흐름이 강해지는 시기와 관리가 필요한 시기</li>
-                  </ul>
-                </div>
-                {primary.wealthScore > 0 && (
-                  <p className="text-[13px] text-text-tertiary border-t border-white/5 pt-3">
-                    지난 사주 분석에서 재물운 {primary.wealthScore}점이 나왔었지. 그 점수 뒤에 있는 이유를 더 파볼게.
-                  </p>
-                )}
-              </div>
-
-              <div className="px-1">
+              <AboutCard wealthScore={primary.wealthScore} />
+              <div className="px-1 space-y-3">
                 <button
                   onClick={() => router.push("/wealth/input")}
                   className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold active:scale-[0.98] transition-transform"
                 >
                   내 사주로 재물운 보기
+                </button>
+                <button
+                  onClick={() => router.push("/wealth/self")}
+                  className="btn-secondary w-full h-[48px] rounded-xl text-[14px] font-semibold active:scale-[0.98] transition-transform"
+                >
+                  다른 사주로 보기
+                </button>
+              </div>
+            </>
+          ) : (
+            // 대표사주 없음/신규(비로그인 포함) — 자체입력 경로
+            <>
+              <AboutCard />
+              <div className="px-1">
+                <button
+                  onClick={() => router.push("/wealth/self")}
+                  className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold active:scale-[0.98] transition-transform"
+                >
+                  생년월일 넣고 재물운 보기
                 </button>
               </div>
             </>
