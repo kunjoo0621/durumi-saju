@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
+import ShareRewardBanner from "@/components/ShareRewardBanner";
 import HubHeroCarousel from "@/components/hub/HubHeroCarousel";
 import ServiceRail from "@/components/hub/ServiceRail";
 import CelebrityRail, { type HubCelebrity } from "@/components/hub/CelebrityRail";
@@ -60,6 +61,8 @@ export default async function HomePage() {
       </div>
 
       <Header sticky />
+      {/* 결과 공유 5알 보상 안내 — 가입보너스 종료 후 유입 배너(origin/main에서 허브로 복원) */}
+      <ShareRewardBanner />
 
       <main className="pb-[120px]">
         <HubHeroCarousel />
