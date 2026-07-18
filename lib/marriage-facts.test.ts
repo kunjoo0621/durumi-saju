@@ -155,14 +155,38 @@ test("배우자성 손상(여명): 월간 丁(상관)이 월지 酉 정기 辛(�
   );
 });
 
-// 충거 단독 케이스: 일지 충만 있고(개두/인접 극은 없음) → "충거"만 발화.
-// dayBranchChungChart(위에서 이미 배우자궁 안정도 테스트에 쓰인 차트)를 재사용 —
-// 子午沖(월지 午 vs 일지 子)만 있고 비겁/식상 공격자 개두는 구성상 없음.
-test("배우자성 손상: 일지 충만 있으면 충거만 발화(극 없음)", () => {
-  const enriched = enrichSajuData(dayBranchChungChart, { isTimeUnknown: false });
-  const facts = deriveMarriageFacts(enriched, null, dayBranchChungChart, "female", "솔로", 2026);
+// 충거 정밀화(1): 배우자성을 "정기로 담은" 지지가 충당하는 진짜 케이스만 인정.
+// 일간 甲(목/양), 여명. 일지 酉(정기 辛=정관=배우자성)가 월지 卯와 卯酉沖 →
+// 배우자성을 담은 일지 자체가 충당하므로 충거가 정당하게 발화해야 한다.
+// 극(비겁/식상 공격자) 개두·인접은 구성상 없음(년간 己=정재, 월간 乙=겁재, 시간
+// 戊=편재 — 여명 공격자 식상=식신/상관에 해당하는 천간이 전무) → 충거만 단독 발화.
+const spouseChungeoOnlyChart: SajuData = {
+  year: { heavenlyStem: "己", earthlyBranch: "子", hiddenStems: ["癸"] },
+  month: { heavenlyStem: "乙", earthlyBranch: "卯", hiddenStems: ["乙"] },
+  day: { heavenlyStem: "甲", earthlyBranch: "酉", hiddenStems: ["辛"] },
+  hour: { heavenlyStem: "戊", earthlyBranch: "辰", hiddenStems: ["戊", "乙", "癸"] },
+};
+
+test("배우자성 손상: 배우자성을 담은 일지가 충당하면 충거 단독 발화(극 없음)", () => {
+  const enriched = enrichSajuData(spouseChungeoOnlyChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, spouseChungeoOnlyChart, "female", "솔로", 2026);
+  assert.equal(facts.spouseStarAbsent, false, "일지 酉 지장간 辛=정관으로 배우자성 존재해야 함");
+  assert.ok(facts.dayBranchChung.length > 0, "일지 卯酉沖이 잡혀야 함(궁 불안정도 동시 성립하는 정상 케이스)");
   assert.equal(facts.spouseStarDamaged, true);
   assert.deepEqual(facts.spouseStarDamageReason, ["충거"]);
+});
+
+// 충거 정밀화(2): bare 일지충 — 일지가 충당하지만 그 일지가 배우자성을 담고 있지 않은
+// 경우는 이미 spousePalaceStability("불안정")가 표현하는 신호이므로 배우자성 손상에는
+// 카운트하지 않는다(이중계상 방지가 이번 정밀화의 핵심). dayBranchChungChart(월지 午 vs
+// 일지 子, 子午沖)는 일지 子의 정기가 정인(癸)이라 배우자성(관성)을 담지 않는다.
+test("배우자성 손상: 배우자성을 담지 않은 bare 일지충은 카운트하지 않음(궁 불안정과 이중계상 방지)", () => {
+  const enriched = enrichSajuData(dayBranchChungChart, { isTimeUnknown: false });
+  const facts = deriveMarriageFacts(enriched, null, dayBranchChungChart, "female", "솔로", 2026);
+  assert.ok(facts.dayBranchChung.length > 0, "일지 子午沖이 잡혀야 함(궁 불안정 성립 확인용)");
+  assert.equal(facts.spousePalaceStability, "불안정", "궁 불안정 신호는 여전히 spousePalaceStability에 있어야 함");
+  assert.equal(facts.spouseStarDamaged, false, "일지가 배우자성을 담지 않으므로 배우자성 손상은 아니어야 함");
+  assert.deepEqual(facts.spouseStarDamageReason, []);
 });
 
 // 클린 네거티브: 배우자성(정관, 년간 辛)은 존재하되 극/충 어느 쪽도 없는 차트.

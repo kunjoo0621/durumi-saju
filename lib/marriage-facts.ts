@@ -110,16 +110,17 @@ function detectSpouseStarKeuk(
   return false;
 }
 
-// 충거(沖去) 감지 — (a) 일지 자체가 충당하는 경우(dayBranchChung, 배우자궁 자체가
-// 흔들리는 케이스를 배우자성 손상에도 반영) 또는 (b) 배우자성을 정기로 담은 지지가
-// 다른 지지와 충 관계인 경우(일지 여부와 무관하게 어느 기둥이든).
+// 충거(沖去) 감지 — 배우자성을 "정기(본기)로 담은" 지지가 다른 지지와 충 관계인 경우만
+// 인정한다(일지 포함 — 일지 정기가 배우자성이면서 그 일지가 충당하는 경우도 여기서 자연히
+// 잡힌다). 배우자성을 담지 않은 지지의 "bare 일지충"은 여기서 제외한다 — 그건 이미
+// spousePalaceStability("불안정")가 별도로 표현하는 신호라, 여기서도 카운트하면 배우자궁
+// 불안정을 배우자성 손상으로 이중계상하게 되어 발화율이 부풀려진다(실측 MC: 이중계상 제거
+// 전 남/여 각 ~50% → 제거 후 극 감지기가 주도하는 수준으로 정상화, marriage-v1.md 참조).
 function detectChungeo(
   dayStem: string,
   sajuData: SajuData,
   spouseSet: Set<string>,
-  dayBranchChung: string[],
 ): boolean {
-  if (dayBranchChung.length > 0) return true;
   const branches = PILLARS.map((pos) => sajuData[pos]?.earthlyBranch).filter(
     (b): b is string => !!b,
   );
@@ -210,15 +211,21 @@ export function deriveMarriageFacts(
   // 축. 남명은 비겁(비견·겁재)이 재성(배우자성) 지지를 개두·인접으로 극하면 "비겁극재",
   // 여명은 식상(식신·상관)이 관성(배우자성) 지지를 같은 방식으로 극하면 "상관견관"으로
   // 판정한다("특히 상관"이지만 브리프 정의상 식신도 공격자에 포함). 여기에 충거(배우자성을
-  // 담은 지지가 충으로 깨지는 경우, 일지 충 포함)를 더한다. 배우자성이 또렷하고 궁이
-  // 안정이어도 이 신호는 별도로 발화할 수 있다(co-exist — gunggeobJaengjae류 상호배타 아님).
+  // "정기로 담은" 지지가 충으로 깨지는 경우 — 일지도 포함되지만 일지가 배우자성을 담고
+  // 있을 때만)를 더한다. 배우자성이 담기지 않은 지지의 bare 일지충은 여기서 세지 않는다
+  // — 그건 이미 spousePalaceStability("불안정")가 별도 축으로 표현하는 신호라, 여기서도
+  // 세면 궁 불안정을 배우자성 손상으로 이중계상하게 된다(이중계상 제거 전 MC 실측: 발화율
+  // 남/여 각 ~50% — bare 일지충의 기저 발생률만으로 충거가 과다발화했었음. 제거 후 극
+  // 감지기가 주도하는 수준으로 정상화, 수치는 marriage-v1.md 참조). 배우자성이 또렷하고
+  // 궁이 안정이어도 이 신호는 별도로 발화할 수 있다(co-exist — gunggeobJaengjae류 상호배타
+  // 아님).
   const attackerSet = sex === "male" ? BIGEOP_SET : SIKSSANG_SET;
   const keukReason: SpouseStarDamageReason = sex === "male" ? "비겁극재" : "상관견관";
   const spouseStarDamageReason: SpouseStarDamageReason[] = [];
   if (detectSpouseStarKeuk(dayStem, sajuData, attackerSet, spouseSet)) {
     spouseStarDamageReason.push(keukReason);
   }
-  if (detectChungeo(dayStem, sajuData, spouseSet, dayBranchChung)) {
+  if (detectChungeo(dayStem, sajuData, spouseSet)) {
     spouseStarDamageReason.push("충거");
   }
   const spouseStarDamaged = spouseStarDamageReason.length > 0;
