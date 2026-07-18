@@ -49,3 +49,4 @@ public/__dev__/
 gsc-key.json
 *-key.json
 *.credentials.json
+scripts/enrich-quality-output.json
