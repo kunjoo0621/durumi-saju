@@ -74,7 +74,8 @@ export default function MarriageInputPage() {
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (res.status === 404) {
-          setPrimaryState("missing");
+          // 대표사주 없음 — 막다른 안내 대신 자체입력(생년월일 질문)으로 바로 보낸다.
+          router.replace("/marriage/self");
           return;
         }
         if (!res.ok) {
@@ -253,15 +254,13 @@ export default function MarriageInputPage() {
           ) : primaryState === "missing" ? (
             <div className="rounded-2xl bg-background-secondary border border-white/5 p-6 text-center space-y-4">
               <p className="text-body-2 text-text-secondary">
-                결혼운 검사는 이미 본 사주 분석 결과를 확장해서 풀어줘.
-                <br />
-                먼저 사주 분석부터 마쳐야 볼 수 있어.
+                생년월일만 넣으면 바로 결혼운을 볼 수 있어.
               </p>
               <button
-                onClick={() => router.push("/start")}
+                onClick={() => router.push("/marriage/self")}
                 className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold"
               >
-                내 사주 분석 먼저 하기
+                생년월일 넣고 결혼운 보기
               </button>
             </div>
           ) : primaryState === "error" ? (

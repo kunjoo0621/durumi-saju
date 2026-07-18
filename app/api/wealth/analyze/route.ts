@@ -431,7 +431,14 @@ export async function POST(request: NextRequest) {
       }
 
       // 6) Gemini 호출 (analysis.ts 모델 fallback 체인 미러) → JSON5 파싱
-      const prompt = buildWealthPrompt(facts, grade, sajuText, input.employmentStatus);
+      // self는 직업을 묻지 않아 employmentStatus가 default("직장인")다. 그 톤이 은퇴자·자영업
+      // 유저에게 잘못 박히지 않도록 self면 미제공(undefined)으로 넘긴다(프롬프트가 "미제공" 처리).
+      const prompt = buildWealthPrompt(
+        facts,
+        grade,
+        sajuText,
+        source === "self" ? undefined : input.employmentStatus,
+      );
       const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
       const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;
 

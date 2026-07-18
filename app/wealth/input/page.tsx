@@ -72,7 +72,8 @@ export default function WealthInputPage() {
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (res.status === 404) {
-          setPrimaryState("missing");
+          // 대표사주 없음 — 막다른 안내 대신 자체입력(생년월일 질문)으로 바로 보낸다.
+          router.replace("/wealth/self");
           return;
         }
         if (!res.ok) {
