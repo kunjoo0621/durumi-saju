@@ -14,11 +14,14 @@ export interface SpouseStarHit { pillar: "year"|"month"|"day"|"hour"; source: "�
 export interface TimingWindow { year: number; age: number; triggers: Array<"세운합일지"|"배우자성투출"|"도화홍염">; isPast: boolean; }
 export type SpouseStarDamageReason = "비겁극재" | "상관견관" | "충거";
 
+// 일지 지장간 층위 — 본기=배우자의 겉으로 드러나는 결, 중기=같이 살아야 보이는 속결, 여기=가끔 스치는 결.
+export interface SpousePalaceHiddenStar { position: "본기" | "중기" | "여기"; stem: string; star: string; }
+
 export interface MarriageFacts {
   sex: "male"|"female"; maritalStatus: MaritalStatus;
   dayStem: string; dayBranch: string;
   spouseStarType: "관성"|"재성"; spouseStars: SpouseStarHit[]; spouseStarAbsent: boolean;
-  gwansalHonjap: boolean; spousePalaceHiddenStars: string[];
+  gwansalHonjap: boolean; spousePalaceHiddenStars: string[]; spousePalaceHidden: SpousePalaceHiddenStar[];
   dayBranchHap: string[]; dayBranchChung: string[]; dayBranchGongmang: boolean;
   spousePalaceStability: "안정" | "보통" | "불안정";
   // 배우자성 손상(위치 극/충) — spousePalaceStability(일지 합충)·spouseStars(존재/강도)와
@@ -172,11 +175,17 @@ export function deriveMarriageFacts(
   // 프롬프트 노출 라벨은 성별에 맞춰 marriage-prompt.ts buildFactBlock에서 분기한다.
   const gwansalHonjap = spouseStars.some(s => s.star === jeong) && spouseStars.some(s => s.star === pyeon);
 
-  // 2) 일지 지장간 십성 (배우자 숨은 성격)
+  // 2) 일지 지장간 십성 — 본기/중기/여기 층위 구조화(배우자의 겉결/속결/스치는 결).
+  // BRANCH_INFO.jijanggan 인덱스 0=본기, 1=중기, 2=여기 (wealth-facts 가중치 관행과 동일).
+  const HIDDEN_POSITION = ["본기", "중기", "여기"] as const;
   const dayHidden = BRANCH_INFO[dayBranch]?.jijanggan ?? [];
-  const spousePalaceHiddenStars = dayHidden
-    .map(h => tenStarOf(dayStem, h.stem))
-    .filter((x): x is string => !!x);
+  const spousePalaceHidden: SpousePalaceHiddenStar[] = [];
+  dayHidden.forEach((h, idx) => {
+    const st = tenStarOf(dayStem, h.stem);
+    if (!st) return;
+    spousePalaceHidden.push({ position: HIDDEN_POSITION[Math.min(idx, 2)], stem: h.stem, star: st });
+  });
+  const spousePalaceHiddenStars = spousePalaceHidden.map((h) => h.star); // 기존 필드 하위호환
 
   // 3) 일지 합/충
   // 실측(saju-enrichment.ts:644 PairRelation): type은 "hap"|"samhap"|"banghap"|"chung"|"hyung"|"wonjin"|"same"|"none"
@@ -240,7 +249,7 @@ export function deriveMarriageFacts(
 
   return {
     sex, maritalStatus, dayStem, dayBranch, spouseStarType,
-    spouseStars, spouseStarAbsent, gwansalHonjap, spousePalaceHiddenStars,
+    spouseStars, spouseStarAbsent, gwansalHonjap, spousePalaceHiddenStars, spousePalaceHidden,
     dayBranchHap, dayBranchChung, dayBranchGongmang, spousePalaceStability,
     spouseStarDamaged, spouseStarDamageReason,
     dohwa, hongyeom,
