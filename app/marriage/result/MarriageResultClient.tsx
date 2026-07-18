@@ -504,16 +504,16 @@ function OpeningScene({
   const gc = getGradeColor(internalGrade);
   return (
     <section className="relative flex min-h-[82vh] flex-col items-center justify-center overflow-hidden px-6 text-center">
-      {/* 애정운 전용 배경 일러스트 — 매번 생성이 아니라 고정 자산 1장을 은은하게 깖 */}
+      {/* 애정운 전용 배경 — 두루미 없이 검사(애정/재물/커리어)를 구분하는 톤 맞춘 추상 이미지. 고정 자산 1장. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/images/marriage/love-hero.webp"
+        src="/images/marriage/bg-love.webp"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top opacity-50"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top opacity-[0.65]"
       />
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background-primary/55 via-background-primary/45 to-background-primary"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background-primary/30 via-background-primary/20 to-background-primary"
         aria-hidden="true"
       />
       <div
