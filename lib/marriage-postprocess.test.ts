@@ -23,3 +23,24 @@ test("금지 신살(과숙살) 언급 제거", () => {
   assert.ok(violations.some(v => v.includes("금지신살")));
   assert.ok(!blocks.spousePalace.includes("과숙살"));
 });
+
+test("advice가 아닌 중첩 객체 속 단정 예언도 재귀적으로 제거", () => {
+  const parsed = { extraSection: { sub: { text: "과숙살이 있고 이혼수도 보입니다." } }, advice: [] };
+  const { blocks, violations } = applyMarriageGuards(parsed, facts, "");
+  assert.ok(!blocks.extraSection.sub.text.includes("과숙살"));
+  assert.ok(!blocks.extraSection.sub.text.includes("이혼수"));
+  assert.ok(violations.some(v => v.includes("단정 예언 제거")));
+});
+
+test("줄바꿈으로 구분된 한국어 블록: 문제되는 한 줄만 제거하고 나머지 줄은 보존", () => {
+  const parsed = {
+    spousePalace:
+      "결혼 생활은 대체로 안정적입니다.\n하지만 외도 가능성도 있습니다.\n서로 배려하면 좋아질 것입니다.",
+    advice: [],
+  };
+  const { blocks, violations } = applyMarriageGuards(parsed, facts, "");
+  assert.ok(blocks.spousePalace.includes("안정적입니다"));
+  assert.ok(blocks.spousePalace.includes("배려하면 좋아질 것입니다"));
+  assert.ok(!blocks.spousePalace.includes("외도"));
+  assert.ok(violations.some(v => v.includes("단정 예언 제거")));
+});
