@@ -162,14 +162,14 @@ export default function WealthResultClient() {
     fetch(url)
       .then(async (res) => {
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || "결과를 불러올 수 없어요.");
+        if (!res.ok) throw new Error(json?.error || "결과를 못 불러왔어.");
         return json as ApiResponse;
       })
       .then((json) => {
         if (!cancelled) setData(json);
       })
       .catch((e: any) => {
-        if (!cancelled) setError(e?.message || "오류가 발생했어요.");
+        if (!cancelled) setError(e?.message || "오류가 났어.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -186,7 +186,7 @@ export default function WealthResultClient() {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-background-primary flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-body-2 text-text-secondary mb-4">{error || "결과가 없어요."}</p>
+        <p className="text-body-2 text-text-secondary mb-4">{error || "결과가 없어."}</p>
         <button
           type="button"
           onClick={() => router.push("/wealth")}
@@ -240,7 +240,7 @@ function TeaserLockedView({ data, router }: { data: ApiResponse; router: ReturnT
               등급은 나왔어요. 전체 리포트를 열어보세요.
             </h1>
             <p className="mt-4 max-w-[380px] text-[15.5px] leading-[1.7] text-text-secondary break-keep">
-              재성 진단, 재를 담는 그릇, 재물 흐름이 강해지는 시기까지 — 지금은 등급만 공개돼 있어요.
+              재성 진단, 재를 담는 그릇, 재물 흐름이 강해지는 시기까지 — 지금은 등급만 공개돼 있어.
             </p>
             {(interest || jaeseongType) && (
               <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -408,7 +408,7 @@ function WealthResultBody({
             <section className="px-6 pt-16">
               <p className={EYEBROW}>실천 조언</p>
               <h2 className="mt-3 font-aggro text-[26px] leading-[1.3] break-keep text-text-primary">
-                이렇게 해보면 좋아요
+                이렇게 해봐
               </h2>
               <ul className="mt-8 space-y-5">
                 {result.advice.map((item, i) => {
@@ -602,14 +602,14 @@ function deriveJaeseongStrengthGauge(
   jaeseongType: "정재우세" | "편재우세" | "재성혼재" | "무재",
   jaeGrip: WealthGrip | undefined,
 ): { value: number; verdict: string } {
-  if (jaeseongType === "무재") return { value: 10, verdict: "재성이 없어요 — 그릇으로 봐요" };
+  if (jaeseongType === "무재") return { value: 10, verdict: "재성이 없어 — 그릇으로 보자" };
   if (jaeGrip === "신왕재왕" || jaeGrip === "재다신약") {
-    return { value: 85, verdict: "재성이 뚜렷하게 강해요" };
+    return { value: 85, verdict: "재성이 뚜렷하게 강해" };
   }
   if (jaeGrip === "신왕재쇠" || jaeGrip === "신약재소") {
-    return { value: 35, verdict: "재성이 차분한 편이에요" };
+    return { value: 35, verdict: "재성이 차분한 편이야" };
   }
-  return { value: 50, verdict: "결이 섞여 있어요" };
+  return { value: 50, verdict: "결이 섞여 있어" };
 }
 
 // 재를 담는 그릇 — jaeGrip(신강신약×재성 2차원 4상한)을 그대로 스펙트럼 포지션에 매핑한다.
@@ -620,15 +620,15 @@ function deriveJaeseongStrengthGauge(
 function deriveJaeGripGauge(jaeGrip: WealthGrip | undefined): { value: number; verdict: string } {
   switch (jaeGrip) {
     case "재다신약":
-      return { value: 15, verdict: "그릇보다 재물이 많아 관리가 관건이에요" };
+      return { value: 15, verdict: "그릇보다 재물이 많아 관리가 관건이야" };
     case "신약재소":
-      return { value: 40, verdict: "무리 없는 균형이에요" };
+      return { value: 40, verdict: "무리 없는 균형이야" };
     case "신왕재쇠":
-      return { value: 65, verdict: "그릇에 비해 여유가 있어요" };
+      return { value: 65, verdict: "그릇에 비해 여유가 있어" };
     case "신왕재왕":
-      return { value: 90, verdict: "그릇도 크고 재물도 넉넉해요" };
+      return { value: 90, verdict: "그릇도 크고 재물도 넉넉해" };
     default:
-      return { value: 50, verdict: "결이 섞여 있어요" };
+      return { value: 50, verdict: "결이 섞여 있어" };
   }
 }
 

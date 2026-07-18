@@ -78,7 +78,7 @@ export default function MarriageInputPage() {
           return;
         }
         if (!res.ok) {
-          setPrimaryErrorMsg(data?.error || "결혼운 정보를 불러올 수 없어요.");
+          setPrimaryErrorMsg(data?.error || "결혼운 정보를 못 불러왔어.");
           setPrimaryState("error");
           return;
         }
@@ -90,7 +90,7 @@ export default function MarriageInputPage() {
         setPrimaryState("ready");
       } catch {
         if (!cancelled) {
-          setPrimaryErrorMsg("결혼운 정보를 불러올 수 없어요.");
+          setPrimaryErrorMsg("결혼운 정보를 못 불러왔어.");
           setPrimaryState("error");
         }
       }

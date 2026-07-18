@@ -151,14 +151,14 @@ export default function MarriageResultClient() {
     fetch(url)
       .then(async (res) => {
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error || "결과를 불러올 수 없어요.");
+        if (!res.ok) throw new Error(json?.error || "결과를 못 불러왔어.");
         return json as ApiResponse;
       })
       .then((json) => {
         if (!cancelled) setData(json);
       })
       .catch((e: any) => {
-        if (!cancelled) setError(e?.message || "오류가 발생했어요.");
+        if (!cancelled) setError(e?.message || "오류가 났어.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -175,7 +175,7 @@ export default function MarriageResultClient() {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-background-primary flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-body-2 text-text-secondary mb-4">{error || "결과가 없어요."}</p>
+        <p className="text-body-2 text-text-secondary mb-4">{error || "결과가 없어."}</p>
         <button
           type="button"
           onClick={() => router.push("/marriage")}
@@ -236,7 +236,7 @@ function TeaserLockedView({ data, router }: { data: ApiResponse; router: ReturnT
               등급은 나왔어요. 전체 리포트를 열어보세요.
             </h1>
             <p className="mt-4 max-w-[380px] text-[15.5px] leading-[1.7] text-text-secondary break-keep">
-              배우자궁 진단, 배우자성 분석, 인연이 열리는 시기까지 — 지금은 등급만 공개돼 있어요.
+              배우자궁 진단, 배우자성 분석, 인연이 열리는 시기까지 — 지금은 등급만 공개돼 있어.
             </p>
             {(maritalStatus || starChip) && (
               <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -405,7 +405,7 @@ function MarriageResultBody({
             <section className="px-6 pt-16">
               <p className={EYEBROW}>실천 조언</p>
               <h2 className="mt-3 font-aggro text-[26px] leading-[1.3] break-keep text-text-primary">
-                이렇게 해보면 좋아요
+                이렇게 해봐
               </h2>
               <ul className="mt-8 space-y-5">
                 {result.advice.map((item, i) => {
@@ -589,9 +589,9 @@ function deriveStarGauge(
   honjap: boolean,
   starType: "관성" | "재성",
 ): { value: number; verdict: string } {
-  if (absent) return { value: 10, verdict: "배우자성 없음 — 배우자궁으로 봐요" };
-  if (honjap) return { value: 50, verdict: `${starType} 두 종류가 섞여 있어요` };
-  return { value: 88, verdict: `${starType}이 또렷하게 있어요` };
+  if (absent) return { value: 10, verdict: "배우자성 없음 — 배우자궁으로 보자" };
+  if (honjap) return { value: 50, verdict: `${starType} 두 종류가 섞여 있어` };
+  return { value: 88, verdict: `${starType}이 또렷하게 있어` };
 }
 
 // 배우자궁 안정도 — 엔진 확정값(spousePalaceStability, lib/marriage-facts.ts 일지 6합/6충
@@ -604,9 +604,9 @@ function deriveStarGauge(
 function derivePalaceGauge(
   stability: "안정" | "보통" | "불안정" | undefined,
 ): { value: number; verdict: string } {
-  if (stability === "불안정") return { value: 25, verdict: "흔들리는 결이 보여요" };
-  if (stability === "안정") return { value: 80, verdict: "안정적인 결이에요" };
-  return { value: 50, verdict: "결이 섞여 있어요" };
+  if (stability === "불안정") return { value: 25, verdict: "흔들리는 결이 보여" };
+  if (stability === "안정") return { value: 80, verdict: "안정적인 결이야" };
+  return { value: 50, verdict: "결이 섞여 있어" };
 }
 
 // ────────────────────────────────────────────────────────

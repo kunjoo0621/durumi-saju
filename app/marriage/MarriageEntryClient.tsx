@@ -42,7 +42,7 @@ export default function MarriageEntryClient() {
           // 대표사주 없음 — 에러가 아니라 "먼저 사주 분석"으로 안내할 정상 상태.
           setPrimary(null);
         } else if (!res.ok) {
-          setPrimaryError(data?.error || "결혼운 정보를 불러올 수 없어요.");
+          setPrimaryError(data?.error || "결혼운 정보를 못 불러왔어.");
         } else {
           setPrimary({
             loveScore: typeof data?.loveScore === "number" ? data.loveScore : 0,
@@ -50,7 +50,7 @@ export default function MarriageEntryClient() {
           });
         }
       } catch {
-        if (!cancelled) setPrimaryError("결혼운 정보를 불러올 수 없어요.");
+        if (!cancelled) setPrimaryError("결혼운 정보를 못 불러왔어.");
       } finally {
         if (!cancelled) setPrimaryLoading(false);
       }
