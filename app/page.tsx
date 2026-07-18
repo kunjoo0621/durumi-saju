@@ -203,6 +203,7 @@ function LandingPageInner() {
   const hero = useScrollReveal<HTMLElement>();
   const analysis = useScrollReveal<HTMLElement>();
   const battle = useScrollReveal<HTMLElement>();
+  const deep = useScrollReveal<HTMLElement>();
   const faq = useScrollReveal<HTMLElement>();
 
   const revealStyle = (visible: boolean): React.CSSProperties => ({
@@ -315,7 +316,38 @@ function LandingPageInner() {
           </div>
         </section>
 
-        {/* ── 섹션 4: FAQ ── */}
+        {/* ── 섹션 4: 심층 검사 (결혼운·재물운) ── */}
+        <section
+          ref={deep.ref}
+          style={revealStyle(deep.visible)}
+          className="relative py-16 md:py-20"
+        >
+          <div className="relative mx-auto max-w-[720px] px-5 sm:px-0">
+            <h2 className="font-aggro text-[28px] leading-[130%] font-bold text-white text-center break-keep mb-8">
+              한 분야만 골라서
+              <br />
+              끝까지 깊게 파고드는 심층 검사
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FeatureCard
+                badge="결혼운·애정운"
+                title="내 결혼운, 배우자궁까지 깊게"
+                body="배우자성·배우자궁·인연이 열리는 시기를 원국에서 파고들어, 결혼과 애정을 심층 분석해줘"
+                imageSrc="/images/marriage/bg-love.webp"
+                imageAlt="결혼운 심층 검사 미리보기"
+              />
+              <FeatureCard
+                badge="재물운"
+                title="내 재물 그릇, 언제 돈이 붙나"
+                body="재성 구조·재를 담는 그릇·재물 흐름이 강해지는 시기를 파고들어, 재물운을 심층 분석해줘"
+                imageSrc="/images/wealth/bg-wealth.webp"
+                imageAlt="재물운 심층 검사 미리보기"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ── 섹션 5: FAQ ── */}
         <section
           ref={faq.ref}
           style={revealStyle(faq.visible)}
