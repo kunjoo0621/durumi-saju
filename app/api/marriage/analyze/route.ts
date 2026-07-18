@@ -47,6 +47,7 @@ import { assertMarriageConsistency } from "@/lib/marriage-consistency";
 import { buildMarriagePrompt } from "@/lib/marriage-prompt";
 import { applyMarriageGuards, validateMarriageBlocks } from "@/lib/marriage-postprocess";
 import { generateWithQaRegen } from "@/lib/qa-regen";
+import { buildMarriageTimeline } from "@/lib/fortune-timeline";
 import { MARRIAGE_COST } from "@/lib/constants/coins";
 import {
   normalizeSelfInput,
@@ -474,6 +475,11 @@ export async function POST(request: NextRequest) {
           { status: 500 },
         );
       }
+
+      // 서버 결정론 타임라인 — 가드/스크럽이 끝난 뒤에 병합한다(LLM 산문이 아니므로 스크럽
+      // 대상 아님·건드리면 안 됨). 실패해도 리포트 본문과 무관하므로 저장을 막지 않는다.
+      const serverTimeline = buildMarriageTimeline(fortune, facts, currentYear);
+      if (serverTimeline) blocks.serverTimeline = serverTimeline;
 
       // 8) 저장
       const { data: updatedRows, error: updateError } = await supabaseAdmin
