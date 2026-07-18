@@ -7,7 +7,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 export type PetSpecies = "dog" | "cat";
 export type PetGender = "male" | "female" | "unknown" | "";
 export type BirthTier = 1 | 2 | 3 | 4;
-export type AdoptionRoute = "purchase" | "rescue" | "gift" | "unknown" | "";
 
 // 보호자 입력 (사주 단일 분석과 동일 필드 — 재사용 가능)
 export interface PetCompatOwnerInput {
@@ -37,9 +36,7 @@ export interface PetCompatPetInput {
   adoptionDate: string;          // tier 4
   calendarType: "solar" | "lunar" | "";
 
-  adoptionRoute: AdoptionRoute;
-
-  // v0.6 — 사진 (옵션, AI 일러스트 변환용)
+  // 사진 (하드 필수 — 전용 일러스트 생성용)
   photoPath: string;             // Supabase Storage 경로 (pet-uploads 버킷 안)
   photoUrl: string;              // 미리보기용 signed URL (1시간 유효)
 }
@@ -86,7 +83,6 @@ const emptyPet: PetCompatPetInput = {
   birthMonthEstimated: "",
   adoptionDate: "",
   calendarType: "",
-  adoptionRoute: "",
   photoPath: "",
   photoUrl: "",
 };
@@ -114,6 +110,20 @@ export const usePetCompatStore = create<PetCompatState>()(
     }),
     {
       name: "pet-compat-store",
+      // v1: 입력 폼 재설계로 스텝 배열 순서가 바뀜(펫 먼저 → 보호자 나중) +
+      //     adoptionRoute 필드 제거. 구 localStorage 의 step 인덱스가 새 배열과
+      //     어긋나 중간저장 사용자가 엉뚱한 화면에서 시작하는 것을 막기 위해 step 리셋.
+      version: 1,
+      migrate: (persistedState, version) => {
+        const s = (persistedState ?? {}) as Partial<PetCompatState> & {
+          pet?: Record<string, unknown>;
+        };
+        if (version < 1) {
+          if (s.pet && "adoptionRoute" in s.pet) delete s.pet.adoptionRoute;
+          s.step = 0;
+        }
+        return s as PetCompatState;
+      },
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? localStorage : (undefined as unknown as Storage)
       ),

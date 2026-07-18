@@ -84,7 +84,10 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = sessionLookup.data.payload as PetCompatPayload;
-    if (!payload?.pet?.name || !payload?.pet?.species || !payload?.pet?.birthTier) {
+    if (
+      !payload?.pet?.name || !payload?.pet?.species || !payload?.pet?.birthTier ||
+      !payload?.pet?.breed || !payload?.pet?.gender
+    ) {
       return NextResponse.json({ error: "펫 정보가 부족해." }, { status: 400 });
     }
     if (!["dog", "cat"].includes(payload.pet.species)) {
@@ -202,7 +205,8 @@ export async function POST(request: NextRequest) {
             photoUrl: photoSignedUrl,
             petName: pet.name,
             petSpecies: pet.species,
-            petBreed: pet.breed,
+            // "잘 몰라요"(폼의 미상 옵션)는 일러스트 프롬프트에서 품종으로 쓰지 않음.
+            petBreed: pet.breed && pet.breed !== "잘 몰라요" ? pet.breed : undefined,
             resultId: provisionalResultId,
             archetype: scores.archetype,
           })
@@ -235,7 +239,7 @@ export async function POST(request: NextRequest) {
         birth_month_estimated: pet.birthMonthEstimated || null,
         adoption_date: pet.adoptionDate || null,
         calendar_type: pet.calendarType || null,
-        adoption_route: pet.adoptionRoute || null,
+        adoption_route: null,
       })
       .select("id")
       .single();

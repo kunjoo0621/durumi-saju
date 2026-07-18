@@ -59,11 +59,14 @@ export async function POST(request: NextRequest) {
 
     if (isPet) {
       const petPayload = sessionRow.payload as {
-        pet?: { name?: string; species?: string; birthTier?: number };
+        pet?: { name?: string; species?: string; breed?: string; gender?: string; birthTier?: number };
         owner?: { birthYear?: string; gender?: string };
       };
+      // breed·gender 필수(폼에서 하드 강제). photoPath 는 서버 하드필수 아님 —
+      // 클라가 하드 강제하고, 서버는 사진 없어도 분석은 진행(일러스트만 스킵)하는 안전설계 유지.
       if (
         !petPayload?.pet?.name || !petPayload?.pet?.species || !petPayload?.pet?.birthTier ||
+        !petPayload?.pet?.breed || !petPayload?.pet?.gender ||
         !petPayload?.owner?.birthYear || !petPayload?.owner?.gender
       ) {
         return NextResponse.json({ error: "입력값이 부족합니다." }, { status: 400 });

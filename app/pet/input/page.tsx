@@ -51,31 +51,35 @@ const CAT_BREEDS = [
   "벵골", "랙돌", "터키시앙고라", "믹스묘", "기타",
 ] as const;
 
+// 품종 select 의 "잘 몰라요" 옵션 값 — 서버/프롬프트에서는 미상/믹스로 취급.
+const BREED_UNKNOWN = "잘 몰라요";
+
+// 펫 먼저 → 보호자 나중. 앞 5스텝(petIntro~ownerMode)은 NEW/EXISTING 공통.
 type StepId =
-  | "selectMode"
+  | "petIntro" | "petDetail" | "petBirth" | "petPhoto"
+  | "ownerMode"
   | "ownerName" | "ownerBirth" | "ownerLocation" | "ownerGender"
-  | "petName" | "petSpecies" | "petBirth" | "petPhoto" | "petOptional" | "confirm";
+  | "confirm";
 
 const STEPS_NEW: StepId[] = [
-  "selectMode", "ownerName", "ownerBirth", "ownerLocation", "ownerGender",
-  "petName", "petSpecies", "petBirth", "petPhoto", "petOptional", "confirm",
+  "petIntro", "petDetail", "petBirth", "petPhoto", "ownerMode",
+  "ownerName", "ownerBirth", "ownerLocation", "ownerGender", "confirm",
 ];
 
 const STEPS_EXISTING: StepId[] = [
-  "selectMode", "petName", "petSpecies", "petBirth", "petPhoto", "petOptional", "confirm",
+  "petIntro", "petDetail", "petBirth", "petPhoto", "ownerMode", "confirm",
 ];
 
 const STEP_TITLE: Record<StepId, string> = {
-  selectMode: "네 사주부터 확인할게",
-  ownerName: "네 이름이 뭐야?",
+  petIntro: "우리 아이 소개해줘",
+  petDetail: "조금 더 알려줘",
+  petBirth: "생일 정보 알려줘",
+  petPhoto: "사진 한 장이면 돼",
+  ownerMode: "이제 보호자 차례",
+  ownerName: "보호자 이름이 뭐야?",
   ownerBirth: "언제 태어났어?",
   ownerLocation: "어디서 태어났어?",
   ownerGender: "성별은?",
-  petName: "우리 아이 이름이 뭐야?",
-  petSpecies: "어떤 동물이야?",
-  petBirth: "생일 정보 알려줘",
-  petPhoto: "사진 한 장 넣어줄래?",
-  petOptional: "알면 더 정확해져",
   confirm: "이대로 분석할게",
 };
 
@@ -121,9 +125,11 @@ export default function PetInputPage() {
   }, [status]);
 
   const steps: StepId[] = ownerMode === "new" ? STEPS_NEW : STEPS_EXISTING;
-  const currentStepId = steps[step] ?? "selectMode";
+  const currentStepId = steps[step] ?? "petIntro";
   const totalSteps = steps.length;
   const isLastStep = step === totalSteps - 1;
+  // 진행 바 분모는 NEW 기준으로 고정 — ownerMode 분기에서 분모가 튀지 않게(단조 증가).
+  const progressTotal = STEPS_NEW.length;
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const el = e.target;
@@ -186,7 +192,8 @@ export default function PetInputPage() {
         unknownBirthTime: r.unknownBirthTime || false,
       });
       actions.setOwnerMode("existing");
-      actions.setStep(1);
+      // 보호자 스텝을 건너뛰고 바로 확인 화면으로 (EXISTING 배열의 마지막 = confirm).
+      actions.setStep(STEPS_EXISTING.length - 1);
     } catch {
       setMySajuError("사주를 못 불러왔어.");
     } finally {
@@ -342,8 +349,22 @@ export default function PetInputPage() {
 
   const canProceed = (): boolean => {
     switch (currentStepId) {
-      case "selectMode":
-        return false; // selectMode는 inline 버튼으로 진행, 다음 버튼 미사용
+      case "petIntro":
+        return pet.name.trim().length > 0 && (pet.species === "dog" || pet.species === "cat");
+      case "petDetail":
+        return pet.breed !== "" && (pet.gender === "male" || pet.gender === "female" || pet.gender === "unknown");
+      case "petBirth":
+        if (pet.birthTier === 0) return false;
+        if (pet.birthTier === 1) return !!pet.birthDate && !!pet.birthTime && !petBirthDateError && !petBirthTimeError;
+        if (pet.birthTier === 2) return !!pet.birthDate && !petBirthDateError;
+        if (pet.birthTier === 3) return !!pet.birthYearEstimated && !petEstimateError;
+        if (pet.birthTier === 4) return !!pet.adoptionDate && !petAdoptionDateError;
+        return false;
+      case "petPhoto":
+        // 하드 필수 — 사진 업로드 완료(photoPath 존재)해야만 다음. 탈출구 없음.
+        return !photoUploading && !!pet.photoPath;
+      case "ownerMode":
+        return false; // inline 버튼으로 진행, 다음 버튼 미사용
       case "ownerName":
         return owner.name.trim().length > 0;
       case "ownerBirth":
@@ -356,21 +377,6 @@ export default function PetInputPage() {
         return owner.birthLocation.length > 0;
       case "ownerGender":
         return owner.gender === "male" || owner.gender === "female";
-      case "petName":
-        return pet.name.trim().length > 0;
-      case "petSpecies":
-        return pet.species === "dog" || pet.species === "cat";
-      case "petBirth":
-        if (pet.birthTier === 0) return false;
-        if (pet.birthTier === 1) return !!pet.birthDate && !!pet.birthTime && !petBirthDateError && !petBirthTimeError;
-        if (pet.birthTier === 2) return !!pet.birthDate && !petBirthDateError;
-        if (pet.birthTier === 3) return !!pet.birthYearEstimated && !petEstimateError;
-        if (pet.birthTier === 4) return !!pet.adoptionDate && !petAdoptionDateError;
-        return false;
-      case "petPhoto":
-        return !photoUploading;  // 사진 업로드 중 아니면 진행 OK (사진 없어도 통과)
-      case "petOptional":
-        return true;
       case "confirm":
         return true;
       default:
@@ -384,9 +390,12 @@ export default function PetInputPage() {
 
   const renderStep = () => {
     switch (currentStepId) {
-      case "selectMode":
+      case "ownerMode":
         return (
           <div className="space-y-3">
+            <p className="text-center text-[13px] text-text-secondary">
+              {pet.name}와의 궁합을 보려면 보호자 사주가 필요해
+            </p>
             <button
               type="button"
               onClick={handleLoadMySaju}
@@ -403,7 +412,7 @@ export default function PetInputPage() {
             </button>
             <button
               type="button"
-              onClick={() => { actions.setOwnerMode("new"); actions.setStep(1); }}
+              onClick={() => { actions.setOwnerMode("new"); actions.setStep(step + 1); }}
               className="btn-option w-full py-5 px-5 rounded-xl text-left transition-[transform,background-color,color] duration-200 active:scale-[0.98]"
             >
               <div className="text-[16px] font-bold text-text-primary">새로 입력하기</div>
@@ -539,37 +548,39 @@ export default function PetInputPage() {
           </div>
         );
 
-      case "petName":
+      case "petIntro":
         return (
-          <div>
-            <input
-              type="text"
-              value={pet.name}
-              onChange={(e) => actions.setPet({ name: e.target.value })}
-              placeholder="예: 콩이, 미오, 감자"
-              className="w-full text-[15px] h-[52px]"
-              onFocus={handleInputFocus}
-              autoFocus
-              aria-label="반려동물 이름"
-            />
-          </div>
-        );
-
-      case "petSpecies":
-        return (
-          <div className="space-y-3" role="radiogroup" aria-label="종">
-            {[{ v: "dog", l: "강아지" }, { v: "cat", l: "고양이" }].map((s) => (
-              <button
-                key={s.v}
-                type="button"
-                onClick={() => actions.setPet({ species: s.v as "dog" | "cat" })}
-                className={`btn-option w-full py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
-                  pet.species === s.v ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
-                }`}
-              >
-                {pet.species === s.v && <span className="mr-2">✓</span>}{s.l}
-              </button>
-            ))}
+          <div className="space-y-5">
+            <div>
+              <div className="text-[12px] text-text-secondary mb-2">이름</div>
+              <input
+                type="text"
+                value={pet.name}
+                onChange={(e) => actions.setPet({ name: e.target.value })}
+                placeholder="예: 콩이, 미오, 감자"
+                className="w-full text-[15px] h-[52px]"
+                onFocus={handleInputFocus}
+                autoFocus
+                aria-label="반려동물 이름"
+              />
+            </div>
+            <div>
+              <div className="text-[12px] text-text-secondary mb-2">어떤 아이야?</div>
+              <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="종">
+                {[{ v: "dog", l: "강아지" }, { v: "cat", l: "고양이" }].map((s) => (
+                  <button
+                    key={s.v}
+                    type="button"
+                    onClick={() => actions.setPet({ species: s.v as "dog" | "cat" })}
+                    className={`btn-option py-4 rounded-xl text-button-md transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
+                      pet.species === s.v ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
+                    }`}
+                  >
+                    {pet.species === s.v && <span className="mr-2">✓</span>}{s.l}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         );
 
@@ -719,8 +730,12 @@ export default function PetInputPage() {
       case "petPhoto":
         return (
           <div className="space-y-4">
+            <p className="text-center text-[14px] text-text-primary font-semibold">
+              {pet.name || "우리 아이"} 전용 일러스트를 만들어줄게
+            </p>
             <p className="text-center text-[13px] text-text-secondary">
-              사진 올리면 결과 카드에 {pet.name}만의 일러스트가 박혀. 안 올려도 진행 OK.
+              사진 한 장이면 결과 카드에 {pet.name || "우리 아이"}만의 그림이 박혀.
+              얼굴 잘 나온 정면 사진이 제일 예쁘게 나와.
             </p>
 
             {pet.photoUrl ? (
@@ -771,17 +786,28 @@ export default function PetInputPage() {
           </div>
         );
 
-      case "petOptional": {
+      case "petDetail": {
         const breeds = pet.species === "cat" ? CAT_BREEDS : DOG_BREEDS;
         return (
           <div className="space-y-6">
-            <p className="text-center text-[13px] text-text-secondary">
-              전부 옵션이야. 몰라도 넘어가
-            </p>
+            <div>
+              <div className="text-[12px] text-text-secondary mb-2">품종</div>
+              <select
+                value={pet.breed}
+                onChange={(e) => actions.setPet({ breed: e.target.value })}
+                onFocus={handleInputFocus}
+                className="w-full text-[15px] h-[52px]"
+                aria-label="품종"
+              >
+                <option value="" disabled>품종을 골라줘</option>
+                {breeds.map((b) => <option key={b} value={b}>{b}</option>)}
+                <option value={BREED_UNKNOWN}>{BREED_UNKNOWN}</option>
+              </select>
+            </div>
 
             <div>
               <div className="text-[12px] text-text-secondary mb-2">성별</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="성별">
                 {[{ v: "male", l: "수컷" }, { v: "female", l: "암컷" }, { v: "unknown", l: "모름" }].map((g) => (
                   <button
                     key={g.v}
@@ -791,48 +817,11 @@ export default function PetInputPage() {
                       pet.gender === g.v ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
                     }`}
                   >
-                    {g.l}
+                    {pet.gender === g.v && <span className="mr-1">✓</span>}{g.l}
                   </button>
                 ))}
               </div>
             </div>
-
-            <div>
-              <div className="text-[12px] text-text-secondary mb-2">품종</div>
-              <select
-                value={pet.breed}
-                onChange={(e) => actions.setPet({ breed: e.target.value })}
-                onFocus={handleInputFocus}
-                className="w-full text-[15px] h-[52px]"
-              >
-                <option value="">선택 안 함</option>
-                {breeds.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <div className="text-[12px] text-text-secondary mb-2">어떻게 가족이 됐어?</div>
-              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="입양 경로">
-                {[
-                  { v: "purchase", l: "구매" },
-                  { v: "rescue", l: "입양" },
-                  { v: "gift", l: "선물" },
-                  { v: "unknown", l: "모름" },
-                ].map((r) => (
-                  <button
-                    key={r.v}
-                    type="button"
-                    onClick={() => actions.setPet({ adoptionRoute: r.v as "purchase" | "rescue" | "gift" | "unknown" })}
-                    className={`btn-option py-3 px-3 rounded-xl text-button-sm transition-[transform,background-color,color] duration-200 active:scale-[0.98] ${
-                      pet.adoptionRoute === r.v ? "btn-option--selected shadow-[0_0_0_1px_rgba(255,107,107,0.2)]" : ""
-                    }`}
-                  >
-                    {r.l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
           </div>
         );
       }
@@ -851,18 +840,28 @@ export default function PetInputPage() {
             </div>
             <div className="bg-background-tertiary rounded-2xl p-5">
               <div className="text-[12px] text-text-secondary mb-2">반려동물</div>
-              <div className="text-[15px] text-text-primary font-bold">
-                {pet.name} <span className="text-[13px] text-text-secondary">({pet.species === "dog" ? "강아지" : "고양이"})</span>
-              </div>
-              <div className="text-[13px] text-text-secondary mt-1 space-y-0.5">
-                {pet.breed && <div>품종: {pet.breed}</div>}
-                {pet.gender && (
-                  <div>성별: {pet.gender === "male" ? "수컷" : pet.gender === "female" ? "암컷" : "모름"}</div>
+              <div className="flex items-start gap-3">
+                {pet.photoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pet.photoUrl}
+                    alt={pet.name}
+                    className="w-16 h-16 rounded-xl object-cover bg-background-secondary shrink-0"
+                  />
                 )}
-                {pet.birthTier === 1 && <div>생일: {pet.birthDate} {pet.birthTime}</div>}
-                {pet.birthTier === 2 && <div>생일: {pet.birthDate} (시 미상)</div>}
-                {pet.birthTier === 3 && <div>추정: {pet.birthYearEstimated}년 {pet.birthMonthEstimated || "?"}월</div>}
-                {pet.birthTier === 4 && <div>가족 된 날: {pet.adoptionDate}</div>}
+                <div className="min-w-0">
+                  <div className="text-[15px] text-text-primary font-bold">
+                    {pet.name} <span className="text-[13px] text-text-secondary">({pet.species === "dog" ? "강아지" : "고양이"})</span>
+                  </div>
+                  <div className="text-[13px] text-text-secondary mt-1 space-y-0.5">
+                    <div>품종: {pet.breed}</div>
+                    <div>성별: {pet.gender === "male" ? "수컷" : pet.gender === "female" ? "암컷" : "모름"}</div>
+                    {pet.birthTier === 1 && <div>생일: {pet.birthDate} {pet.birthTime}</div>}
+                    {pet.birthTier === 2 && <div>생일: {pet.birthDate} (시 미상)</div>}
+                    {pet.birthTier === 3 && <div>추정: {pet.birthYearEstimated}년 {pet.birthMonthEstimated || "?"}월</div>}
+                    {pet.birthTier === 4 && <div>가족 된 날: {pet.adoptionDate}</div>}
+                  </div>
+                </div>
               </div>
             </div>
             <p className="text-center text-[13px] text-text-secondary">
@@ -888,7 +887,7 @@ export default function PetInputPage() {
     );
   }
 
-  const showFooterButton = currentStepId !== "selectMode";
+  const showFooterButton = currentStepId !== "ownerMode";
 
   return (
     <div className="h-[100dvh] bg-background-primary flex flex-col overflow-hidden">
@@ -911,17 +910,17 @@ export default function PetInputPage() {
       >
         <div className="max-w-[640px] mx-auto space-y-4">
           <div className="flex items-center">
-            <span className="text-[14px] text-text-secondary">{step + 1} / {totalSteps}</span>
+            <span className="text-[14px] text-text-secondary">{Math.min(step + 1, progressTotal)} / {progressTotal}</span>
             <div
               className="ml-3 flex-1 h-1 bg-background-tertiary rounded-full overflow-hidden"
               role="progressbar"
-              aria-valuenow={step + 1}
+              aria-valuenow={Math.min(step + 1, progressTotal)}
               aria-valuemin={1}
-              aria-valuemax={totalSteps}
+              aria-valuemax={progressTotal}
             >
               <div
                 className="h-full bg-primary rounded-full transition-[width] duration-500 ease-out"
-                style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
+                style={{ width: `${(Math.min(step + 1, progressTotal) / progressTotal) * 100}%` }}
               />
             </div>
           </div>

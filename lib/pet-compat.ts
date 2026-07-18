@@ -28,7 +28,6 @@ export interface PetInput {
   birthMonthEstimated?: number;
   adoptionDate?: string;
   calendarType?: "solar" | "lunar";
-  adoptionRoute?: "purchase" | "rescue" | "gift" | "unknown";
 
   // v0.6 — 사진 (옵션, Storage 경로)
   photoPath?: string;
@@ -519,6 +518,9 @@ export function buildPetCompatUserInfo(input: PetCompatInput): string {
     return "노령묘 (느긋하고 노련해진, 잠과 온기를 더 찾는 시기)";
   })();
 
+  // 품종 "잘 몰라요"(폼의 미상 옵션)는 빈 값과 동일하게 취급 → 지어내기 방지.
+  const knownBreed = pet.breed && pet.breed !== "잘 몰라요" ? pet.breed : "";
+
   return `
 [보호자]
 - 이름: ${owner.name}
@@ -534,16 +536,15 @@ ${ownerSajuText}
 - 이름: ${pet.name}
 - 종: ${pet.species === "dog" ? "강아지" : "고양이"}
 - ★ 이 아이는 ${pet.species === "dog" ? "강아지" : "고양이"}다. 결과 전체에서 ${pet.species === "dog" ? "고양이" : "강아지"} 전용 행동·용어(${pet.species === "dog" ? "꾹꾹이·골골송·식빵" : "댕댕이·산책·꼬리 프로펠러"} 등)를 쓰면 실패.
-- 품종: ${pet.breed || "(미상/믹스)"}
+- 품종: ${knownBreed || "(미상/믹스 가능)"}
 - 성별: ${pet.gender === "male" ? "수컷" : pet.gender === "female" ? "암컷" : "(미상)"}
 - 생일 정보: ${petBirthLine}
 - 생일 신뢰도: tier ${pet.birthTier} — ${tierNote[pet.birthTier]}
 - ★ 사양(서버 확정 — manual.spec에 그대로 옮기고, 본문에서 띠·오행 언급 시 이 값과 어긋나지 마라): ${input.petSpec}
 
 [★ 이 아이 프로필 — 판정·시뮬·케어에 반드시 녹여라 (사주만큼 중요)]
-- 품종 렌즈: ${pet.breed || "(미상/믹스)"} ${pet.breed ? `— 네가 확실히 아는 이 품종의 기질·체형·본능(예: 보더콜리=일 시켜줘야 사는 몰이 본능·초집중, 닥스훈트=굴 파던 사냥꾼·긴 허리·큰 목청, 진돗개=주인 하나만 보는 충직·경계, 시츄=느긋한 무릎담요, 뱅갈=야생 운동량·물 좋아함, 러시안블루=낯가림·조용)을 행동 묘사의 '재료'로 써라. 확실히 모르는 품종이면 지어내지 말고 종 일반 행동만.` : "— 믹스/미상이라 품종 렌즈는 생략하고 종 일반 행동만 써라."}
+- 품종 렌즈: ${knownBreed || "(미상/믹스 가능)"} ${knownBreed ? `— 네가 확실히 아는 이 품종의 기질·체형·본능(예: 보더콜리=일 시켜줘야 사는 몰이 본능·초집중, 닥스훈트=굴 파던 사냥꾼·긴 허리·큰 목청, 진돗개=주인 하나만 보는 충직·경계, 시츄=느긋한 무릎담요, 뱅갈=야생 운동량·물 좋아함, 러시안블루=낯가림·조용)을 행동 묘사의 '재료'로 써라. 확실히 모르는 품종이면 지어내지 말고 종 일반 행동만.` : "— 믹스/미상이라 품종 렌즈는 생략하고 종 일반 행동만 써라."}
 - 나이·생애단계: ${lifeStage ? lifeStage : "나이 미상 — 나이·생애단계 관련 묘사 금지"}
-- 입양 경로: ${pet.adoptionRoute === "rescue" ? "구조 — 첫 만남/신뢰 쌓기 서사에 한 번 정도 자연스럽게 녹여도 됨" : pet.adoptionRoute === "gift" ? "선물로 옴 — 억지 서사 금지" : "(서사에 억지로 넣지 마라)"}
 
 [반려동물 사주 (만세력)]
 ${petSajuText}

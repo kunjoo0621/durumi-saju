@@ -149,7 +149,8 @@ export function buildPetSpec(pet: PetInput, petEnriched: EnrichedSajuData | null
   } else if (pet.birthTier === 3 && pet.birthYearEstimated) {
     ageStr = `약 ${Math.max(0, nowYear - pet.birthYearEstimated)}세`;
   }
-  const breed = pet.breed || "믹스";
+  // "잘 몰라요"(폼의 미상 옵션)도 단정 회피 → 믹스류로.
+  const breed = pet.breed && pet.breed !== "잘 몰라요" ? pet.breed : "믹스";
   // F1(WS2): tier 4(가족 된 날)는 연지가 펫의 '실제 띠'가 아니라 입양연도 지지 → 띠·오행을 확정처럼 쓰지 않는다.
   //          (tier 4 사주 신호는 extractPetCompatSignals에서도 중화됨.)
   if (pet.birthTier === 4) {
@@ -408,6 +409,9 @@ export function buildPetSajuText(
     ? "戌(土) — 중화의 성격, 어디든 잘 어울림, 심성 안 변함 (세종의소리 칼럼)"
     : "寅(木) — 상향 의지, 천진난만, 정 끌어들임 (세종의소리 칼럼)";
 
+  // "잘 몰라요"(폼의 미상 옵션)는 빈 값과 동일하게 취급 → 지어내기 방지.
+  const knownBreed = pet.breed && pet.breed !== "잘 몰라요" ? pet.breed : "";
+
   // v0.7: 중성화 신호 제거 (명리학적 정당성 약함)
   const extras: string[] = [];
 
@@ -416,7 +420,7 @@ export function buildPetSajuText(
 [펫 사주 — ${pet.name} (계산 불가)]
 ${note}
 종 본성: ${speciesNature}
-견종/묘종: ${pet.breed || "(미상/믹스)"}
+견종/묘종: ${knownBreed || "(미상/믹스 가능)"}
 ${extras.length > 0 ? extras.join("\n") + "\n" : ""}※ 사주 데이터 없음 — 종 본성과 보조 신호만 참고
 `.trim();
   }
@@ -447,7 +451,7 @@ ${sajuBlock}
 
 [종/품종 본성]
 종 본성: ${speciesNature}
-${pet.species === "dog" ? "견종" : "묘종"}: ${pet.breed || "(미상/믹스)"}
+${pet.species === "dog" ? "견종" : "묘종"}: ${knownBreed || "(미상/믹스 가능)"}
 ${extras.length > 0 ? "\n[보조 신호]\n" + extras.join("\n") : ""}
 `.trim();
 }
