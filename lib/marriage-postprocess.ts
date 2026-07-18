@@ -6,7 +6,9 @@ const FORBIDDEN_PREDICTIONS = [
   /결혼\s*운이?\s*없/, /불임/, /자식\s*(이|은|을)?\s*없/, /자식\s*복이?\s*없/,
   /바람\s*(기|피)/, /과부/, /독수공방/, /(일찍|먼저)\s*(떠나|떠날|여의)/,
 ];
-const FORBIDDEN_SHINSAL = [/과숙살/, /고신살/, /상부살/, /홍란/, /천희/];
+// 괴강살·백호살·양인살은 일주/일지만 보면 계산 가능해 보여 LLM이 학습 데이터에서 끌어와 지어내기 쉬운
+// 일주 파생 신살이다(프롬프트 절대 규칙 1이 1차 방어). 여기선 그 누수를 잡는 2차 안전망.
+const FORBIDDEN_SHINSAL = [/과숙살/, /고신살/, /상부살/, /홍란/, /천희/, /괴강살/, /백호살/, /양인살/];
 
 export interface MarriageGuardResult { blocks: any; violations: string[]; }
 
