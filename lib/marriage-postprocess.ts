@@ -1,7 +1,38 @@
-const FORBIDDEN_PREDICTIONS = [/이혼수?/, /사별/, /외도/, /바람(을|이|날)/, /혼자 늙/, /팔자가 세/];
+// 단정 예언 금지어 — 문장 단위로만 컷하므로(scrubForbiddenPredictions) 긍정 맥락 문장은
+// 안전하다. 예: "이별의 아픔을 딛고"는 /이별수/에 안 걸린다. 결측/빈 블록은 F-2가 후단에서 잡는다.
+const FORBIDDEN_PREDICTIONS = [
+  /이혼수?/, /사별/, /외도/, /바람(을|이|날)/, /혼자 늙/, /팔자가 세/,
+  /이별수/, /곧\s*헤어/, /헤어질\s*(수|운명|팔자)/, /파혼/, /갈라서|갈라설/, /재혼/,
+  /결혼\s*운이?\s*없/, /불임/, /자식\s*(이|은|을)?\s*없/, /자식\s*복이?\s*없/,
+  /바람\s*(기|피)/, /과부/, /독수공방/, /(일찍|먼저)\s*(떠나|떠날|여의)/,
+];
 const FORBIDDEN_SHINSAL = [/과숙살/, /고신살/, /상부살/, /홍란/, /천희/];
 
 export interface MarriageGuardResult { blocks: any; violations: string[]; }
+
+// F-2: Gemini 출력이 필수 블록을 다 채웠는지 검증. 가드가 문장을 스크럽한 뒤 빈 블록이 남는
+// 경우(무료 리포트 취약점)와 모델이 스키마를 어긴 경우를 잡는다. 이슈 배열이 비면 통과.
+const REQUIRED_TEXT_BLOCKS: Array<[string, number]> = [
+  ["teaserSummary", 10], ["gradeHeadline", 80], ["spousePalace", 80], ["spouseStar", 80],
+  ["partnerProfile", 80], ["relationshipPattern", 80], ["timingFlow", 80], ["gunghapCta", 30],
+];
+
+export function validateMarriageBlocks(parsed: any, opts?: { minAdvice?: number }): string[] {
+  const minAdvice = opts?.minAdvice ?? 2;
+  const issues: string[] = [];
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return ["루트가 객체 아님"];
+  for (const [key, minLen] of REQUIRED_TEXT_BLOCKS) {
+    const v = parsed[key];
+    if (typeof v !== "string" || v.trim().length < minLen) issues.push(`${key} 누락/부족(<${minLen}자)`);
+  }
+  const advice = parsed.advice;
+  if (!Array.isArray(advice)) issues.push("advice 배열 아님");
+  else {
+    const valid = advice.filter((a: any) => typeof a?.text === "string" && a.text.trim().length >= 10 && typeof a?.tag === "string");
+    if (valid.length < minAdvice) issues.push(`advice 유효 항목 ${valid.length} < ${minAdvice}`);
+  }
+  return issues;
+}
 
 export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: string): MarriageGuardResult {
   const violations: string[] = [];

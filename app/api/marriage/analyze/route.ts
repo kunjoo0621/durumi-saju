@@ -35,7 +35,6 @@ import {
   type InputPayload,
 } from "@/lib/analysis";
 import { parseJson5Loose } from "@/lib/json5Utils";
-import { normalizeScores } from "@/lib/resultSchema";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { refundCoins } from "@/lib/server/session-helpers";
 import { getPrimarySajuData } from "@/lib/server/get-primary-saju";
@@ -43,11 +42,54 @@ import { calculateSaju, enrichSajuData, formatSajuText } from "@/lib/utils/saju"
 import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 import { deriveMarriageFacts, type MaritalStatus } from "@/lib/marriage-facts";
-import { computeMarriageGrade } from "@/lib/marriage-grade";
+import { computeMarriageGrade, extractLoveScore } from "@/lib/marriage-grade";
 import { assertMarriageConsistency } from "@/lib/marriage-consistency";
 import { buildMarriagePrompt } from "@/lib/marriage-prompt";
-import { applyMarriageGuards } from "@/lib/marriage-postprocess";
+import { applyMarriageGuards, validateMarriageBlocks } from "@/lib/marriage-postprocess";
 import { MARRIAGE_COST } from "@/lib/constants/coins";
+
+// 크래시로 full_json 없이 남은 unlock을 "진행 중"으로 볼 유예 시간. 이 안이면 재차감을 막고
+// 409로 잠시 후 재시도를 안내한다(동시 요청 보호). 넘으면 orphan으로 보고 멱등 환불 후 재결제.
+const ORPHAN_GRACE_MS = 3 * 60 * 1000;
+
+// 멱등 환불 헬퍼 — "차감 1회당 환불 1회, 리포트 1건" 불변식의 핵심.
+// unlock row 삭제(order_id 기준)가 원자적 승자 결정: 삭제 count가 1이어야 이 호출이 환불 책임자다.
+// 동시/중복 호출이 와도 삭제에 성공한 단 한 경로만 refundCoins를 부른다.
+async function refundMarriageUnlock(userId: string, orderId: string): Promise<boolean> {
+  // 이미 이 order_id로 환불이 기록됐는지 먼저 확인 — 조회 실패면 아무것도 건드리지 않고 false(호출부가 500).
+  const { data: priorRefunds, error: refundLookupError } = await supabaseAdmin
+    .from("coin_transactions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("type", "refund")
+    .eq("reference_id", orderId)
+    .limit(1);
+  if (refundLookupError) {
+    console.error("[MARRIAGE_ANALYZE] refund lookup 실패", orderId, refundLookupError.message);
+    return false;
+  }
+
+  // unlock 삭제 = 원자적 승자 결정. 삭제된 row가 있어야 이 호출이 환불 자격을 얻는다.
+  const { data: deleted, error: deleteError } = await supabaseAdmin
+    .from("marriage_result_unlocks")
+    .delete()
+    .eq("order_id", orderId)
+    .select("id");
+  if (deleteError) {
+    console.error("[MARRIAGE_ANALYZE] unlock 삭제 실패", orderId, deleteError.message);
+    return false;
+  }
+  if (!deleted || deleted.length === 0) {
+    // 다른 경로가 이미 이 unlock을 정리·환불함 — 재환불 금지.
+    return true;
+  }
+  if (priorRefunds && priorRefunds.length > 0) {
+    // 환불은 이미 기록됐는데 unlock만 남아 있던 방어적 케이스 — 삭제만 하고 재환불 안 함.
+    return true;
+  }
+  await refundCoins(userId, MARRIAGE_COST, orderId);
+  return true;
+}
 
 const ALLOWED_STATUS: MaritalStatus[] = ["솔로", "연애중", "기혼", "다시 혼자"];
 
@@ -100,7 +142,7 @@ export async function POST(request: NextRequest) {
     // teaser row(=/api/marriage/start 산출물)가 있어야 한다 — 없으면 결제 대상 row가 없다.
     const { data: resultRow, error: resultRowError } = await supabaseAdmin
       .from("marriage_results")
-      .select("id, full_json")
+      .select("id, full_json, marriage_grade")
       .eq("user_id", userId)
       .eq("input_hash", inputHash)
       .eq("marital_status", maritalStatus)
@@ -121,7 +163,7 @@ export async function POST(request: NextRequest) {
     // 2) 멱등 체크
     const { data: existingUnlock, error: unlockLookupError } = await supabaseAdmin
       .from("marriage_result_unlocks")
-      .select("id, order_id")
+      .select("id, order_id, created_at")
       .eq("user_id", userId)
       .eq("input_hash", inputHash)
       .eq("marital_status", maritalStatus)
@@ -143,23 +185,54 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingUnlock) {
-      // 결제는 됐는데 full_json이 없음 — 이전 시도가 Gemini/저장 단계에서 끊긴 orphan unlock.
-      // 이 row를 그대로 재사용해 재차감 없이 재시도하면:
-      //   차감 → (일시적) 실패 → 환불(순환) → 재시도가 이 unlock을 "이미 결제됨"으로 오인
-      //   → 재차감 없이 성공 → 순 코인 0으로 리포트 획득(무료 리포트).
-      // 게다가 refundCoins는 reference_id 기준 멱등이 아니므로(주석 참조) 같은 order_id로
-      // 재시도가 반복 실패하면 매번 환불만 쌓여 코인 파밍도 가능하다.
-      // → stale row를 지우고 이번 시도는 반드시 새로 결제(spend_coins + 새 unlock insert)하게
-      //    fall-through 시킨다. marriage_results 쪽은 8) 저장이 단일 UPDATE로 전 필드를
-      //    한 번에 쓰므로 full_json이 null이면 다른 필드도 세팅된 적이 없어 별도 정리는 불필요.
-      const { error: staleDeleteError } = await supabaseAdmin
-        .from("marriage_result_unlocks")
-        .delete()
-        .eq("id", existingUnlock.id);
-      if (staleDeleteError) {
-        console.error("[MARRIAGE_ANALYZE] stale unlock delete", staleDeleteError.message);
+      // 결제는 됐는데 full_json이 없음 — orphan unlock. 두 경우가 섞여 있다:
+      //   (a) 방금 다른 요청이 결제하고 아직 Gemini/저장 중(정상 진행) → 재차감하면 이중결제.
+      //   (b) 이전 시도가 크래시로 끊겨 영영 안 채워질 stale row → 지우고 재결제해야 함.
+      // 시간으로 구분한다: created_at이 3분 안이면 (a)로 보고 409로 잠시 후 재시도 안내(재차감 금지),
+      // 3분을 넘겼으면 (b)로 보고 그 orphan의 차감을 멱등 환불한 뒤 이번 시도를 새로 결제시킨다.
+      //
+      // ★ 이전 버전은 orphan을 "환불 없이 삭제 후 재차감"해 크래시 사용자에게 이중결제를 물렸다.
+      //   refundMarriageUnlock으로 orphan 차감을 먼저 되돌려 "차감 1 = 리포트 1" 불변식을 지킨다.
+      const ageMs = Date.now() - new Date(existingUnlock.created_at as string).getTime();
+      if (Number.isFinite(ageMs) && ageMs < ORPHAN_GRACE_MS) {
+        return NextResponse.json(
+          { error: "이미 분석이 진행 중이에요. 잠시 후 다시 시도해 주세요.", analyzing: true },
+          { status: 409 },
+        );
+      }
+      const cleaned = await refundMarriageUnlock(userId, existingUnlock.order_id as string);
+      if (!cleaned) {
         return NextResponse.json({ error: "결제 정보 정리 중 오류가 발생했습니다." }, { status: 500 });
       }
+      // fall-through → 아래에서 반드시 새로 결제(spend_coins + 새 unlock insert).
+    }
+
+    // 2-2) 결제 전 등급 게이트 (F-3/N-1) — 돈을 쓰기 전에 확정.
+    //  · 연애운 결측을 0으로 뭉개 C를 만들지 않는다(extractLoveScore null → 500, 결제 없음).
+    //  · 미리보기(start)가 저장한 등급과 지금 계산한 등급이 다르면(그 사이 개인사주 재분석으로
+    //    사주가 바뀐 경우) 결제하지 않고 409 — 잘못된 등급으로 유료 리포트를 만들지 않는다.
+    const { data: srcRow, error: srcError } = await supabaseAdmin
+      .from("saju_results")
+      .select("full_json")
+      .eq("id", primary.sourceResultId)
+      .maybeSingle();
+    if (srcError) {
+      console.error("[MARRIAGE_ANALYZE] full_json 조회 실패", srcError.message);
+      return NextResponse.json({ error: "사주 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+    }
+    const loveScore = extractLoveScore(srcRow?.full_json);
+    if (loveScore === null) {
+      console.error("[MARRIAGE_ANALYZE] 연애운 점수 결측 — 결제 차단");
+      return NextResponse.json({ error: "연애운 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+    }
+    const { grade } = computeMarriageGrade(loveScore);
+    const storedGrade = (resultRow.marriage_grade as string | null) ?? null;
+    if (storedGrade && storedGrade !== grade) {
+      console.error(`[MARRIAGE_ANALYZE] 등급 불일치 — 미리보기 ${storedGrade} vs 현재 ${grade} (결제 차단)`);
+      return NextResponse.json(
+        { error: "미리보기 이후 사주 정보가 바뀌었어요. 미리보기를 다시 만든 뒤 시도해 주세요.", gradeMismatch: true },
+        { status: 409 },
+      );
     }
 
     // 3) 잔액 확인 + 차감 (today/start 패턴 미러) — 이 지점부터는 항상 신규 결제 경로.
@@ -202,6 +275,9 @@ export async function POST(request: NextRequest) {
       if (unlockInsert.error.code === "23505") {
         // 진 쪽(loser) — 이긴 쪽이 이미 unlock row를 갖고 있으므로 내 차감만 환불하고 끝낸다.
         // 이긴 쪽 row는 절대 건드리지 않는다(아래 refundAndCleanup과 달리 삭제 없음).
+        // ★여기선 refundMarriageUnlock을 쓰지 않는다: insert 실패로 내 order_id의 unlock row가
+        //  없으니 삭제 게이트를 태우면 "삭제 0건 → 환불 스킵"이 돼 내 차감이 환불되지 않는다.
+        //  loser는 자기 차감을 직접 환불해야 맞다(이긴 쪽 order_id와 다르므로 이중환불 아님).
         await refundCoins(userId, MARRIAGE_COST, orderId);
         const { data: freshRow } = await supabaseAdmin
           .from("marriage_results")
@@ -217,6 +293,7 @@ export async function POST(request: NextRequest) {
         );
       }
       console.error("[MARRIAGE_ANALYZE] unlock insert", unlockInsert.error.message);
+      // insert 자체가 실패해 내 unlock row가 없다 — 삭제 게이트를 못 태우므로 직접 환불.
       await refundCoins(userId, MARRIAGE_COST, orderId);
       return NextResponse.json(
         { error: "결제 기록 저장 중 오류가 발생했습니다.", refunded: true },
@@ -232,18 +309,9 @@ export async function POST(request: NextRequest) {
     // 안전하지만, 혹시라도 그 가드가 깨지면 무료 리포트 취약점이 재발한다 — 방어적으로 여기서
     // order_id 기준(unique index) 정확히 삭제해 항상 clean state로 되돌린다.
     const refundAndCleanup = async () => {
-      await refundCoins(userId, MARRIAGE_COST, refundRef);
-      const { error: cleanupError } = await supabaseAdmin
-        .from("marriage_result_unlocks")
-        .delete()
-        .eq("order_id", refundRef);
-      if (cleanupError) {
-        console.error(
-          "[MARRIAGE_ANALYZE] unlock cleanup 실패 — order_id:",
-          refundRef,
-          cleanupError.message,
-        );
-      }
+      // 삭제(order_id) 원자성으로 "차감 1 = 환불 1"을 보장하는 멱등 헬퍼로 위임한다.
+      // 실패해도 여기선 이미 500 반환 경로라 반환값은 무시(로그는 헬퍼 내부에서 남긴다).
+      await refundMarriageUnlock(userId, refundRef);
     };
 
     // 4) facts 재조립 + grade, 5~8) 일관성 검증 → Gemini → 가드 → 저장
@@ -295,17 +363,7 @@ export async function POST(request: NextRequest) {
       const facts = deriveMarriageFacts(enriched, fortune, saju, gender, maritalStatus, currentYear);
       const sajuText = formatSajuText(saju, { isTimeUnknown: primary.unknownBirthTime });
 
-      const { data: srcRow, error: srcError } = await supabaseAdmin
-        .from("saju_results")
-        .select("full_json")
-        .eq("id", primary.sourceResultId)
-        .maybeSingle();
-      if (srcError) {
-        console.error("[MARRIAGE_ANALYZE] full_json 조회 실패", srcError.message);
-      }
-      const loveScore = normalizeScores((srcRow?.full_json as any)?.scores).연애운;
-      const { grade } = computeMarriageGrade(loveScore);
-
+      // loveScore·grade는 결제 전 게이트(2-2)에서 이미 확정됐다(storedGrade와 동일 보장). 재조회 없이 그대로 사용.
       // 5) 일관성 검증 — 실패하면 Gemini도 호출하지 않고 즉시 환불.
       const issues = assertMarriageConsistency({
         grade,
@@ -334,7 +392,16 @@ export async function POST(request: NextRequest) {
         const res = await callGemini(model, prompt, MARRIAGE_SYSTEM_PROMPT, { temperature: 0.75 });
         if (res.ok) {
           try {
-            parsed = parseJson5Loose<any>(res.text);
+            const candidate = parseJson5Loose<any>(res.text);
+            // F-2: 필수 블록이 다 찼는지 파싱 직후 검증 — 비거나 스키마를 어긴 응답이면
+            // 다음 모델로 폴백(빈 유료 리포트가 저장되는 걸 막는다).
+            const blockIssues = validateMarriageBlocks(candidate);
+            if (blockIssues.length > 0) {
+              console.error("[MARRIAGE_ANALYZE] 블록 검증 실패 — 폴백", blockIssues);
+              lastError = { status: 502, apiStatus: "INVALID_BLOCKS", message: "분석 결과 형식이 불완전합니다." };
+              continue;
+            }
+            parsed = candidate;
             lastError = null;
             break;
           } catch (parseError: any) {
@@ -360,6 +427,18 @@ export async function POST(request: NextRequest) {
       const { blocks, violations } = applyMarriageGuards(parsed, facts, sajuText);
       if (violations.length > 0) {
         console.warn("[MARRIAGE_ANALYZE] guard violations", violations);
+      }
+
+      // F-2 후단: 가드가 문장을 스크럽한 뒤 필수 블록이 비었는지 재검증(무료/빈 리포트 방지).
+      // 가드가 advice를 최대 통째로 지울 수 있어 여기선 minAdvice:1(최소 1개 생존) 요구.
+      const postGuardIssues = validateMarriageBlocks(blocks, { minAdvice: 1 });
+      if (postGuardIssues.length > 0) {
+        console.error("[MARRIAGE_ANALYZE] 가드 후 블록 부족 — 환불", postGuardIssues);
+        await refundAndCleanup();
+        return NextResponse.json(
+          { error: "분석 결과가 불완전해요. 알은 환불됐어요.", refunded: true },
+          { status: 500 },
+        );
       }
 
       // 8) 저장
@@ -395,6 +474,16 @@ export async function POST(request: NextRequest) {
           { error: "분석 결과를 저장할 수 없습니다. 알은 환불되었습니다.", refunded: true },
           { status: 500 },
         );
+      }
+
+      // N-2: 가드가 무언가 걸러냈으면 사후 감사용으로 기록(별도 best-effort UPDATE, 본 저장과 분리).
+      // 실패해도 리포트는 이미 저장됐으므로 비치명 — 경고만 남기고 성공 반환을 막지 않는다.
+      if (violations.length > 0) {
+        const { error: gvError } = await supabaseAdmin
+          .from("marriage_results")
+          .update({ guard_violations: violations })
+          .eq("id", resultId);
+        if (gvError) console.warn("[MARRIAGE_ANALYZE] guard_violations 기록 실패(비치명)", gvError.message);
       }
 
       // 9) 반환

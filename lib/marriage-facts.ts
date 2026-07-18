@@ -65,6 +65,9 @@ export function deriveMarriageFacts(
   const spouseStarAbsent = spouseStars.length === 0;
   const jeong = sex === "female" ? "정관" : "정재";
   const pyeon = sex === "female" ? "편관" : "편재";
+  // 필드명은 gwansalHonjap 하나지만 남명은 실제로 "정편재혼잡"(정재+편재 동시)이다. 필드명을
+  // rename하지 않는 이유: DB 컬럼(gwansal_honjap)·teaser_json·share-marriage·API 응답까지 파급.
+  // 프롬프트 노출 라벨은 성별에 맞춰 marriage-prompt.ts buildFactBlock에서 분기한다.
   const gwansalHonjap = spouseStars.some(s => s.star === jeong) && spouseStars.some(s => s.star === pyeon);
 
   // 2) 일지 지장간 십성 (배우자 숨은 성격)
