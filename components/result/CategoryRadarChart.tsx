@@ -12,9 +12,21 @@ export type CategoryItem = {
   grade: string;
 };
 
-type CategoryRadarChartProps = {
-  categories: CategoryItem[];
+// v0.3(펫): 범용 축 — 등급 없는 지표(호흡·사랑 등) N개를 레이더로. label 2행째는 grade 있으면 등급, 없으면 subLabel.
+export type RadarAxis = {
+  key: string;
+  label?: string;
+  score: number;
+  grade?: string;
+  subLabel?: string;
 };
+
+type CategoryRadarChartProps = {
+  categories?: CategoryItem[];
+  axes?: RadarAxis[];       // 전달 시 categories 대신 범용 축 렌더 (미전달 시 기존 경로 그대로)
+};
+
+type RadarItem = { key: string; label: string; score: number; grade: string; subLabel?: string };
 
 const CATEGORY_ORDER: CategoryKey[] = ["재물운", "연애운", "직장운", "건강운", "대인운"];
 
@@ -51,24 +63,34 @@ function clampScore(raw: number) {
   return clamp(Math.round(raw), 0, 100);
 }
 
-function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
-  const orderedCategories = useMemo(() => {
-    const map = new Map(categories.map((item) => [item.key, item]));
+function CategoryRadarChartInner({ categories, axes }: CategoryRadarChartProps) {
+  const orderedCategories = useMemo<RadarItem[]>(() => {
+    if (axes && axes.length) {
+      return axes.map((a) => ({
+        key: a.key,
+        label: a.label ?? a.key,
+        score: clampScore(a.score),
+        grade: typeof a.grade === "string" && a.grade.trim() ? a.grade.trim() : "",
+        subLabel: a.subLabel,
+      }));
+    }
+    const map = new Map((categories ?? []).map((item) => [item.key, item]));
     return CATEGORY_ORDER.map((key) => {
       const found = map.get(key);
       return {
         key,
+        label: key,
         score: clampScore(found?.score ?? 0),
         grade: typeof found?.grade === "string" && found.grade.trim() ? found.grade.trim() : "-",
       };
     });
-  }, [categories]);
+  }, [categories, axes]);
 
   const [progress, setProgress] = useState(0);
   const hasAnimatedRef = useRef(false);
 
   const scoreHash = useMemo(
-    () => orderedCategories.map((item) => `${item.key}:${item.score}:${item.grade}`).join("|"),
+    () => orderedCategories.map((item) => `${item.key}:${item.score}:${item.grade}:${item.subLabel ?? ""}`).join("|"),
     [orderedCategories]
   );
 
@@ -226,7 +248,8 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
           {/* Labels (2-line: 카테고리명 / 등급 · 점수) */}
           <g>
             {labelPoints.map((label) => {
-              const gradeColor = getGradeColor(label.item.grade).main;
+              const hasGrade = label.item.grade !== ""; // categories 경로는 항상 등급 표시(기존 동작 보존), axes는 grade 없으면 subLabel
+              const gradeColor = hasGrade ? getGradeColor(label.item.grade).main : "";
               return (
                 <g key={label.item.key}>
                   <text
@@ -236,7 +259,7 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                     style={{ fontSize: 14, fontWeight: 600 }}
                     fill="rgba(255,255,255,0.85)"
                   >
-                    {label.item.key}
+                    {label.item.label}
                   </text>
                   <text
                     x={label.x.toFixed(2)}
@@ -244,8 +267,14 @@ function CategoryRadarChartInner({ categories }: CategoryRadarChartProps) {
                     textAnchor="middle"
                     style={{ fontSize: 12, fontWeight: 500 }}
                   >
-                    <tspan fill={gradeColor}>{safeDisplayGrade(label.item.grade)}</tspan>
-                    <tspan fill="rgba(255,255,255,0.4)">{" · "}{label.item.score}점</tspan>
+                    {hasGrade ? (
+                      <>
+                        <tspan fill={gradeColor}>{safeDisplayGrade(label.item.grade)}</tspan>
+                        <tspan fill="rgba(255,255,255,0.4)">{" · "}{label.item.score}점</tspan>
+                      </>
+                    ) : (
+                      <tspan fill="rgba(255,255,255,0.45)">{label.item.subLabel ?? `${label.item.score}점`}</tspan>
+                    )}
                   </text>
                 </g>
               );

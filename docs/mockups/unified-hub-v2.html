@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ko" data-auth="out">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>두루미 통합 허브 v2 — DS 토큰·Phosphor 아이콘·하드코딩0</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // 실제 프로젝트 토큰 1:1 미러 (globals.css / tailwind.config.ts). 이 블록이 유일한 색 정의처.
+  tailwind.config = {
+    theme: { extend: {
+      colors: {
+        background: { primary: "rgb(9 9 11)", secondary: "rgb(20 20 20)", tertiary: "rgb(39 39 42)" },
+        text: { primary: "rgb(255 255 255)", secondary: "rgb(161 161 170)", tertiary: "rgb(140 140 150)" },
+        primary: { DEFAULT: "rgb(244 63 94)", hover: "rgb(251 113 133)", kakao: "rgb(254 229 0)" },
+        saju: { wood: "rgb(34 197 94)" },
+      },
+      fontFamily: { aggro: ["SBAggroM", "Pretendard", "sans-serif"] },
+    }},
+  };
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  @font-face { font-family:"SBAggroM"; src:url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/SBAggroM.woff") format("woff"); font-display:swap; }
+  :root { color-scheme: dark; }
+  html, body { background:#050507; }
+  body { font-family:"Pretendard",-apple-system,system-ui,"Apple SD Gothic Neo",sans-serif; -webkit-font-smoothing:antialiased; }
+  .font-aggro { font-family:"SBAggroM","Pretendard",sans-serif; }
+  .break-keep { word-break: keep-all; }
+  .no-scrollbar::-webkit-scrollbar { display:none; } .no-scrollbar { scrollbar-width:none; }
+  .reveal { opacity:0; transform:translateY(22px); transition:opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1); }
+  .reveal.in { opacity:1; transform:none; }
+  .press { transition: transform .18s cubic-bezier(.34,1.56,.64,1), background-color .2s, box-shadow .2s; }
+  .press:active { transform: scale(.97); }
+  .depth { box-shadow: 0 8px 30px rgba(0,0,0,.42); }
+  .slot { position:relative; display:grid; place-items:center; border:2px dashed rgb(255 255 255 / .14); background:rgb(255 255 255 / .04); color:rgb(140 140 150); }
+  .slot .glyph { text-align:center; line-height:1.3; }
+  [data-auth="in"] .only-out { display:none !important; }
+  [data-auth="out"] .only-in { display:none !important; }
+  .glassbar { background: rgb(20 20 22 / .72); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+  @media (prefers-reduced-motion: reduce){ .reveal{transition:none;opacity:1;transform:none;} }
+</style>
+</head>
+<body class="min-h-screen text-text-primary">
+
+<!-- 목업 컨트롤 -->
+<div class="fixed top-3 left-1/2 -translate-x-1/2 z-[300] flex gap-1 rounded-full bg-white/10 backdrop-blur px-1 py-1 text-[12px] font-semibold ring-1 ring-white/15">
+  <button onclick="setAuth('out')" id="tab-out" class="rounded-full px-3 py-1.5">로그아웃</button>
+  <button onclick="setAuth('in')" id="tab-in" class="rounded-full px-3 py-1.5 text-text-secondary">로그인</button>
+</div>
+
+<div class="mx-auto w-full max-w-[440px] min-h-screen bg-background-primary relative overflow-hidden">
+  <div class="pointer-events-none absolute -top-28 left-1/2 -translate-x-1/2 h-[320px] w-[320px] rounded-full blur-[100px] bg-primary/[0.14]"></div>
+
+  <!-- Header (실제 Header.tsx 형태: 가운데 타이틀 + 우측 알잔액/로그인 + 햄버거) -->
+  <header class="sticky top-0 z-[100] bg-background-primary px-5 py-4">
+    <div class="flex items-center">
+      <div class="flex-1 flex justify-start"><div class="w-10"></div></div>
+      <div class="font-aggro text-[19px] text-text-primary shrink-0"><span>사주보는 두루미</span></div>
+      <div class="flex-1 flex items-center justify-end gap-2">
+        <span class="only-in flex items-center gap-1 text-[13px] font-semibold px-2.5 py-1 rounded-lg text-text-secondary bg-white/[0.06]">
+          <svg viewBox="0 0 256 256" fill="currentColor" width="14" height="14"><path d="M128,232a72,72,0,0,1-72-72c0-24.7,10.9-56.9,28.5-84C102.2,49.3,116.3,40,128,40s25.8,9.3,43.5,36c17.6,27.1,28.5,59.3,28.5,84A72,72,0,0,1,128,232Z"/></svg>40
+        </span>
+        <span class="only-out whitespace-nowrap text-[13px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 bg-background-secondary text-text-secondary">로그인</span>
+        <button class="w-10 h-10 grid place-items-center rounded-lg text-text-primary press" aria-label="메뉴"><svg viewBox="0 0 256 256" fill="currentColor" width="22" height="22"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pb-[120px]">
+
+    <!-- ① 지금 인기 있는 (콘텐츠 캐러셀) -->
+    <section class="pt-4">
+      <div class="reveal mb-3 flex items-end justify-between px-5">
+        <div>
+          <p class="text-[12px] font-medium text-text-tertiary">요즘 다들 보는</p>
+          <h2 class="font-aggro text-[22px]">이번 주 인기 사주</h2>
+        </div>
+        <button class="text-[13px] text-text-secondary shrink-0 pb-1">전체 보기 →</button>
+      </div>
+      <div class="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2" style="scroll-padding-left:20px">
+        <article class="relative snap-start w-[86%] shrink-0 overflow-hidden rounded-3xl bg-background-secondary" style="aspect-ratio:2/3">
+          <img src="assets/saju-grade.png" alt="내 사주 등급" class="absolute inset-0 h-full w-full object-cover" />
+          <span class="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/80">1 / 5</span>
+        </article>
+        <article class="relative snap-start w-[86%] shrink-0 overflow-hidden rounded-3xl bg-background-secondary" style="aspect-ratio:2/3">
+          <img src="assets/battle.png" alt="사주 배틀" class="absolute inset-0 h-full w-full object-cover" />
+          <span class="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/80">2 / 5</span>
+        </article>
+        <article class="relative snap-start w-[86%] shrink-0 overflow-hidden rounded-3xl bg-background-secondary" style="aspect-ratio:2/3">
+          <img src="assets/yearly.png" alt="2026년 운세" class="absolute inset-0 h-full w-full object-cover" />
+          <span class="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/80">3 / 5</span>
+        </article>
+        <article class="relative snap-start w-[86%] shrink-0 overflow-hidden rounded-3xl bg-background-secondary" style="aspect-ratio:2/3">
+          <img src="assets/pet.png" alt="반려동물 궁합" class="absolute inset-0 h-full w-full object-cover" />
+          <span class="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/80">4 / 5</span>
+        </article>
+        <article class="relative snap-start w-[86%] shrink-0 overflow-hidden rounded-3xl bg-background-secondary" style="aspect-ratio:2/3">
+          <img src="assets/today.png" alt="오늘의 운세" class="absolute inset-0 h-full w-full object-cover" />
+          <span class="absolute right-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/80">5 / 5</span>
+        </article>
+        <div class="w-1 shrink-0"></div>
+      </div>
+      <div class="flex justify-center gap-1.5 pt-1">
+        <span class="h-1.5 w-5 rounded-full bg-primary"></span>
+        <span class="h-1.5 w-1.5 rounded-full bg-white/25"></span>
+        <span class="h-1.5 w-1.5 rounded-full bg-white/25"></span>
+        <span class="h-1.5 w-1.5 rounded-full bg-white/25"></span>
+        <span class="h-1.5 w-1.5 rounded-full bg-white/25"></span>
+      </div>
+    </section>
+
+    <!-- ② 두루미가 봐드려요 (서비스 캐러셀 · 메뉴 우선) -->
+    <section class="pt-10">
+      <div class="reveal mb-3 px-5">
+        <p class="text-[12px] font-medium text-text-tertiary">알 하나면 충분해요</p>
+        <h2 class="font-aggro text-[22px]">두루미가 봐드릴게요</h2>
+      </div>
+      <div class="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2" style="scroll-padding-left:20px">
+        <button class="press snap-start w-[150px] shrink-0 text-left">
+          <div class="relative mb-2 w-full overflow-hidden rounded-2xl bg-background-secondary" style="aspect-ratio:4/5"><img src="assets/saju-grade.png" alt="" class="absolute inset-0 h-full w-full object-cover object-[center_80%]" /></div>
+          <span class="text-[11px] font-semibold text-text-secondary">평생 사주</span>
+          <h3 class="text-[16px] font-bold leading-tight">내 사주 분석</h3>
+          <p class="mt-1 text-[12px] text-text-tertiary leading-snug line-clamp-1 break-keep">타고난 기질과 운의 흐름</p>
+          <p class="mt-1 flex items-center gap-1 text-[14px] font-bold"><svg viewBox="0 0 256 256" fill="currentColor" width="14" height="14"><path d="M128,232a72,72,0,0,1-72-72c0-24.7,10.9-56.9,28.5-84C102.2,49.3,116.3,40,128,40s25.8,9.3,43.5,36c17.6,27.1,28.5,59.3,28.5,84A72,72,0,0,1,128,232Z"/></svg>10알</p>
+        </button>
+        <button class="press snap-start w-[150px] shrink-0 text-left">
+          <div class="relative mb-2 w-full overflow-hidden rounded-2xl bg-background-secondary" style="aspect-ratio:4/5"><img src="assets/pet.png" alt="" class="absolute inset-0 h-full w-full object-cover object-[center_80%]" /><span class="absolute right-2 top-2 rounded-md bg-saju-wood px-1.5 py-0.5 text-[10px] font-bold text-background-primary">NEW</span></div>
+          <span class="text-[11px] font-semibold text-text-secondary">반려동물 궁합</span>
+          <h3 class="text-[16px] font-bold leading-tight">우리 아이와 궁합</h3>
+          <p class="mt-1 text-[12px] text-text-tertiary leading-snug line-clamp-1 break-keep">우리 아인 날 어떻게 볼까</p>
+          <p class="mt-1 flex items-center gap-1 text-[14px] font-bold"><svg viewBox="0 0 256 256" fill="currentColor" width="14" height="14"><path d="M128,232a72,72,0,0,1-72-72c0-24.7,10.9-56.9,28.5-84C102.2,49.3,116.3,40,128,40s25.8,9.3,43.5,36c17.6,27.1,28.5,59.3,28.5,84A72,72,0,0,1,128,232Z"/></svg><span class="text-text-tertiary line-through text-[12px] font-semibold">15</span> 8알</p>
+        </button>
+        <button class="press snap-start w-[150px] shrink-0 text-left">
+          <div class="relative mb-2 w-full overflow-hidden rounded-2xl bg-background-secondary" style="aspect-ratio:4/5"><img src="assets/today.png" alt="" class="absolute inset-0 h-full w-full object-cover object-[center_80%]" /></div>
+          <span class="text-[11px] font-semibold text-text-secondary">7월 17일</span>
+          <h3 class="text-[16px] font-bold leading-tight">오늘의 운세</h3>
+          <p class="mt-1 text-[12px] text-text-tertiary leading-snug line-clamp-1 break-keep">오늘 나에게 딱 맞는 하루</p>
+          <p class="mt-1 flex items-center gap-1 text-[14px] font-bold"><svg viewBox="0 0 256 256" fill="currentColor" width="14" height="14"><path d="M128,232a72,72,0,0,1-72-72c0-24.7,10.9-56.9,28.5-84C102.2,49.3,116.3,40,128,40s25.8,9.3,43.5,36c17.6,27.1,28.5,59.3,28.5,84A72,72,0,0,1,128,232Z"/></svg>5알</p>
+        </button>
+        <button class="press snap-start w-[150px] shrink-0 text-left">
+          <div class="relative mb-2 w-full overflow-hidden rounded-2xl bg-background-secondary" style="aspect-ratio:4/5"><img src="assets/battle.png" alt="" class="absolute inset-0 h-full w-full object-cover object-[center_80%]" /></div>
+          <span class="text-[11px] font-semibold text-text-secondary">둘이서</span>
+          <h3 class="text-[16px] font-bold leading-tight">사주 배틀</h3>
+          <p class="mt-1 text-[12px] text-text-tertiary leading-snug line-clamp-1 break-keep">누가 더 셀까, 사주 맞대결</p>
+          <p class="mt-1 flex items-center gap-1 text-[14px] font-bold"><svg viewBox="0 0 256 256" fill="currentColor" width="14" height="14"><path d="M128,232a72,72,0,0,1-72-72c0-24.7,10.9-56.9,28.5-84C102.2,49.3,116.3,40,128,40s25.8,9.3,43.5,36c17.6,27.1,28.5,59.3,28.5,84A72,72,0,0,1,128,232Z"/></svg>20알</p>
+        </button>
+        <button class="press snap-start w-[150px] shrink-0 text-left">
+          <div class="relative mb-2 w-full overflow-hidden rounded-2xl bg-background-secondary" style="aspect-ratio:4/5"><img src="assets/yearly.png" alt="" class="absolute inset-0 h-full w-full object-cover object-[center_80%]" /></div>
+          <span class="text-[11px] font-semibold text-text-secondary">2026년</span>
+          <h3 class="text-[16px] font-bold leading-tight">올해 운세</h3>
+          <p class="mt-1 text-[12px] text-text-tertiary leading-snug line-clamp-1 break-keep">올해 나에게 무슨 일이</p>
+          <p class="mt-1 flex items-center gap-1 text-[14px] font-bold"><svg viewBox="0 0 256 256" fill="currentColor" width="14" height="14"><path d="M128,232a72,72,0,0,1-72-72c0-24.7,10.9-56.9,28.5-84C102.2,49.3,116.3,40,128,40s25.8,9.3,43.5,36c17.6,27.1,28.5,59.3,28.5,84A72,72,0,0,1,128,232Z"/></svg>15알</p>
+        </button>
+        <div class="w-1 shrink-0"></div>
+      </div>
+    </section>
+
+    <!-- ③ 연예인 사주 (메뉴 아래 · 세로 인물 카드) -->
+    <section class="pt-10">
+      <div class="reveal mb-3 flex items-end justify-between px-5">
+        <div>
+          <p class="text-[12px] font-medium text-text-tertiary">이 사람은 어떤 사주일까?</p>
+          <h2 class="font-aggro text-[22px]">연예인 사주</h2>
+        </div>
+        <button class="text-[13px] text-text-secondary shrink-0 pb-1">전체 보기 →</button>
+      </div>
+      <div class="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2" style="scroll-padding-left:20px">
+        <button class="press snap-start w-[130px] shrink-0 text-left">
+          <div class="slot w-full overflow-hidden rounded-2xl" style="aspect-ratio:3/4"><span class="text-[9px]">얼굴 3:4</span></div>
+          <h3 class="mt-2 text-[15px] font-bold leading-tight">임영웅</h3>
+          <p class="mt-0.5 text-[12px] text-text-tertiary">트로트</p>
+        </button>
+        <button class="press snap-start w-[130px] shrink-0 text-left">
+          <div class="slot w-full overflow-hidden rounded-2xl" style="aspect-ratio:3/4"><span class="text-[9px]">얼굴 3:4</span></div>
+          <h3 class="mt-2 text-[15px] font-bold leading-tight">손태진</h3>
+          <p class="mt-0.5 text-[12px] text-text-tertiary">성악·크로스오버</p>
+        </button>
+        <button class="press snap-start w-[130px] shrink-0 text-left">
+          <div class="slot w-full overflow-hidden rounded-2xl" style="aspect-ratio:3/4"><span class="text-[9px]">얼굴 3:4</span></div>
+          <h3 class="mt-2 text-[15px] font-bold leading-tight">안성훈</h3>
+          <p class="mt-0.5 text-[12px] text-text-tertiary">트로트</p>
+        </button>
+        <button class="press snap-start w-[130px] shrink-0 text-left">
+          <div class="slot w-full overflow-hidden rounded-2xl" style="aspect-ratio:3/4"><span class="text-[9px]">얼굴 3:4</span></div>
+          <h3 class="mt-2 text-[15px] font-bold leading-tight">정동원</h3>
+          <p class="mt-0.5 text-[12px] text-text-tertiary">트로트</p>
+        </button>
+        <button class="press snap-start w-[130px] shrink-0 text-left">
+          <div class="slot w-full overflow-hidden rounded-2xl" style="aspect-ratio:3/4"><span class="text-[9px]">얼굴 3:4</span></div>
+          <h3 class="mt-2 text-[15px] font-bold leading-tight">이찬원</h3>
+          <p class="mt-0.5 text-[12px] text-text-tertiary">트로트</p>
+        </button>
+        <div class="w-1 shrink-0"></div>
+      </div>
+    </section>
+
+    <!-- ④ 사주 사전 (리스트 · 숫자 없음) -->
+    <section class="reveal px-5 pt-10">
+      <p class="text-[12px] font-medium text-text-tertiary">이 말, 무슨 뜻일까?</p>
+      <h2 class="font-aggro text-[22px] mb-2">알아두면 재밌는 사주 사전</h2>
+      <div class="-mx-1">
+        <a class="press flex items-center gap-3.5 rounded-2xl px-1 py-2.5">
+          <div class="slot h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl"><span class="text-[9px]">썸네일<br/>1:1</span></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold leading-[1.35] break-keep">내 사주는 몇 등급일까</h3><p class="mt-0.5 text-[12.5px] text-text-tertiary">사주 입문</p></div>
+        </a>
+        <a class="press flex items-center gap-3.5 rounded-2xl px-1 py-2.5">
+          <div class="slot h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl"><span class="text-[9px]">썸네일<br/>1:1</span></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold leading-[1.35] break-keep">좋은 일주는 따로 있을까</h3><p class="mt-0.5 text-[12.5px] text-text-tertiary">60갑자</p></div>
+        </a>
+        <a class="press flex items-center gap-3.5 rounded-2xl px-1 py-2.5">
+          <div class="slot h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl"><span class="text-[9px]">썸네일<br/>1:1</span></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold leading-[1.35] break-keep">천을귀인, 최고의 길신</h3><p class="mt-0.5 text-[12.5px] text-text-tertiary">신살</p></div>
+        </a>
+        <a class="press flex items-center gap-3.5 rounded-2xl px-1 py-2.5">
+          <div class="slot h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl"><span class="text-[9px]">썸네일<br/>1:1</span></div>
+          <div class="min-w-0 flex-1"><h3 class="text-[16px] font-bold leading-[1.35] break-keep">일간 — 사주의 중심 '나'</h3><p class="mt-0.5 text-[12.5px] text-text-tertiary">사주 입문</p></div>
+        </a>
+      </div>
+      <button class="mt-3 w-full rounded-2xl bg-white/[0.04] py-3 text-[14px] text-text-secondary">사전 전체 보기 →</button>
+    </section>
+
+    <!-- ④ 두루미 매거진 (리스트 · 숫자 없음 · 사전과 동일) -->
+    <section class="reveal px-5 pt-10">
+      <p class="text-[12px] font-medium text-text-tertiary">로그인 없이 읽을 수 있어요</p>
+      <h2 class="font-aggro text-[22px] mb-2">두루미가 들려주는 사주 이야기</h2>
+      <div class="-mx-1">
+        <a class="press flex items-center gap-3.5 rounded-2xl px-1 py-2.5">
+          <div class="slot h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl"><span class="text-[9px]">썸네일<br/>1:1</span></div>
+          <div class="min-w-0 flex-1">
+            <h3 class="text-[16px] font-bold leading-[1.35] line-clamp-2 break-keep">임영웅 사주, 무엇이 그를 대세로 만들었나</h3>
+            <p class="mt-0.5 flex items-center gap-1 text-[12.5px] text-text-tertiary">연예인 사주 · 6분 · <svg viewBox="0 0 256 256" fill="currentColor" width="11" height="11"><path d="M143.4,17.6a8,8,0,0,0-12.8,4C124,52,108,72,90,90c-20,20-34,44-34,70a72,72,0,0,0,144,0C200,96,163,42,143.4,17.6Zm-15.4,190a48,48,0,0,1-48-48c0-18,10-36,26-52,10-10,20-24,26-40,10,18,44,60,44,92A48,48,0,0,1,128,207.6Z"/></svg>1.2만</p>
+          </div>
+        </a>
+        <a class="press flex items-center gap-3.5 rounded-2xl px-1 py-2.5">
+          <div class="slot h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl"><span class="text-[9px]">썸네일<br/>1:1</span></div>
+          <div class="min-w-0 flex-1">
+            <h3 class="text-[16px] font-bold leading-[1.35] line-clamp-2 break-keep">부자 되는 사주는 정말 따로 있을까</h3>
+            <p class="mt-0.5 flex items-center gap-1 text-[12.5px] text-text-tertiary">사주 개념 · 5분 · <svg viewBox="0 0 256 256" fill="currentColor" width="11" height="11"><path d="M143.4,17.6a8,8,0,0,0-12.8,4C124,52,108,72,90,90c-20,20-34,44-34,70a72,72,0,0,0,144,0C200,96,163,42,143.4,17.6Zm-15.4,190a48,48,0,0,1-48-48c0-18,10-36,26-52,10-10,20-24,26-40,10,18,44,60,44,92A48,48,0,0,1,128,207.6Z"/></svg>8.9천</p>
+          </div>
+        </a>
+        <a class="press flex items-center gap-3.5 rounded-2xl px-1 py-2.5">
+          <div class="slot h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl"><span class="text-[9px]">썸네일<br/>1:1</span></div>
+          <div class="min-w-0 flex-1">
+            <h3 class="text-[16px] font-bold leading-[1.35] line-clamp-2 break-keep">도화살, 매력의 별인가 위험의 별인가</h3>
+            <p class="mt-0.5 flex items-center gap-1 text-[12.5px] text-text-tertiary">신살 · 4분 · <svg viewBox="0 0 256 256" fill="currentColor" width="11" height="11"><path d="M143.4,17.6a8,8,0,0,0-12.8,4C124,52,108,72,90,90c-20,20-34,44-34,70a72,72,0,0,0,144,0C200,96,163,42,143.4,17.6Zm-15.4,190a48,48,0,0,1-48-48c0-18,10-36,26-52,10-10,20-24,26-40,10,18,44,60,44,92A48,48,0,0,1,128,207.6Z"/></svg>6.4천</p>
+          </div>
+        </a>
+      </div>
+      <button class="mt-3 w-full rounded-2xl bg-white/[0.04] py-3 text-[14px] text-text-secondary">매거진 더 보기 →</button>
+    </section>
+
+    <!-- FAQ -->
+    <section class="reveal px-5 pt-10">
+      <h2 class="mb-4 text-center font-aggro text-[22px]">자주 묻는 질문</h2>
+      <div class="space-y-2">
+        <details class="group overflow-hidden rounded-2xl bg-white/[0.04]" open>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold"><span>돈 내기 전에 볼 수 있는 건 없나요?</span><svg class="shrink-0 text-text-tertiary transition group-open:rotate-180" width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M208 96l-80 80-80-80"/></svg></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">매거진과 사주 사전은 로그인 없이 전부 읽을 수 있어요. 분석 서비스는 알(코인)로 이용해요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-white/[0.04]">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold"><span>출생 시간을 모르면 어떻게 돼?</span><svg class="shrink-0 text-text-tertiary transition group-open:rotate-180" width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M208 96l-80 80-80-80"/></svg></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">시주를 빼고 일주·월주·년주로 분석해요. 핵심 결과는 나오지만 정확도는 떨어질 수 있어요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-white/[0.04]">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold"><span>결과에서 뭘 볼 수 있어?</span><svg class="shrink-0 text-text-tertiary transition group-open:rotate-180" width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M208 96l-80 80-80-80"/></svg></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">종합 등급과 재물·연애·직장·건강·대인 5가지 운의 점수, 그리고 왜 그렇게 나왔는지 근거까지 담겨요. 대운·세운 흐름과 터닝포인트도 한눈에 볼 수 있어요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-white/[0.04]">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold"><span>배틀·반려동물 궁합은 뭐가 달라?</span><svg class="shrink-0 text-text-tertiary transition group-open:rotate-180" width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M208 96l-80 80-80-80"/></svg></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">배틀은 두 사람의 사주를 5가지 항목으로 비교해 궁합과 관계를 풀어줘요. 반려동물 궁합은 내 사주와 우리 아이의 생일로 둘의 합을 봐요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-white/[0.04]">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold"><span>알(코인)은 어떻게 충전해?</span><svg class="shrink-0 text-text-tertiary transition group-open:rotate-180" width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M208 96l-80 80-80-80"/></svg></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">카카오로 로그인한 뒤 알을 충전하면 바로 이용할 수 있어요. 사주 10알, 배틀 20알처럼 서비스마다 필요한 알이 달라요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-white/[0.04]">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold"><span>분석은 AI가 하는 거야? 정확해?</span><svg class="shrink-0 text-text-tertiary transition group-open:rotate-180" width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M208 96l-80 80-80-80"/></svg></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">만세력은 정확히 계산하고, 풀이는 명리 원리를 담아 AI가 읽기 쉽게 정리해요. 절대적인 예언이 아니라 나를 이해하는 재미로 봐주세요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-white/[0.04]">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-[15px] font-semibold"><span>결과를 저장하거나 공유할 수 있어?</span><svg class="shrink-0 text-text-tertiary transition group-open:rotate-180" width="18" height="18" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M208 96l-80 80-80-80"/></svg></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">카카오 로그인을 하면 결과가 자동 저장돼요. 공유 링크를 보내면 상대는 로그인 없이도 결과를 볼 수 있어요.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <!-- 하단 스티키 CTA -->
+  <div class="fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[440px] px-5 pb-6 pt-6" style="background:linear-gradient(0deg,rgb(9 9 11) 0%,rgb(9 9 11) 62%,transparent 100%)">
+    <button class="only-out press flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-kakao py-4 text-[16px] font-bold text-black/85 depth">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.6-.8 3-.1.5.2.5.4.4.2-.1 2.6-1.8 3.7-2.5.6.1 1.3.1 1.9.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>
+      카카오로 3초만에 시작하기
+    </button>
+    <button class="only-in press w-full rounded-2xl bg-primary py-4 text-[16px] font-bold text-text-primary depth">내 결과 보기</button>
+  </div>
+</div>
+
+<script>
+  function setAuth(v){
+    document.documentElement.dataset.auth=v;
+    document.getElementById('tab-out').className='rounded-full px-3 py-1.5 '+(v==='out'?'bg-white/15 text-white':'text-text-secondary');
+    document.getElementById('tab-in').className='rounded-full px-3 py-1.5 '+(v==='in'?'bg-white/15 text-white':'text-text-secondary');
+  }
+  setAuth('out');
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

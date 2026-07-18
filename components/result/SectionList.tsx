@@ -1,14 +1,24 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState, type ComponentType } from "react";
 import SectionHeader from "./SectionHeader";
 import SectionBody from "./SectionBody";
 import { SECTION_META, resolveKey } from "@/lib/constants/section-icons";
+
+// v0.3(펫): 전역 이모지 맵 오염 없이 섹션별 아이콘/컬러/라벨을 직접 지정 (미전달 시 기존 이모지 경로)
+export type SectionMeta = {
+  Icon: ComponentType<Record<string, unknown>>;
+  label: string;
+  color: string;
+  bg: string;
+  accent: string;
+};
 
 export type ResultSection = {
   icon: string;
   title: string;
   content?: string;
+  meta?: SectionMeta;
 };
 
 type SectionListProps = {
@@ -17,6 +27,8 @@ type SectionListProps = {
   onUnlock?: () => void;
   unlockLabel?: string;
   initialExpandedCount?: number;
+  /** 좌측 세로 악센트바 표시 (기본 true — 기존 화면 유지). 펫 결과는 false */
+  showAccentBar?: boolean;
 };
 
 const DEFAULT_ACCENT = '#D1D5DB';
@@ -31,6 +43,7 @@ type SectionItemProps = {
   onUnlock?: () => void;
   unlockLabel?: string;
   accentColor: string;
+  showAccentBar: boolean;
 };
 
 const SectionItem = memo(function SectionItem({
@@ -42,20 +55,24 @@ const SectionItem = memo(function SectionItem({
   onUnlock,
   unlockLabel,
   accentColor,
+  showAccentBar,
 }: SectionItemProps) {
   const contentId = `section-content-${index}`;
   const handleToggle = useCallback(() => onToggle(index), [onToggle, index]);
 
   return (
     <div className="flex bg-background-secondary rounded-2xl overflow-hidden">
-      <div
-        className="w-1 shrink-0 rounded-full my-2 ml-1.5"
-        style={{ backgroundColor: accentColor }}
-      />
+      {showAccentBar && (
+        <div
+          className="w-1 shrink-0 rounded-full my-2 ml-1.5"
+          style={{ backgroundColor: accentColor }}
+        />
+      )}
       <div className="flex-1 min-w-0">
         <SectionHeader
           icon={section.icon}
           title={section.title}
+          meta={section.meta}
           expanded={expanded}
           onToggle={handleToggle}
           id={contentId}
@@ -88,6 +105,7 @@ function SectionListInner({
   onUnlock,
   unlockLabel,
   initialExpandedCount = 0,
+  showAccentBar = true,
 }: SectionListProps) {
   const initialSet = useMemo(() => {
     const count = Math.max(0, Math.min(initialExpandedCount, sections.length));
@@ -121,7 +139,8 @@ function SectionListInner({
           locked={locked}
           onUnlock={onUnlock}
           unlockLabel={unlockLabel}
-          accentColor={SECTION_META[resolveKey(section.icon)]?.accent ?? DEFAULT_ACCENT}
+          accentColor={section.meta?.accent ?? SECTION_META[resolveKey(section.icon)]?.accent ?? DEFAULT_ACCENT}
+          showAccentBar={showAccentBar}
         />
       ))}
     </div>

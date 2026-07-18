@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ko" data-auth="out">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>두루미 통합 허브 — 목업</title>
+
+<!-- Tailwind Play CDN (목업 전용 / 실서비스는 프로젝트 tailwind.config.ts 사용) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // ⚠️ 실제 프로젝트 토큰 1:1 미러 — 클래스명 그대로 JSX 포팅됨
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          background: { primary: "#09090B", secondary: "#141414", tertiary: "#27272A" },
+          text: { primary: "#FFFFFF", secondary: "#A1A1AA", tertiary: "#8C8C96" },
+          primary: { DEFAULT: "#F43F5E", hover: "#FB7185", kakao: "#FEE500" },
+        },
+        fontFamily: { aggro: ["SBAggroM", "Pretendard", "sans-serif"] },
+        fontSize: {
+          display: ["38px", { lineHeight: "1.2", fontWeight: "700" }],
+          "title-1": ["30px", { lineHeight: "1.3", fontWeight: "600" }],
+          "title-2": ["24px", { lineHeight: "1.35", fontWeight: "600" }],
+          "title-3": ["19px", { lineHeight: "1.4", fontWeight: "600" }],
+          "body-2": ["15px", { lineHeight: "1.65", fontWeight: "400" }],
+          caption: ["12px", { lineHeight: "1.5", fontWeight: "400" }],
+        },
+      },
+    },
+  };
+</script>
+
+<!-- Pretendard + SBAggroM (globals.css와 동일 소스) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  @font-face {
+    font-family: "SBAggroM";
+    src: url("https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/SBAggroM.woff") format("woff");
+    font-weight: normal;
+    font-display: swap;
+  }
+  :root { color-scheme: dark; }
+  html, body { background: #050507; }
+  body {
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #fff;
+  }
+  .font-aggro { font-family: "SBAggroM", "Pretendard", sans-serif; }
+  .break-keep { word-break: keep-all; }
+
+  /* 스크롤바 숨김 (peek 레일) */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* 스크롤 리빌 + 스태거 */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .stagger > * { opacity: 0; transform: translateY(20px); }
+  .stagger.in > * { animation: slideUp .55s cubic-bezier(.34,1.56,.64,1) both; }
+  .stagger.in > *:nth-child(1) { animation-delay: .00s; }
+  .stagger.in > *:nth-child(2) { animation-delay: .06s; }
+  .stagger.in > *:nth-child(3) { animation-delay: .12s; }
+  .stagger.in > *:nth-child(4) { animation-delay: .18s; }
+  .stagger.in > *:nth-child(5) { animation-delay: .24s; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+
+  /* 카드 프레스 */
+  .press { transition: transform .2s cubic-bezier(.34,1.56,.64,1), background-color .2s, box-shadow .2s; }
+  .press:active { transform: scale(.97); }
+  .poster-press { transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s; }
+  .poster-press:active { transform: scale(.985); }
+  .poster-press:active .poster-art { transform: scale(1.02); }
+
+  /* 포스터 아트 hover 슬로우 줌 (데스크톱) */
+  .poster-art { transition: transform .7s cubic-bezier(.22,1,.36,1); }
+  @media (hover: hover) { .poster-press:hover .poster-art { transform: scale(1.045); } }
+
+  /* 떠 있는 깊이 */
+  .depth { box-shadow: 0 8px 32px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.06); }
+  .depth-sm { box-shadow: 0 2px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05); }
+
+  /* 히어로 포스터 잔잔한 플로팅 */
+  .float { animation: floaty 6s ease-in-out infinite; }
+  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+  /* auth 분기 */
+  [data-auth="in"] .only-out { display: none !important; }
+  [data-auth="out"] .only-in { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .stagger.in > *, .float { transition: none !important; animation: none !important; opacity: 1 !important; transform: none !important; }
+  }
+</style>
+</head>
+
+<body class="min-h-screen">
+
+<!-- ══════ 목업 컨트롤 (실서비스엔 없음) ══════ -->
+<div class="fixed top-3 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-1 rounded-full bg-white/10 backdrop-blur px-1 py-1 text-[12px] font-semibold ring-1 ring-white/15">
+  <button onclick="setAuth('out')" id="tab-out" class="rounded-full px-3 py-1.5">로그아웃</button>
+  <button onclick="setAuth('in')" id="tab-in" class="rounded-full px-3 py-1.5 text-text-secondary">로그인</button>
+</div>
+
+<!-- ══════ 모바일 프레임 ══════ -->
+<div class="mx-auto w-full max-w-[440px] min-h-screen bg-background-primary relative overflow-hidden">
+
+  <!-- 상단 은은한 브랜드 글로우 -->
+  <div class="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-[340px] w-[340px] rounded-full blur-[90px]" style="background: rgba(244,63,94,.16)"></div>
+
+  <!-- ─── Header (sticky) ─── -->
+  <header class="sticky top-0 z-[100] flex items-center justify-between px-5 py-4 backdrop-blur-sm">
+    <div class="font-aggro text-[19px] tracking-tight">두루미<span class="text-primary">사주</span></div>
+    <div class="flex items-center gap-2">
+      <!-- 로그인 시 알 잔액 -->
+      <span class="only-in inline-flex items-center gap-1 rounded-full bg-background-tertiary/70 px-3 py-1.5 text-[13px] font-semibold ring-1 ring-white/8">
+        <span class="text-primary">🥚</span> 40알
+      </span>
+      <button class="grid h-9 w-9 place-items-center rounded-full bg-background-tertiary/60 ring-1 ring-white/8 press" aria-label="메뉴">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 공유 리워드 얇은 배너 -->
+  <div class="mx-5 mb-2 flex items-center gap-2 rounded-xl bg-primary/10 px-3.5 py-2 text-[12.5px] text-primary-hover ring-1 ring-primary/20">
+    <span>🎁</span><span class="font-medium">결과 공유하면 <b class="font-bold">3알</b> 적립돼요</span>
+  </div>
+
+  <main class="pb-[132px]">
+
+    <!-- ═══ ① 히어로 ═══ -->
+    <section class="reveal px-5 pt-6 pb-2 text-center">
+      <!-- 로그아웃: 훅 -->
+      <div class="only-out">
+        <h1 class="font-aggro text-[28px] leading-[1.3] break-keep">사주 보면 결국<br/>똑같은 말 나오지?</h1>
+        <p class="mt-3 text-body-2 text-text-secondary break-keep">AI가 만세력을 계산하고, 결과는 재미있게 풀어드려요</p>
+      </div>
+      <!-- 로그인: 인사 -->
+      <div class="only-in">
+        <h1 class="font-aggro text-[24px] leading-[1.3] break-keep">건주님,<br/>오늘은 뭘 볼까요?</h1>
+      </div>
+
+      <!-- 히어로 포스터 (플레이스홀더 = 수정구 두루미 자리) -->
+      <div class="only-out mt-6 relative mx-auto aspect-[16/11] w-full overflow-hidden rounded-3xl depth"
+           style="background: radial-gradient(120% 100% at 50% 0%, #1a1140 0%, #0d0a1e 55%, #09090B 100%)">
+        <div class="absolute inset-0 grid place-items-center">
+          <svg class="float w-[46%] opacity-90" viewBox="0 0 96 96" fill="none">
+            <circle cx="48" cy="46" r="30" fill="#F43F5E" fill-opacity="0.14"/>
+            <circle cx="48" cy="46" r="30" stroke="#FB7185" stroke-opacity="0.55" stroke-width="2.5"/>
+            <ellipse cx="38" cy="34" rx="9" ry="5.5" fill="#fff" fill-opacity="0.14" transform="rotate(-20 38 34)"/>
+            <path d="M48 30l2.5 7 7 2.5-7 2.5-2.5 7-2.5-7-7-2.5 7-2.5z" fill="#FB7185" fill-opacity="0.85"/>
+            <circle cx="34" cy="52" r="2.5" fill="#FB7185" fill-opacity="0.6"/>
+            <circle cx="62" cy="40" r="2" fill="#FB7185" fill-opacity="0.55"/>
+            <path d="M37 74v-3a11 11 0 0 1 22 0v3" fill="#F43F5E" fill-opacity="0.14" stroke="#FB7185" stroke-opacity="0.4" stroke-width="2"/>
+          </svg>
+        </div>
+        <span class="absolute bottom-3 right-3 rounded-full bg-black/40 px-2.5 py-1 text-[10px] text-white/50">일러스트 자리</span>
+      </div>
+      <div class="only-in mt-4 relative mx-auto h-[132px] w-full overflow-hidden rounded-2xl depth-sm"
+           style="background: radial-gradient(120% 120% at 50% 0%, #1a1140 0%, #09090B 70%)">
+        <div class="absolute inset-0 grid place-items-center opacity-80">
+          <svg class="w-[74px]" viewBox="0 0 96 96" fill="none"><circle cx="48" cy="46" r="26" stroke="#FB7185" stroke-opacity="0.5" stroke-width="2.5"/><path d="M48 32l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#FB7185" fill-opacity="0.8"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ② AnalysisCounter ═══ -->
+    <section class="reveal px-5 py-3">
+      <div class="flex items-center justify-center gap-2 rounded-2xl bg-background-secondary/60 py-3 text-[14px] ring-1 ring-white/6">
+        <span class="relative flex h-2 w-2"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span></span>
+        <span class="text-text-secondary">지금까지</span>
+        <b id="counter" class="font-aggro text-[17px] text-white tabular-nums">0</b>
+        <span class="text-text-secondary">명이 두루미와 사주를 봤어요</span>
+      </div>
+    </section>
+
+    <!-- ═══ ③ 서비스 포스터 카드 (허브의 심장) ═══ -->
+    <section class="px-5 pt-6">
+      <div class="reveal mb-4 flex items-end justify-between">
+        <div>
+          <p class="text-[12px] font-medium text-text-tertiary">두루미가 봐드려요</p>
+          <h2 class="font-aggro text-title-2">뭐부터 볼까요</h2>
+        </div>
+      </div>
+
+      <div class="stagger space-y-4">
+
+        <!-- 사주 — 플래그십 풀블리드 포스터 -->
+        <button class="poster-press relative block w-full overflow-hidden rounded-3xl text-left depth aspect-[16/10]">
+          <div class="poster-art absolute inset-0" style="background: radial-gradient(130% 120% at 78% 30%, #3a1220 0%, #1a0c14 45%, #0c0a0c 100%)"></div>
+          <div class="pointer-events-none absolute right-[-6%] top-1/2 h-[220px] w-[220px] -translate-y-1/2 rounded-full blur-[54px]" style="background: rgba(255,107,107,.20)"></div>
+          <svg class="poster-art absolute right-3 top-1/2 h-[78%] -translate-y-1/2 opacity-95" viewBox="0 0 96 96" fill="none">
+            <circle cx="48" cy="42" r="28" fill="#FF6B6B" fill-opacity="0.16"/><circle cx="48" cy="42" r="28" stroke="#FF6B6B" stroke-opacity="0.5" stroke-width="2.5"/>
+            <ellipse cx="39" cy="31" rx="9" ry="5.5" fill="#fff" fill-opacity="0.14" transform="rotate(-20 39 31)"/>
+            <path d="M48 28l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#FF6B6B" fill-opacity="0.7"/>
+            <circle cx="37" cy="45" r="2.5" fill="#FF6B6B" fill-opacity="0.5"/><circle cx="59" cy="37" r="2" fill="#FF6B6B" fill-opacity="0.45"/>
+            <path d="M37 72v-2a11 11 0 0 1 22 0v2" fill="#FF6B6B" fill-opacity="0.12" stroke="#FF6B6B" stroke-opacity="0.28" stroke-width="2"/>
+          </svg>
+          <div class="absolute inset-x-0 bottom-0 h-[62%]" style="background: linear-gradient(to top, rgba(6,4,6,.92) 0%, rgba(6,4,6,.55) 45%, transparent 100%)"></div>
+          <div class="absolute left-5 top-5"><span class="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background: rgba(255,107,107,.14); color:#FF9B9B">평생 사주</span></div>
+          <div class="absolute inset-x-5 bottom-5">
+            <h3 class="font-aggro text-[24px] leading-tight">내 사주 분석</h3>
+            <p class="mt-1 text-[14px] text-white/80 break-keep">타고난 기질과 흐름을 5가지 운으로 풀어봐요</p>
+            <p class="mt-3 flex items-center gap-1.5 text-[17px] font-bold" style="color:#FF9B9B">🥚 10알</p>
+          </div>
+        </button>
+
+        <!-- 반려동물 궁합 — 플래그십 포스터 (NEW) -->
+        <button class="poster-press relative block w-full overflow-hidden rounded-3xl text-left depth aspect-[16/10]">
+          <div class="poster-art absolute inset-0" style="background: radial-gradient(130% 120% at 78% 30%, #0e2b24 0%, #0a1a16 45%, #090c0b 100%)"></div>
+          <div class="pointer-events-none absolute right-[-6%] top-1/2 h-[220px] w-[220px] -translate-y-1/2 rounded-full blur-[54px]" style="background: rgba(52,211,153,.18)"></div>
+          <svg class="poster-art absolute right-4 top-1/2 h-[74%] -translate-y-1/2 opacity-95" viewBox="0 0 96 96" fill="none">
+            <path d="M48 84C44 78 8 56 8 32c0-14 10-24 22-24 8 0 14 4 18 10 4-6 10-10 18-10 12 0 22 10 22 24 0 24-36 46-40 52z" fill="#34D399" fill-opacity="0.15" stroke="#34D399" stroke-opacity="0.45" stroke-width="2.5" stroke-linejoin="round"/>
+            <ellipse cx="48" cy="46" rx="10" ry="9" fill="#34D399" fill-opacity="0.3"/>
+            <circle cx="40" cy="33" r="4.5" fill="#34D399" fill-opacity="0.35"/><circle cx="56" cy="33" r="4.5" fill="#34D399" fill-opacity="0.35"/>
+            <circle cx="34" cy="42" r="3.5" fill="#34D399" fill-opacity="0.3"/><circle cx="62" cy="42" r="3.5" fill="#34D399" fill-opacity="0.3"/>
+            <path d="M48 16l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#34D399" fill-opacity="0.6"/>
+          </svg>
+          <div class="absolute inset-x-0 bottom-0 h-[62%]" style="background: linear-gradient(to top, rgba(6,7,6,.92) 0%, rgba(6,7,6,.55) 45%, transparent 100%)"></div>
+          <div class="absolute left-5 top-5 flex items-center gap-1.5">
+            <span class="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background: rgba(52,211,153,.14); color:#5FE3B5">반려동물 궁합</span>
+            <span class="rounded-lg px-2 py-1 text-[11px] font-bold" style="background:#34D399; color:#062a1e">NEW</span>
+          </div>
+          <div class="absolute inset-x-5 bottom-5">
+            <h3 class="font-aggro text-[24px] leading-tight">우리 아이와 궁합</h3>
+            <p class="mt-1 text-[14px] text-white/80 break-keep">우리 아이와 나, 얼마나 잘 맞을까요</p>
+            <p class="mt-3 flex items-center gap-1.5 text-[17px] font-bold" style="color:#5FE3B5">🥚 <span class="text-white/45 line-through text-[15px] font-semibold">15알</span> 8알</p>
+          </div>
+        </button>
+
+        <!-- today — Phase A 가로 카드 -->
+        <button class="press relative flex w-full items-center overflow-hidden rounded-2xl bg-background-secondary py-5 pl-6 pr-4 text-left ring-1 ring-white/6 depth-sm">
+          <div class="pointer-events-none absolute right-[-24px] top-1/2 h-[150px] w-[150px] -translate-y-1/2 rounded-full blur-[52px]" style="background: rgba(14,165,233,.10)"></div>
+          <div class="relative z-[2] min-w-0 flex-1">
+            <span class="mb-2 inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background: rgba(14,165,233,.10); color:#0EA5E9">7월 17일</span>
+            <h3 class="text-[19px] font-bold tracking-tight">오늘의 운세</h3>
+            <p class="mt-1.5 text-[14px] text-text-secondary break-keep">오늘 하루, 내 사주엔 어떤 날인지 확인해요</p>
+            <p class="mt-2.5 flex items-center gap-1 text-[16px] font-bold" style="color:#0EA5E9">🥚 5알</p>
+          </div>
+          <div class="relative z-[2] ml-3 grid h-[104px] w-[84px] shrink-0 place-items-center overflow-hidden rounded-xl" style="background: radial-gradient(120% 120% at 50% 30%, #0b2536, #0a1720)">
+            <svg class="w-[64px]" viewBox="0 0 96 96" fill="none">
+              <g stroke="#0EA5E9" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.55"><line x1="48" y1="10" x2="48" y2="18"/><line x1="20" y1="40" x2="28" y2="40"/><line x1="68" y1="40" x2="76" y2="40"/><line x1="29" y1="21" x2="34" y2="26"/><line x1="62" y1="54" x2="67" y2="59"/><line x1="29" y1="59" x2="34" y2="54"/><line x1="62" y1="26" x2="67" y2="21"/></g>
+              <circle cx="48" cy="40" r="14" fill="#0EA5E9" fill-opacity="0.18"/><circle cx="48" cy="40" r="14" stroke="#0EA5E9" stroke-opacity="0.5" stroke-width="2.5"/><circle cx="48" cy="40" r="7" fill="#0EA5E9" fill-opacity="0.4"/>
+            </svg>
+          </div>
+        </button>
+
+        <!-- 배틀 — Phase A 가로 카드 -->
+        <button class="press relative flex w-full items-center overflow-hidden rounded-2xl bg-background-secondary py-5 pl-6 pr-4 text-left ring-1 ring-white/6 depth-sm">
+          <div class="pointer-events-none absolute right-[-24px] top-1/2 h-[150px] w-[150px] -translate-y-1/2 rounded-full blur-[52px]" style="background: rgba(168,85,247,.10)"></div>
+          <div class="relative z-[2] min-w-0 flex-1">
+            <span class="mb-2 inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background: rgba(168,85,247,.10); color:#A855F7">둘이서</span>
+            <h3 class="text-[19px] font-bold tracking-tight">사주 배틀</h3>
+            <p class="mt-1.5 text-[14px] text-text-secondary break-keep">두 사람 사주를 나란히 놓고 궁합을 겨뤄봐요</p>
+            <p class="mt-2.5 flex items-center gap-1 text-[16px] font-bold" style="color:#A855F7">🥚 20알</p>
+          </div>
+          <div class="relative z-[2] ml-3 grid h-[104px] w-[84px] shrink-0 place-items-center overflow-hidden rounded-xl" style="background: radial-gradient(120% 120% at 50% 30%, #241033, #16091f)">
+            <svg class="w-[64px]" viewBox="0 0 96 96" fill="none">
+              <path d="M48 8L80 22V50C80 68 48 88 48 88S16 68 16 50V22L48 8Z" fill="#A855F7" fill-opacity="0.15" stroke="#A855F7" stroke-opacity="0.5" stroke-width="2.5" stroke-linejoin="round"/>
+              <line x1="48" y1="22" x2="48" y2="76" stroke="#A855F7" stroke-opacity="0.3" stroke-width="2"/>
+              <text x="48" y="58" text-anchor="middle" fill="#A855F7" fill-opacity="0.8" font-size="15" font-weight="900" font-family="Pretendard">VS</text>
+            </svg>
+          </div>
+        </button>
+
+        <!-- 올해 운세 — Phase A 가로 카드 -->
+        <button class="press relative flex w-full items-center overflow-hidden rounded-2xl bg-background-secondary py-5 pl-6 pr-4 text-left ring-1 ring-white/6 depth-sm">
+          <div class="pointer-events-none absolute right-[-24px] top-1/2 h-[150px] w-[150px] -translate-y-1/2 rounded-full blur-[52px]" style="background: rgba(245,158,11,.10)"></div>
+          <div class="relative z-[2] min-w-0 flex-1">
+            <span class="mb-2 inline-flex rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background: rgba(245,158,11,.10); color:#F59E0B">2026년</span>
+            <h3 class="text-[19px] font-bold tracking-tight">올해 운세</h3>
+            <p class="mt-1.5 text-[14px] text-text-secondary break-keep">올해 남은 흐름을 월별로 미리 봐요</p>
+            <p class="mt-2.5 flex items-center gap-1 text-[16px] font-bold" style="color:#F59E0B">🥚 15알</p>
+          </div>
+          <div class="relative z-[2] ml-3 grid h-[104px] w-[84px] shrink-0 place-items-center overflow-hidden rounded-xl" style="background: radial-gradient(120% 120% at 50% 30%, #2e2109, #1a1305)">
+            <svg class="w-[64px]" viewBox="0 0 96 96" fill="none">
+              <circle cx="48" cy="42" r="28" fill="#F59E0B" fill-opacity="0.12" stroke="#F59E0B" stroke-opacity="0.4" stroke-width="2.5"/>
+              <path d="M48 24v18l13 7" stroke="#F59E0B" stroke-opacity="0.7" stroke-width="2.5" stroke-linecap="round"/><circle cx="48" cy="42" r="2.5" fill="#F59E0B"/>
+            </svg>
+          </div>
+        </button>
+
+      </div>
+    </section>
+
+    <!-- ═══ ④ 읽을거리 peek 레일 (매거진) ═══ -->
+    <section class="reveal pt-10">
+      <div class="mb-3 flex items-end justify-between px-5">
+        <div>
+          <p class="text-[12px] font-medium text-text-tertiary">두루미 매거진</p>
+          <h2 class="font-aggro text-title-2">읽을거리</h2>
+        </div>
+        <button class="text-[13px] text-text-secondary">전체 보기 →</button>
+      </div>
+      <p class="mb-3 px-5 text-[13px] text-text-tertiary">회원가입 없이 읽을 수 있어요</p>
+      <div class="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1" style="scroll-padding-left:20px">
+        <!-- story card -->
+        <article class="snap-start w-[264px] shrink-0">
+          <div class="relative aspect-[4/3] overflow-hidden rounded-2xl depth-sm" style="background: linear-gradient(135deg,#2a1533,#150b1c)">
+            <div class="absolute inset-0 grid place-items-center text-[40px] opacity-60">🎤</div>
+            <span class="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white/70">🔥 1.2만</span>
+          </div>
+          <h3 class="mt-2.5 font-aggro text-[17px] leading-[1.3] line-clamp-2 break-keep">임영웅 사주, 무엇이 그를 대세로 만들었나</h3>
+          <p class="mt-1 text-[12.5px] text-text-tertiary">연예인 사주 · 6분</p>
+        </article>
+        <article class="snap-start w-[264px] shrink-0">
+          <div class="relative aspect-[4/3] overflow-hidden rounded-2xl depth-sm" style="background: linear-gradient(135deg,#132a2a,#0b1a1a)">
+            <div class="absolute inset-0 grid place-items-center text-[40px] opacity-60">💰</div>
+            <span class="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white/70">🔥 8.9천</span>
+          </div>
+          <h3 class="mt-2.5 font-aggro text-[17px] leading-[1.3] line-clamp-2 break-keep">부자 되는 사주는 정말 따로 있을까</h3>
+          <p class="mt-1 text-[12.5px] text-text-tertiary">사주 개념 · 5분</p>
+        </article>
+        <article class="snap-start w-[264px] shrink-0">
+          <div class="relative aspect-[4/3] overflow-hidden rounded-2xl depth-sm" style="background: linear-gradient(135deg,#2a1f13,#1a130b)">
+            <div class="absolute inset-0 grid place-items-center text-[40px] opacity-60">🌙</div>
+            <span class="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-[11px] text-white/70">🔥 6.4천</span>
+          </div>
+          <h3 class="mt-2.5 font-aggro text-[17px] leading-[1.3] line-clamp-2 break-keep">도화살, 매력의 별인가 위험의 별인가</h3>
+          <p class="mt-1 text-[12.5px] text-text-tertiary">신살 · 4분</p>
+        </article>
+        <!-- 전체 보기 고스트 -->
+        <a class="snap-start grid w-[132px] shrink-0 place-items-center rounded-2xl bg-background-secondary/50 text-center ring-1 ring-white/6" style="aspect-ratio:4/3">
+          <span class="text-[13px] text-text-secondary">전체 보기<br/><span class="text-[18px]">→</span></span>
+        </a>
+        <div class="w-1 shrink-0"></div>
+      </div>
+    </section>
+
+    <!-- ═══ ⑤ 사주 사전 개념 그리드 ═══ -->
+    <section class="reveal px-5 pt-10">
+      <div class="mb-3">
+        <p class="text-[12px] font-medium text-text-tertiary">궁금할 때 찾아보는</p>
+        <h2 class="font-aggro text-title-2">사주 사전</h2>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <a class="press flex min-h-[78px] flex-col justify-center rounded-2xl bg-background-secondary p-4 ring-1 ring-white/8">
+          <span class="text-[15px] font-semibold leading-[1.35] break-keep">내 사주는 몇 등급일까</span>
+          <span class="mt-1 text-[12px] text-text-tertiary">사주 입문</span>
+        </a>
+        <a class="press flex min-h-[78px] flex-col justify-center rounded-2xl bg-background-secondary p-4 ring-1 ring-white/8">
+          <span class="text-[15px] font-semibold leading-[1.35] break-keep">좋은 일주는 따로 있을까</span>
+          <span class="mt-1 text-[12px] text-text-tertiary">60갑자</span>
+        </a>
+        <a class="press flex min-h-[78px] flex-col justify-center rounded-2xl bg-background-secondary p-4 ring-1 ring-white/8">
+          <span class="text-[15px] font-semibold leading-[1.35] break-keep">격국 — 사주의 그릇</span>
+          <span class="mt-1 text-[12px] text-text-tertiary">격국</span>
+        </a>
+        <a class="press flex min-h-[78px] flex-col justify-center rounded-2xl bg-background-secondary p-4 ring-1 ring-white/8">
+          <span class="text-[15px] font-semibold leading-[1.35] break-keep">천을귀인, 최고의 길신</span>
+          <span class="mt-1 text-[12px] text-text-tertiary">신살</span>
+        </a>
+        <a class="press flex min-h-[78px] flex-col justify-center rounded-2xl bg-background-secondary p-4 ring-1 ring-white/8">
+          <span class="text-[15px] font-semibold leading-[1.35] break-keep">도화살은 나쁜 걸까</span>
+          <span class="mt-1 text-[12px] text-text-tertiary">신살</span>
+        </a>
+        <a class="press flex min-h-[78px] flex-col justify-center rounded-2xl bg-background-secondary p-4 ring-1 ring-white/8">
+          <span class="text-[15px] font-semibold leading-[1.35] break-keep">일간 — 사주의 중심 '나'</span>
+          <span class="mt-1 text-[12px] text-text-tertiary">사주 입문</span>
+        </a>
+      </div>
+      <button class="mt-3 w-full rounded-2xl bg-background-secondary/50 py-3 text-[14px] text-text-secondary ring-1 ring-white/6">사전 전체 보기 →</button>
+    </section>
+
+    <!-- ═══ ⑥ 이런 결과를 받아요 (proof) ═══ -->
+    <section class="reveal px-5 pt-10">
+      <div class="mb-3">
+        <p class="text-[12px] font-medium text-text-tertiary">받아보면</p>
+        <h2 class="font-aggro text-title-2">이런 결과를 받아요</h2>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="overflow-hidden rounded-2xl bg-background-secondary ring-1 ring-white/6">
+          <div class="px-4 pt-4 pb-3 text-center">
+            <span class="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold">개인 사주</span>
+            <h3 class="mt-2 text-[15px] font-bold leading-tight">등급·점수·근거<br/>한 장에</h3>
+          </div>
+          <div class="aspect-[4/3] w-full" style="background: linear-gradient(160deg,#1c1c20,#111114)"></div>
+        </div>
+        <div class="overflow-hidden rounded-2xl bg-background-secondary ring-1 ring-white/6">
+          <div class="px-4 pt-4 pb-3 text-center">
+            <span class="inline-block rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold">사주 배틀</span>
+            <h3 class="mt-2 text-[15px] font-bold leading-tight">5개 항목<br/>승부 판정</h3>
+          </div>
+          <div class="aspect-[4/3] w-full" style="background: linear-gradient(160deg,#1c1c20,#111114)"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ⑦ FAQ ═══ -->
+    <section class="reveal px-5 pt-10">
+      <h2 class="mb-4 text-center font-aggro text-title-2">자주 묻는 질문</h2>
+      <div class="space-y-3">
+        <details class="group overflow-hidden rounded-2xl bg-background-secondary ring-1 ring-white/6" open>
+          <summary class="flex cursor-pointer list-none items-center justify-between p-5 text-[15px] font-semibold">돈 내기 전에 볼 수 있는 건 없나요?<span class="text-text-tertiary transition group-open:rotate-180">⌄</span></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">매거진과 사주 사전은 로그인 없이 전부 읽을 수 있어요. 분석 서비스는 알(코인)로 이용해요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-background-secondary ring-1 ring-white/6">
+          <summary class="flex cursor-pointer list-none items-center justify-between p-5 text-[15px] font-semibold">출생 시간을 모르면 어떻게 돼?<span class="text-text-tertiary transition group-open:rotate-180">⌄</span></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">시간을 "모름"으로 선택하면 시주를 빼고 일주·월주·년주로 분석해요. 핵심 결과는 나오지만 정확도는 떨어질 수 있어요.</p>
+        </details>
+        <details class="group overflow-hidden rounded-2xl bg-background-secondary ring-1 ring-white/6">
+          <summary class="flex cursor-pointer list-none items-center justify-between p-5 text-[15px] font-semibold">알은 뭐야?<span class="text-text-tertiary transition group-open:rotate-180">⌄</span></summary>
+          <p class="px-5 pb-5 text-[14px] leading-relaxed text-text-secondary break-keep">알은 두루미 서비스에서 쓰는 재화예요. 카카오 로그인 후 충전하면 바로 이용할 수 있어요.</p>
+        </details>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══ ⑧ 스티키 CTA ═══ -->
+  <div class="fixed inset-x-0 bottom-0 z-[120] mx-auto max-w-[440px] px-5 pb-6 pt-5" style="background: linear-gradient(0deg, #09090B 0%, #09090B 62%, transparent 100%)">
+    <!-- 로그아웃 -->
+    <button class="only-out press flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-[16px] font-bold text-[#181600] depth" style="background:#FEE500">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#181600"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.6-.8 3-.1.5.2.5.4.4.2-.1 2.6-1.8 3.7-2.5.6.1 1.3.1 1.9.1 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>
+      카카오로 3초만에 시작하기
+    </button>
+    <!-- 로그인 -->
+    <button class="only-in press w-full rounded-2xl bg-primary py-4 text-[16px] font-bold text-white depth">내 결과 보기</button>
+  </div>
+
+</div>
+
+<script>
+  // auth 토글
+  function setAuth(v){
+    document.documentElement.dataset.auth = v;
+    document.getElementById('tab-out').className = 'rounded-full px-3 py-1.5 ' + (v==='out'?'bg-white/15 text-white':'text-text-secondary');
+    document.getElementById('tab-in').className  = 'rounded-full px-3 py-1.5 ' + (v==='in' ?'bg-white/15 text-white':'text-text-secondary');
+  }
+  setAuth('out');
+
+  // 스크롤 리빌 + 스태거
+  const io = new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}})},{threshold:.12});
+  document.querySelectorAll('.reveal,.stagger').forEach(el=>io.observe(el));
+
+  // 카운터 카운트업
+  const cel = document.getElementById('counter');
+  const target = 12480;
+  const cio = new IntersectionObserver((es)=>{es.forEach(e=>{ if(e.isIntersecting){ let n=0; const step=Math.ceil(target/40); const t=setInterval(()=>{ n+=step; if(n>=target){n=target;clearInterval(t);} cel.textContent=n.toLocaleString(); },26); cio.unobserve(e.target);}})},{threshold:.5});
+  cio.observe(cel);
+</script>
+</body>
+</html>
