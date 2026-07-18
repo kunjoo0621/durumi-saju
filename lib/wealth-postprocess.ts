@@ -15,7 +15,13 @@ const FORBIDDEN_PREDICTIONS = [
   /쪽박/,
   /파산할\s*(팔자|운명)/,
   /반드시\s*(손해|이득|대박|입재)/,
-  /무조건\s*(대박|망|손해)/,
+  /무조건\s*(대박|망|손해|이득|이익)/,
+  // §10 프롬프트 절대 규칙 3-2 금지 예시("재물운이 없는 사주예요" / "재물운이 약하다") 커버
+  /재물운.{0,5}(없|약하|부족)/,
+  // §10 절대 규칙 4 금지 예시("2027년에 반드시 큰돈이 들어옵니다") 커버 — 이익 단정
+  /반드시\s*(큰돈|재물|돈).{0,6}(들어|생기|들어와|온다|옵니)/,
+  // §10 절대 규칙 4 금지 예시("그 해엔 분명 손해를 봅니다") 커버 — 손익 단정
+  /분명\s*(손해|이득|대박|손실)/,
 ];
 
 // 결혼운과 동일 금지 리스트 계승(스펙 §3 "신살 정책" — 근거 얇은 흉살·공포성 신살은 도메인 무관하게
@@ -27,6 +33,14 @@ const FORBIDDEN_SHINSAL = [/과숙살/, /고신살/, /상부살/, /홍란/, /천
 // 종목/코인/부동산/금융상품명 + "사라/투자/매수/추천" 패턴이 같은 문장에 함께 나오면 그 문장을 컷한다.
 const FINANCIAL_ADVICE_PATTERN =
   /(주식|코인|비트코인|이더리움|부동산|아파트|펀드|ETF|채권|금\s?현물).{0,10}(사|투자|매수|추천)/;
+
+// FINANCIAL_ADVICE_PATTERN 오탐 방지: "특정 주식이나 부동산을 추천하지 않습니다" 같은 준법 면책 문장은
+// 추천 동사가 부정형이라 실제 자문이 아니다. 이런 부정형/금지형 서술은 스크럽 대상에서 제외한다.
+const FINANCIAL_ADVICE_NEGATION =
+  /(추천하지\s*않|사지\s*마|투자하지\s*마|매수하지\s*않|아니|말라|금지)/;
+
+const isFinancialAdvice = (text: string): boolean =>
+  FINANCIAL_ADVICE_PATTERN.test(text) && !FINANCIAL_ADVICE_NEGATION.test(text);
 
 export interface WealthGuardResult {
   blocks: any;
@@ -45,7 +59,7 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
         violations.push(`단정 예언 제거: ${text.slice(0, 20)}`);
         return false;
       }
-      if (FINANCIAL_ADVICE_PATTERN.test(text)) {
+      if (isFinancialAdvice(text)) {
         violations.push(`재무자문 제거: ${text.slice(0, 20)}`);
         return false;
       }
@@ -82,7 +96,7 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
           violations.push(`단정 예언 제거(${label})`);
           return false;
         }
-        if (FINANCIAL_ADVICE_PATTERN.test(sent)) {
+        if (isFinancialAdvice(sent)) {
           violations.push(`재무자문 제거(${label})`);
           return false;
         }
