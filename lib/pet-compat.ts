@@ -432,7 +432,7 @@ function buildRelationSignalBlock(s: PetCompatSignals, scores: PetCompatComputed
   if (relMap[s.dayMasterRelation]) rel.push(relMap[s.dayMasterRelation]);
 
   // v0.9(N3): 종별 상극이 점수엔 있는데 근거엔 없어 서사가 어긋나던 문제 — 조건부 노출
-  if ((s as any).isSpeciesIncompat) rel.push("보호자 자리와 이 종의 기운이 서로 밀어내는 배치 — 처음부터 착 맞기보다 시간 들여 길드는 관계 [내부: 종 상극]");
+  if (s.isSpeciesIncompat) rel.push("보호자 자리와 이 종의 기운이 서로 밀어내는 배치 — 처음부터 착 맞기보다 시간 들여 길드는 관계 [내부: 종 상극]");
 
   lines.push('■ 두 사람의 관계 신호 (아래 "쉬운 말"만 본문에 써라. [내부:…] 용어는 본문 노출 금지)');
   if (rel.length) rel.forEach((r) => lines.push(`- ${r}`));

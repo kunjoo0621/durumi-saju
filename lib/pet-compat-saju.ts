@@ -9,6 +9,7 @@ import { calculateSaju, enrichSajuData, type SajuData } from "./utils/saju";
 import { convertLunarToSolar } from "./utils/lunar";
 import type { EnrichedSajuData } from "./utils/saju-enrichment";
 import type { PetInput, PetSpecies } from "./pet-compat";
+import { isSpeciesIncompat } from "./pet-compat-scoring";
 import type { PetCompatSignals, Strength } from "./pet-compat-scoring";
 
 // ────────────────────────────────────────────────────────
@@ -312,6 +313,7 @@ export function extractPetCompatSignals(
       yearBranchHap: false,
       yearBranchChung: false,
       petSpecies: pet.species,
+      isSpeciesIncompat: isSpeciesIncompat(pet.species, ownerDayBranch),
     };
   }
 
@@ -323,7 +325,7 @@ export function extractPetCompatSignals(
 
   const ownerYearBranch = getYearBranchHanja(ownerEnriched.pillars);
 
-  return {
+  const signals: PetCompatSignals = {
     ownerStrength,
     ownerInseong: ownerCounts.inseong,
     ownerSikSang: ownerCounts.sikSang,
@@ -362,7 +364,26 @@ export function extractPetCompatSignals(
     yearBranchChung: pairIn(CHUNG_PAIRS, ownerYearBranch, petYearBranch),
 
     petSpecies: pet.species,
+    isSpeciesIncompat: isSpeciesIncompat(pet.species, ownerDayBranch),
   };
+
+  // v5(N1): tier 3(추정 생일)는 일주가 "그 달 15일 정오" 근사 → 일주 파생 신호가 허구.
+  // 실측: 유지 시 진짜 생일 대비 등급 61% 뒤바뀜, |Δruler| 평균 19. 연주(띠)·종 신호만 남기고 중화.
+  // 중화 결과 petDayMasterElement/petTwelveStage가 ""가 되어 pet-compat.ts lowReliability=true → 프롬프트 가드 자동 작동.
+  if (pet.birthTier === 3) {
+    return {
+      ...signals,
+      petStrength: "balanced",
+      petInseong: 0, petSikSang: 0, petBigeob: 0, petJaeseong: 0, petGwanseong: 0,
+      petDayBranch: "", petDayMasterElement: "",
+      petHasDohwa: false, petHasYeokma: false, petHasCheonEulGwiin: false, petTwelveStage: "",
+      dayBranchHap: false, dayBranchSamhap: false, dayBranchBanghap: false,
+      dayBranchChung: false, dayBranchHyeong: false, dayBranchWonjin: false,
+      dayMasterRelation: "none",
+    };
+  }
+
+  return signals;
 }
 
 // ────────────────────────────────────────────────────────
@@ -403,10 +424,16 @@ ${extras.length > 0 ? extras.join("\n") + "\n" : ""}※ 사주 데이터 없음 
 
   const sajuBlock = formatEnrichedSajuText(enriched);
 
+  // v5(N1): tier 3(추정 생일)은 일주가 '그 달 15일 정오' 근사 → 일주(일간·일지)는 허구.
+  // 연주(띠)·월주의 큰 흐름만 해석하고, 일주 파생(일지 합충·신살·12운성)은 지어내지 말라고 명시.
+  const tier3Guard = pet.birthTier === 3
+    ? "\n※ 일주(일간·일지)는 추정 근사치 — 해석 금지. 연주(띠)·월주의 큰 흐름만 담백하게 서술하고, 일지 합충·신살·12운성은 지어내지 마라.\n"
+    : "";
+
   return `
 [펫 사주 — ${pet.name}]
 신뢰도: ${reliabilityLabel} — ${note}
-
+${tier3Guard}
 ${sajuBlock}
 
 [종/품종 본성]

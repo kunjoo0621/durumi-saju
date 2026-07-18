@@ -1,5 +1,6 @@
-// 펫 궁합 v2 — D/S/tier 2/4 등 엣지 케이스 점수 검증 (LLM 미호출, 결정론만)
-// 목적: sync 룰 v2 적용 후 양 극단 + fallback 케이스의 등급/지표가 의도대로 나오는지 sanity check
+// 펫 궁합 v5 — D/S/tier 2/4 등 엣지 케이스 점수 검증 (LLM 미호출, 결정론만)
+// 목적: v5 리밸런스 후 양 극단 + fallback 케이스의 등급/지표가 의도대로 나오는지 sanity check
+//       (tier≥3 최저 C 가드, S/D 케이스 보존)
 
 const mod = await import("../lib/pet-compat-scoring");
 const m: typeof import("../lib/pet-compat-scoring") = ((mod as any).default ?? mod) as any;
@@ -21,6 +22,7 @@ function base(): Signals {
     dayMasterRelation: "none",
     yearBranchHap: false, yearBranchChung: false,
     petSpecies: "dog",
+    isSpeciesIncompat: false,
   };
 }
 
@@ -28,7 +30,7 @@ const cases: Array<{ name: string; expect: string; s: Signals }> = [
   // 1. S 권역 — 모든 신호 최대치
   {
     name: "S — 완벽 매칭(개)",
-    expect: "S 등급, sync 85+, lover/loyalty 균형",
+    expect: "S 등급, sync 90+, 펫이 더 매달림(gap≤-20 → 껌딱지)",
     s: {
       ...base(),
       ownerStrength: "balanced", ownerInseong: 2, ownerSikSang: 2, ownerJaeseong: 1, ownerBigeob: 0,
@@ -61,10 +63,11 @@ const cases: Array<{ name: string; expect: string; s: Signals }> = [
       dayMasterRelation: "geuk_to_pet",  // 금→목 (보호자가 펫 극)
       yearBranchChung: true,
       petSpecies: "cat",
+      isSpeciesIncompat: true,  // 보호자 일지 申 + 고양이 → 종 상극 (실 파이프라인과 동일)
     },
   },
   // 4. mockSignalsForTest "rebel" — B 권역 예상
-  { name: "rebel 프리셋(기존 mock)", expect: "B, 펫 압도", s: mockSignalsForTest("rebel") },
+  { name: "rebel 프리셋(기존 mock)", expect: "C, 펫 압도(ruler 100)·충성 최저", s: mockSignalsForTest("rebel") },
 
   // 5. tier 2 fallback — 시 미상 (사주 데이터는 있지만 신호 약함)
   {
@@ -99,6 +102,7 @@ const cases: Array<{ name: string; expect: string; s: Signals }> = [
       dayMasterRelation: "geuk_to_pet",  // 토→수
       yearBranchChung: false,
       petSpecies: "cat",
+      isSpeciesIncompat: true,  // 보호자 일지 辰 + 고양이 → 종 상극 (실 파이프라인과 동일)
     },
   },
 

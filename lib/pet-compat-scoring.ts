@@ -17,12 +17,18 @@ import { COMPOSITE_GRADE_CUTOFFS } from "./gradeSystem"; // 상대경로: tsx �
 // v4: 신살 검출 버그 수정 — 도화·홍염·역마·천을귀인이 항상 false로 잡히던 것을 교정
 //     (hasShinsalKey가 shinsal.matches[].label + pillar12Shinsal[*].name을 훑도록).
 //     영향: 해당 신살 보유 펫의 ruler/lover 보정이 이제 반영됨. 400건 시뮬 분포 이동 경미(D 0% 유지).
-export const PET_COMPAT_SCORING_VERSION = 4;
+// v5 (2026-07-18): 격자 실측(보호자 36×펫 40, 1,440쌍) 기반 리밸런스.
+//   — N1: tier3(추정 생일) 일주 파생 신호 중화 (진짜 생일 대비 등급 61% 뒤바뀜 제거).
+//   — N3: isSpeciesIncompat를 신호로 승격 (conflict 점수와 LLM 근거 블록이 같은 신호를 봄).
+//   — computeRuler/Lover/Loyalty 계수 리밸런스 (ruler mean 60.7→51.3, affectionGap +16.6→+6.1).
+//   — pickLabelAndArchetype 재설계 (라벨 top1 편중 완화, 아키타입 8종 전부 발생).
+//   — raw composite 분위수 재산정: REMAP_OLD [0,47,61,71,79,100] (p3/p25/p70/p92).
+export const PET_COMPAT_SCORING_VERSION = 5;
 
-// v2에서 튜닝·검증된 펫 composite 분포(경계 25/45/65/80)를
+// v5 raw composite 분위수(p3/p25/p70/p92 = 47/61/71/79)를
 // 사주 마스터 컷(52/70/80/85) 스케일로 경계 보존 사상.
-// 등급 인구는 v2와 동일하게 유지되고, 점수의 의미만 사주와 통일된다.
-const REMAP_OLD = [0, 25, 45, 65, 80, 100];
+// 목표 등급 인구(S8~10/A20~25/B40~45/C20~25/D2~3)로 매핑되고, 점수 의미는 사주와 통일된다.
+const REMAP_OLD = [0, 47, 61, 71, 79, 100];
 const REMAP_NEW = [
   0,
   COMPOSITE_GRADE_CUTOFFS.C,
@@ -94,6 +100,7 @@ export interface PetCompatSignals {
 
   // 종 정보
   petSpecies: "dog" | "cat";
+  isSpeciesIncompat: boolean;   // v5(N3): 종별 상극(보호자 일지 申子辰 등) — conflict와 LLM 근거 블록이 같은 신호를 보게
 }
 
 // ────────────────────────────────────────────────────────
@@ -122,7 +129,7 @@ const SPECIES_INCOMPAT: Record<"dog" | "cat", string[]> = {
   cat: ["申", "子", "辰"],   // 고양이 ↔ 원숭이/쥐/용
 };
 
-function isSpeciesIncompat(species: "dog" | "cat", ownerDayBranch: string): boolean {
+export function isSpeciesIncompat(species: "dog" | "cat", ownerDayBranch: string): boolean {
   return SPECIES_INCOMPAT[species].includes(ownerDayBranch);
 }
 
@@ -200,31 +207,31 @@ function computeSync(s: PetCompatSignals): number {
 function computeRuler(s: PetCompatSignals): number {
   let score = 50;
 
-  // 신강신약 비교 (가장 큰 영향)
-  if (s.petStrength === "strong" && s.ownerStrength === "weak") score += 30;
-  else if (s.petStrength === "strong") score += 18;
-  else if (s.petStrength === "weak" && s.ownerStrength === "strong") score -= 25;
-  else if (s.petStrength === "weak") score -= 12;
+  // 신강신약 비교 (가장 큰 영향) — v5: 신강약 비대칭 교정 (편중 주범)
+  if (s.petStrength === "strong" && s.ownerStrength === "weak") score += 28;       // 30→28
+  else if (s.petStrength === "strong") score += 16;                                 // 18→16
+  else if (s.petStrength === "weak" && s.ownerStrength === "strong") score -= 28;   // 25→28 (대칭화)
+  else if (s.petStrength === "weak") score -= 16;                                   // 12→16 (대칭화)
 
   // 일간 오행 극 관계 — 펫이 보호자를 극하면 펫 우위
-  if (s.dayMasterRelation === "geuk_to_owner") score += 18;
-  if (s.dayMasterRelation === "geuk_to_pet") score -= 15;
+  if (s.dayMasterRelation === "geuk_to_owner") score += 15;   // v5: 18→15
+  if (s.dayMasterRelation === "geuk_to_pet") score -= 15;     // 유지
 
-  // 펫 신살 — 귀여움/매력으로 권력
-  if (s.petHasDohwa) score += 15;             // 도화·홍염 — 귀여움 권력
-  if (s.petHasCheonEulGwiin) score += 10;     // 천을귀인 — 모셔지는 운
+  // 펫 신살 — 귀여움/매력으로 권력 (v5: prevalence 감안해 완화)
+  if (s.petHasDohwa) score += 12;             // 15→12 도화·홍염 — 귀여움 권력
+  if (s.petHasCheonEulGwiin) score += 8;      // 10→8 천을귀인 — 모셔지는 운
 
   // 보호자 인성 — 보호 본능으로 휘둘림
-  score += Math.min(s.ownerInseong * 6, 18);
+  score += Math.min(s.ownerInseong * 5, 15);  // v5: 6/18→5/15
 
   // 보호자 비겁 — 자기 우선 (펫에 안 휘둘림)
-  score -= Math.min(s.ownerBigeob * 5, 15);
+  score -= Math.min(s.ownerBigeob * 5, 15);   // 유지
 
   // 펫 관성 — 규율·복종 (펫이 우위 안 함)
-  score -= Math.min(s.petGwanseong * 4, 12);
+  score -= Math.min(s.petGwanseong * 4, 12);  // 유지
 
-  // 종별 본성: 고양이는 기본 +8 (시니컬·황제 톤, 펫 도메인 표준)
-  if (s.petSpecies === "cat") score += 8;
+  // 종별 본성: 고양이는 기본 +7 (시니컬·황제 톤, 펫 도메인 표준)
+  if (s.petSpecies === "cat") score += 7;      // v5: 8→7
 
   return clamp(score);
 }
@@ -235,20 +242,20 @@ function computeRuler(s: PetCompatSignals): number {
 function computeLover(s: PetCompatSignals): number {
   let score = 50;
 
-  // 보호자 십성 신호
-  score += Math.min(s.ownerInseong * 10, 25);     // 인성 = 보호 본능 (max +25)
-  score += Math.min(s.ownerSikSang * 7, 18);      // 식상 = 베풀기
-  score += Math.min(s.ownerJaeseong * 5, 12);     // 편재·정재 — 펫에 돈 씀
-  score -= Math.min(s.ownerBigeob * 7, 18);       // 비겁 = 자기 우선
+  // 보호자 십성 신호 — v5: 가산 3종 부풀림 완화 (mean 70.8→감소, gap 정상화)
+  score += Math.min(s.ownerInseong * 8, 20);      // 10/25→8/20 인성 = 보호 본능
+  score += Math.min(s.ownerSikSang * 5, 12);      // 7/18→5/12 식상 = 베풀기
+  score += Math.min(s.ownerJaeseong * 4, 10);     // 5/12→4/10 편재·정재 — 펫에 돈 씀
+  score -= Math.min(s.ownerBigeob * 7, 18);       // 유지 비겁 = 자기 우선
 
   // 보호자가 펫을 생함 — 일방적으로 에너지 줌
   if (s.dayMasterRelation === "saeng_to_pet") score += 15;
 
   // 펫에 도화·홍염 — 보호자가 더 빠짐
-  if (s.petHasDohwa) score += 10;
+  if (s.petHasDohwa) score += 8;                   // v5: 10→8
 
   // 보호자 신약 + 펫 신강 — 보호자가 의지·매달림
-  if (s.ownerStrength === "weak" && s.petStrength === "strong") score += 12;
+  if (s.ownerStrength === "weak" && s.petStrength === "strong") score += 10;  // v5: 12→10
 
   return clamp(score);
 }
@@ -258,7 +265,7 @@ function computeLover(s: PetCompatSignals): number {
 // "반려동물이 더 좋아하는가" 잡아냄. lover (보호자 → 펫)와 대비.
 // ────────────────────────────────────────────────────────
 function computeLoyalty(s: PetCompatSignals): number {
-  let score = 45;  // 기본 (펫은 본래 독립적, 충성도 평균 이하 시작)
+  let score = 48;  // v5: 45→48 (affectionGap 대칭화 — lover 부풀림 상쇄)
 
   // 펫 십성 — 관성 (규율·복종)
   score += Math.min(s.petGwanseong * 10, 25);     // 정관·편관 = 보호자 복종
@@ -283,8 +290,8 @@ function computeLoyalty(s: PetCompatSignals): number {
   if (s.dayBranchHap) score += 12;
   if (s.dayBranchSamhap) score += 8;
 
-  // 종 본성: 고양이는 기본 -10 (시니컬 베이스)
-  if (s.petSpecies === "cat") score -= 10;
+  // 종 본성: 고양이는 기본 -8 (시니컬 베이스)
+  if (s.petSpecies === "cat") score -= 8;   // v5: 10→8
 
   // 펫 천을귀인 — 보호자를 귀인으로 인식
   if (s.petHasCheonEulGwiin) score += 8;
@@ -310,8 +317,8 @@ function computeConflict(s: PetCompatSignals): number {
   if (s.dayMasterRelation === "geuk_to_pet") score += 12;
   if (s.dayMasterRelation === "geuk_to_owner") score += 12;
 
-  // 종별 상극 (세종의소리 매트릭스: 개/고양이 ↔ 申子辰)
-  if (isSpeciesIncompat(s.petSpecies, s.ownerDayBranch)) score += 18;
+  // 종별 상극 (세종의소리 매트릭스: 개/고양이 ↔ 申子辰) — v5(N3): 추출부에서 계산된 신호 사용
+  if (s.isSpeciesIncompat) score += 18;
 
   // 양쪽 편관 강 (압박 vs 압박)
   if (s.ownerGwanseong >= 2 && s.petGwanseong >= 2) score += 12;
@@ -359,30 +366,39 @@ function pickLabelAndArchetype(
   const { ruler, conflict, sync, lover, loyalty } = scores;
   const affectionGap = lover - loyalty;  // 양수 = 보호자 일방, 음수 = 펫 일방
 
+  // v5: 격자 실측 기반 재설계 — 임계 재조정으로 라벨 top1 편중 완화 + 아키타입 8종 전부 발생.
+  //     분기 구조·아키타입 집합 불변(SCENE_BLOCKS 무변경), 문구·임계만 조정.
   if (grade === "S") {
     if (sync >= 85 && Math.abs(affectionGap) <= 15) return { text: "전생에 한 이불 쓰던 인연", archetype: "HARMONY" };
-    if (affectionGap >= 25) return { text: "찰떡인데 더 빠진 쪽은 너", archetype: "OWNER_DEVOTION" };
-    if (affectionGap <= -25) return { text: "공식 인증 껌딱지 인연", archetype: "PET_DEVOTION" };
+    if (ruler >= 70) return { text: "귀하신 몸과 복 받은 집사", archetype: "PET_THRONE" };
+    if (affectionGap >= 20) return { text: "찰떡인데 더 빠진 쪽은 너", archetype: "OWNER_DEVOTION" };
+    if (affectionGap <= -20) return { text: "공식 인증 껌딱지 인연", archetype: "PET_DEVOTION" };
     return { text: "팔자가 먼저 알아본 인연", archetype: "HARMONY" };
   }
   if (grade === "A") {
-    if (sync >= 75) return { text: "손발 척척 환상의 복식조", archetype: "HARMONY" };
-    if (affectionGap >= 30) return { text: "애정 지분은 네가 51%", archetype: "OWNER_DEVOTION" };
-    if (affectionGap <= -30) return { text: "너에게 올인한 순정파", archetype: "PET_DEVOTION" };
+    if (ruler >= 66 && affectionGap >= 8) return { text: "행복한 시종과 흡족한 상전", archetype: "PET_THRONE" };
+    if (ruler <= 32) return { text: "믿고 따르는 전담 매니저", archetype: "OWNER_MANAGER" };
+    if (affectionGap >= 22) return { text: "애정 지분은 네가 51%", archetype: "OWNER_DEVOTION" };
+    if (affectionGap <= -22) return { text: "너에게 올인한 순정파", archetype: "PET_DEVOTION" };
     if (conflict >= 30) return { text: "서로 좋아 죽는데 둘 다 유난함", archetype: "OFFBEAT" };
-    return { text: "손발 척척 환상의 복식조", archetype: "HARMONY" };
+    if (sync >= 80) return { text: "손발 척척 환상의 복식조", archetype: "HARMONY" };
+    return { text: "합 잘 맞는 단짝 콤비", archetype: "HARMONY" };
   }
   if (grade === "B") {
-    if (ruler >= 70 && affectionGap >= 20) return { text: "간식 셔틀과 네 발 상전", archetype: "PET_THRONE" };
+    if (ruler >= 66 && affectionGap >= 10) return { text: "간식 셔틀과 네 발 상전", archetype: "PET_THRONE" };
     if (ruler <= 30) return { text: "이 집 결재권자는 너", archetype: "OWNER_MANAGER" };
-    if (affectionGap >= 35) return { text: "너만 애가 타는 짝사랑", archetype: "OWNER_DEVOTION" };
-    if (affectionGap <= -35) return { text: "현관 소리만 기다리는 순애보", archetype: "PET_DEVOTION" };
+    if (affectionGap >= 20) return { text: "너만 애가 타는 짝사랑", archetype: "OWNER_DEVOTION" };
+    if (affectionGap <= -20) return { text: "현관 소리만 기다리는 순애보", archetype: "PET_DEVOTION" };
+    if (conflict >= 38) return { text: "투닥대며 정드는 애증 콤비", archetype: "OFFBEAT" };
+    if (sync >= 70) return { text: "티격태격해도 합은 찰떡", archetype: "HARMONY" };
     return { text: "츤데레 룸메이트", archetype: "ROOMMATE" };
   }
   if (grade === "C") {
-    if (ruler >= 65 && affectionGap >= 20) return { text: "무급인데 평생직장", archetype: "PET_THRONE" };
+    if (ruler >= 63 && affectionGap >= 10) return { text: "무급인데 평생직장", archetype: "PET_THRONE" };
+    if (ruler <= 32) return { text: "네 계획표대로 크는 아이", archetype: "OWNER_MANAGER" };
     if (conflict >= 50) return { text: "투닥거려도 결국 한솥밥", archetype: "OFFBEAT" };
-    if (affectionGap >= 30) return { text: "들이대는 너, 한 발 빼는 얘", archetype: "OWNER_DEVOTION" };
+    if (affectionGap >= 25) return { text: "들이대는 너, 한 발 빼는 얘", archetype: "OWNER_DEVOTION" };
+    if (affectionGap <= -25) return { text: "무뚝뚝한 너만 바라기", archetype: "PET_DEVOTION" };
     return { text: "극과 극인데 한 지붕 아래", archetype: "ROOMMATE" };
   }
   // D — "묘연(猫緣)"은 고양이 전용 → 강아지는 "인연"
@@ -437,6 +453,7 @@ function baseSignals(): PetCompatSignals {
     dayMasterRelation: "none",
     yearBranchHap: false, yearBranchChung: false,
     petSpecies: "dog",
+    isSpeciesIncompat: false,
   };
 }
 
