@@ -16,14 +16,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
-import { normalizeScores } from "@/lib/resultSchema";
 import { getSupabaseUserId } from "@/lib/server/user";
 import { getPrimarySajuData } from "@/lib/server/get-primary-saju";
 import { calculateSaju, enrichSajuData, formatSajuText } from "@/lib/utils/saju";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 import { deriveWealthFacts, type WealthInterest } from "@/lib/wealth-facts";
-import { computeWealthGrade } from "@/lib/wealth-grade";
+import { computeWealthGrade, extractWealthScore } from "@/lib/wealth-grade";
 
 const ALLOWED_INTEREST: WealthInterest[] = [
   "목돈·노후 준비",
@@ -133,8 +132,15 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (srcError) {
       console.error("[WEALTH_START] full_json 조회 실패", srcError.message);
+      return NextResponse.json({ error: "사주 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
     }
-    const wealthScore = normalizeScores((srcRow?.full_json as any)?.scores).재물운;
+    // 재물운 결측을 0으로 뭉개면 등급이 무조건 C로 찍혀 teaser가 잘못 굳는다(F-3).
+    // 결측이면 등급을 만들지 않고 500 — 미리보기 단계에서 막아 잘못된 등급이 저장되지 않게 한다.
+    const wealthScore = extractWealthScore(srcRow?.full_json);
+    if (wealthScore === null) {
+      console.error("[WEALTH_START] 재물운 점수 결측 — teaser 생성 차단");
+      return NextResponse.json({ error: "재물운 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+    }
     const { grade } = computeWealthGrade(wealthScore);
 
     // teaser_json — 결정론적 paywall 게이트. Gemini teaserSummary(문장)와는 다른 필드다:
