@@ -89,6 +89,19 @@ Fable 실측: 개인사주 연애 섹션(`lib/analysis.ts` [섹션 5])이 이미
 - 공유: `lib/share-marriage.ts` (OG 카드)
 - 홈/메뉴: 홈 화면에 검사 카드 1개 추가 + 메뉴 엔트리. (전체 홈 리디자인·펫궁합은 범위 밖)
 
+### 5.1 결과표 디자인 (참조: 디자인 시스템 + 펫 결과표)
+
+결과 화면 `app/marriage/result/MarriageResultClient.tsx`는 아래 두 참조를 그대로 따른다:
+- **`docs/DESIGN_SYSTEM.md`** — H.DOT 디자인 시스템(토큰·타이포·색·컴포넌트). 임의 스타일 금지, 토큰 준수.
+- **`app/pet/result/PetResultClient.tsx`** (durumi-saju-pet 워크트리) — **스크롤 내러티브 패턴**을 결과표 골격으로 재사용:
+  1. 풀블리드 **OpeningScene**(`min-h-[80~86vh]`) = 결혼운 **등급 히어로**(SS~C + 헤드라인, `font-aggro`).
+  2. 이후 블록 = `<section className="px-6 pt-16">` 스택, 각 섹션 `font-aggro` 헤더(`text-[23~26px]`, `break-keep`).
+  3. 점수/강약 표현 = 펫의 `RelationAxis`/게이지 컴포넌트 결 재사용(배우자성 강약·배우자궁 안정도 등).
+  4. 구조화 텍스트 = 펫의 `parseSpec` dot-bullet 방식.
+  5. 카드형 블록(예: 타이밍 연도, 배우자상) = `SimCard` 결.
+- §4의 리포트 블록(공통 코어 → 상태별 강조 → 마무리)을 위 스크롤 섹션에 1:1 매핑한다.
+- 시니어 가독성 우선: 큰 글씨·고대비·한 번에 하나(디자인 시스템·펫 결과표가 이미 준수하는 결 유지).
+
 ---
 
 ## 6. 하드 규칙 (quality-gate / postprocess 강제)
