@@ -240,3 +240,56 @@ test("fortune null이면 타이밍/대운 재성 구간 빈 배열", () => {
   assert.deepEqual(facts.timingWindows, []);
   assert.deepEqual(facts.daeunWealthYears, []);
 });
+
+// ── 겁재 탈재(손재 구멍) ────────────────────────────────────────────
+// 실제 운영자 개인사주 메인 리포트가 "군겁쟁재/손재 구조"로 읽는 실사용자 차트.
+// 일간 癸(수/음). 월간 壬(수/양)=겁재(같은 오행, 다른 음양) 직접 투출 +
+// 월지 午의 정기 丁(화/음)=재성(CONTROLS[수]=화, sameYY(음,음)=true → 편재) —
+// 겁재가 재성 지지 바로 위에 앉은 "개두" 형태. 재성 자체는 weighted로 약하지 않을
+// 수 있으나(jaeGrip 사분면과 무관), 겁재가 재를 직접 누르는 손재 구멍은 별도로 존재.
+const userChart: SajuData = {
+  year: { heavenlyStem: "乙", earthlyBranch: "亥", hiddenStems: ["戊", "甲", "壬"] },
+  month: { heavenlyStem: "壬", earthlyBranch: "午", hiddenStems: ["丙", "己", "丁"] },
+  day: { heavenlyStem: "癸", earthlyBranch: "未", hiddenStems: ["丁", "乙", "己"] },
+  hour: { heavenlyStem: "庚", earthlyBranch: "申", hiddenStems: ["戊", "壬", "庚"] },
+};
+
+test("겁재 탈재(실사용자 차트): 월간 壬(겁재)이 월지 午 정기 丁(편재) 위에 개두 → bigeopTaljae true, jaeGrip과 co-exist", () => {
+  const enriched = enrichSajuData(userChart, { isTimeUnknown: false });
+  const facts = deriveWealthFacts(enriched, null, userChart, "지출·빚 관리", 2026);
+  assert.equal(facts.bigeopTaljae, true, "겁재 개두(월간 壬 / 월지 午 정기 丁)를 잡아야 함");
+  // 이 차트가 바로 이번 수정의 발단: 엔진은 재성을 weighted "강"으로 읽어 jaeGrip이
+  // "신왕재왕"(조화)으로 나온다 — gunggeobJaengjae(신왕재쇠 전용)는 구조상 false가
+  // 맞다. 하지만 겁재 개두로 인한 손재 구멍은 실재하므로 bigeopTaljae가 별도로
+  // true를 잡아 메인 개인사주 리포트("잘 버는데 주머니가 샌다")와 정합을 맞춘다.
+  assert.equal(facts.jaeGrip, "신왕재왕", `실측 jaeGrip 확인용 (${facts.jaeGrip})`);
+  assert.equal(facts.gunggeobJaengjae, false);
+});
+
+// 부정 케이스: 비겁 천간(년간 乙=겁재)은 있지만 같은/인접 기둥 지지에 재성(토)이
+// 정기·중기로 존재하지 않음(년지 亥=壬·甲, 월지 卯=乙 모두 무재) + 재성은 시지 未에만
+// 있는데 시주는 년주와 인접하지 않음(연-월, 월-일, 일-시만 인접) → 거리 미달로 false.
+const bigeopFarFromJaeChart: SajuData = {
+  year: { heavenlyStem: "乙", earthlyBranch: "亥", hiddenStems: ["壬", "甲"] },
+  month: { heavenlyStem: "丙", earthlyBranch: "卯", hiddenStems: ["乙"] },
+  day: { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour: { heavenlyStem: "辛", earthlyBranch: "未", hiddenStems: ["己", "丁", "乙"] },
+};
+
+test("겁재 탈재 부정 케이스: 비겁(년간 겁재)과 재성(시지 정기)이 같은/인접 기둥이 아니면 → false", () => {
+  const enriched = enrichSajuData(bigeopFarFromJaeChart, { isTimeUnknown: false });
+  const facts = deriveWealthFacts(enriched, null, bigeopFarFromJaeChart, "지출·빚 관리", 2026);
+  assert.equal(facts.bigeopTaljae, false);
+});
+
+// co-exist 검증: strongAbundantChart는 년간 甲(비견, day 甲과 같은 오행·같은 음양)이
+// 인접한 월지 未의 정기 己(정재)와 개두 형태 — jaeGrip이 "신왕재왕"(그릇 강)이어도
+// bigeopTaljae가 true로 발화해야 한다(gunggeobJaengjae처럼 신왕재왕과 상호배타가
+// 아니라 의도적으로 co-exist하는 것이 이 필드의 핵심 요구사항).
+test("겁재 탈재 co-exist: 신왕재왕 차트도 비겁-재성 개두가 있으면 bigeopTaljae true (gunggeobJaengjae와 달리 상호배타 아님)", () => {
+  const enriched = enrichSajuData(strongAbundantChart, { isTimeUnknown: false });
+  const facts = deriveWealthFacts(enriched, null, strongAbundantChart, "목돈·노후 준비", 2026);
+  assert.equal(facts.jaeGrip, "신왕재왕");
+  assert.equal(facts.gunggeobJaengjae, false);
+  assert.equal(facts.bigeopTaljae, true, "비견(년간 甲)-재성(월지 未 정기 己) 개두를 잡아야 함");
+});

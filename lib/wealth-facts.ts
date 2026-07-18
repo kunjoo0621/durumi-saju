@@ -46,7 +46,8 @@ export interface WealthFacts {
   jaeGrip: WealthGrip; // 그릇 2차원 4상한
   jaedaShinyak: boolean; // 재다신약 (jaeGrip === "재다신약"에서 파생)
   sikssangSaengjae: boolean; // 식상생재 (weighted-aware)
-  gunggeobJaengjae: boolean; // 군겁쟁재
+  gunggeobJaengjae: boolean; // 군겁쟁재 (신왕재쇠 국면 전용, jaeGrip과 상호배타)
+  bigeopTaljae: boolean; // 겁재 탈재(손재 구멍) — 재성 강약과 무관하게 개두/인접 극이면 발화, jaeGrip과 독립
   jaego: boolean; // 재고(財庫) 유무
   yongshinFavorsWealth: boolean; // 용신이 재/식상
   timingWindows: WealthTimingWindow[];
@@ -162,6 +163,64 @@ const BIGEOP_STRONG_THRESHOLD = 6;
 // 식상생재: 지장간 여기 1개(0.5)만으로는 발화하지 않도록 최소 "본기급(2)" 이상을 요구.
 const SIKSSANG_MEANINGFUL_THRESHOLD = 3;
 
+// ── 겁재 탈재(손재 구멍) ────────────────────────────────────────────
+// gunggeobJaengjae(군겁쟁재)는 자평 정통상 "신왕재쇠"(비겁 왕 + 재 약) 국면에서만
+// 성립하는 개념이라, 재성이 강한(신왕재왕) 사주에서는 구조상 절대 발화하지 않는다
+// (위 gunggeobJaengjae 판정문 참조). 하지만 재성이 강해도 "비겁 천간이 재성 지지
+// 바로 위(개두) 또는 인접 기둥에 앉아 있으면" 실제로 새는 돈이 있다 — 버는 힘(재다)과
+// 관리력(탈재)은 서로 다른 축이라 둘 다 참일 수 있다. 위치(개두·인접)만 보면 되는
+// 이유: 비겁 오행은 정의상 (일간이 극하는 오행 = 재성 오행)을 그대로 극하므로,
+// 비겁과 재성이 같은/인접한 기둥에 있다는 사실 자체가 이미 "극이 실제로 부딪힌다"는
+// 뜻이다(그래서 별도 CONTROLS 재확인이 불필요 — 순수 위치 판정).
+const ADJACENT_PILLARS: Record<
+  (typeof PILLARS)[number],
+  (typeof PILLARS)[number][]
+> = {
+  year: ["month"],
+  month: ["year", "day"],
+  day: ["month", "hour"],
+  hour: ["day"],
+};
+
+// 지지 재성 판정 — 정기(index0)·중기(index1)만 "탈재가 실제로 부딪히는" 신호로 인정.
+// 여기(index2, 지장간 가중치 체계상 weight 0.5로 가장 약함)만 스쳐가는 경우는
+// SIKSSANG_MEANINGFUL_THRESHOLD와 같은 철학으로 제외 — 스쳐가는 기운까지 손재로
+// 잡으면 과발화(거의 모든 사주에서 true)로 판정력을 잃는다.
+function branchHasStrongJae(dayStem: string, branch: string | undefined): boolean {
+  if (!branch) return false;
+  const info = BRANCH_INFO[branch];
+  if (!info) return false;
+  return info.jijanggan.slice(0, 2).some((j) => {
+    const st = tenStarOf(dayStem, j.stem);
+    return st === "정재" || st === "편재";
+  });
+}
+
+// 비겁 천간 존재 여부 — day 천간(일간 자기 자신)은 제외(collectWeightedHits와 동일 정책,
+// 자기 자신과 비교하면 항상 비견이 잡혀 허위 발화하는 것을 방지).
+function isBigeopStem(
+  dayStem: string,
+  pos: (typeof PILLARS)[number],
+  sajuData: SajuData,
+): boolean {
+  if (pos === "day") return false;
+  const stem = sajuData[pos]?.heavenlyStem;
+  if (!stem) return false;
+  const st = tenStarOf(dayStem, stem);
+  return st === "비견" || st === "겁재";
+}
+
+function detectBigeopTaljae(dayStem: string, sajuData: SajuData): boolean {
+  for (const pos of PILLARS) {
+    if (!isBigeopStem(dayStem, pos, sajuData)) continue;
+    if (branchHasStrongJae(dayStem, sajuData[pos]?.earthlyBranch)) return true;
+    for (const adj of ADJACENT_PILLARS[pos]) {
+      if (branchHasStrongJae(dayStem, sajuData[adj]?.earthlyBranch)) return true;
+    }
+  }
+  return false;
+}
+
 export function deriveWealthFacts(
   enriched: EnrichedSajuData,
   fortune: FortuneResult | null,
@@ -246,6 +305,12 @@ export function deriveWealthFacts(
     throw new Error("[wealth-facts] 불변식 위반: 무재 상태에서 gunggeobJaengjae 발화");
   }
 
+  // 6.5) 겁재 탈재(손재 구멍): gunggeobJaengjae와 달리 jaeGrip 사분면과 무관하게
+  // 독립 판정한다 — 신왕재왕(그릇 강)이어도 비겁 개두/인접 극이 있으면 손재 기운은
+  // 실재한다("잘 버는데 주머니가 샌다"). gunggeobJaengjae와의 상호배타 불변식은
+  // 없음(의도적으로 co-exist 허용).
+  const bigeopTaljae = detectBigeopTaljae(dayStem, sajuData);
+
   // 7) 재고(財庫): 재 오행의 묘(墓) 지지가 사주 지지에 존재하는지 (v1과 동일 — Fable 검증 완료, 유지)
   const jaeElement = CONTROLS[dayMasterElement];
   const siksangElement = GENERATES[dayMasterElement];
@@ -285,6 +350,7 @@ export function deriveWealthFacts(
     jaedaShinyak,
     sikssangSaengjae,
     gunggeobJaengjae,
+    bigeopTaljae,
     jaego,
     yongshinFavorsWealth,
     timingWindows,
