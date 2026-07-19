@@ -174,12 +174,16 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
       .trim();
   };
 
-  // 소수점 수치 제거 — 이 모듈 본문에 소수점은 서버 강도값(예: "강도가 10.5로") 누출 외엔 없다.
-  // "비겁이 10.5로 강하다" → "비겁이 강하다". 조용히 제거(재생성 불필요). 연도·나이는 정수라 무영향.
-  const scrubStrayDecimals = (s: string): string =>
-    /\d+\.\d+/.test(s)
-      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "").replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim()
+  // 소수점 수치(강도값 누출) + 상투적 필러 연결어 제거 — 조용히(재생성 불필요).
+  // "비겁이 10.5로 강하다"→"비겁이 강하다", "비유하자면, 넌 물이야"→"넌 물이야".
+  // 필러는 프롬프트로 금지하면 오히려 프라이밍돼 늘어나므로 후처리 결정론 제거가 유일하게 확실하다.
+  const scrubStrayDecimals = (s: string): string => {
+    let out = /\d+\.\d+/.test(s)
+      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
       : s;
+    out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
+    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
+  };
 
   // 4) 위 스크럽들을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용
   const walk = (o: any, label: string): any => {

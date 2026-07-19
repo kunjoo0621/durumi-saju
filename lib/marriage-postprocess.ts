@@ -75,11 +75,14 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
       .trim();
   };
 
-  // 소수점 수치(서버 강도값) 누출 제거 — 조용히. 연도·나이는 정수라 무영향.
-  const scrubStrayDecimals = (s: string): string =>
-    /\d+\.\d+/.test(s)
-      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "").replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim()
+  // 소수점 수치(강도값) + 상투적 필러 연결어("비유하자면") 제거 — 조용히(재생성 불필요).
+  const scrubStrayDecimals = (s: string): string => {
+    let out = /\d+\.\d+/.test(s)
+      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
       : s;
+    out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
+    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
+  };
 
   // 1) 조언: 근거 태그 필수 + 단정 예언이 있는 항목은 통째로 컷 (원문 기준 판정)
   if (Array.isArray(blocks.advice)) {
