@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -45,31 +44,15 @@ export default function MenuPage() {
   const { data: session, status } = useSession();
   const resetBattle = useBattleStore((s) => s.reset);
   const resetPet = usePetCompatStore((s) => s.reset);
-  const [checking, setChecking] = useState(false);
-  const [checkError, setCheckError] = useState(false);
 
-  const handleSajuClick = async () => {
+  // 로그인 상태면 무조건 통합 "내 결과"(/my/results)로. 결과 0건이어도 튕기지 않고
+  // 내 결과 페이지의 빈 상태가 "사주 보러가기" CTA를 처리한다(CS: 결제 후 결과를 못 찾는 문제).
+  const handleSajuClick = () => {
     if (!session?.user) {
       router.push("/start");
       return;
     }
-    if (checking) return;
-    setChecking(true);
-    setCheckError(false);
-    try {
-      const res = await fetch("/api/results");
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      const results = Array.isArray(data.results) ? data.results : [];
-      if (results.length > 0) {
-        router.push("/my/results");
-      } else {
-        router.push("/start");
-      }
-    } catch {
-      setChecking(false);
-      setCheckError(true);
-    }
+    router.push("/my/results");
   };
 
   if (status === "loading") {
@@ -107,7 +90,7 @@ export default function MenuPage() {
             <div className="min-w-0 flex-1">
               <span className="text-[11px] font-semibold text-text-secondary">평생 사주</span>
               <h3 className="mt-0.5 text-[18px] font-bold leading-tight">
-                {checking ? "내 사주 내역 확인 중…" : "내 사주 분석"}
+                내 사주 분석
               </h3>
               <p className="mt-1 break-keep text-[13px] leading-snug text-text-secondary">
                 타고난 기질과 운의 흐름을 5가지 운으로 풀어봐요
@@ -119,30 +102,6 @@ export default function MenuPage() {
             </div>
             <RowThumb src={THUMB.saju} />
           </button>
-
-          {checkError && (
-            <div className="space-y-4 py-4">
-              <p className="text-[15px] text-text-secondary">
-                내 사주 내역을 불러오지 못했어. 다시 시도할까?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleSajuClick}
-                  className="btn-primary h-11 flex-1 rounded-xl text-[14px] font-semibold"
-                >
-                  다시 시도
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/start")}
-                  className="btn-secondary h-11 flex-1 rounded-xl text-[14px] font-semibold"
-                >
-                  새로 사주 보기
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* 올해 (FEATURE_FLAG) */}
           {YEARLY_ENABLED && (

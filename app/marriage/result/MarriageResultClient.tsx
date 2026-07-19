@@ -496,6 +496,18 @@ export function MarriageResultBody({
           결혼운 {marriageGrade}등급 · {data.maritalStatus} ·{" "}
           {new Date(data.createdAt).toLocaleDateString("ko-KR")}
         </div>
+
+        {/* 재열람 안내 — 결과는 "내 결과"에 저장돼 언제든 다시 볼 수 있다 */}
+        <div className="px-6 pt-5 text-center">
+          <p className="text-[13px] text-text-tertiary">이 결과는 내 결과에서 다시 볼 수 있어</p>
+          <button
+            type="button"
+            onClick={() => router.push("/my/results")}
+            className="mt-2 text-[14px] font-semibold text-primary underline underline-offset-4 active:opacity-80"
+          >
+            내 결과 보러가기
+          </button>
+        </div>
       </main>
 
       {/* 하단 sticky 액션 바 */}

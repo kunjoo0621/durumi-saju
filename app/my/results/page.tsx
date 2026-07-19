@@ -29,7 +29,17 @@ type ResultItem = {
   is_primary: boolean;
 };
 
-type Tab = "saju" | "yearly" | "battle";
+type Tab = "saju" | "yearly" | "marriage" | "wealth" | "today" | "pet" | "battle";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "saju", label: "내 사주" },
+  { key: "yearly", label: "올해 운세" },
+  { key: "marriage", label: "결혼운" },
+  { key: "wealth", label: "재물운" },
+  { key: "today", label: "오늘" },
+  { key: "pet", label: "펫 궁합" },
+  { key: "battle", label: "사주 배틀" },
+];
 
 type YearlyItem = {
   id: string;
@@ -48,12 +58,69 @@ type YearlyItem = {
   pillarKorean: string | null;
 };
 
+type MarriageItem = {
+  id: string;
+  maritalStatus: string | null;
+  grade: string | null; // 표시 등급 (SS/S/A/B/C)
+  createdAt: string | null;
+  unlocked: boolean;
+};
+
+type WealthItem = {
+  id: string;
+  interest: string | null;
+  grade: string | null; // 표시 등급 (SS/S/A/B/C)
+  createdAt: string | null;
+  unlocked: boolean;
+};
+
+type TodayItem = {
+  id: string;
+  target_date: string;
+  today_mood: string | null;
+  today_weather_icon: "sun" | "cloud" | "rain" | "thunder" | null;
+  ten_star: string | null;
+  created_at: string | null;
+};
+
+type PetItem = {
+  id: string;
+  labelGrade: string | null; // S/A/B/C/D
+  labelText: string | null;
+  illustrationUrl: string | null;
+  petName: string | null;
+  petSpecies: "dog" | "cat" | string | null;
+  createdAt: string | null;
+};
+
 const RELATIONSHIP_LABELS: Record<string, string> = {
   lover: "연인",
   friend: "친구",
   colleague: "동료",
   family: "가족",
   other: "기타",
+};
+
+// 결혼운·재물운 등급은 표시 등급(SS/S/A/B/C)으로 저장됨 → 등급메달/색상 유틸이 기대하는
+// 내부 등급(S/A/B/C/D)으로 역매핑. MarriageResultClient의 MARRIAGE_TO_INTERNAL_GRADE와 동일.
+const DISPLAY_TO_INTERNAL: Record<string, string> = {
+  SS: "S",
+  S: "A",
+  A: "B",
+  B: "C",
+  C: "D",
+};
+
+const WEATHER_LABEL: Record<string, string> = {
+  sun: "맑음",
+  cloud: "흐림",
+  rain: "비 예보",
+  thunder: "폭풍 주의",
+};
+
+const PET_SPECIES_LABEL: Record<string, string> = {
+  dog: "강아지",
+  cat: "고양이",
 };
 
 /* ── 날짜 포맷 ── */
@@ -229,6 +296,241 @@ function DotsButton({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
   );
 }
 
+/* ── 등급 메달 (내부 등급 기준) ── */
+function GradeMedal({ grade, size = 56 }: { grade: string | null; size?: number }) {
+  const gc = grade ? getGradeColor(grade) : null;
+  const badgeSrc = grade ? getGradeBadge(grade) : null;
+  if (badgeSrc) {
+    return (
+      <div
+        className="rounded-[14px] flex items-center justify-center shrink-0"
+        style={{ width: size, height: size, background: gc?.bg || "#2D231B" }}
+      >
+        <Image src={badgeSrc} alt="등급" width={30} height={30} />
+      </div>
+    );
+  }
+  return (
+    <div
+      className="rounded-[14px] flex items-center justify-center shrink-0 bg-white/5"
+      style={{ width: size, height: size }}
+    >
+      <span className="text-[#4B5563] text-[14px]">?</span>
+    </div>
+  );
+}
+
+/* ── 잠김(미결제) 배지 ── */
+function LockBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[12px] font-semibold whitespace-nowrap shrink-0"
+      style={{ color: "#8A8A8A" }}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="4" y="10" width="16" height="11" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      </svg>
+      잠김 · 이어서 보기
+    </span>
+  );
+}
+
+/* ── 공통 빈/에러 상태 (신규 탭 재사용) ── */
+function TabEmpty({ message, ctaLabel, onCta, onMenu }: { message: string; ctaLabel: string; onCta: () => void; onMenu: () => void }) {
+  return (
+    <div className="pt-12 flex flex-col items-center text-center space-y-6">
+      <p className="text-[15px] text-text-secondary">{message}</p>
+      <div className="w-full space-y-3">
+        <button type="button" onClick={onCta} className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold">
+          {ctaLabel}
+        </button>
+        <button type="button" onClick={onMenu} className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold">
+          메뉴로
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TabError({ message, onRetry, onMenu }: { message: string; onRetry: () => void; onMenu: () => void }) {
+  return (
+    <div className="pt-12 flex flex-col items-center text-center space-y-6">
+      <p className="text-[15px] text-text-secondary">{message}</p>
+      <div className="w-full space-y-3">
+        <button type="button" onClick={onRetry} className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold">
+          다시 시도
+        </button>
+        <button type="button" onClick={onMenu} className="btn-secondary w-full h-[54px] rounded-xl text-[15px] font-semibold">
+          메뉴로
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── 결혼운 카드 ── */
+function MarriageCard({ item }: { item: MarriageItem }) {
+  const internalGrade = item.grade ? DISPLAY_TO_INTERNAL[item.grade] ?? "D" : null;
+  const gc = item.grade ? getGradeColor(internalGrade || "D") : null;
+  return (
+    <Link
+      href={`/marriage/result?id=${item.id}`}
+      className="block rounded-2xl active:opacity-80 transition-opacity"
+      style={{ background: "#141414" }}
+    >
+      <div className="py-5 px-5 flex items-center gap-4">
+        <GradeMedal grade={internalGrade} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">결혼운·애정운</span>
+            {item.unlocked ? (
+              item.grade && (
+                <span className="text-[13px] font-semibold whitespace-nowrap shrink-0" style={{ color: gc?.text || "#D0A070" }}>
+                  {item.grade}등급
+                </span>
+              )
+            ) : (
+              <LockBadge />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+            {item.maritalStatus && <span>{item.maritalStatus}</span>}
+            {item.maritalStatus && item.createdAt && <span style={{ color: "#2A2A2A" }}>·</span>}
+            {item.createdAt && <span>{formatResultDate(item.createdAt)}</span>}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ── 재물운 카드 ── */
+function WealthCard({ item }: { item: WealthItem }) {
+  const internalGrade = item.grade ? DISPLAY_TO_INTERNAL[item.grade] ?? "D" : null;
+  const gc = item.grade ? getGradeColor(internalGrade || "D") : null;
+  return (
+    <Link
+      href={`/wealth/result?id=${item.id}`}
+      className="block rounded-2xl active:opacity-80 transition-opacity"
+      style={{ background: "#141414" }}
+    >
+      <div className="py-5 px-5 flex items-center gap-4">
+        <GradeMedal grade={internalGrade} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">재물운</span>
+            {item.unlocked ? (
+              item.grade && (
+                <span className="text-[13px] font-semibold whitespace-nowrap shrink-0" style={{ color: gc?.text || "#D0A070" }}>
+                  {item.grade}등급
+                </span>
+              )
+            ) : (
+              <LockBadge />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+            {item.interest && <span>{item.interest}</span>}
+            {item.interest && item.createdAt && <span style={{ color: "#2A2A2A" }}>·</span>}
+            {item.createdAt && <span>{formatResultDate(item.createdAt)}</span>}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ── 오늘 카드 ── */
+function todayDateLabel(targetDate: string): string {
+  const [y, m, d] = targetDate.split("-").map(Number);
+  if (!y || !m || !d) return targetDate;
+  const dayName = ["일", "월", "화", "수", "목", "금", "토"][new Date(y, m - 1, d).getDay()];
+  return `${m}월 ${d}일 (${dayName})`;
+}
+
+function TodayCard({ item }: { item: TodayItem }) {
+  const icon = item.today_weather_icon;
+  const weatherLabel = icon ? WEATHER_LABEL[icon] : null;
+  const tenStar = item.ten_star ? item.ten_star.replace(/\([^)]*\)/g, "").trim() : null;
+  return (
+    <Link
+      href={`/today/result/${item.id}`}
+      className="block rounded-2xl active:opacity-80 transition-opacity"
+      style={{ background: "#141414" }}
+    >
+      <div className="py-5 px-5 flex items-center gap-4">
+        <div className="w-[56px] h-[56px] rounded-[14px] flex items-center justify-center shrink-0 bg-white/5">
+          {icon ? (
+            <img src={`/icons/weather/${icon}.svg`} alt="" aria-hidden width={34} height={34} />
+          ) : (
+            <span className="text-[#4B5563] text-[14px]">?</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">{todayDateLabel(item.target_date)}</span>
+            {weatherLabel && (
+              <span className="text-[13px] font-semibold whitespace-nowrap shrink-0" style={{ color: "#D0A070" }}>
+                {weatherLabel}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+            <span>오늘의 운세</span>
+            {tenStar && (
+              <>
+                <span style={{ color: "#2A2A2A" }}>·</span>
+                <span>{tenStar}운</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ── 펫 궁합 카드 ── */
+function PetCard({ item }: { item: PetItem }) {
+  const speciesLabel = item.petSpecies ? PET_SPECIES_LABEL[item.petSpecies] ?? item.petSpecies : null;
+  return (
+    <Link
+      href={`/pet/result?id=${item.id}`}
+      className="block rounded-2xl active:opacity-80 transition-opacity"
+      style={{ background: "#141414" }}
+    >
+      <div className="py-5 px-5 flex items-center gap-4">
+        {item.illustrationUrl ? (
+          <div className="w-[56px] h-[56px] rounded-[14px] overflow-hidden shrink-0 bg-white/5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={item.illustrationUrl} alt="" aria-hidden className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <GradeMedal grade={item.labelGrade} />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">
+              {item.petName ? `${item.petName}와의 궁합` : "우리 아이와 궁합"}
+            </span>
+            {item.labelGrade && (
+              <span className="text-[13px] font-semibold whitespace-nowrap shrink-0" style={{ color: getGradeColor(item.labelGrade).text }}>
+                {safeDisplayGrade(item.labelGrade)}등급
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+            {speciesLabel && <span>{speciesLabel}</span>}
+            {speciesLabel && item.createdAt && <span style={{ color: "#2A2A2A" }}>·</span>}
+            {item.createdAt && <span>{formatResultDate(item.createdAt)}</span>}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 /* ── 메인 페이지 ── */
 export default function MyResultsPage() {
   const router = useRouter();
@@ -254,6 +556,30 @@ export default function MyResultsPage() {
   const [yearlyLoading, setYearlyLoading] = useState(false);
   const [yearlyError, setYearlyError] = useState(false);
   const yearlyFetched = useRef(false);
+
+  // Marriage results state
+  const [marriageResults, setMarriageResults] = useState<MarriageItem[]>([]);
+  const [marriageLoading, setMarriageLoading] = useState(false);
+  const [marriageError, setMarriageError] = useState(false);
+  const marriageFetched = useRef(false);
+
+  // Wealth results state
+  const [wealthResults, setWealthResults] = useState<WealthItem[]>([]);
+  const [wealthLoading, setWealthLoading] = useState(false);
+  const [wealthError, setWealthError] = useState(false);
+  const wealthFetched = useRef(false);
+
+  // Today results state
+  const [todayResults, setTodayResults] = useState<TodayItem[]>([]);
+  const [todayLoading, setTodayLoading] = useState(false);
+  const [todayError, setTodayError] = useState(false);
+  const todayFetched = useRef(false);
+
+  // Pet compat results state
+  const [petResults, setPetResults] = useState<PetItem[]>([]);
+  const [petLoading, setPetLoading] = useState(false);
+  const [petError, setPetError] = useState(false);
+  const petFetched = useRef(false);
 
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -330,6 +656,98 @@ export default function MyResultsPage() {
     await fetchYearly();
   }, [fetchYearly]);
 
+  const fetchMarriage = useCallback(async () => {
+    if (marriageFetched.current) return;
+    setMarriageLoading(true);
+    setMarriageError(false);
+    try {
+      const res = await fetch("/api/marriage/list");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setMarriageResults(Array.isArray(data.results) ? data.results : []);
+      marriageFetched.current = true;
+    } catch {
+      setMarriageError(true);
+      setMarriageResults([]);
+    } finally {
+      setMarriageLoading(false);
+    }
+  }, []);
+
+  const retryMarriage = useCallback(async () => {
+    marriageFetched.current = false;
+    await fetchMarriage();
+  }, [fetchMarriage]);
+
+  const fetchWealth = useCallback(async () => {
+    if (wealthFetched.current) return;
+    setWealthLoading(true);
+    setWealthError(false);
+    try {
+      const res = await fetch("/api/wealth/list");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setWealthResults(Array.isArray(data.results) ? data.results : []);
+      wealthFetched.current = true;
+    } catch {
+      setWealthError(true);
+      setWealthResults([]);
+    } finally {
+      setWealthLoading(false);
+    }
+  }, []);
+
+  const retryWealth = useCallback(async () => {
+    wealthFetched.current = false;
+    await fetchWealth();
+  }, [fetchWealth]);
+
+  const fetchToday = useCallback(async () => {
+    if (todayFetched.current) return;
+    setTodayLoading(true);
+    setTodayError(false);
+    try {
+      const res = await fetch("/api/today/list");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setTodayResults(Array.isArray(data.results) ? data.results : []);
+      todayFetched.current = true;
+    } catch {
+      setTodayError(true);
+      setTodayResults([]);
+    } finally {
+      setTodayLoading(false);
+    }
+  }, []);
+
+  const retryToday = useCallback(async () => {
+    todayFetched.current = false;
+    await fetchToday();
+  }, [fetchToday]);
+
+  const fetchPet = useCallback(async () => {
+    if (petFetched.current) return;
+    setPetLoading(true);
+    setPetError(false);
+    try {
+      const res = await fetch("/api/pet-compat/list");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setPetResults(Array.isArray(data.results) ? data.results : []);
+      petFetched.current = true;
+    } catch {
+      setPetError(true);
+      setPetResults([]);
+    } finally {
+      setPetLoading(false);
+    }
+  }, []);
+
+  const retryPet = useCallback(async () => {
+    petFetched.current = false;
+    await fetchPet();
+  }, [fetchPet]);
+
   useEffect(() => {
     if (!session?.user) {
       setLoading(false);
@@ -339,13 +757,14 @@ export default function MyResultsPage() {
   }, [session]);
 
   useEffect(() => {
-    if (tab === "battle" && session?.user) {
-      fetchBattles();
-    }
-    if (tab === "yearly" && session?.user) {
-      fetchYearly();
-    }
-  }, [tab, session, fetchBattles, fetchYearly]);
+    if (!session?.user) return;
+    if (tab === "battle") fetchBattles();
+    if (tab === "yearly") fetchYearly();
+    if (tab === "marriage") fetchMarriage();
+    if (tab === "wealth") fetchWealth();
+    if (tab === "today") fetchToday();
+    if (tab === "pet") fetchPet();
+  }, [tab, session, fetchBattles, fetchYearly, fetchMarriage, fetchWealth, fetchToday, fetchPet]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -423,7 +842,7 @@ export default function MyResultsPage() {
           <div className="text-center space-y-4">
             <p className="text-text-secondary">로그인하면 저장된 결과를 볼 수 있어</p>
             <button
-              onClick={() => login("/menu")}
+              onClick={() => login("/my/results")}
               disabled={signing}
               className="w-full h-[54px] rounded-xl bg-[#FEE500] text-black text-[15px] font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
             >
@@ -439,42 +858,23 @@ export default function MyResultsPage() {
     <div className="min-h-screen bg-background-primary flex flex-col">
       <Header showBack sticky title="내 결과" onBack={() => router.push("/menu")} />
 
-      {/* Tabs */}
-      <div className="max-w-[640px] mx-auto w-full px-5">
-        <div className="flex border-b border-white/10">
-          <button
-            type="button"
-            onClick={() => setTab("saju")}
-            className={`flex-1 py-3 text-center text-[14px] font-semibold transition-colors ${
-              tab === "saju"
-                ? "text-white border-b-2 border-[#FF6B6B]"
-                : "text-gray-500"
-            }`}
-          >
-            내 사주
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("yearly")}
-            className={`flex-1 py-3 text-center text-[14px] font-semibold transition-colors ${
-              tab === "yearly"
-                ? "text-white border-b-2 border-[#FF6B6B]"
-                : "text-gray-500"
-            }`}
-          >
-            올해 운세
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("battle")}
-            className={`flex-1 py-3 text-center text-[14px] font-semibold transition-colors ${
-              tab === "battle"
-                ? "text-white border-b-2 border-[#FF6B6B]"
-                : "text-gray-500"
-            }`}
-          >
-            사주 배틀
-          </button>
+      {/* Tabs — 가로 스크롤 칩 (서비스 7종) */}
+      <div className="max-w-[640px] mx-auto w-full">
+        <div className="flex border-b border-white/10 overflow-x-auto scrollbar-hide px-5">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`shrink-0 px-4 py-3 text-center text-[14px] font-semibold whitespace-nowrap transition-colors ${
+                tab === t.key
+                  ? "text-white border-b-2 border-[#FF6B6B]"
+                  : "text-gray-500"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -776,6 +1176,106 @@ export default function MyResultsPage() {
                     </button>
                   </div>
                 </div>
+              )}
+            </>
+          )}
+
+          {/* ===== 결혼운 탭 ===== */}
+          {tab === "marriage" && (
+            <>
+              {marriageLoading && <InlineLoading message="불러오는 중..." />}
+              {!marriageLoading && !marriageError && marriageResults.length > 0 && (
+                <div className="space-y-3">
+                  {marriageResults.map((m) => (
+                    <MarriageCard key={m.id} item={m} />
+                  ))}
+                </div>
+              )}
+              {!marriageLoading && !marriageError && marriageResults.length === 0 && (
+                <TabEmpty
+                  message="아직 결혼운 결과가 없어"
+                  ctaLabel="결혼운 보러가기"
+                  onCta={() => router.push("/marriage")}
+                  onMenu={() => router.push("/menu")}
+                />
+              )}
+              {!marriageLoading && marriageError && (
+                <TabError message="결혼운 내역을 못 불러왔어" onRetry={retryMarriage} onMenu={() => router.push("/menu")} />
+              )}
+            </>
+          )}
+
+          {/* ===== 재물운 탭 ===== */}
+          {tab === "wealth" && (
+            <>
+              {wealthLoading && <InlineLoading message="불러오는 중..." />}
+              {!wealthLoading && !wealthError && wealthResults.length > 0 && (
+                <div className="space-y-3">
+                  {wealthResults.map((w) => (
+                    <WealthCard key={w.id} item={w} />
+                  ))}
+                </div>
+              )}
+              {!wealthLoading && !wealthError && wealthResults.length === 0 && (
+                <TabEmpty
+                  message="아직 재물운 결과가 없어"
+                  ctaLabel="재물운 보러가기"
+                  onCta={() => router.push("/wealth")}
+                  onMenu={() => router.push("/menu")}
+                />
+              )}
+              {!wealthLoading && wealthError && (
+                <TabError message="재물운 내역을 못 불러왔어" onRetry={retryWealth} onMenu={() => router.push("/menu")} />
+              )}
+            </>
+          )}
+
+          {/* ===== 오늘 탭 ===== */}
+          {tab === "today" && (
+            <>
+              {todayLoading && <InlineLoading message="불러오는 중..." />}
+              {!todayLoading && !todayError && todayResults.length > 0 && (
+                <div className="space-y-3">
+                  {todayResults.map((t) => (
+                    <TodayCard key={t.id} item={t} />
+                  ))}
+                </div>
+              )}
+              {!todayLoading && !todayError && todayResults.length === 0 && (
+                <TabEmpty
+                  message="아직 오늘의 운세 결과가 없어"
+                  ctaLabel="오늘의 운세 보러가기"
+                  onCta={() => router.push("/today")}
+                  onMenu={() => router.push("/menu")}
+                />
+              )}
+              {!todayLoading && todayError && (
+                <TabError message="오늘의 운세 내역을 못 불러왔어" onRetry={retryToday} onMenu={() => router.push("/menu")} />
+              )}
+            </>
+          )}
+
+          {/* ===== 펫 궁합 탭 ===== */}
+          {tab === "pet" && (
+            <>
+              {petLoading && <InlineLoading message="불러오는 중..." />}
+              {!petLoading && !petError && petResults.length > 0 && (
+                <div className="space-y-3">
+                  {petResults.map((p) => (
+                    <PetCard key={p.id} item={p} />
+                  ))}
+                </div>
+              )}
+              {!petLoading && !petError && petResults.length === 0 && (
+                <TabEmpty
+                  message="아직 펫 궁합 결과가 없어"
+                  ctaLabel="펫 궁합 보러가기"
+                  onCta={() => router.push("/pet/input")}
+                  onMenu={() => router.push("/menu")}
+                />
+              )}
+              {!petLoading && petError && (
+                <TabError message="펫 궁합 내역을 못 불러왔어" onRetry={retryPet} onMenu={() => router.push("/menu")} />
               )}
             </>
           )}

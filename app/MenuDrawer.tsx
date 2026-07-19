@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useKakaoLogin } from "@/hooks/useKakaoLogin";
-import { X, Egg, BookOpenText, Sparkle, Sword, Notebook } from "@phosphor-icons/react";
+import { X, Egg, BookOpenText, Sparkle, Sword, Notebook, Heart, Coins } from "@phosphor-icons/react";
 import { SkeletonBar } from "@/components/loading";
 import Modal, { ModalDivider } from "@/components/Modal";
 
@@ -166,6 +166,26 @@ export default function MenuDrawer() {
               </Link>
 
               <MenuItem
+                href="/marriage"
+                title="결혼운·애정운"
+                subtitle="배우자궁·인연이 열리는 때까지"
+                iconBg="rgba(251,113,133,0.12)"
+                iconColor="#FB7185"
+                Icon={Heart}
+                onClick={closeMenu}
+              />
+
+              <MenuItem
+                href="/wealth"
+                title="재물운"
+                subtitle="돈이 붙는 시기·내 재물 그릇"
+                iconBg="rgba(234,179,8,0.1)"
+                iconColor="#EAB308"
+                Icon={Coins}
+                onClick={closeMenu}
+              />
+
+              <MenuItem
                 href="/stories"
                 title="두루미 매거진"
                 subtitle="몰랐던 사주·꿈해몽·궁합 이야기"
@@ -265,6 +285,24 @@ export default function MenuDrawer() {
                 iconBg="rgba(234,179,8,0.1)"
                 iconColor="#EAB308"
                 Icon={Sword}
+                onClick={closeMenu}
+              />
+              <MenuItem
+                href="/marriage"
+                title="결혼운·애정운"
+                subtitle="배우자궁·인연이 열리는 때까지"
+                iconBg="rgba(251,113,133,0.12)"
+                iconColor="#FB7185"
+                Icon={Heart}
+                onClick={closeMenu}
+              />
+              <MenuItem
+                href="/wealth"
+                title="재물운"
+                subtitle="돈이 붙는 시기·내 재물 그릇"
+                iconBg="rgba(234,179,8,0.1)"
+                iconColor="#EAB308"
+                Icon={Coins}
                 onClick={closeMenu}
               />
               <MenuItem
