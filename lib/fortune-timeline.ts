@@ -68,6 +68,25 @@ const MARRIAGE_HINT_MARRIED: Record<string, string> = {
 };
 const MARRIAGE_HINT_NONE = "큰 트리거 없이 흘러가는 해야";
 
+// 같은 트리거가 창(7년) 안에 두 번 이상 뜰 때(예: 2028·2029 둘 다 비겁손재) 같은 문장이 반복돼
+// 버그처럼 보인다 → 두 번째부터 변주(ALT)로 교차. 뜻은 같고 표현만 다르게(fabrication 아님).
+const WEALTH_HINT_ALT: Record<string, string> = {
+  재성투출: "재물 기운이 한 번 더 드는 해 — 앞선 흐름을 이어받기 좋아",
+  식상투출: "만들어내는 힘이 이어지는 해 — 벌이의 폭을 넓혀볼 만해",
+  비겁조력: "다시 힘이 실리는 해 — 다져둔 기반을 밀어붙여도 좋아",
+  비겁손재: "돈이 새기 쉬운 흐름이 이어지니 지갑 관리에 한 번 더 신경 써",
+};
+const MARRIAGE_HINT_ALT: Record<string, string> = {
+  배우자성투출: "배우자 기운이 한 번 더 드는 해 — 인연의 결이 이어지는 시기야",
+  세운합일지: "배우자궁이 다시 움직이는 해 — 관계를 한 발 더 좁히기 좋아",
+  도화홍염: "매력이 이어지는 해 — 인연의 온도를 데우기 좋아",
+};
+const MARRIAGE_HINT_MARRIED_ALT: Record<string, string> = {
+  배우자성투출: "부부 사이를 한 번 더 다독이기 좋은 해야",
+  세운합일지: "부부의 호흡을 다시 맞춰가기 좋은 해야",
+  도화홍염: "부부 사이 설렘을 이어가기 좋은 해야",
+};
+
 function sliceWindow(fortune: FortuneResult, currentYear: number) {
   return (fortune.seun ?? []).filter(
     (s) => s.year >= currentYear - PAST_SPAN && s.year <= currentYear + FUTURE_SPAN,
@@ -121,9 +140,20 @@ export function buildWealthTimeline(
 ): ServerTimeline | null {
   if (!fortune) return null;
   const trigByYear = new Map(facts.timingWindows.map((w) => [w.year, w.triggers as string[]]));
+  const triggerSeen = new Map<string, number>();
   const entries: TimelineEntry[] = sliceWindow(fortune, currentYear).map((s) => {
     const triggers = trigByYear.get(s.year) ?? [];
     const lead = triggers[0];
+    let hint: string;
+    if (lead) {
+      const n = triggerSeen.get(lead) ?? 0;
+      triggerSeen.set(lead, n + 1);
+      hint = n % 2 === 1
+        ? WEALTH_HINT_ALT[lead] ?? WEALTH_HINT[lead] ?? WEALTH_HINT_NONE
+        : WEALTH_HINT[lead] ?? WEALTH_HINT_NONE;
+    } else {
+      hint = WEALTH_YEAR_HINT[s.tenStar] ?? WEALTH_HINT_NONE;
+    }
     return {
       year: s.year,
       age: s.age,
@@ -132,9 +162,7 @@ export function buildWealthTimeline(
       twelveStage: s.twelveStage,
       mood: lead ? WEALTH_MOOD[lead] ?? "보통" : "보통",
       triggers,
-      hint: lead
-        ? WEALTH_HINT[lead] ?? WEALTH_HINT_NONE
-        : WEALTH_YEAR_HINT[s.tenStar] ?? WEALTH_HINT_NONE,
+      hint,
       isPast: s.year < currentYear,
       isCurrent: s.year === currentYear,
     };
@@ -151,10 +179,20 @@ export function buildMarriageTimeline(
   if (!fortune) return null;
   const married = facts.maritalStatus === "기혼";
   const hintTable = married ? MARRIAGE_HINT_MARRIED : MARRIAGE_HINT;
+  const hintTableAlt = married ? MARRIAGE_HINT_MARRIED_ALT : MARRIAGE_HINT_ALT;
   const trigByYear = new Map(facts.timingWindows.map((w) => [w.year, w.triggers as string[]]));
+  const triggerSeen = new Map<string, number>();
   const entries: TimelineEntry[] = sliceWindow(fortune, currentYear).map((s) => {
     const triggers = trigByYear.get(s.year) ?? [];
     const lead = MARRIAGE_TRIGGER_PRIORITY.find((t) => triggers.includes(t));
+    let hint: string;
+    if (lead) {
+      const n = triggerSeen.get(lead) ?? 0;
+      triggerSeen.set(lead, n + 1);
+      hint = n % 2 === 1 ? hintTableAlt[lead] ?? hintTable[lead] : hintTable[lead];
+    } else {
+      hint = MARRIAGE_YEAR_HINT[s.tenStar] ?? MARRIAGE_HINT_NONE;
+    }
     return {
       year: s.year,
       age: s.age,
@@ -163,7 +201,7 @@ export function buildMarriageTimeline(
       twelveStage: s.twelveStage,
       mood: lead ? "강세" : "보통", // 결혼운 엔진엔 부정 트리거가 없다 — 주의 무드 미사용
       triggers,
-      hint: lead ? hintTable[lead] : MARRIAGE_YEAR_HINT[s.tenStar] ?? MARRIAGE_HINT_NONE,
+      hint,
       isPast: s.year < currentYear,
       isCurrent: s.year === currentYear,
     };

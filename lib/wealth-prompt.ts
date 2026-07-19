@@ -9,7 +9,7 @@
 //     관심사-구조 불일치·employmentStatus grounding·개고 금지·재무자문 아님)
 // 프롬프트 스냅샷: prompts/history/wealth-v1.md
 
-import type { WealthFacts, WealthStarHit, WealthTimingWindow } from "./wealth-facts";
+import type { WealthFacts, WealthStarHit, WealthTimingWindow, WealthInterest } from "./wealth-facts";
 import type { WealthGrade } from "./wealth-grade";
 
 // ────────────────────────────────────────────────────────
@@ -115,6 +115,43 @@ function detectInterestStructureGap(facts: WealthFacts): string {
   return gaps.join(" / ");
 }
 
+// 구조가 "버는 방식" 중 어디에 가장 자연스럽게 기우는지 — 결정론 소프트 신호(단정 아님).
+// 사용자가 여러 관심사를 봐도 각각 "잘 맞아"로만 긍정하는 예스맨 문제를 막고, 구조가 다른 쪽에
+// 더 자연스러우면 정직하게(부드럽게) 짚게 하려는 근거값. 우선순위: 식상생재(자기 생산)=사업 >
+// 신약 그릇=관리 > 재성유형(정재=축적/편재=투자). 편재라도 식상생재가 있으면 사업이 더 우선.
+function naturalFitLabel(facts: WealthFacts): string {
+  let lean: WealthInterest | null = null;
+  let why = "";
+  if (facts.sikssangSaengjae) {
+    lean = "사업·수입 키우기";
+    why = "식상생재(재능·활동으로 스스로 벌이를 만드는 힘)가 있어 남 밑보다 자기가 판을 짜서 버는 방식";
+  } else if (facts.jaeGrip === "재다신약" || facts.jaeGrip === "신약재소") {
+    lean = "지출·빚 관리";
+    why = "그릇(일간 힘)이 약한 편이라 키우기보다 새는 돈을 잡고 기반 다지기";
+  } else if (facts.jaeseongType === "정재우세") {
+    lean = "목돈·노후 준비";
+    why = "정재우세(안정형 재물)라 꾸준히 모으고 지키기";
+  } else if (facts.jaeseongType === "편재우세") {
+    lean = "투자로 불리기";
+    why = "편재우세(유동적 큰 재물)라 기회를 읽고 굴리기";
+  }
+  if (!lean) return "특정 방식으로 크게 기울지 않음 — 사용자 관심사를 그대로 지지";
+  if (lean === facts.interest) return `사용자 관심사(${facts.interest})와 구조 신호가 일치 — 잘 맞는다고 자연스럽게 확인`;
+  return `구조 신호는 '${lean}' 쪽이 조금 더 자연스러운 편(${why}) — 사용자는 '${facts.interest}'를 선택`;
+}
+
+// 그릇 4상한 raw 용어(신왕재쇠 등)를 factBlock에 그대로 넣으면 LLM이 본문에 베껴 쓰거나(용어 노출)
+// 비슷한 이름끼리 헷갈려 오기한다(신왕재쇠→신왕재소). 아예 뜻만 넘겨 LLM이 용어를 볼 일이 없게 한다.
+function jaeGripPlain(grip: string): string {
+  switch (grip) {
+    case "신왕재왕": return "내 힘도 강하고 재물 담는 그릇도 큰 편(둘 다 넉넉)";
+    case "신왕재쇠": return "내 힘은 강한데 재물 담는 그릇은 아직 작은 편";
+    case "재다신약": return "재물은 많은데 그걸 감당할 그릇(내 힘)이 작은 편";
+    case "신약재소": return "재물 신호도 그릇도 둘 다 은은한 편";
+    default: return grip;
+  }
+}
+
 function buildFactBlock(facts: WealthFacts, grade: WealthGrade, employmentStatus?: string): string {
   const lines = [
     `지금 재물 관심사(사용자가 직접 선택): ${facts.interest}`,
@@ -126,7 +163,7 @@ function buildFactBlock(facts: WealthFacts, grade: WealthGrade, employmentStatus
     `재성 강도(가중 점수 — 절대값 자체는 언급 말고 강약 판단 근거로만 활용): ${facts.jaeseongStrength}`,
     `비겁(비견·겁재) 강도(가중 점수): ${facts.bigeopStrength}`,
     `신강/신약 수준: ${facts.strengthLevel}`,
-    `재를 담는 그릇(신강신약×재성 2차원 4상한): ${facts.jaeGrip}`,
+    `재를 담는 그릇(뜻으로만 서술 — 용어 이름 쓰지 말 것): ${jaeGripPlain(facts.jaeGrip)}`,
     `재다신약 여부: ${facts.jaedaShinyak ? "예" : "아니오"}`,
     `식상생재(재능·활동으로 스스로 벌이를 만드는 힘) 여부: ${facts.sikssangSaengjae ? "예" : "아니오"}`,
     `군겁쟁재(비겁이 적은 재를 두고 다투는 구조) 여부: ${facts.gunggeobJaengjae ? "예" : "아니오"}`,
@@ -136,6 +173,7 @@ function buildFactBlock(facts: WealthFacts, grade: WealthGrade, employmentStatus
     `타이밍 창(세운이 재성·식상·비겁을 건드리는 해): ${formatTimingWindows(facts.timingWindows)}`,
     `대운 중 재성이 들어오는 구간: ${formatDaeunWealthYears(facts)}`,
     `관심사-구조 불일치 감지(서버 계산값 — 있으면 반드시 짚어라): ${detectInterestStructureGap(facts)}`,
+    `구조가 자연스럽게 지지하는 방식(소프트 신호 — 아래 '관심사 vs 구조 정직' 규칙대로 활용): ${naturalFitLabel(facts)}`,
     `재물운 등급(서버 확정값 — 절대 변경 금지): ${grade}`,
   ];
   return lines.join("\n");
@@ -191,11 +229,18 @@ const SYSTEM_RULES = `
   큰돈이 들어옵니다")를 지어내지 마라.
 - [사주 원국] 텍스트는 오행·일간 특성 같은 문맥 보강에만 참고하고, 거기서 새로운 "재물운 판정"을 계산해 끼워
   넣지 마라. 재물운 판정의 유일한 근거는 [재물 사실] 블록이다.
+- ★관심사 vs 구조 정직 (예스맨 금지 — 값어치의 핵심): [재물 사실]의 "구조가 자연스럽게 지지하는 방식" 값을 그대로 따르라.
+  · "…일치" 또는 "특정 방향 없음"이면 → 사용자 관심사를 그대로 자연스럽게 지지해라(구조랑 잘 맞는다고 확인).
+  · "구조 신호는 'X' 쪽이 조금 더 자연스러운 편"이면 → 사용자가 고른 관심사도 충분히 된다고 인정하되, 네 구조엔
+    X 쪽이 조금 더 결에 맞다는 걸 savingStyle에서 딱 한 번 부드럽게 얹어라. 예: "이 관심사도 충분히 되는데,
+    네 결만 보면 X 쪽이 조금 더 자연스러운 편이야." 절대 "네 선택이 틀렸다/이건 안 맞아"로 부정·단정하지 마라 —
+    고른 관심사 안에서의 실행법은 그대로 충실히 주고, 결의 방향만 한 문장 정직하게 얹는다.
 - ★수치 노출 금지: [재물 사실] 블록의 점수·강도·가중치 숫자(예: "강도 1", "힘은 10.5", 소수점 붙은 모든 수치)를
   본문에 그대로 쓰지 마라. "10.5로 높은", "강도 1인" 같은 표현 절대 금지 — 반드시 "약한 편/뚜렷하게 강한/은은한"
   같은 말로 변환해라. 본문에 소수점 숫자나 강도 수치가 보이면 실패다.
 - ★나이 표기: [타이밍 창]·[대운] 값의 나이는 세는나이다. "만 O세"라고 쓰지 말고 그냥 "O세"로 쓰거나 연도만 써라.
 - ★한자 병기 금지: 본문은 순수 한글. 신살·십성·간지에 한자(財·劫財·紅艶殺 등)를 괄호로 병기하지 마라.
+- ★그릇 4상한 용어 이름 노출 금지: '신왕재왕·신왕재쇠·재다신약·신약재소' 같은 그릇 용어 이름을 본문에 그대로 쓰지 마라(전문용어 최소화 + 비슷한 이름끼리 헷갈려 잘못 쓰는 것 방지 — 예: '신왕재쇠'를 '신왕재소'로 오기). [재물 사실]의 '재를 담는 그릇' 값은 반드시 뜻으로만 풀어라. 예: 신왕재쇠→"내 힘은 강한데 재물 담는 그릇은 아직 작은 편", 재다신약→"재물은 많은데 그걸 감당할 그릇이 작은 편", 신약재소→"재물 신호도 그릇도 둘 다 은은한 편".
 - ★타이밍 충실도: 연도·나이·대운은 [타이밍 창]·[대운 중 재성이 들어오는 구간] 값에 있는 것만 써라. 현재는 {{CURRENT_YEAR}}년이다 —
   과거 연도({{PREV_YEAR}} 이하)를 "앞으로/올해"처럼 미래로 말하지 마라. 대운의 나이·십성은 값 그대로 쓰고, 없는 대운 전환 나이를
   지어내지 마라("36세부터 편재 대운" 식으로 [대운] 값에 없는 걸 만들면 실패).
