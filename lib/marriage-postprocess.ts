@@ -154,6 +154,6 @@ export function validateMarriageRichness(blocks: any): string[] {
   );
   if (total >= MARRIAGE_RICHNESS_MIN_TOTAL) return [];
   return [
-    `본문 5블록 총량 부족(${total}자 < ${MARRIAGE_RICHNESS_MIN_TOTAL}자) — 같은 말 반복·패러프레이즈로 늘리지 말고, [일지 지장간 구조]의 본기/중기/여기 층위와 [타이밍 창]·[대운 중 배우자성이 들어오는 구간]의 구체 연도를 근거로 각 블록에 새 정보를 1~2문장씩 추가하라. 재미 기법(생생한 비유·펀치라인)도 아직 얇은 블록에 더 얹어라`,
+    `본문 5블록 총량 부족(${total}자 < ${MARRIAGE_RICHNESS_MIN_TOTAL}자) — 같은 말 반복·패러프레이즈로 늘리지 말고, [일지 지장간 구조]의 본기/속결 층위(속결이 없으면 본기를 겉/속 두 면으로)와 [타이밍 창]·[대운 중 배우자성이 들어오는 구간]의 구체 연도를 근거로 각 블록에 새 정보를 1~2문장씩 추가하라. 재미 기법(생생한 비유·펀치라인)도 아직 얇은 블록에 더 얹어라`,
   ];
 }

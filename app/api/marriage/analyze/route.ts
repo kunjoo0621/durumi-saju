@@ -430,7 +430,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 6) Gemini 호출 (analysis.ts 모델 fallback 체인 미러) → JSON5 파싱
-      const prompt = buildMarriagePrompt(facts, grade, sajuText);
+      const prompt = buildMarriagePrompt(facts, grade, sajuText, currentYear);
       const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
       const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;
 

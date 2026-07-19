@@ -440,6 +440,7 @@ export async function POST(request: NextRequest) {
         grade,
         sajuText,
         source === "self" ? undefined : input.employmentStatus,
+        currentYear,
       );
       const _envModels = process.env.GEMINI_MODELS?.split(",").map((m) => m.trim()).filter(Boolean) ?? [];
       const models = _envModels.length > 0 ? _envModels : DEFAULT_MODELS;

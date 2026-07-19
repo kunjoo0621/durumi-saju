@@ -74,6 +74,46 @@ function sliceWindow(fortune: FortuneResult, currentYear: number) {
   );
 }
 
+// 대운은 "현재 진행 중이거나 앞으로 올 것"만 남긴다 — 이미 끝난 대운(endAge < 현재 나이)을
+// "앞으로의 큰 흐름"에 노출하면 어릴 적 대운만 떠서 고장처럼 보인다(④). 전부 과거면 빈 배열.
+function filterUpcomingDaeun(
+  daeun: ServerTimeline["daeun"],
+  fortune: FortuneResult,
+  currentYear: number,
+): ServerTimeline["daeun"] {
+  const currentAge = (fortune.seun ?? []).find((s) => s.year === currentYear)?.age;
+  if (currentAge === undefined) return daeun;
+  return daeun.filter((d) => d.endAge >= currentAge);
+}
+
+// 트리거 없는 해의 힌트 — 그 해 세운 십성으로 해마다 다른 plain 문구를 파생한다(⑥).
+// 종전엔 "큰 트리거 없이 흘러가는 해야"가 매해 반복돼 버그처럼 보였다. 십성 용어는 노출하지 않고
+// (전문용어 최소화), 관계상태 무관 안전 문구만 쓴다(기혼 포함 — 외부 인연 암시 배제).
+const MARRIAGE_YEAR_HINT: Record<string, string> = {
+  비견: "내 색이 또렷해지는 해 — 나를 먼저 세우기 좋아",
+  겁재: "사람들과 부대끼며 나를 알아가는 해",
+  식신: "마음이 편해지고 표현이 부드러워지는 해",
+  상관: "하고 싶은 말과 끼가 살아나는 해",
+  편재: "여유가 생기고 활동 폭이 넓어지는 해",
+  정재: "관계를 차분히 챙기기 좋은 해",
+  편관: "책임과 긴장이 함께 오는 해 — 관계의 틀을 점검해",
+  정관: "관계에 질서를 세우기 좋은 해",
+  편인: "혼자 채우고 정비하는 해",
+  정인: "마음이 안정되고 기대는 힘이 느는 해",
+};
+const WEALTH_YEAR_HINT: Record<string, string> = {
+  비견: "내 힘으로 버는 데 집중하는 해",
+  겁재: "돈이 오가는 폭이 커지는 해 — 관리가 필요해",
+  식신: "손에 익은 일로 벌이가 도는 해",
+  상관: "새 아이디어로 벌 여지가 생기는 해",
+  편재: "돈이 크게 움직일 여지가 보이는 해",
+  정재: "안정적으로 모으기 좋은 해",
+  편관: "일과 자리에 힘이 실리는 해 — 압박도 함께 와",
+  정관: "자리와 신용을 다지는 해",
+  편인: "배우고 준비하며 기반을 만드는 해",
+  정인: "문서와 자격이 도움이 되는 해",
+};
+
 export function buildWealthTimeline(
   fortune: FortuneResult | null,
   facts: Pick<WealthFacts, "timingWindows" | "daeunWealthYears">,
@@ -92,13 +132,15 @@ export function buildWealthTimeline(
       twelveStage: s.twelveStage,
       mood: lead ? WEALTH_MOOD[lead] ?? "보통" : "보통",
       triggers,
-      hint: lead ? WEALTH_HINT[lead] ?? WEALTH_HINT_NONE : WEALTH_HINT_NONE,
+      hint: lead
+        ? WEALTH_HINT[lead] ?? WEALTH_HINT_NONE
+        : WEALTH_YEAR_HINT[s.tenStar] ?? WEALTH_HINT_NONE,
       isPast: s.year < currentYear,
       isCurrent: s.year === currentYear,
     };
   });
   if (entries.length === 0) return null;
-  return { version: 1, entries, daeun: facts.daeunWealthYears };
+  return { version: 1, entries, daeun: filterUpcomingDaeun(facts.daeunWealthYears, fortune, currentYear) };
 }
 
 export function buildMarriageTimeline(
@@ -121,11 +163,11 @@ export function buildMarriageTimeline(
       twelveStage: s.twelveStage,
       mood: lead ? "강세" : "보통", // 결혼운 엔진엔 부정 트리거가 없다 — 주의 무드 미사용
       triggers,
-      hint: lead ? hintTable[lead] : MARRIAGE_HINT_NONE,
+      hint: lead ? hintTable[lead] : MARRIAGE_YEAR_HINT[s.tenStar] ?? MARRIAGE_HINT_NONE,
       isPast: s.year < currentYear,
       isCurrent: s.year === currentYear,
     };
   });
   if (entries.length === 0) return null;
-  return { version: 1, entries, daeun: facts.daeunSpouseYears };
+  return { version: 1, entries, daeun: filterUpcomingDaeun(facts.daeunSpouseYears, fortune, currentYear) };
 }
