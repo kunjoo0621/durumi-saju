@@ -122,12 +122,14 @@ function detectInterestStructureGap(facts: WealthFacts): string {
 function naturalFitLabel(facts: WealthFacts): string {
   let lean: WealthInterest | null = null;
   let why = "";
-  if (facts.sikssangSaengjae) {
-    lean = "사업·수입 키우기";
-    why = "식상생재(재능·활동으로 스스로 벌이를 만드는 힘)가 있어 남 밑보다 자기가 판을 짜서 버는 방식";
-  } else if (facts.jaeGrip === "재다신약" || facts.jaeGrip === "신약재소") {
+  // 신약 그릇(재다신약·신약재소)을 식상생재보다 먼저 판정한다 — 신약이면 식상이 일간을 더
+  // 설기시켜 확장 권유가 부적절하므로(재다신약은 특히), 이 경우 '키우기'보다 '관리·기반'이 우선.
+  if (facts.jaeGrip === "재다신약" || facts.jaeGrip === "신약재소") {
     lean = "지출·빚 관리";
     why = "그릇(일간 힘)이 약한 편이라 키우기보다 새는 돈을 잡고 기반 다지기";
+  } else if (facts.sikssangSaengjae) {
+    lean = "사업·수입 키우기";
+    why = "식상생재(재능·활동으로 스스로 벌이를 만드는 힘)가 있어 남 밑보다 자기가 판을 짜서 버는 방식";
   } else if (facts.jaeseongType === "정재우세") {
     lean = "목돈·노후 준비";
     why = "정재우세(안정형 재물)라 꾸준히 모으고 지키기";
