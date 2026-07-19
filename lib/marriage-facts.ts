@@ -14,8 +14,11 @@ export interface SpouseStarHit { pillar: "year"|"month"|"day"|"hour"; source: "�
 export interface TimingWindow { year: number; age: number; triggers: Array<"세운합일지"|"배우자성투출"|"도화홍염">; isPast: boolean; }
 export type SpouseStarDamageReason = "비겁극재" | "상관견관" | "충거";
 
-// 일지 지장간 층위 — 본기=배우자의 겉으로 드러나는 결, 중기=같이 살아야 보이는 속결, 여기=가끔 스치는 결.
-export interface SpousePalaceHiddenStar { position: "본기" | "중기" | "여기"; stem: string; star: string; }
+// 일지 지장간 층위 — 본기=배우자의 겉으로 드러나는 결(가장 강한 기운), 속결=같이 살아야 보이는 숨은 결.
+// ★중기/여기 구분은 하지 않는다: BRANCH_INFO.jijanggan은 무게순 정렬이라 index1/2가 중기·여기와
+// 일치하지 않아(예: 未=[己,丁,乙]에서 丁이 여기인데 무게가 커 index1) 라벨이 뒤바뀐다. 본기(index0=최고
+// 무게)만 신뢰 가능하므로 나머지는 "속결"로 묶는다(겉/속 층위 가치는 유지, 명리 오라벨 위험 제거).
+export interface SpousePalaceHiddenStar { position: "본기" | "속결"; stem: string; star: string; }
 
 export interface MarriageFacts {
   sex: "male"|"female"; maritalStatus: MaritalStatus;
@@ -177,13 +180,12 @@ export function deriveMarriageFacts(
 
   // 2) 일지 지장간 십성 — 본기/중기/여기 층위 구조화(배우자의 겉결/속결/스치는 결).
   // BRANCH_INFO.jijanggan 인덱스 0=본기, 1=중기, 2=여기 (wealth-facts 가중치 관행과 동일).
-  const HIDDEN_POSITION = ["본기", "중기", "여기"] as const;
   const dayHidden = BRANCH_INFO[dayBranch]?.jijanggan ?? [];
   const spousePalaceHidden: SpousePalaceHiddenStar[] = [];
   dayHidden.forEach((h, idx) => {
     const st = tenStarOf(dayStem, h.stem);
     if (!st) return;
-    spousePalaceHidden.push({ position: HIDDEN_POSITION[Math.min(idx, 2)], stem: h.stem, star: st });
+    spousePalaceHidden.push({ position: idx === 0 ? "본기" : "속결", stem: h.stem, star: st });
   });
   const spousePalaceHiddenStars = spousePalaceHidden.map((h) => h.star); // 기존 필드 하위호환
 

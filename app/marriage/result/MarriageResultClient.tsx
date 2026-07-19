@@ -752,7 +752,7 @@ function FortuneWeatherTimeline({
                 </div>
                 <p className="text-[15.5px] text-text-primary leading-relaxed font-medium break-keep">{e.hint}</p>
                 <p className="text-[12px] text-text-tertiary mt-1.5">
-                  만 {e.age}세 · {e.pillarKorean}년 · {e.tenStar}운 · {e.twelveStage}
+                  {e.age}세 · {e.pillarKorean}년 · {e.tenStar}운 · {e.twelveStage}
                 </p>
               </article>
             );
