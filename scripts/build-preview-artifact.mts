@@ -5,6 +5,18 @@ import { readFileSync, writeFileSync } from "node:fs";
 const data = JSON.parse(readFileSync("scripts/enrich-quality-output.json", "utf8"));
 const out = process.argv[2] ?? "preview.html";
 
+// 올해의 운세와 동일한 날씨 SVG 아이콘을 <symbol>로 인라인 (아티팩트 CSP=외부요청 차단).
+// 각 SVG 내부 id는 파일별로 고유(_103_26/_15/_19)라 한 페이지에 함께 넣어도 충돌 없음.
+function svgSymbol(id: string, file: string): string {
+  const raw = readFileSync(`public/icons/weather/${file}`, "utf8");
+  const vb = raw.match(/viewBox="([^"]+)"/)?.[1] ?? "0 0 394 380";
+  const inner = raw.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+  return `<symbol id="${id}" viewBox="${vb}">${inner}</symbol>`;
+}
+const WX_DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${
+  svgSymbol("wx-sun", "sun.svg") + svgSymbol("wx-cloud", "cloud.svg") + svgSymbol("wx-rain", "rain.svg")
+}</svg>`;
+
 // 짧은 라벨/서브
 const META: Record<string, { short: string; sub: string }> = {
   "운영자(1995-06-21 계미)": { short: "운영자", sub: "1995 · 계미 · 솔로" },
@@ -17,15 +29,17 @@ const META: Record<string, { short: string; sub: string }> = {
 const enriched = data.map((p: any) => ({ ...p, meta: META[p.label] ?? { short: p.label, sub: "" } }));
 
 const html = `<h1 class="sr-only">재물운·결혼운 풍부화 결과 미리보기</h1>
+${WX_DEFS}
 <div id="app"></div>
 <script id="data" type="application/json">${JSON.stringify(enriched).replace(/</g, "\\u003c")}</script>
 <script>
 const DATA = JSON.parse(document.getElementById("data").textContent);
 const MOOD = {
-  강세: { icon: "☀", label: "맑음", cls: "m-sun" },
-  보통: { icon: "☁", label: "흐림", cls: "m-cloud" },
-  주의: { icon: "☂", label: "비 예보", cls: "m-rain" },
+  강세: { sym: "wx-sun", label: "맑음", cls: "m-sun" },
+  보통: { sym: "wx-cloud", label: "흐림", cls: "m-cloud" },
+  주의: { sym: "wx-rain", label: "비 예보", cls: "m-rain" },
 };
+const wx = (sym, extra) => \`<svg class="tl-ic \${extra || ""}" viewBox="0 0 394 380"><use href="#\${sym}"></use></svg>\`;
 const GRADE_LABEL = { S: "SS", A: "S", B: "A", C: "B", D: "C" }; // 내부→표시 격상(참고표기)
 let pIdx = 0, svc = "wealth";
 
@@ -40,7 +54,7 @@ function timeline(tl, accent) {
   tl.entries.forEach(e => {
     const m = MOOD[e.mood] || MOOD["보통"];
     const cell = el("div", "tl-cell" + (e.isCurrent ? " cur" : "") + (e.isPast ? " past" : ""));
-    cell.innerHTML = \`<span class="tl-yr">\${e.year}</span><span class="tl-ic \${m.cls}">\${m.icon}</span><span class="tl-lb">\${e.isPast ? "지남" : m.label}</span>\`;
+    cell.innerHTML = \`<span class="tl-yr">\${e.year}</span>\${wx(m.sym)}<span class="tl-lb">\${e.isPast ? "지남" : m.label}</span>\`;
     row.appendChild(cell);
   });
   strip.appendChild(row); wrap.appendChild(strip);
@@ -48,7 +62,7 @@ function timeline(tl, accent) {
   tl.entries.filter(e => !e.isPast).forEach(e => {
     const m = MOOD[e.mood] || MOOD["보통"];
     const r = el("article", "tl-d");
-    r.innerHTML = \`<div class="tl-d-top"><span class="tl-d-yr">\${e.year}</span><span class="tl-ic sm \${m.cls}">\${m.icon}</span><span class="tl-d-lb \${m.cls}">\${m.label}</span></div>
+    r.innerHTML = \`<div class="tl-d-top"><span class="tl-d-yr">\${e.year}</span>\${wx(m.sym, "sm")}<span class="tl-d-lb \${m.cls}">\${m.label}</span></div>
       <p class="tl-hint">\${esc(e.hint)}</p>
       <p class="tl-sub">\${e.age}세 · \${e.pillarKorean}년 · \${esc(e.tenStar)}운 · \${esc(e.twelveStage)}</p>\`;
     detail.appendChild(r);
@@ -214,8 +228,8 @@ body{margin:0;background:var(--bg);color:var(--tx);
 .tl-cell.cur{background:var(--card2);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
 .tl-cell.past{opacity:.4;}
 .tl-yr{font-size:13px;font-weight:700;color:var(--tx2);font-variant-numeric:tabular-nums;}
-.tl-ic{font-size:26px;line-height:1;}
-.tl-ic.sm{font-size:20px;}
+.tl-ic{width:38px;height:38px;display:block;flex:0 0 auto;}
+.tl-ic.sm{width:30px;height:30px;}
 .m-sun{color:var(--sun);} .m-cloud{color:var(--cloud);} .m-rain{color:var(--rain);}
 .tl-lb{font-size:10.5px;font-weight:700;white-space:nowrap;color:var(--tx3);}
 .tl-detail{margin-top:16px;border-top:1px solid var(--line);padding-top:6px;}
