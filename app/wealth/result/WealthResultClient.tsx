@@ -81,7 +81,7 @@ interface TeaserFacts {
   interest?: WealthInterest;
 }
 
-interface ApiResponse {
+export interface ApiResponse {
   status: "teaser" | "completed";
   resultId: string;
   interest: WealthInterest;
@@ -331,7 +331,7 @@ const INTEREST_CARD_LABELS: Record<
 // 본문 (completed)
 // ────────────────────────────────────────────────────────
 
-function WealthResultBody({
+export function WealthResultBody({
   data,
   result,
   router,

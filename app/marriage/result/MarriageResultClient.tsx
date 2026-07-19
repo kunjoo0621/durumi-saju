@@ -70,7 +70,7 @@ interface TeaserFacts {
   maritalStatus?: MaritalStatus;
 }
 
-interface ApiResponse {
+export interface ApiResponse {
   status: "teaser" | "completed";
   resultId: string;
   maritalStatus: MaritalStatus;
@@ -327,7 +327,7 @@ const STATUS_CARD_LABELS: Record<
 // 본문 (completed)
 // ────────────────────────────────────────────────────────
 
-function MarriageResultBody({
+export function MarriageResultBody({
   data,
   result,
   router,

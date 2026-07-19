@@ -16,7 +16,7 @@ import * as _tl from "../lib/fortune-timeline";
 import * as _qa from "../lib/qa-regen";
 import * as _an from "../lib/analysis";
 import * as _js from "../lib/json5Utils";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 import type { WealthInterest } from "../lib/wealth-facts";
 import type { MaritalStatus } from "../lib/marriage-facts";
 
@@ -66,8 +66,22 @@ const PEOPLE: Person[] = [
   { label: "시간모름여성(2000-01-10)", y: 2000, m: 1, d: 10, unknown: true, gender: "여성", marital: "솔로", interest: "목돈·노후 준비" },
 ];
 
-const LIMIT = Number(process.argv[2] ?? PEOPLE.length);
+const argN = process.argv.find((a) => /^\d+$/.test(a));
+const LIMIT = Number(argN ?? PEOPLE.length);
 const clen = (s: unknown) => (typeof s === "string" ? s.trim().length : 0);
+
+// --reuse: 기존 결과의 블록을 재활용(Gemini 0호출). facts는 매번 새로 계산.
+let REUSE_MAP: Record<string, any> | null = null;
+if (process.argv.includes("--reuse")) {
+  try {
+    const prev = JSON.parse(readFileSync("scripts/enrich-quality-output.json", "utf8"));
+    REUSE_MAP = Object.fromEntries(prev.map((r: any) => [r.label, {
+      wb: r.wealth?.blocks ?? null, mb: r.marriage?.blocks ?? null,
+      wAtt: r.wealth?.attempts, mAtt: r.marriage?.attempts,
+    }]));
+    console.log("♻️  reuse 모드 — 저장된 블록 재활용(Gemini 0호출)");
+  } catch { console.error("reuse 실패 — 기존 출력 없음"); }
+}
 
 async function genOne(p: Person) {
   const hour = p.unknown ? undefined : p.hh;
@@ -96,18 +110,24 @@ async function genOne(p: Person) {
   const wFacts = deriveWealthFacts(enriched, fortune, saju, p.interest, YEAR);
   const mFacts = deriveMarriageFacts(enriched, fortune, saju, gender, p.marital, YEAR);
 
-  const wGen = await generateWithQaRegen<any>({
-    prompt: buildWealthPrompt(wFacts, wGrade, sajuText), systemPrompt: SYS, models, temperature: 0.75,
-    callModel: (mo, pr, sy, cfg) => callGemini(mo, pr, sy, cfg), shouldFallback,
-    parse: (t) => parseJson5Loose<any>(t), validateBlocks: (c) => validateWealthBlocks(c),
-    applyGuards: (c) => applyWealthGuards(c, wFacts, sajuText), softValidate: (b) => validateWealthRichness(b),
-  });
-  const mGen = await generateWithQaRegen<any>({
-    prompt: buildMarriagePrompt(mFacts, mGrade, sajuText), systemPrompt: SYS, models, temperature: 0.75,
-    callModel: (mo, pr, sy, cfg) => callGemini(mo, pr, sy, cfg), shouldFallback,
-    parse: (t) => parseJson5Loose<any>(t), validateBlocks: (c) => validateMarriageBlocks(c),
-    applyGuards: (c) => applyMarriageGuards(c, mFacts, sajuText), softValidate: (b) => validateMarriageRichness(b),
-  });
+  // --reuse: Gemini 재호출 없이 저장된 블록 재활용(facts는 결정론이라 위에서 새로 계산됨).
+  const reuse = REUSE_MAP && REUSE_MAP[p.label];
+  const wGen = reuse
+    ? { ok: !!reuse.wb, blocks: reuse.wb, attempts: reuse.wAtt ?? 1 }
+    : await generateWithQaRegen<any>({
+        prompt: buildWealthPrompt(wFacts, wGrade, sajuText), systemPrompt: SYS, models, temperature: 0.75,
+        callModel: (mo, pr, sy, cfg) => callGemini(mo, pr, sy, cfg), shouldFallback,
+        parse: (t) => parseJson5Loose<any>(t), validateBlocks: (c) => validateWealthBlocks(c),
+        applyGuards: (c) => applyWealthGuards(c, wFacts, sajuText), softValidate: (b) => validateWealthRichness(b),
+      });
+  const mGen = reuse
+    ? { ok: !!reuse.mb, blocks: reuse.mb, attempts: reuse.mAtt ?? 1 }
+    : await generateWithQaRegen<any>({
+        prompt: buildMarriagePrompt(mFacts, mGrade, sajuText), systemPrompt: SYS, models, temperature: 0.75,
+        callModel: (mo, pr, sy, cfg) => callGemini(mo, pr, sy, cfg), shouldFallback,
+        parse: (t) => parseJson5Loose<any>(t), validateBlocks: (c) => validateMarriageBlocks(c),
+        applyGuards: (c) => applyMarriageGuards(c, mFacts, sajuText), softValidate: (b) => validateMarriageRichness(b),
+      });
 
   const wb = wGen.ok ? wGen.blocks : null;
   const mb = mGen.ok ? mGen.blocks : null;
@@ -119,8 +139,24 @@ async function genOne(p: Person) {
   const wTotal = wb ? wKeys.reduce((s, k) => s + clen(wb[k]), 0) : 0;
   const mTotal = mb ? mKeys.reduce((s, k) => s + clen(mb[k]), 0) : 0;
 
+  // 실제 결과 컴포넌트(WealthResultBody/MarriageResultBody)에 그대로 먹일 ApiResponse mock.
+  const nowIso = "2026-07-19T00:00:00.000Z";
+  const apiWealth = wb ? {
+    status: "completed", resultId: "mock", interest: p.interest, wealthGrade: wGrade,
+    jaeseongType: wFacts.jaeseongType, jaedaShinyak: wFacts.jaedaShinyak,
+    sikssangSaengjae: wFacts.sikssangSaengjae, gunggeobJaengjae: wFacts.gunggeobJaengjae,
+    jaeGrip: wFacts.jaeGrip, result: wb, createdAt: nowIso,
+  } : null;
+  const apiMarriage = mb ? {
+    status: "completed", resultId: "mock", maritalStatus: p.marital, marriageGrade: mGrade,
+    spouseStarType: mFacts.spouseStarType, gwansalHonjap: mFacts.gwansalHonjap,
+    spouseStarAbsent: mFacts.spouseStarAbsent, spousePalaceStability: mFacts.spousePalaceStability,
+    result: mb, createdAt: nowIso,
+  } : null;
+
   return {
     label: p.label, marital: p.marital, interest: p.interest,
+    apiWealth, apiMarriage,
     wealth: { grade: wGrade, ok: wGen.ok, attempts: wGen.ok ? wGen.attempts : 0, total: wTotal,
       per: Object.fromEntries(wKeys.map((k) => [k, clen(wb?.[k])])), blocks: wb },
     marriage: { grade: mGrade, ok: mGen.ok, attempts: mGen.ok ? mGen.attempts : 0, total: mTotal,
@@ -142,4 +178,14 @@ for (const p of PEOPLE.slice(0, LIMIT)) {
 }
 const out = "scripts/enrich-quality-output.json";
 writeFileSync(out, JSON.stringify(results, null, 2));
-console.log(`\n✅ 전체 저장: ${out} (${results.length}명)`);
+// dev 결과 미리보기 라우트(app/dev/enrich-result-ui)가 import하는 mock — ApiResponse 형태.
+const META: Record<string, string> = {
+  "운영자(1995-06-21 계미)": "운영자 · 1995 · 계미 · 솔로",
+  "기혼여성(1988-03-15)": "기혼여성 · 1988",
+  "다시혼자여성(1975-11-02)": "다시혼자 · 1975",
+  "연애중남성(1992-07-20)": "연애중 · 1992",
+  "시간모름여성(2000-01-10)": "시간모름 · 2000",
+};
+const preview = results.map((r: any) => ({ label: r.label, sub: META[r.label] ?? r.label, apiWealth: r.apiWealth, apiMarriage: r.apiMarriage }));
+writeFileSync("lib/mockEnrichPreview.json", JSON.stringify(preview, null, 2));
+console.log(`\n✅ 전체 저장: ${out} + lib/mockEnrichPreview.json (${results.length}명)`);
