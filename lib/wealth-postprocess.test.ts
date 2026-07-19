@@ -272,3 +272,24 @@ test("총량 충분하면 이슈 없음", () => {
   );
   assert.equal(validateWealthRichness(fat).length, 0);
 });
+
+// ── 한자 병기 스크럽 (2026-07-19) ──
+test("본문 한자 병기를 결정론적으로 제거하고 괄호 정리", () => {
+  const { blocks, violations } = applyWealthGuards(
+    { jaeseongDiagnosis: "겁재(劫財, 다투는 기운)가 홍염살(紅艶殺)처럼 財를 눌러.", advice: [] },
+    {}, "",
+  );
+  assert.ok(!/[㐀-鿿]/.test(blocks.jaeseongDiagnosis), "한자 잔존: " + blocks.jaeseongDiagnosis);
+  assert.ok(blocks.jaeseongDiagnosis.includes("겁재(다투는 기운)"));
+  void violations; // 한자는 조용히 제거(violations 미포함)
+});
+
+// ── 소수점 강도값 누출 제거 (2026-07-19) ──
+test("소수점 강도 수치를 제거하고 문장이 자연스럽게 남는다", () => {
+  const { blocks } = applyWealthGuards(
+    { jaeGripDiagnosis: "비겁의 강도가 10.5로 태강한 수준이라 고집이 세.", advice: [] },
+    {}, "",
+  );
+  assert.ok(!/\d+\.\d+/.test(blocks.jaeGripDiagnosis), "소수점 잔존: " + blocks.jaeGripDiagnosis);
+  assert.ok(blocks.jaeGripDiagnosis.includes("강도가 태강한"), "부자연: " + blocks.jaeGripDiagnosis);
+});

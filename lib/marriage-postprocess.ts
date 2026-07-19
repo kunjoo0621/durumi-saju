@@ -54,10 +54,32 @@ export function validateMarriageBlocks(parsed: any, opts?: { minAdvice?: number 
   return issues;
 }
 
+// 본문에서 제거할 한자(CJK 통합한자) — 순수 한글 원칙. 신살명 한자병기·오타 방지.
+const MARR_HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
+const MARR_HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
+
 export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: string): MarriageGuardResult {
   const violations: string[] = [];
   const blocks = JSON.parse(JSON.stringify(parsed ?? {}));
   const forbidden = forbiddenPredictionsFor(facts?.maritalStatus); // ★ status-aware
+
+  // 한자는 조용히 제거(violations 미포함) — minor 스타일, 재생성 불필요.
+  const scrubHanja = (s: string): string => {
+    if (!MARR_HANJA_RE.test(s)) return s;
+    return s
+      .replace(MARR_HANJA_GLOBAL, "")
+      .replace(/\(\s*[,，、·\s]*\)/g, "")
+      .replace(/\(\s*[,，、]\s*/g, "(")
+      .replace(/\s+([,.、·)])/g, "$1")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
+  // 소수점 수치(서버 강도값) 누출 제거 — 조용히. 연도·나이는 정수라 무영향.
+  const scrubStrayDecimals = (s: string): string =>
+    /\d+\.\d+/.test(s)
+      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "").replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim()
+      : s;
 
   // 1) 조언: 근거 태그 필수 + 단정 예언이 있는 항목은 통째로 컷 (원문 기준 판정)
   if (Array.isArray(blocks.advice)) {
@@ -103,7 +125,8 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
       const afterShinsal = scrubShinsal(o);
-      return scrubForbiddenPredictions(afterShinsal, label);
+      const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
+      return scrubForbiddenPredictions(afterHanja, label);
     }
     if (Array.isArray(o)) return o.map((item, idx) => walk(item, `${label}[${idx}]`));
     if (o && typeof o === "object") {

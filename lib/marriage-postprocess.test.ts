@@ -219,3 +219,14 @@ test("결혼 총량 충분하면 이슈 없음", () => {
   );
   assert.equal(validateMarriageRichness(fat).length, 0);
 });
+
+// ── 한자 병기 스크럽 (2026-07-19) ──
+test("결혼 본문 한자 병기 제거", () => {
+  const { blocks } = applyMarriageGuards(
+    { spousePalace: "2026년은 홍염살(紅艶殺)의 기운이 강해. 도화(桃花, 매력)도 있어.", advice: [] },
+    { maritalStatus: "솔로" }, "",
+  );
+  assert.ok(!/[㐀-鿿]/.test(blocks.spousePalace), "한자 잔존: " + blocks.spousePalace);
+  assert.ok(blocks.spousePalace.includes("홍염살의"));
+  assert.ok(blocks.spousePalace.includes("도화(매력)"));
+});

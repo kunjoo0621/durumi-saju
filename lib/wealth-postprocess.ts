@@ -95,6 +95,10 @@ export function validateWealthBlocks(parsed: any, opts?: { minAdvice?: number })
   return issues;
 }
 
+// 본문에서 제거할 한자(CJK 통합한자) — 순수 한글 원칙. test용(비-global)과 replace용(global) 분리.
+const HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
+const HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
+
 export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: string): WealthGuardResult {
   const violations: string[] = [];
   const blocks = JSON.parse(JSON.stringify(parsed ?? {}));
@@ -156,11 +160,33 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
     return keptLines.join("\n").trim();
   };
 
-  // 4) 위 두 스크럽을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용
+  // 3-b) 한자 제거 스크럽 — 본문은 순수 한글이어야 한다(신살명 한자병기·오타 방지).
+  // "홍염살(紅艶殺)의" → "홍염살의", "겁재(劫財, 다투는 기운)" → "겁재(다투는 기운)".
+  // 한자는 조용히 제거한다(violations에 넣지 않음) — minor 스타일이라 재생성 유발할 필요 없음.
+  const scrubHanja = (s: string): string => {
+    if (!HANJA_RE.test(s)) return s;
+    return s
+      .replace(HANJA_GLOBAL, "")
+      .replace(/\(\s*[,，、·\s]*\)/g, "")
+      .replace(/\(\s*[,，、]\s*/g, "(")
+      .replace(/\s+([,.、·)])/g, "$1")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
+  // 소수점 수치 제거 — 이 모듈 본문에 소수점은 서버 강도값(예: "강도가 10.5로") 누출 외엔 없다.
+  // "비겁이 10.5로 강하다" → "비겁이 강하다". 조용히 제거(재생성 불필요). 연도·나이는 정수라 무영향.
+  const scrubStrayDecimals = (s: string): string =>
+    /\d+\.\d+/.test(s)
+      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "").replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim()
+      : s;
+
+  // 4) 위 스크럽들을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
       const afterShinsal = scrubShinsal(o);
-      return scrubForbiddenSentences(afterShinsal, label);
+      const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
+      return scrubForbiddenSentences(afterHanja, label);
     }
     if (Array.isArray(o)) return o.map((item, idx) => walk(item, `${label}[${idx}]`));
     if (o && typeof o === "object") {
