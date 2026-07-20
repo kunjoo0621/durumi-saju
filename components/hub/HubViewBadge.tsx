@@ -1,9 +1,5 @@
-"use client";
-
-// 매거진 조회수 배지 — StoryCardViewBadge 로직 복제 + HUB_STYLE(조회=Fire) 아이콘.
-// 공용 StoryCardViewBadge(Eye)는 수정 금지 원칙에 따라 신규 작성.
-import { useEffect, useState } from "react";
-import { Fire } from "@phosphor-icons/react";
+// 매거진 허브 조회수 배지 — 아이콘만 Fire(HUB_STYLE), 나머지는 StoryCardViewBadge와 동일.
+import { Fire } from "@phosphor-icons/react/dist/ssr";
 
 function formatViewCount(n: number): string {
   if (n < 1000) return `${n}`;
@@ -12,23 +8,12 @@ function formatViewCount(n: number): string {
   return `${(n / 10000).toFixed(1)}만`;
 }
 
-export default function HubViewBadge({ slug }: { slug: string }) {
-  const [count, setCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/stories/${slug}/view`, { method: "GET" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { viewCount: number } | null) => {
-        if (!cancelled && d) setCount(d.viewCount);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
-
-  if (count === null || count === 0) return null;
+/**
+ * 조회수는 부모(허브 페이지)가 서버에서 배치로 읽어 prop으로 내려준다.
+ * (이전에는 카드마다 `/api/stories/<slug>/view`를 개별 fetch했음.) 순수 표시 = server component.
+ */
+export default function HubViewBadge({ count }: { count?: number | null }) {
+  if (count == null || count === 0) return null;
 
   return (
     <>

@@ -11,6 +11,8 @@ interface Props {
   story: Story;
   /** Featured = hero 자리. 일반 카드보다 일러스트와 제목이 큼. */
   variant?: "default" | "featured";
+  /** 부모 페이지가 서버에서 배치로 읽어 넘기는 조회수(없으면 배지 숨김). */
+  viewCount?: number;
 }
 
 /**
@@ -18,7 +20,7 @@ interface Props {
  * 카드 박스(border/background) 없음 — 세로 여백으로만 구분.
  * 부모가 1px 디바이더(border-t)를 깔아준다.
  */
-export default function StoryCard({ story, variant = "default" }: Props) {
+export default function StoryCard({ story, variant = "default", viewCount }: Props) {
   const featured = variant === "featured";
   const readingMin = getReadingMinutes(story);
 
@@ -46,7 +48,7 @@ export default function StoryCard({ story, variant = "default" }: Props) {
               <Hourglass size={12} weight="regular" aria-hidden="true" />
               {readingMin}분
             </span>
-            <StoryCardViewBadge slug={story.slug} withSeparator />
+            <StoryCardViewBadge count={viewCount} withSeparator />
           </div>
         </div>
 

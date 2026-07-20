@@ -1,10 +1,8 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { Eye } from "@phosphor-icons/react";
+import { Eye } from "@phosphor-icons/react/dist/ssr";
 
 interface Props {
-  slug: string;
+  /** 서버에서 배치로 읽은 조회수. 없거나 0이면 배지를 숨긴다. */
+  count?: number | null;
   /** 앞에 `·` 분리자 표시 — 카드 메타 라인에서 사용 */
   withSeparator?: boolean;
 }
@@ -17,31 +15,14 @@ function formatViewCount(n: number): string {
 }
 
 /**
- * 허브 카드에 노출되는 조회수 배지.
- * 부모(허브 페이지의 client wrapper)가 useEffect로 fetch한 결과를
- * window 전역 store가 아니라 props로 받아도 되지만, 카드를 server component로 두려면
- * 카드 안에서 자체 fetch하는 게 단순함.
+ * 리스트/허브 카드의 조회수 배지 (읽기 전용 표시).
  *
- * 이 단순한 MVP는 각 카드가 자체 fetch (3개라 부담 없음).
- * 글이 늘면 허브에서 배치 fetch + Context 패턴으로 교체.
+ * 조회수는 부모 페이지가 서버에서 `getStoryViews`로 한 번에 읽어 prop으로 내려준다.
+ * (이전에는 카드마다 `/api/stories/<slug>/view`를 개별 fetch → 글이 늘며 요청 폭증했음.)
+ * 순수 표시 컴포넌트라 server component로 렌더된다.
  */
-export default function StoryCardViewBadge({ slug, withSeparator }: Props) {
-  const [count, setCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/stories/${slug}/view`, { method: "GET" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { viewCount: number } | null) => {
-        if (!cancelled && d) setCount(d.viewCount);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
-
-  if (count === null || count === 0) return null;
+export default function StoryCardViewBadge({ count, withSeparator }: Props) {
+  if (count == null || count === 0) return null;
 
   return (
     <>

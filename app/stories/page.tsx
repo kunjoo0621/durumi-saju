@@ -17,11 +17,15 @@ import {
   STORY_CATEGORY_TAGLINE,
   type StoryCategory,
 } from "@/lib/stories/types";
+import { getStoryViews } from "@/lib/stories/views";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 
 const CATEGORY_ORDER: StoryCategory[] = ["celebrity", "saju", "dream", "love"];
 
 const SITE_URL = "https://www.durumisaju.com";
+
+// 조회수 배지를 서버에서 주입 — 10분 ISR로 갱신(정적 유지 + 카드별 개별 fetch 제거).
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: "두루미 매거진 — 몰랐던 사주·꿈해몽·궁합 이야기 | 사주보는 두루미",
@@ -46,11 +50,12 @@ function formatIssueDate() {
   return `${y}.${m}.${d}`;
 }
 
-export default function StoriesHubPage() {
+export default async function StoriesHubPage() {
   const all = getAllStories();
   const hero = all[0];
   const rest = all.slice(1);
   const issueDate = formatIssueDate();
+  const views = await getStoryViews(all.map((s) => s.slug));
 
   // 클라이언트 검색 인덱스 — registry를 클라 번들에 끌어오지 않도록 서버에서 평탄화.
   const searchItems: SearchItem[] = all.map((s) => ({
@@ -149,7 +154,7 @@ export default function StoriesHubPage() {
                 이 주의 글
               </div>
             </div>
-            <StoryCard story={hero} variant="featured" />
+            <StoryCard story={hero} variant="featured" viewCount={views[hero.slug]} />
           </section>
         )}
 
@@ -163,7 +168,7 @@ export default function StoriesHubPage() {
             </div>
             <StoryListMore>
               {rest.map((s) => (
-                <StoryCard key={s.slug} story={s} />
+                <StoryCard key={s.slug} story={s} viewCount={views[s.slug]} />
               ))}
             </StoryListMore>
           </section>

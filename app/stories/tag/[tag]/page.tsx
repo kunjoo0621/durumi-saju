@@ -10,9 +10,13 @@ import {
   getStoriesByTag,
   getTagMeta,
 } from "@/lib/stories/registry";
+import { getStoryViews } from "@/lib/stories/views";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 
 const SITE_URL = "https://www.durumisaju.com";
+
+// 조회수 배지를 서버에서 주입 — 10분 ISR로 갱신(카드별 개별 fetch 제거).
+export const revalidate = 600;
 
 type Props = { params: Promise<{ tag: string }> };
 
@@ -52,6 +56,7 @@ export default async function StoryTagPage({ params }: Props) {
   if (stories.length === 0) notFound();
 
   const allCount = getAllStories().length;
+  const views = await getStoryViews(stories.map((s) => s.slug));
   // 같은 그룹의 다른 태그 (사이드 탐색용)
   const siblings = getAllTags().filter(
     (t) => t.group === meta.group && t.tag !== decoded,
@@ -147,7 +152,7 @@ export default async function StoryTagPage({ params }: Props) {
 
         <div className="divide-y divide-white/[0.07]">
           {stories.map((s) => (
-            <StoryCard key={s.slug} story={s} />
+            <StoryCard key={s.slug} story={s} viewCount={views[s.slug]} />
           ))}
         </div>
 

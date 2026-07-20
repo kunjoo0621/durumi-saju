@@ -18,6 +18,7 @@ import {
   getStoryBySlug,
 } from "@/lib/stories/registry";
 import { computeCelebritySaju } from "@/lib/stories/celebrity";
+import { getStoryViews } from "@/lib/stories/views";
 import { getHeroImageSize } from "@/lib/stories/hero-image-size";
 import {
   STORY_CATEGORY_LABEL,
@@ -84,6 +85,7 @@ export default async function StoryDetailPage({ params }: Props) {
 
   const readingMin = getReadingMinutes(story);
   const related = getRelatedStories(story, 3);
+  const relatedViews = await getStoryViews(related.map((s) => s.slug));
   const categoryLabel = STORY_CATEGORY_LABEL[story.category];
 
   // 연예인 카테고리 — birth info → SajuData + enriched (십성·신살) 빌드 시 계산.
@@ -295,7 +297,7 @@ export default async function StoryDetailPage({ params }: Props) {
             </div>
             <div className="divide-y divide-white/[0.07]">
               {related.map((s) => (
-                <StoryCard key={s.slug} story={s} />
+                <StoryCard key={s.slug} story={s} viewCount={relatedViews[s.slug]} />
               ))}
             </div>
           </section>

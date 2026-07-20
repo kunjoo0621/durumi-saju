@@ -15,9 +15,13 @@ import {
   STORY_CATEGORY_TAGLINE,
   type StoryCategory,
 } from "@/lib/stories/types";
+import { getStoryViews } from "@/lib/stories/views";
 import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 
 const SITE_URL = "https://www.durumisaju.com";
+
+// 조회수 배지를 서버에서 주입 — 10분 ISR로 갱신(카드별 개별 fetch 제거).
+export const revalidate = 600;
 
 const VALID_CATEGORIES = new Set<StoryCategory>([
   "saju",
@@ -76,6 +80,7 @@ export default async function StoryCategoryPage({ params }: Props) {
   const description = CATEGORY_DESCRIPTION[cat];
   const stories = getStoriesByCategory(cat);
   const allCount = getAllStories().length;
+  const views = await getStoryViews(stories.map((s) => s.slug));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -170,7 +175,7 @@ export default async function StoryCategoryPage({ params }: Props) {
         {stories.length > 0 ? (
           <div className="divide-y divide-white/[0.07]">
             {stories.map((s) => (
-              <StoryCard key={s.slug} story={s} />
+              <StoryCard key={s.slug} story={s} viewCount={views[s.slug]} />
             ))}
           </div>
         ) : (

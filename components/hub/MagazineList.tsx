@@ -9,7 +9,14 @@ import { STORY_CATEGORY_HANDLE } from "@/lib/stories/types";
 import type { Story } from "@/lib/stories/types";
 import { HUB_PRESS } from "./services";
 
-export default function MagazineList({ stories }: { stories: Story[] }) {
+export default function MagazineList({
+  stories,
+  views,
+}: {
+  stories: Story[];
+  /** 부모(홈)가 서버에서 읽은 slug→조회수 맵. 카드마다 개별 fetch 대신 주입. */
+  views?: Record<string, number>;
+}) {
   if (stories.length === 0) return null;
   return (
     <Reveal className="px-5 pt-10">
@@ -41,7 +48,7 @@ export default function MagazineList({ stories }: { stories: Story[] }) {
               </h3>
               <p className="mt-0.5 flex items-center gap-1 text-[12.5px] text-text-tertiary">
                 {STORY_CATEGORY_HANDLE[s.category]} · {getReadingMinutes(s)}분
-                <HubViewBadge slug={s.slug} />
+                <HubViewBadge count={views?.[s.slug]} />
               </p>
             </div>
           </Link>

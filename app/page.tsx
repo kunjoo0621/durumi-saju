@@ -71,7 +71,7 @@ export default async function HomePage() {
         <ServiceRail />
         <CelebrityRail items={celebrities} />
         <DictList />
-        <MagazineList stories={magazineStories} />
+        <MagazineList stories={magazineStories} views={views} />
         <HubFaq />
         <div className="px-5 pt-10">
           <BusinessFooter />
