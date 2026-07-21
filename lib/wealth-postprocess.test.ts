@@ -331,3 +331,16 @@ test("스크럽이 tag를 비우면 항목 재검증 컷(빈 근거태그 출고
   assert.equal(blocks.advice[0].tag, "[근거:겁재탈재]");
   assert.ok(violations.some((v: string) => v.includes("재검증 컷")));
 });
+
+test("중복 괄호 collapse: 정관(정관, 바른 규칙)→정관(바른 규칙), 정상 괄호 무변형", () => {
+  const { blocks } = applyWealthGuards({ jaeseongDiagnosis: "정관(정관, 바른 규칙)이 있고 편재(유동적인 큰돈)도 떠 있어." }, facts, "");
+  assert.ok(blocks.jaeseongDiagnosis.includes("정관(바른 규칙)"));
+  assert.ok(blocks.jaeseongDiagnosis.includes("편재(유동적인 큰돈)"));
+  assert.ok(!blocks.jaeseongDiagnosis.includes("정관(정관"));
+});
+test("성사단정 '기회가 쏟아질 거야' 컷 / '기회가 보이면 살펴봐' 보존", () => {
+  const cut = applyWealthGuards({ timingFlow: "앞 문장. 2028년엔 기회가 여기저기서 쏟아질 거야. 뒤 문장." }, facts, "");
+  assert.ok(!cut.blocks.timingFlow.includes("쏟아질"));
+  const keep = applyWealthGuards({ timingFlow: "2028년은 기회가 보이면 살펴볼 만한 시기야." }, facts, "");
+  assert.ok(keep.blocks.timingFlow.includes("살펴볼"));
+});

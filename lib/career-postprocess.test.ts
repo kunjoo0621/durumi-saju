@@ -213,3 +213,8 @@ test("3-layer: 프롬프트 좋은 문장 예시가 가드 금지 패턴에 안 
   const { violations } = applyCareerGuards({ probe: m![1] }, {}, "");
   assert.equal(violations.length, 0, `좋은 예시가 가드에 걸림: ${violations.join(" | ")}`);
 });
+
+test("중복 괄호 collapse: 편관(편관, 강한 자리)→편관(강한 자리)", () => {
+  const { blocks } = applyCareerGuards({ gwanseongDiagnosis: "편관(편관, 강한 자리)이 떠 있어 책임이 커." }, {}, "");
+  assert.ok(blocks.gwanseongDiagnosis.includes("편관(강한 자리)") && !blocks.gwanseongDiagnosis.includes("편관(편관"));
+});

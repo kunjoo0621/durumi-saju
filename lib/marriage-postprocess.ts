@@ -8,6 +8,11 @@ const FORBIDDEN_PREDICTIONS_BASE = [
   /이별수/, /곧\s*헤어/, /헤어질\s*(수|운명|팔자)/, /파혼/, /갈라서|갈라설/,
   /결혼\s*운이?\s*없/, /불임/, /자식\s*(이|은|을)?\s*없/, /자식\s*복이?\s*없/,
   /바람\s*(기|피)/, /과부/, /독수공방/, /(일찍|먼저)\s*(떠나|떠날|여의)/,
+  // ── 긍정 성사단정(2026-07-21 실측 누출) — 손해 방향만 잡고 성사 보장이 새던 구멍 ──
+  /만나게?\s*될\s*운명/,                                  // "다정한 사람을 만나게 될 운명이야"
+  /(반드시|무조건|꼭|분명)\s*(결혼하|만나게?\s*[된돼될]|이어[진질]|맺어[진질])/,
+  /(결혼|결실|인연).{0,6}(보장|확실해|틀림없)/,
+  /절대\s*(놓치|지나치|비껴가)지\s*않/,                    // 단정 보장형만("놓치지 마" 조언형 미매치)
 ];
 // 기본(솔로·연애중·기혼): 이 단어들이 등장할 정당 맥락이 없다 — 단어 자체를 컷(기존 동작 유지).
 const FORBIDDEN_DEFAULT_EXTRA = [/이혼수?/, /사별/, /재혼/];
@@ -78,6 +83,14 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
   };
 
   // 소수점 수치(강도값) + 상투적 필러 연결어("비유하자면") 제거 — 조용히(재생성 불필요).
+  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
+  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
+  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
+  const collapseEchoParens = (s: string): string =>
+    s
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
+
   const scrubStrayDecimals = (s: string): string => {
     let out = /\d+\.\d+/.test(s)
       ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
@@ -142,7 +155,7 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
     if (typeof o === "string") {
       const isTag = label.endsWith(".tag");
       const afterShinsal = isTag ? scrubShinsal(o) : scrubGradeAlpha(scrubShinsal(o));
-      const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
+      const afterHanja = scrubStrayDecimals(collapseEchoParens(scrubHanja(afterShinsal)));
       return scrubForbiddenPredictions(afterHanja, label);
     }
     if (Array.isArray(o)) return o.map((item, idx) => walk(item, `${label}[${idx}]`));

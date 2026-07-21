@@ -251,3 +251,12 @@ test("스크럽이 tag를 비우면 항목 재검증 컷(빈 근거태그 출고
   assert.equal(blocks.advice[0].tag, "[근거:도화]");
   assert.ok(violations.some((v: string) => v.includes("재검증 컷")));
 });
+
+test("중복 괄호 collapse + 성사단정 컷 / 보존", () => {
+  const r = applyMarriageGuards({ spouseStar: "축토(축토, 얼어붙은 땅)와 정관(정관)이 있어." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(r.blocks.spouseStar.includes("축토(얼어붙은 땅)") && r.blocks.spouseStar.includes("정관") && !r.blocks.spouseStar.includes("정관(정관"));
+  const cut = applyMarriageGuards({ timingFlow: "앞 문장. 다정한 사람을 만나게 될 운명이야. 뒤 문장." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(!cut.blocks.timingFlow.includes("운명"));
+  const keep = applyMarriageGuards({ timingFlow: "좋은 인연을 놓치지 마. 만나게 될 수도 있어." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(keep.blocks.timingFlow.includes("놓치지 마") && keep.blocks.timingFlow.includes("수도 있어"));
+});

@@ -169,6 +169,14 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
   // ★정수 강도도 잡는다: "힘도 5 정도로", "인성이 3쯤" 같은 raw 강도 정수 누출(소수점 스크럽만으론
   //  안 잡히던 갭 — 2026-07-21 실측 발견). "\d 정도/쯤" 패턴은 연도(년)·나이(세)가 사이에 오지 않아
   //  안전(2028년·34세는 미매치). "강도/힘/세력 + \d"도 커버.
+  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
+  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
+  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
+  const collapseEchoParens = (s: string): string =>
+    s
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
+
   const scrubStrayDecimals = (s: string): string => {
     let out = /\d+\.\d+/.test(s)
       ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
@@ -201,7 +209,7 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
     if (typeof o === "string") {
       const isTag = label.endsWith(".tag");
       const afterShinsal = isTag ? scrubShinsal(o) : scrubGradeAlpha(scrubGripTerms(scrubShinsal(o)));
-      const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
+      const afterHanja = scrubStrayDecimals(collapseEchoParens(scrubHanja(afterShinsal)));
       return scrubForbiddenSentences(afterHanja, label);
     }
     if (Array.isArray(o)) return o.map((item, idx) => walk(item, `${label}[${idx}]`));
