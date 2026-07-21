@@ -100,8 +100,9 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
   if (Array.isArray(blocks.advice)) {
     blocks.advice = blocks.advice.filter((a: any) => {
       const text = String(a?.text ?? "");
-      if (FORBIDDEN_PREDICTIONS.some((re) => re.test(text))) {
-        violations.push(`단정 예언 제거: ${text.slice(0, 20)}`);
+      const hit = FORBIDDEN_PREDICTIONS.find((re) => re.test(text));
+      if (hit) {
+        violations.push(`단정 예언 제거: ${text.slice(0, 20)} /${hit.source}/`);
         return false;
       }
       if (isExecutionDirective(text)) {
@@ -137,8 +138,9 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
       const allBlank = sentences.every((sent) => sent.trim() === "");
       const keptSentences = sentences.filter((sent) => {
         if (sent.trim() === "") return true;
-        if (FORBIDDEN_PREDICTIONS.some((re) => re.test(sent))) {
-          violations.push(`단정 예언 제거(${label})`);
+        const hit = FORBIDDEN_PREDICTIONS.find((re) => re.test(sent));
+        if (hit) {
+          violations.push(`단정 예언 제거(${label}): /${hit.source}/`);
           return false;
         }
         if (isExecutionDirective(sent)) {

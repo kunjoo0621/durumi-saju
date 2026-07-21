@@ -113,7 +113,7 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
   if (Array.isArray(blocks.advice)) {
     blocks.advice = blocks.advice.filter((a: any) => {
       const text = String(a?.text ?? "");
-      if (forbidden.some(re => re.test(text))) { violations.push(`단정 예언 제거: ${text.slice(0,20)}`); return false; }
+      const hit = forbidden.find(re => re.test(text)); if (hit) { violations.push(`단정 예언 제거: ${text.slice(0,20)} /${hit.source}/`); return false; }
       if (!a?.tag || !/\[근거:.+\]/.test(a.tag)) { violations.push(`근거태그 없음 컷: ${text.slice(0,20)}`); return false; }
       return true;
     });
@@ -137,8 +137,9 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
       const allBlank = sentences.every((sent) => sent.trim() === "");
       const keptSentences = sentences.filter((sent) => {
         if (sent.trim() === "") return true;
-        if (forbidden.some((re) => re.test(sent))) {
-          violations.push(`단정 예언 제거(${label})`);
+        const hit = forbidden.find((re) => re.test(sent));
+        if (hit) {
+          violations.push(`단정 예언 제거(${label}): /${hit.source}/`);
           return false;
         }
         return true;

@@ -115,3 +115,38 @@ test("softValidate 이슈는 재생성을 유발하되 최종 출고는 막지 �
   assert.equal(calls, 2); // soft 이슈로 1회 재생성 시도
   if (res.ok) assert.equal(res.violations.length, 0); // soft 이슈는 violations에 안 남음
 });
+
+// ── 3-A(2026-07-21): softValidate가 위반 유무와 무관하게 실행되고 softIssues가 반환된다 ──
+test("위반+얇음 동시 → 재생성 노트에 richness 채움경로 포함 + softIssues 반환", async () => {
+  const prompts: string[] = [];
+  const responses = [DIRTY, CLEAN]; // 1차: 위반→가드가 body 비움(얇음) / 2차: 클린
+  const res = await generateWithQaRegen<{ body: string }>({
+    prompt: "BASE", systemPrompt: "SYS", models: ["m1"],
+    callModel: async (_m, prompt) => { prompts.push(prompt); return { ok: true, text: responses.shift()! }; },
+    shouldFallback: () => false,
+    parse: (t) => JSON.parse(t),
+    validateBlocks: passValidate,
+    applyGuards: guardCutForbidden,
+    softValidate: (b) => (String(b.body).length < 5 ? ["본문 얇음: 궁위·타이밍으로 채워라"] : []),
+  });
+  // ★3-A 핵심: 1차가 위반+얇음인데 재생성 노트에 richness 문구가 실려야 한다(예전엔 위반0일 때만 실행돼 누락)
+  assert.ok(prompts[1].includes("단정 예언 제거"));
+  assert.ok(prompts[1].includes("본문 얇음"), "위반이 있을 때 richness 노트가 누락됨(3-A 회귀)");
+  assert.ok(res.ok);
+  if (res.ok) { assert.equal(res.violations.length, 0); assert.deepEqual(res.softIssues, []); }
+});
+
+test("2회 모두 얇음 → 스크럽본 출고 + softIssues 반환(감사 기록용)", async () => {
+  const THIN = JSON.stringify({ body: "짧", advice: [] });
+  const res = await generateWithQaRegen<{ body: string }>({
+    prompt: "BASE", systemPrompt: "SYS", models: ["m1"],
+    callModel: async () => ({ ok: true, text: THIN }),
+    shouldFallback: () => false,
+    parse: (t) => JSON.parse(t),
+    validateBlocks: passValidate,
+    applyGuards: (p: any) => ({ blocks: p, violations: [] }),
+    softValidate: (b) => (String(b.body).length < 5 ? ["본문 얇음"] : []),
+  });
+  assert.ok(res.ok);
+  if (res.ok) { assert.equal(res.attempts, 2); assert.ok(res.softIssues.includes("본문 얇음")); }
+});
