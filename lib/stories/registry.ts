@@ -151,6 +151,9 @@ import { zena } from "./data/zena";
 import { jeonggwanHusband } from "./data/jeonggwan-husband";
 import { cheondeokWoldeokGwiin } from "./data/cheondeok-woldeok-gwiin";
 import { sanAteez } from "./data/san-ateez";
+import { movingDream } from "./data/moving-dream";
+import { hyeonchimSal } from "./data/hyeonchim-sal";
+import { jaeseongWife } from "./data/jaeseong-wife";
 import type { Story, StoryCategory } from "./types";
 import { STORY_TAGS, TAG_META, TAG_ORDER, type TagMeta } from "./tags";
 
@@ -308,6 +311,9 @@ const RAW_STORIES: Story[] = [
   jangGiha,
   yunGai,
   jeonYujin,
+  movingDream,
+  hyeonchimSal,
+  jaeseongWife,
 ];
 
 // tags.ts(단일 소스)의 태그를 각 글에 주입한다.
