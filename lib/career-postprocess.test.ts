@@ -137,6 +137,18 @@ test("소수점 강도값 누출 스크럽", () => {
   assert.ok(!/\d+\.\d+/.test(blocks.workStyle));
 });
 
+test("정수 강도값 누출(힘도 5 정도로 / 강도 6) 스크럽 — 소수점만 잡던 갭 보강", () => {
+  const r1 = applyCareerGuards({ gwanseongDiagnosis: "인성의 힘도 5 정도로 든든해서 자리를 지탱해." }, {}, "");
+  assert.ok(!r1.blocks.gwanseongDiagnosis.includes("5 정도"), r1.blocks.gwanseongDiagnosis);
+  const r2 = applyCareerGuards({ workStyle: "관성 강도 6인 편이라 뚜렷해." }, {}, "");
+  assert.ok(!/강도\s*\d/.test(r2.blocks.workStyle), r2.blocks.workStyle);
+});
+
+test("연도·나이·개수는 스크럽 안 됨(강도 정수만 제거)", () => {
+  const { blocks } = applyCareerGuards({ timingFlow: "2028년, 34세 무렵에 자리가 3번 열려." }, {}, "");
+  assert.ok(blocks.timingFlow.includes("2028") && blocks.timingFlow.includes("34") && blocks.timingFlow.includes("3번"));
+});
+
 test("validateCareerBlocks: gradeHeadline은 minLen 8 (80자 복사 함정 방지)", () => {
   const ok = {
     teaserSummary: "조직에서 오래 갈 결이야",

@@ -165,11 +165,16 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
       .trim();
   };
 
-  // 소수점 수치(강도값 누출) + 상투적 필러 제거 — 조용히.
+  // 강도값 누출(소수점 + 정수) + 상투적 필러 제거 — 조용히.
+  // ★정수 강도도 잡는다: "힘도 5 정도로", "인성이 3쯤" 같은 raw 강도 정수 누출(소수점 스크럽만으론
+  //  안 잡히던 갭 — 2026-07-21 실측 발견). "\d 정도/쯤" 패턴은 연도(년)·나이(세)가 사이에 오지 않아
+  //  안전(2028년·34세는 미매치). "강도/힘/세력 + \d"도 커버.
   const scrubStrayDecimals = (s: string): string => {
     let out = /\d+\.\d+/.test(s)
       ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
       : s;
+    out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, ""); // "5 정도로" → 제거
+    out = out.replace(/(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g, "$1$2"); // "강도 6" → "강도"
     out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
