@@ -25,6 +25,10 @@ const FORBIDDEN_PREDICTIONS = [
   /번아웃.{0,3}(온다|와|올\s*거|불가피|피할\s*수\s*없)/,
   // 과장 단정
   /(무조건|반드시)\s*(성공|출세|대성)/,
+  // ── Fable 검수(2026-07-21) 실측 누출 성사보장 — FORBIDDEN이 못 잡던 변형 ──
+  /(반드시|무조건|꼭)\s*(따라오|따라온|따라올|이어진|이어질|열린다|열릴)/, // "명예·직함은 반드시 따라오는"
+  /절대\s*(지나치|놓치|비껴|피해\s*가|외면하)/, // "기회는 너를 절대 지나치지 않아"
+  /(제안|기회|자리|러브콜).{0,12}(쏟아진|쏟아질|밀려온|밀려올|넘쳐난|넘쳐날)/, // "제안이 여기저기서 쏟아질 거야"
 ];
 
 // 인생 중대 결정(퇴사·이직·창업)의 실행을 "당장/지금/무조건" 단정 지시하는 문장(절대 규칙 5).
@@ -47,6 +51,13 @@ const FORBIDDEN_SHINSAL = [
   /과숙살/, /고신살/, /상부살/, /홍란/, /천희/,
   /괴강살/, /백호살/, /양인살/, /장성살/, /학당귀인/, /학당/,
 ];
+
+// 그릇 4상한 용어 본문 노출 방지(프롬프트 규칙 1 위반 누출 2차망, Fable 검수 2026-07-21).
+// 문장 컷이 아니라 용어만 중립어로 치환 — 재해석 문장 전체가 날아가지 않게. "관다신약처럼 ~"
+// 비교 서열화도 함께 잡힌다.
+const GRIP_TERMS = /신왕관왕|신왕관쇠|관다신약|신약관소|신약관다/g;
+// teaser 등급 알파벳 노출 방지(유료 전 스포일러+서열화). "S등급다운/S등급의" 접미까지 제거.
+const GRADE_ALPHA = /(SS|[SABCD])\s*등급(다운|답게|다워|스러운|의|이|은|을|급)?/g;
 
 export interface CareerGuardResult {
   blocks: any;
@@ -163,10 +174,24 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
 
+  // 3-c) 그릇 4상한 용어 노출 → 중립어 치환(문장 보존). 3-d) 등급 알파벳 노출 → 제거.
+  const scrubGripTerms = (s: string): string => {
+    const out = s.replace(GRIP_TERMS, "이런 구조");
+    if (out === s) return s;
+    violations.push("그릇용어 노출 치환");
+    return out.replace(/\s{2,}/g, " ").trim();
+  };
+  const scrubGradeAlpha = (s: string): string => {
+    const out = s.replace(GRADE_ALPHA, "");
+    if (out === s) return s;
+    violations.push("등급노출 스크럽");
+    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
+  };
+
   // 4) 위 스크럽들을 blocks 전체(배열/객체 중첩 어디든)에 재귀 적용
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
-      const afterShinsal = scrubShinsal(o);
+      const afterShinsal = scrubGradeAlpha(scrubGripTerms(scrubShinsal(o)));
       const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
       return scrubForbiddenSentences(afterHanja, label);
     }

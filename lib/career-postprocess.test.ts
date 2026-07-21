@@ -41,6 +41,48 @@ test("금지 예시 전수: applyCareerGuards가 문장 단위로 전부 컷한�
   }
 });
 
+// ── Fable 검수(2026-07-21) 실측 누출 문장 — 프롬프트는 금지했는데 가드가 못 잡던 것 ──
+const LEAKED_PREDICTIONS = [
+  "고생한 만큼 명예와 직함은 반드시 따라오는 결이야",
+  "좋은 제안이 여기저기서 쏟아질 거야",
+  "기회는 준비된 너를 절대 지나치지 않아",
+  "네가 원하는 자리가 무조건 따라온다",
+];
+
+test("Fable 누출 성사보장 문장 전수 컷(FORBIDDEN 확장)", () => {
+  for (const bad of LEAKED_PREDICTIONS) {
+    const { violations } = applyCareerGuards({ timingFlow: `앞 문장 멀쩡. ${bad} 뒤 문장 멀쩡.` }, {}, "");
+    assert.ok(violations.length > 0, `안 걸림: "${bad}"`);
+  }
+});
+
+test("그릇 4상한 용어(관다신약 등) 본문 노출 → 중립 치환 + 위반", () => {
+  const { blocks, violations } = applyCareerGuards(
+    { careerGripDiagnosis: "이걸 명리에서는 관다신약이라고 부르는데, 페이스가 관건이야." },
+    {}, "",
+  );
+  assert.ok(!blocks.careerGripDiagnosis.includes("관다신약"), "용어가 남아있음");
+  assert.ok(violations.some((v) => v.includes("그릇용어")));
+});
+
+test("그릇 용어 비교 서열화(관다신약처럼 ~) → 용어 제거(재해석 문장은 보존)", () => {
+  const { blocks } = applyCareerGuards(
+    { workStyle: "관다신약처럼 자리에 치여 사는 게 아니라, 네가 판을 주도하는 결이야." },
+    {}, "",
+  );
+  assert.ok(!blocks.workStyle.includes("관다신약"));
+  assert.ok(blocks.workStyle.includes("네가 판을 주도하는"), "재해석 문장이 통째로 날아감");
+});
+
+test("teaser 등급 알파벳 노출(S등급 등) → 스크럽 + 위반", () => {
+  const { blocks, violations } = applyCareerGuards(
+    { teaserSummary: "S등급다운 탄탄한 에너지로 네 판을 어떻게 짜야 할지 알려줄게." },
+    {}, "",
+  );
+  assert.ok(!/(SS|[SABCD])\s*등급/.test(blocks.teaserSummary), "등급 알파벳이 남아있음");
+  assert.ok(violations.some((v) => v.includes("등급노출")));
+});
+
 test("금지 예시가 advice에 있으면 항목 통째로 삭제", () => {
   const { blocks } = applyCareerGuards(
     { advice: [{ text: "2027년에 반드시 승진한다", tag: "[근거:정관]" }, { text: "자격증을 미리 챙겨두면 좋아", tag: "[근거:관인상생]" }] },
