@@ -2,7 +2,7 @@ import posthog from "posthog-js";
 
 type SpendType = "analysis" | "battle";
 
-export type FormName = "start" | "battle" | "yearly" | "today" | "marriage" | "wealth";
+export type FormName = "start" | "battle" | "yearly" | "today" | "marriage" | "wealth" | "career";
 
 /** 폼 스텝 진행 */
 export function trackFormStep(form: FormName, step: number, stepName: string) {
