@@ -29,6 +29,7 @@ const THUMB = {
   yearly: "/images/hub/yearly.webp",
   marriage: "/images/marriage/marriage-poster.webp",
   wealth: "/images/wealth/wealth-poster.webp",
+  career: "/images/career/career-poster.webp",
 } as const;
 
 function RowThumb({ src }: { src: string }) {
@@ -205,8 +206,7 @@ export default function MenuPage() {
                 {CAREER_COST}알
               </p>
             </div>
-            {/* 포스터 에셋(career-poster.webp) 생성 전 — 그라디언트 플레이스홀더(잘못된 톤 고착 방지) */}
-            <div className="relative aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#20262E] via-[#191D24] to-[#121212]" />
+            <RowThumb src={THUMB.career} />
           </button>
 
           {/* 펫 (NEW) */}

@@ -66,6 +66,19 @@ Besides this title and subtitle, NO other text/letters/numbers/hanja.
 Scene: the robed crane in the lower portion holding up ONE single glowing fortune card, and directly behind it ONE large radiant rising sun bursting with warm dawn light — a bright, focused single-day moment.
 ```
 
+## 6. 커리어운 → career-poster.png (선글라스·블랙 정장 변형)
+```
+Use the crane mascot in the attached image as the character base — preserve its head silhouette, coral-red (#F43F5E) crest and long coral-red beak IDENTICALLY (do NOT alter the head shape, crest, or beak). It is wearing sleek black wayfarer-style sunglasses over its eyes. Render it as a stylized 3D character in a sharp, impeccably tailored black business suit (crisp white shirt, slim dark tie) instead of a robe.
+Style: high-end cinematic 3D movie-poster key art. Deep black cosmic background with dual-tone energy (electric blue/violet on the left, warm orange/gold on the right), stars, glowing particles, volumetric light, strong rim lighting, shallow depth of field. Vertical portrait, 2:3 aspect ratio.
+TEXT LAYOUT — keep this EXACT layout identical for the whole poster series (critical): all text centered in the TOP portion; a small ornamental filigree flourish at top-center (~6% from top); the MAIN TITLE as one centered line with its center around 15% from the top, very large; the SUBTITLE centered directly under it around 26% from the top; a thin symmetrical filigree divider just under the subtitle (~30%); the character/scene fills the LOWER ~62% and never overlaps the text.
+FONTS: main title in a BOLD KOREAN MYEONGJO SERIF (thick traditional Korean serif, Nanum Myeongjo ExtraBold style, NOT gothic/sans), white with soft glow; subtitle in a lighter refined Korean serif, smaller. Crisp correct Hangul.
+Main title, spelled EXACTLY: 커리어운
+Subtitle, spelled EXACTLY: 나는 어느 길로 가야 할까?
+Besides this title and subtitle, NO other text/letters/numbers/hanja.
+Scene: the suited crane standing tall and confident in a powerful hero pose in the lower portion — one hand adjusting its tie or slipping into a pocket, chin up, radiating cool executive charisma like a movie poster of a top boss. Sharp rim light traces the suit's shoulders; blue energy glows on its left, orange-gold on its right, a subtle skyline of luminous towers dissolving into cosmic particles behind it.
+```
+- 운영자 확정본(2026-07-21). 도사 로브 대신 블랙 정장+선글라스 — 커리어의 "쿨한 프로페셔널" 아이덴티티. 얼굴 identity는 볏·긴 부리로 고정, 눈은 선글라스로 가림. 배포: `public/images/career/career-poster.webp`.
+
 ---
 
 ## 재사용 팁

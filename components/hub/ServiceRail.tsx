@@ -16,6 +16,7 @@ import {
   PET_COMPAT_COST,
   MARRIAGE_COST,
   WEALTH_COST,
+  CAREER_COST,
 } from "@/lib/constants/coins";
 import { resolveSolarYear } from "@/lib/utils/ipchun";
 
@@ -42,8 +43,8 @@ export default function ServiceRail() {
 
   const egg = <Egg size={14} weight="fill" className="shrink-0" />;
 
-  // 순서: 결혼운 → 재물운 → 펫 → 오늘 → 사주 → 올해 → 배틀. 사주 계열은 히어로 캐러셀에 이미 노출되므로
-  // 신규·다른 서비스(결혼운·재물운·펫·오늘)를 레일 앞쪽에 먼저 배치 (메뉴 페이지와는 다른 순서)
+  // 순서: 결혼운 → 재물운 → 커리어운 → 펫 → 오늘 → 사주 → 올해 → 배틀. 사주 계열은 히어로 캐러셀에 이미
+  // 노출되므로 신규·다른 서비스(결혼운·재물운·커리어운·펫·오늘)를 레일 앞쪽에 먼저 배치 (메뉴와는 다른 순서)
   const cards: CardDef[] = [
     {
       id: "marriage",
@@ -66,6 +67,18 @@ export default function ServiceRail() {
         <>
           {egg}
           {WEALTH_COST}알
+        </>
+      ),
+    },
+    {
+      id: "career",
+      chip: "심층 풀이",
+      title: "커리어운",
+      desc: "조직형인지 독립형인지, 자리가 열리는 때까지",
+      price: (
+        <>
+          {egg}
+          {CAREER_COST}알
         </>
       ),
     },

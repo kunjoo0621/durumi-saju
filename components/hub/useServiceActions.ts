@@ -66,6 +66,9 @@ export function useServiceActions() {
         case "wealth":
           router.push("/wealth");
           return;
+        case "career":
+          router.push("/career");
+          return;
       }
     },
     [runSaju, resetBattle, resetPet, router],

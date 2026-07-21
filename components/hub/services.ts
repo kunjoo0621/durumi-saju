@@ -5,7 +5,7 @@ import type { DictCategory } from "@/lib/dict/types";
 export const HUB_PRESS =
   "transition-transform duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-[0.97]";
 
-export type HubServiceId = "saju" | "battle" | "yearly" | "pet" | "today" | "marriage" | "wealth";
+export type HubServiceId = "saju" | "battle" | "yearly" | "pet" | "today" | "marriage" | "wealth" | "career";
 
 export interface HubHeroSlide {
   id: HubServiceId;
@@ -29,6 +29,7 @@ export const HUB_SERVICE_THUMB: Record<HubServiceId, string> = {
   today: "/images/hub/today.webp",
   marriage: "/images/marriage/marriage-poster.webp",
   wealth: "/images/wealth/wealth-poster.webp",
+  career: "/images/career/career-poster.webp",
 };
 
 // 연예인 사주 — stories 슬러그(목업 순서). 이름·직업·초상은 서버에서 getStoryBySlug로 주입.
