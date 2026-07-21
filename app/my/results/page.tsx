@@ -29,13 +29,14 @@ type ResultItem = {
   is_primary: boolean;
 };
 
-type Tab = "saju" | "yearly" | "marriage" | "wealth" | "today" | "pet" | "battle";
+type Tab = "saju" | "yearly" | "marriage" | "wealth" | "career" | "today" | "pet" | "battle";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "saju", label: "내 사주" },
   { key: "yearly", label: "올해 운세" },
   { key: "marriage", label: "결혼운" },
   { key: "wealth", label: "재물운" },
+  { key: "career", label: "커리어운" },
   { key: "today", label: "오늘" },
   { key: "pet", label: "펫 궁합" },
   { key: "battle", label: "사주 배틀" },
@@ -69,6 +70,14 @@ type MarriageItem = {
 type WealthItem = {
   id: string;
   interest: string | null;
+  grade: string | null; // 표시 등급 (SS/S/A/B/C)
+  createdAt: string | null;
+  unlocked: boolean;
+};
+
+type CareerItem = {
+  id: string;
+  situation: string | null;
   grade: string | null; // 표시 등급 (SS/S/A/B/C)
   createdAt: string | null;
   unlocked: boolean;
@@ -441,6 +450,41 @@ function WealthCard({ item }: { item: WealthItem }) {
   );
 }
 
+function CareerCard({ item }: { item: CareerItem }) {
+  const internalGrade = item.grade ? DISPLAY_TO_INTERNAL[item.grade] ?? "D" : null;
+  const gc = item.grade ? getGradeColor(internalGrade || "D") : null;
+  return (
+    <Link
+      href={`/career/result?id=${item.id}`}
+      className="block rounded-2xl active:opacity-80 transition-opacity"
+      style={{ background: "#141414" }}
+    >
+      <div className="py-5 px-5 flex items-center gap-4">
+        <GradeMedal grade={internalGrade} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-1.5">
+            <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">커리어운</span>
+            {item.unlocked ? (
+              item.grade && (
+                <span className="text-[13px] font-semibold whitespace-nowrap shrink-0" style={{ color: gc?.text || "#D0A070" }}>
+                  {item.grade}등급
+                </span>
+              )
+            ) : (
+              <LockBadge />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: "#4B5563" }}>
+            {item.situation && <span>{item.situation}</span>}
+            {item.situation && item.createdAt && <span style={{ color: "#2A2A2A" }}>·</span>}
+            {item.createdAt && <span>{formatResultDate(item.createdAt)}</span>}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 /* ── 오늘 카드 ── */
 function todayDateLabel(targetDate: string): string {
   const [y, m, d] = targetDate.split("-").map(Number);
@@ -568,6 +612,12 @@ export default function MyResultsPage() {
   const [wealthLoading, setWealthLoading] = useState(false);
   const [wealthError, setWealthError] = useState(false);
   const wealthFetched = useRef(false);
+
+  // Career results state
+  const [careerResults, setCareerResults] = useState<CareerItem[]>([]);
+  const [careerLoading, setCareerLoading] = useState(false);
+  const [careerError, setCareerError] = useState(false);
+  const careerFetched = useRef(false);
 
   // Today results state
   const [todayResults, setTodayResults] = useState<TodayItem[]>([]);
@@ -702,6 +752,29 @@ export default function MyResultsPage() {
     await fetchWealth();
   }, [fetchWealth]);
 
+  const fetchCareer = useCallback(async () => {
+    if (careerFetched.current) return;
+    setCareerLoading(true);
+    setCareerError(false);
+    try {
+      const res = await fetch("/api/career/list");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setCareerResults(Array.isArray(data.results) ? data.results : []);
+      careerFetched.current = true;
+    } catch {
+      setCareerError(true);
+      setCareerResults([]);
+    } finally {
+      setCareerLoading(false);
+    }
+  }, []);
+
+  const retryCareer = useCallback(async () => {
+    careerFetched.current = false;
+    await fetchCareer();
+  }, [fetchCareer]);
+
   const fetchToday = useCallback(async () => {
     if (todayFetched.current) return;
     setTodayLoading(true);
@@ -762,9 +835,10 @@ export default function MyResultsPage() {
     if (tab === "yearly") fetchYearly();
     if (tab === "marriage") fetchMarriage();
     if (tab === "wealth") fetchWealth();
+    if (tab === "career") fetchCareer();
     if (tab === "today") fetchToday();
     if (tab === "pet") fetchPet();
-  }, [tab, session, fetchBattles, fetchYearly, fetchMarriage, fetchWealth, fetchToday, fetchPet]);
+  }, [tab, session, fetchBattles, fetchYearly, fetchMarriage, fetchWealth, fetchCareer, fetchToday, fetchPet]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -1226,6 +1300,31 @@ export default function MyResultsPage() {
               )}
               {!wealthLoading && wealthError && (
                 <TabError message="재물운 내역을 못 불러왔어" onRetry={retryWealth} onMenu={() => router.push("/menu")} />
+              )}
+            </>
+          )}
+
+          {/* ===== 커리어운 탭 ===== */}
+          {tab === "career" && (
+            <>
+              {careerLoading && <InlineLoading message="불러오는 중..." />}
+              {!careerLoading && !careerError && careerResults.length > 0 && (
+                <div className="space-y-3">
+                  {careerResults.map((c) => (
+                    <CareerCard key={c.id} item={c} />
+                  ))}
+                </div>
+              )}
+              {!careerLoading && !careerError && careerResults.length === 0 && (
+                <TabEmpty
+                  message="아직 커리어운 결과가 없어"
+                  ctaLabel="커리어운 보러가기"
+                  onCta={() => router.push("/career")}
+                  onMenu={() => router.push("/menu")}
+                />
+              )}
+              {!careerLoading && careerError && (
+                <TabError message="커리어운 내역을 못 불러왔어" onRetry={retryCareer} onMenu={() => router.push("/menu")} />
               )}
             </>
           )}

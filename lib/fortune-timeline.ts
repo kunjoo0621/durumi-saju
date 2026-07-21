@@ -8,6 +8,7 @@
 import type { FortuneResult } from "./utils/saju-fortune";
 import type { WealthFacts } from "./wealth-facts";
 import type { MarriageFacts } from "./marriage-facts";
+import type { CareerFacts } from "./career-facts";
 import { STEM_ELEMENT, BRANCH_INFO } from "./utils/saju-enrichment";
 
 export type TimelineMood = "강세" | "보통" | "주의";
@@ -169,6 +170,79 @@ export function buildWealthTimeline(
   });
   if (entries.length === 0) return null;
   return { version: 1, entries, daeun: filterUpcomingDaeun(facts.daeunWealthYears, fortune, currentYear) };
+}
+
+// 커리어 트리거(관성투출·인성투출·식상투출)는 세운 십성이 단일이라 해마다 최대 1개(서로소).
+// 부정 트리거가 없다 — 커리어 안전장치(절대 규칙 3·4: 실패·해고 단정 금지)와 충돌하므로 '주의'
+// 무드를 만들지 않는다. 식상투출은 "새 판" 기운이라 강세가 아니라 '보통'(벌이기 전 점검 프레임).
+const CAREER_MOOD: Record<string, TimelineMood> = {
+  관성투출: "강세",
+  인성투출: "강세",
+  식상투출: "보통",
+};
+const CAREER_HINT: Record<string, string> = {
+  관성투출: "자리·평가가 움직일 여지가 큰 해 — 기회가 보이면 살펴볼 만한 시기야",
+  인성투출: "자격·문서·배움이 힘이 되는 해 — 실력을 증명할 판을 챙겨봐",
+  식상투출: "새 판·전환의 기운이 드는 해 — 벌이고 싶어도 한 번 더 점검하고 가",
+};
+const CAREER_HINT_ALT: Record<string, string> = {
+  관성투출: "자리 기운이 한 번 더 드는 해 — 앞선 흐름을 이어받기 좋아",
+  인성투출: "배움·자격의 힘이 이어지는 해 — 준비해둔 걸 꺼내 쓰기 좋아",
+  식상투출: "만들어내는 기운이 이어지는 해 — 판을 넓히기 전에 속도를 점검해",
+};
+const CAREER_HINT_NONE = "큰 트리거 없이 흘러가는 해야";
+
+// 트리거 없는 해(재성·비겁 세운)의 힌트 — 그 해 세운 십성으로 해마다 다른 plain 문구를 파생.
+// 십성 용어는 노출하지 않고 커리어 결의 안전 문구만(공포·단정 배제).
+const CAREER_YEAR_HINT: Record<string, string> = {
+  비견: "내 힘으로 밀고 나가는 데 집중하는 해",
+  겁재: "경쟁·협업이 오가며 부대끼는 해 — 내 몫을 챙겨",
+  식신: "손에 익은 전문성으로 꾸준히 가는 해",
+  상관: "새 아이디어와 자기 방식이 살아나는 해",
+  편재: "활동 폭이 넓어지고 기회가 도는 해",
+  정재: "맡은 일을 차분히 다지기 좋은 해",
+  편관: "책임과 자리에 힘이 실리는 해 — 압박도 함께 와",
+  정관: "자리와 신용을 쌓기 좋은 해",
+  편인: "배우고 준비하며 기반을 만드는 해",
+  정인: "자격·문서가 도움이 되는 해",
+};
+
+export function buildCareerTimeline(
+  fortune: FortuneResult | null,
+  facts: Pick<CareerFacts, "timingWindows" | "daeunCareerYears">,
+  currentYear: number,
+): ServerTimeline | null {
+  if (!fortune) return null;
+  const trigByYear = new Map(facts.timingWindows.map((w) => [w.year, w.triggers as string[]]));
+  const triggerSeen = new Map<string, number>();
+  const entries: TimelineEntry[] = sliceWindow(fortune, currentYear).map((s) => {
+    const triggers = trigByYear.get(s.year) ?? [];
+    const lead = triggers[0];
+    let hint: string;
+    if (lead) {
+      const n = triggerSeen.get(lead) ?? 0;
+      triggerSeen.set(lead, n + 1);
+      hint = n % 2 === 1
+        ? CAREER_HINT_ALT[lead] ?? CAREER_HINT[lead] ?? CAREER_HINT_NONE
+        : CAREER_HINT[lead] ?? CAREER_HINT_NONE;
+    } else {
+      hint = CAREER_YEAR_HINT[s.tenStar] ?? CAREER_HINT_NONE;
+    }
+    return {
+      year: s.year,
+      age: s.age,
+      pillarKorean: pillarKoreanFor(s.stem, s.branch),
+      tenStar: s.tenStar,
+      twelveStage: s.twelveStage,
+      mood: lead ? CAREER_MOOD[lead] ?? "보통" : "보통",
+      triggers,
+      hint,
+      isPast: s.year < currentYear,
+      isCurrent: s.year === currentYear,
+    };
+  });
+  if (entries.length === 0) return null;
+  return { version: 1, entries, daeun: filterUpcomingDaeun(facts.daeunCareerYears, fortune, currentYear) };
 }
 
 export function buildMarriageTimeline(

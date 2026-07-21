@@ -69,7 +69,7 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
     // charge-success가 charge + Google conversion firing 담당 → 여기선 firing 안 함 (중복 방지).
     // whitelist 경로(/coins 계열·yearly·today)만 경유. 그 외 returnTo는 기존 인라인 흐름.
     // 복귀 후 분석 시작은 각 entry 가 담당 (charge-success는 charge+firing+returnTo 까지만).
-    const SUCCESS_PAGE_RETURNS = ["/coins", "/yearly", "/yearly/input", "/today", "/today/input", "/marriage", "/marriage/input", "/marriage/teaser", "/wealth", "/wealth/input", "/wealth/teaser"];
+    const SUCCESS_PAGE_RETURNS = ["/coins", "/yearly", "/yearly/input", "/today", "/today/input", "/marriage", "/marriage/input", "/marriage/teaser", "/wealth", "/wealth/input", "/wealth/teaser", "/career", "/career/input", "/career/teaser"];
     const returnTo = redirectPath || "/coins";
     const viaSuccessPage = SUCCESS_PAGE_RETURNS.includes(returnTo);
 

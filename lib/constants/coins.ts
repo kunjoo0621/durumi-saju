@@ -6,6 +6,7 @@ export const PET_COMPAT_COST = 20;        // 반려동물 궁합 정상가 (배�
 export const PET_COMPAT_LAUNCH_COST = 10; // 출시 할인가 (기간 미표기, 추후 조용히 정상가 복귀)
 export const MARRIAGE_COST = 10; // 결혼운/애정운 심층 검사 = 10알 (사주·yearly 동일, 풀 심층)
 export const WEALTH_COST = 10; // 재물운 심층 검사 = 10알 (사주·yearly·결혼운 동일, 풀 심층)
+export const CAREER_COST = 10; // 커리어운 심층 검사 = 10알 (사주·yearly·결혼운·재물운 동일, 풀 심층)
 
 export type CoinPackageId = 'basic' | 'popular' | 'value';
 
