@@ -530,10 +530,11 @@ export async function POST(request: NextRequest) {
 
       // N-2: 가드가 무언가 걸러냈으면 사후 감사용으로 기록(별도 best-effort UPDATE, 본 저장과 분리).
       // 실패해도 리포트는 이미 저장됐으므로 비치명 — 경고만 남기고 성공 반환을 막지 않는다.
-      if (violations.length > 0) {
+      const audit = [...violations, ...gen.softIssues.map((s) => `richness:${s}`)];
+      if (audit.length > 0) {
         const { error: gvError } = await supabaseAdmin
           .from("wealth_results")
-          .update({ guard_violations: violations })
+          .update({ guard_violations: [...audit, `attempts:${gen.attempts}`] })
           .eq("id", resultId);
         if (gvError) console.warn("[WEALTH_ANALYZE] guard_violations 기록 실패(비치명)", gvError.message);
       }

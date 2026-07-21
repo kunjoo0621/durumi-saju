@@ -8,6 +8,11 @@ const FORBIDDEN_PREDICTIONS_BASE = [
   /이별수/, /곧\s*헤어/, /헤어질\s*(수|운명|팔자)/, /파혼/, /갈라서|갈라설/,
   /결혼\s*운이?\s*없/, /불임/, /자식\s*(이|은|을)?\s*없/, /자식\s*복이?\s*없/,
   /바람\s*(기|피)/, /과부/, /독수공방/, /(일찍|먼저)\s*(떠나|떠날|여의)/,
+  // ── 긍정 성사단정(2026-07-21 실측 누출) — 손해 방향만 잡고 성사 보장이 새던 구멍 ──
+  /만나게?\s*될\s*운명/,                                  // "다정한 사람을 만나게 될 운명이야"
+  /(반드시|무조건|꼭|분명)\s*(결혼하|만나게?\s*[된돼될]|이어[진질]|맺어[진질])/,
+  /(결혼|결실|인연).{0,6}(보장|확실해|틀림없)/,
+  /절대\s*(놓치|지나치|비껴가)지\s*않/,                    // 단정 보장형만("놓치지 마" 조언형 미매치)
 ];
 // 기본(솔로·연애중·기혼): 이 단어들이 등장할 정당 맥락이 없다 — 단어 자체를 컷(기존 동작 유지).
 const FORBIDDEN_DEFAULT_EXTRA = [/이혼수?/, /사별/, /재혼/];
@@ -57,6 +62,8 @@ export function validateMarriageBlocks(parsed: any, opts?: { minAdvice?: number 
 // 본문에서 제거할 한자(CJK 통합한자) — 순수 한글 원칙. 신살명 한자병기·오타 방지.
 const MARR_HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
 const MARR_HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
+// teaser \ub4f1\uae09 \uc54c\ud30c\ubcb3 \ub178\ucd9c \ubc29\uc9c0(\uc720\ub8cc \uc804 \uc2a4\ud3ec\uc77c\ub7ec+\uc11c\uc5f4\ud654, 2026-07-21 \ucee4\ub9ac\uc5b4\uc6b4 \uc5ed\ud3ec\ud305).
+const GRADE_ALPHA = /(SS|[SABCD])\s*\ub4f1\uae09(\ub2e4\uc6b4|\ub2f5\uac8c|\ub2e4\uc6cc|\uc2a4\ub7ec\uc6b4|\uc758|\uc774|\uc740|\uc744|\uae09)?/g;
 
 export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: string): MarriageGuardResult {
   const violations: string[] = [];
@@ -76,11 +83,29 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
   };
 
   // 소수점 수치(강도값) + 상투적 필러 연결어("비유하자면") 제거 — 조용히(재생성 불필요).
+  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
+  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
+  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
+  const collapseEchoParens = (s: string): string =>
+    s
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
+
   const scrubStrayDecimals = (s: string): string => {
     let out = /\d+\.\d+/.test(s)
       ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
       : s;
+    // 정수 강도 누출("힘도 5 정도로")도 제거 — 연도(년)·나이(세)는 사이 글자로 미매치(안전).
+    out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, "");
+    out = out.replace(/(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g, "$1$2");
     out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
+    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
+  };
+  // teaser 등급 알파벳 → 제거(스포일러 방지).
+  const scrubGradeAlpha = (s: string): string => {
+    const out = s.replace(GRADE_ALPHA, "");
+    if (out === s) return s;
+    violations.push("등급노출 스크럽");
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
 
@@ -88,7 +113,7 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
   if (Array.isArray(blocks.advice)) {
     blocks.advice = blocks.advice.filter((a: any) => {
       const text = String(a?.text ?? "");
-      if (forbidden.some(re => re.test(text))) { violations.push(`단정 예언 제거: ${text.slice(0,20)}`); return false; }
+      const hit = forbidden.find(re => re.test(text)); if (hit) { violations.push(`단정 예언 제거: ${text.slice(0,20)} /${hit.source}/`); return false; }
       if (!a?.tag || !/\[근거:.+\]/.test(a.tag)) { violations.push(`근거태그 없음 컷: ${text.slice(0,20)}`); return false; }
       return true;
     });
@@ -112,8 +137,9 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
       const allBlank = sentences.every((sent) => sent.trim() === "");
       const keptSentences = sentences.filter((sent) => {
         if (sent.trim() === "") return true;
-        if (forbidden.some((re) => re.test(sent))) {
-          violations.push(`단정 예언 제거(${label})`);
+        const hit = forbidden.find((re) => re.test(sent));
+        if (hit) {
+          violations.push(`단정 예언 제거(${label}): /${hit.source}/`);
           return false;
         }
         return true;
@@ -124,11 +150,13 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
     return keptLines.join("\n").trim();
   };
 
-  // 4) 위 두 스크럽을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용
+  // 4) 위 스크럽을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용.
+  // ★advice[].tag(.tag로 끝남)에는 GRADE 스크럽 제외(등급 근거태그 오변형 방지). 신살·한자·단정예언은 tag에도 유지.
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
-      const afterShinsal = scrubShinsal(o);
-      const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
+      const isTag = label.endsWith(".tag");
+      const afterShinsal = isTag ? scrubShinsal(o) : scrubGradeAlpha(scrubShinsal(o));
+      const afterHanja = scrubStrayDecimals(collapseEchoParens(scrubHanja(afterShinsal)));
       return scrubForbiddenPredictions(afterHanja, label);
     }
     if (Array.isArray(o)) return o.map((item, idx) => walk(item, `${label}[${idx}]`));
@@ -139,6 +167,17 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
     return o;
   };
   walk(blocks, "");
+
+  // 5) walk 스크럽 후 advice 재검증 — 스크럽이 text/tag를 비웠으면 항목 통째 컷(빈 근거태그 출고 방지).
+  if (Array.isArray(blocks.advice)) {
+    blocks.advice = blocks.advice.filter((a: any) => {
+      const ok =
+        typeof a?.text === "string" && a.text.trim().length >= 10 &&
+        typeof a?.tag === "string" && /\[근거:.+\]/.test(a.tag);
+      if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
+      return ok;
+    });
+  }
 
   return { blocks, violations };
 }

@@ -100,8 +100,9 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
   if (Array.isArray(blocks.advice)) {
     blocks.advice = blocks.advice.filter((a: any) => {
       const text = String(a?.text ?? "");
-      if (FORBIDDEN_PREDICTIONS.some((re) => re.test(text))) {
-        violations.push(`단정 예언 제거: ${text.slice(0, 20)}`);
+      const hit = FORBIDDEN_PREDICTIONS.find((re) => re.test(text));
+      if (hit) {
+        violations.push(`단정 예언 제거: ${text.slice(0, 20)} /${hit.source}/`);
         return false;
       }
       if (isExecutionDirective(text)) {
@@ -137,8 +138,9 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
       const allBlank = sentences.every((sent) => sent.trim() === "");
       const keptSentences = sentences.filter((sent) => {
         if (sent.trim() === "") return true;
-        if (FORBIDDEN_PREDICTIONS.some((re) => re.test(sent))) {
-          violations.push(`단정 예언 제거(${label})`);
+        const hit = FORBIDDEN_PREDICTIONS.find((re) => re.test(sent));
+        if (hit) {
+          violations.push(`단정 예언 제거(${label}): /${hit.source}/`);
           return false;
         }
         if (isExecutionDirective(sent)) {
@@ -169,6 +171,14 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
   // ★정수 강도도 잡는다: "힘도 5 정도로", "인성이 3쯤" 같은 raw 강도 정수 누출(소수점 스크럽만으론
   //  안 잡히던 갭 — 2026-07-21 실측 발견). "\d 정도/쯤" 패턴은 연도(년)·나이(세)가 사이에 오지 않아
   //  안전(2028년·34세는 미매치). "강도/힘/세력 + \d"도 커버.
+  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
+  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
+  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
+  const collapseEchoParens = (s: string): string =>
+    s
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
+
   const scrubStrayDecimals = (s: string): string => {
     let out = /\d+\.\d+/.test(s)
       ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
@@ -193,11 +203,15 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
 
-  // 4) 위 스크럽들을 blocks 전체(배열/객체 중첩 어디든)에 재귀 적용
+  // 4) 위 스크럽들을 blocks 전체(배열/객체 중첩 어디든)에 재귀 적용.
+  // ★advice[].tag(라벨이 .tag로 끝남)에는 GRIP/GRADE 스크럽을 적용하지 않는다 — 프롬프트 tag
+  //  예시(`[근거:관다신약]`)와 자기모순으로 정상 태그가 매번 "[근거:이런 구조]"로 변형돼 상시
+  //  violation·불필요 재생성을 유발하던 결함(2026-07-21). 신살·한자·단정예언 스크럽은 tag에도 유지.
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
-      const afterShinsal = scrubGradeAlpha(scrubGripTerms(scrubShinsal(o)));
-      const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
+      const isTag = label.endsWith(".tag");
+      const afterShinsal = isTag ? scrubShinsal(o) : scrubGradeAlpha(scrubGripTerms(scrubShinsal(o)));
+      const afterHanja = scrubStrayDecimals(collapseEchoParens(scrubHanja(afterShinsal)));
       return scrubForbiddenSentences(afterHanja, label);
     }
     if (Array.isArray(o)) return o.map((item, idx) => walk(item, `${label}[${idx}]`));
@@ -208,6 +222,19 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
     return o;
   };
   walk(blocks, "");
+
+  // 5) walk 스크럽 후 advice 재검증 — 스크럽이 text/tag를 비웠으면 항목 통째 컷(빈 근거태그 출고 방지).
+  // step 1의 원문 기준 필터는 유지(스크럽으로 위반이 가려진 항목을 살리지 않으려는 의도)하고, 여기서
+  // 스크럽 부작용(빈 태그)만 잡는다. violation이 찍혀 qa-regen 1회 재생성 유도 → 정상 태그면 무손실.
+  if (Array.isArray(blocks.advice)) {
+    blocks.advice = blocks.advice.filter((a: any) => {
+      const ok =
+        typeof a?.text === "string" && a.text.trim().length >= 10 &&
+        typeof a?.tag === "string" && /\[근거:.+\]/.test(a.tag);
+      if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
+      return ok;
+    });
+  }
 
   return { blocks, violations };
 }

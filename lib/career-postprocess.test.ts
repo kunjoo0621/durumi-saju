@@ -106,6 +106,28 @@ test("오탐 방지: 실행 단정의 부정형(안심 문장)은 보존", () =>
   }
 });
 
+test("advice tag의 그릇용어는 스크럽 제외(자기모순 방지) — [근거:관다신약] 보존", () => {
+  const { blocks } = applyCareerGuards(
+    { advice: [{ text: "책임이 큰 자리일수록 회복 루틴을 챙겨", tag: "[근거:관다신약]" }] },
+    {}, "",
+  );
+  assert.equal(blocks.advice.length, 1);
+  assert.equal(blocks.advice[0].tag, "[근거:관다신약]"); // "[근거:이런 구조]"로 변형되면 안 됨
+});
+
+test("스크럽이 tag를 비우면(단정어 포함) 항목 재검증 컷 — 빈 근거태그 출고 방지", () => {
+  const { blocks, violations } = applyCareerGuards(
+    { advice: [
+      { text: "지금 자리에서 실력을 더 쌓아둬 유리해", tag: "[근거:반드시승진]" }, // 태그가 단정어 → 스크럽으로 비워짐
+      { text: "자격을 미리 챙겨두면 힘이 돼 좋아", tag: "[근거:관인상생]" },
+    ] },
+    {}, "",
+  );
+  assert.equal(blocks.advice.length, 1, "빈 태그 항목이 안 잘림");
+  assert.equal(blocks.advice[0].tag, "[근거:관인상생]");
+  assert.ok(violations.some((v) => v.includes("스크럽 후 조언 재검증 컷")));
+});
+
 test("근거 태그 없는 advice 항목은 삭제", () => {
   const { blocks } = applyCareerGuards(
     { advice: [{ text: "자리에서 신뢰를 쌓아", tag: "" }, { text: "문서로 남기는 습관을 들여", tag: "[근거:상관견관]" }] },
@@ -190,4 +212,9 @@ test("3-layer: 프롬프트 좋은 문장 예시가 가드 금지 패턴에 안 
   assert.ok(m, "좋은 문장 예시 블록 없음");
   const { violations } = applyCareerGuards({ probe: m![1] }, {}, "");
   assert.equal(violations.length, 0, `좋은 예시가 가드에 걸림: ${violations.join(" | ")}`);
+});
+
+test("중복 괄호 collapse: 편관(편관, 강한 자리)→편관(강한 자리)", () => {
+  const { blocks } = applyCareerGuards({ gwanseongDiagnosis: "편관(편관, 강한 자리)이 떠 있어 책임이 커." }, {}, "");
+  assert.ok(blocks.gwanseongDiagnosis.includes("편관(강한 자리)") && !blocks.gwanseongDiagnosis.includes("편관(편관"));
 });

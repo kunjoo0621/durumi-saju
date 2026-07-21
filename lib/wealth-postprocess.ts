@@ -36,6 +36,9 @@ const FORBIDDEN_PREDICTIONS = [
   /로또/,
   /도박/,
   /(재물복|금전복)(이|은|도)?\s*없/, // 돈복은 기존 커버, 변형 보강
+  // ── 긍정 성사단정(2026-07-21 실측 누출) — 손해 방향만 잡고 이익 보장이 새던 구멍 보강 ──
+  /(돈|재물|기회|큰돈).{0,12}(쏟아진|쏟아질|밀려온|밀려올|넘쳐난|넘쳐날)/, // "기회가 쏟아질 거야"
+  /절대\s*(잃|새|손해\s*보)지\s*않/,
 ];
 
 // 결혼운과 동일 금지 리스트 계승(스펙 §3 "신살 정책" — 근거 얇은 흉살·공포성 신살은 도메인 무관하게
@@ -99,6 +102,12 @@ export function validateWealthBlocks(parsed: any, opts?: { minAdvice?: number })
 const HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
 const HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
 
+// \uadf8\ub987 4\uc0c1\ud55c \uc6a9\uc5b4 \ubcf8\ubb38 \ub178\ucd9c \ubc29\uc9c0(\ud504\ub86c\ud504\ud2b8 \uaddc\uce59 wealth-prompt.ts:245 \uc704\ubc18 \ub204\ucd9c 2\ucc28\ub9dd, 2026-07-21
+// \ucee4\ub9ac\uc5b4\uc6b4 \uc5ed\ud3ec\ud305). \ubb38\uc7a5 \ucef7 \uc544\ub2c8\ub77c \uc6a9\uc5b4\ub9cc \uc911\ub9bd\uc5b4 \uce58\ud658 \u2014 \uc7ac\ud574\uc11d \ubb38\uc7a5 \ubcf4\uc874. \uc624\uae30 \ubcc0\ud615(\uc2e0\uc655\uc7ac\uc1e0\u2192\uc2e0\uc655\uc7ac\uc18c)\ub3c4 \ud3ec\ud568.
+const WEALTH_GRIP_TERMS = /\uc2e0\uc655\uc7ac\uc655|\uc2e0\uc655\uc7ac\uc1e0|\uc2e0\uc655\uc7ac\uc18c|\uc7ac\ub2e4\uc2e0\uc57d|\uc2e0\uc57d\uc7ac\uc18c/g;
+// teaser \ub4f1\uae09 \uc54c\ud30c\ubcb3 \ub178\ucd9c \ubc29\uc9c0(\uc720\ub8cc \uc804 \uc2a4\ud3ec\uc77c\ub7ec+\uc11c\uc5f4\ud654). "S\ub4f1\uae09\uc758/S\ub4f1\uae09\ub2e4\uc6b4" \uc811\ubbf8\uae4c\uc9c0 \uc81c\uac70.
+const GRADE_ALPHA = /(SS|[SABCD])\s*\ub4f1\uae09(\ub2e4\uc6b4|\ub2f5\uac8c|\ub2e4\uc6cc|\uc2a4\ub7ec\uc6b4|\uc758|\uc774|\uc740|\uc744|\uae09)?/g;
+
 export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: string): WealthGuardResult {
   const violations: string[] = [];
   const blocks = JSON.parse(JSON.stringify(parsed ?? {}));
@@ -107,8 +116,9 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
   if (Array.isArray(blocks.advice)) {
     blocks.advice = blocks.advice.filter((a: any) => {
       const text = String(a?.text ?? "");
-      if (FORBIDDEN_PREDICTIONS.some((re) => re.test(text))) {
-        violations.push(`단정 예언 제거: ${text.slice(0, 20)}`);
+      const hit = FORBIDDEN_PREDICTIONS.find((re) => re.test(text));
+      if (hit) {
+        violations.push(`단정 예언 제거: ${text.slice(0, 20)} /${hit.source}/`);
         return false;
       }
       if (isFinancialAdvice(text)) {
@@ -144,8 +154,9 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
       const allBlank = sentences.every((sent) => sent.trim() === "");
       const keptSentences = sentences.filter((sent) => {
         if (sent.trim() === "") return true;
-        if (FORBIDDEN_PREDICTIONS.some((re) => re.test(sent))) {
-          violations.push(`단정 예언 제거(${label})`);
+        const hit = FORBIDDEN_PREDICTIONS.find((re) => re.test(sent));
+        if (hit) {
+          violations.push(`단정 예언 제거(${label}): /${hit.source}/`);
           return false;
         }
         if (isFinancialAdvice(sent)) {
@@ -177,19 +188,48 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
   // 소수점 수치(강도값 누출) + 상투적 필러 연결어 제거 — 조용히(재생성 불필요).
   // "비겁이 10.5로 강하다"→"비겁이 강하다", "비유하자면, 넌 물이야"→"넌 물이야".
   // 필러는 프롬프트로 금지하면 오히려 프라이밍돼 늘어나므로 후처리 결정론 제거가 유일하게 확실하다.
+  // ★정수 강도도 잡는다: "힘도 5 정도로", "강도 6" 같은 raw 강도 정수 누출(소수점 스크럽만으론 안
+  //  잡히던 갭). "\d 정도/쯤" 패턴은 연도(년)·나이(세)가 사이에 오지 않아 안전(2028년·34세 미매치).
+  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
+  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
+  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
+  const collapseEchoParens = (s: string): string =>
+    s
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
+      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
+
   const scrubStrayDecimals = (s: string): string => {
     let out = /\d+\.\d+/.test(s)
       ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
       : s;
+    out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, "");
+    out = out.replace(/(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g, "$1$2");
     out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
 
-  // 4) 위 스크럽들을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용
+  // 3-c) 그릇 4상한 용어 → 중립어 치환(문장 보존). 3-d) 등급 알파벳 → 제거.
+  const scrubGripTerms = (s: string): string => {
+    const out = s.replace(WEALTH_GRIP_TERMS, "이런 구조");
+    if (out === s) return s;
+    violations.push("그릇용어 노출 치환");
+    return out.replace(/\s{2,}/g, " ").trim();
+  };
+  const scrubGradeAlpha = (s: string): string => {
+    const out = s.replace(GRADE_ALPHA, "");
+    if (out === s) return s;
+    violations.push("등급노출 스크럽");
+    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
+  };
+
+  // 4) 위 스크럽들을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용.
+  // ★advice[].tag(.tag로 끝남)에는 GRIP/GRADE 스크럽 제외 — 프롬프트 tag 예시(`[근거:재다신약]`)와의
+  //  자기모순으로 정상 태그가 매번 변형돼 상시 violation·불필요 재생성을 유발하던 결함(2026-07-21).
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
-      const afterShinsal = scrubShinsal(o);
-      const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
+      const isTag = label.endsWith(".tag");
+      const afterShinsal = isTag ? scrubShinsal(o) : scrubGradeAlpha(scrubGripTerms(scrubShinsal(o)));
+      const afterHanja = scrubStrayDecimals(collapseEchoParens(scrubHanja(afterShinsal)));
       return scrubForbiddenSentences(afterHanja, label);
     }
     if (Array.isArray(o)) return o.map((item, idx) => walk(item, `${label}[${idx}]`));
@@ -200,6 +240,17 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
     return o;
   };
   walk(blocks, "");
+
+  // 5) walk 스크럽 후 advice 재검증 — 스크럽이 text/tag를 비웠으면 항목 통째 컷(빈 근거태그 출고 방지).
+  if (Array.isArray(blocks.advice)) {
+    blocks.advice = blocks.advice.filter((a: any) => {
+      const ok =
+        typeof a?.text === "string" && a.text.trim().length >= 10 &&
+        typeof a?.tag === "string" && /\[근거:.+\]/.test(a.tag);
+      if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
+      return ok;
+    });
+  }
 
   return { blocks, violations };
 }

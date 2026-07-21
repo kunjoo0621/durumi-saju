@@ -45,3 +45,14 @@ test("프롬프트에 일지 지장간 층위 라인 + 긍정 예시 블록 + �
   // 본기 라벨이 실제 값으로 채워졌는지 (일간 甲·일지 戌 본기 戊=편재)
   assert.ok(p.includes("본기 편재"));
 });
+
+test("도화홍염 트리거는 프롬프트에 '매력부각'으로 전달(홍염살 오명명 방지)", () => {
+  const base = deriveMarriageFacts(enrichSajuData(chart, { isTimeUnknown: false }), null, chart, "female", "솔로", 2026);
+  const f: any = {
+    ...base,
+    timingWindows: [{ year: 2029, age: 34, triggers: ["도화홍염"], isPast: false }],
+  };
+  const p = buildMarriagePrompt(f, "A", "사주텍스트");
+  assert.ok(!p.includes("도화홍염"), "도화홍염 원문이 프롬프트에 노출됨");
+  assert.ok(p.includes("매력부각"));
+});

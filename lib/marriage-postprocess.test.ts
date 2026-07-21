@@ -230,3 +230,33 @@ test("결혼 본문 한자 병기 제거", () => {
   assert.ok(blocks.spousePalace.includes("홍염살의"));
   assert.ok(blocks.spousePalace.includes("도화(매력)"));
 });
+
+// ── 2026-07-21 커리어운 역포팅: 등급·정수강도 스크럽 + tag 재검증 ──
+test("teaser 등급 알파벳(S등급) 스크럽 + 정수 강도 스크럽, 연도·나이 보존", () => {
+  const r1 = applyMarriageGuards({ teaserSummary: "S등급다운 인연 흐름이야." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(!/(SS|[SABCD])\s*등급/.test(r1.blocks.teaserSummary));
+  const r2 = applyMarriageGuards({ timingFlow: "배우자성이 5 정도로 뚜렷해 2029년, 34세 무렵 인연이 또렷해." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(!r2.blocks.timingFlow.includes("5 정도"));
+  assert.ok(r2.blocks.timingFlow.includes("2029") && r2.blocks.timingFlow.includes("34"));
+});
+
+test("스크럽이 tag를 비우면 항목 재검증 컷(빈 근거태그 출고 방지)", () => {
+  const { blocks, violations } = applyMarriageGuards(
+    { advice: [
+      { text: "먼저 빈틈을 보여줄 때 인연이 들어와 좋아", tag: "[근거:불임걱정]" }, // 태그가 금지어(불임) → 스크럽으로 비워짐
+      { text: "기준을 세 가지로 줄여보면 도움이 돼", tag: "[근거:도화]" },
+    ] }, { maritalStatus: "미혼" } as any, "",
+  );
+  assert.equal(blocks.advice.length, 1);
+  assert.equal(blocks.advice[0].tag, "[근거:도화]");
+  assert.ok(violations.some((v: string) => v.includes("재검증 컷")));
+});
+
+test("중복 괄호 collapse + 성사단정 컷 / 보존", () => {
+  const r = applyMarriageGuards({ spouseStar: "축토(축토, 얼어붙은 땅)와 정관(정관)이 있어." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(r.blocks.spouseStar.includes("축토(얼어붙은 땅)") && r.blocks.spouseStar.includes("정관") && !r.blocks.spouseStar.includes("정관(정관"));
+  const cut = applyMarriageGuards({ timingFlow: "앞 문장. 다정한 사람을 만나게 될 운명이야. 뒤 문장." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(!cut.blocks.timingFlow.includes("운명"));
+  const keep = applyMarriageGuards({ timingFlow: "좋은 인연을 놓치지 마. 만나게 될 수도 있어." }, { maritalStatus: "미혼" } as any, "");
+  assert.ok(keep.blocks.timingFlow.includes("놓치지 마") && keep.blocks.timingFlow.includes("수도 있어"));
+});

@@ -24,7 +24,7 @@ export interface QaGenOptions<T> {
 }
 
 export type QaGenResult<T> =
-  | { ok: true; blocks: T; violations: string[]; attempts: number }
+  | { ok: true; blocks: T; violations: string[]; softIssues: string[]; attempts: number }
   | { ok: false; error: string };
 
 export async function generateWithQaRegen<T>(opts: QaGenOptions<T>): Promise<QaGenResult<T>> {
@@ -65,11 +65,12 @@ export async function generateWithQaRegen<T>(opts: QaGenOptions<T>): Promise<QaG
     const guarded = opts.applyGuards(parsed);
     lastGuarded = guarded;
 
-    const softIssues =
-      guarded.violations.length === 0 && opts.softValidate ? opts.softValidate(guarded.blocks) : [];
+    // ★위반 유무와 무관하게 softValidate 실행 — 위반+얇음 동시 케이스도 regen note에 richness
+    //  채움경로가 실리도록(2026-07-21 실측: 위반0인데도 얇은 리포트가 미달 사실 없이 출고되던 갭).
+    const softIssues = opts.softValidate ? opts.softValidate(guarded.blocks) : [];
 
     if (guarded.violations.length === 0 && softIssues.length === 0) {
-      return { ok: true, blocks: guarded.blocks, violations: [], attempts: attempt };
+      return { ok: true, blocks: guarded.blocks, violations: [], softIssues: [], attempts: attempt };
     }
     if (attempt < maxAttempts) {
       const notes = [...guarded.violations, ...softIssues];
@@ -78,11 +79,13 @@ export async function generateWithQaRegen<T>(opts: QaGenOptions<T>): Promise<QaG
   }
 
   if (lastGuarded) {
-    // 재생성으로도 못 없앤 위반 → 스크럽본 출고(호출부가 postGuard 검증·감사 기록 담당)
+    // 재생성으로도 못 없앤 위반/얇음 → 스크럽본 출고(호출부가 postGuard 검증·감사 기록 담당).
+    // softIssues를 마지막 blocks 기준으로 재계산해 반환 → 호출부가 richness 미달 최종출고를 기록 가능.
     return {
       ok: true,
       blocks: lastGuarded.blocks,
       violations: lastGuarded.violations,
+      softIssues: opts.softValidate ? opts.softValidate(lastGuarded.blocks) : [],
       attempts: lastAttempt,
     };
   }

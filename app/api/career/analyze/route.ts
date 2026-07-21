@@ -493,11 +493,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // N-2: 가드가 걸러낸 게 있으면 사후 감사용 기록(별도 best-effort UPDATE, 본 저장과 분리, 비치명).
-      if (violations.length > 0) {
+      // N-2: 가드가 걸러낸 것 + richness 미달(soft) + 재생성 횟수를 사후 감사용 기록(별도 best-effort
+      // UPDATE, 비치명). 접두어(richness:/attempts:)로 순수 위반과 구분 — 기존 집계 스크립트 호환.
+      const audit = [...violations, ...gen.softIssues.map((s) => `richness:${s}`)];
+      if (audit.length > 0) {
         const { error: gvError } = await supabaseAdmin
           .from("career_results")
-          .update({ guard_violations: violations })
+          .update({ guard_violations: [...audit, `attempts:${gen.attempts}`] })
           .eq("id", resultId);
         if (gvError) console.warn("[CAREER_ANALYZE] guard_violations 기록 실패(비치명)", gvError.message);
       }
