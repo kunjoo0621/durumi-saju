@@ -189,7 +189,7 @@ test("F-1 역방향 구멍: '코인에 넣어봐, 나쁜 선택이 아니야' �
 
 // 보존 케이스: 정당 진단·면책·허용 프레임·중립 타이밍은 살아남는다.
 for (const [label, keep] of [
-  ["정당 진단", "재다신약이라 관리가 관건이야."],
+  ["정당 진단", "버는 힘보다 담고 관리하는 그릇이 관건인 구조야."], // 그릇용어 없는 재해석(그릇용어 치환은 별도 테스트)
   ["허용 프레임(입재 가능성)", "큰돈이 들어올 수 있는 시기야."],
   ["중립 타이밍", "2027년은 점검할 시기야."],
 ] as Array<[string, string]>) {
@@ -292,4 +292,42 @@ test("소수점 강도 수치를 제거하고 문장이 자연스럽게 남는�
   );
   assert.ok(!/\d+\.\d+/.test(blocks.jaeGripDiagnosis), "소수점 잔존: " + blocks.jaeGripDiagnosis);
   assert.ok(blocks.jaeGripDiagnosis.includes("강도가 태강한"), "부자연: " + blocks.jaeGripDiagnosis);
+});
+
+// ── 2026-07-21 커리어운 역포팅: 그릇용어·등급·정수강도 백스톱 + tag 제외 + 재검증 ──
+test("그릇 4상한 용어 본문 노출 → 중립 치환(문장 보존) + 위반", () => {
+  const { blocks, violations } = applyWealthGuards(
+    { jaeGripDiagnosis: "너는 신왕재왕이라 그릇이 크고 재물을 담을 힘이 넉넉해." }, facts, "",
+  );
+  assert.ok(!blocks.jaeGripDiagnosis.includes("신왕재왕"));
+  assert.ok(blocks.jaeGripDiagnosis.includes("그릇이 크고"), "재해석 문장이 날아감");
+  assert.ok(violations.some((v: string) => v.includes("그릇용어")));
+});
+
+test("advice tag의 그릇용어는 스크럽 제외(자기모순 방지) — [근거:재다신약] 보존", () => {
+  const { blocks } = applyWealthGuards(
+    { advice: [{ text: "큰돈 들어온 달엔 절반을 먼저 떼놔", tag: "[근거:재다신약]" }] }, facts, "",
+  );
+  assert.equal(blocks.advice.length, 1);
+  assert.equal(blocks.advice[0].tag, "[근거:재다신약]");
+});
+
+test("teaser 등급 알파벳(S등급) 스크럽 + 정수 강도(힘도 5 정도로) 스크럽, 연도·나이 보존", () => {
+  const r1 = applyWealthGuards({ teaserSummary: "S등급다운 든든한 재물 그릇이야." }, facts, "");
+  assert.ok(!/(SS|[SABCD])\s*등급/.test(r1.blocks.teaserSummary));
+  const r2 = applyWealthGuards({ savingStyle: "재성이 5 정도로 뚜렷해서 2028년, 34세 무렵에 흐름이 좋아." }, facts, "");
+  assert.ok(!r2.blocks.savingStyle.includes("5 정도"));
+  assert.ok(r2.blocks.savingStyle.includes("2028") && r2.blocks.savingStyle.includes("34"));
+});
+
+test("스크럽이 tag를 비우면 항목 재검증 컷(빈 근거태그 출고 방지)", () => {
+  const { blocks, violations } = applyWealthGuards(
+    { advice: [
+      { text: "이 시기엔 큰 지출 전에 한 번 더 점검해봐", tag: "[근거:반드시대박]" },
+      { text: "새는 구멍은 강제저축으로 먼저 막아둬", tag: "[근거:겁재탈재]" },
+    ] }, facts, "",
+  );
+  assert.equal(blocks.advice.length, 1);
+  assert.equal(blocks.advice[0].tag, "[근거:겁재탈재]");
+  assert.ok(violations.some((v: string) => v.includes("재검증 컷")));
 });

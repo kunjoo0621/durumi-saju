@@ -57,6 +57,8 @@ export function validateMarriageBlocks(parsed: any, opts?: { minAdvice?: number 
 // 본문에서 제거할 한자(CJK 통합한자) — 순수 한글 원칙. 신살명 한자병기·오타 방지.
 const MARR_HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
 const MARR_HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
+// teaser \ub4f1\uae09 \uc54c\ud30c\ubcb3 \ub178\ucd9c \ubc29\uc9c0(\uc720\ub8cc \uc804 \uc2a4\ud3ec\uc77c\ub7ec+\uc11c\uc5f4\ud654, 2026-07-21 \ucee4\ub9ac\uc5b4\uc6b4 \uc5ed\ud3ec\ud305).
+const GRADE_ALPHA = /(SS|[SABCD])\s*\ub4f1\uae09(\ub2e4\uc6b4|\ub2f5\uac8c|\ub2e4\uc6cc|\uc2a4\ub7ec\uc6b4|\uc758|\uc774|\uc740|\uc744|\uae09)?/g;
 
 export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: string): MarriageGuardResult {
   const violations: string[] = [];
@@ -80,7 +82,17 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
     let out = /\d+\.\d+/.test(s)
       ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
       : s;
+    // 정수 강도 누출("힘도 5 정도로")도 제거 — 연도(년)·나이(세)는 사이 글자로 미매치(안전).
+    out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, "");
+    out = out.replace(/(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g, "$1$2");
     out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
+    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
+  };
+  // teaser 등급 알파벳 → 제거(스포일러 방지).
+  const scrubGradeAlpha = (s: string): string => {
+    const out = s.replace(GRADE_ALPHA, "");
+    if (out === s) return s;
+    violations.push("등급노출 스크럽");
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
 
@@ -124,10 +136,12 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
     return keptLines.join("\n").trim();
   };
 
-  // 4) 위 두 스크럽을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용
+  // 4) 위 스크럽을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용.
+  // ★advice[].tag(.tag로 끝남)에는 GRADE 스크럽 제외(등급 근거태그 오변형 방지). 신살·한자·단정예언은 tag에도 유지.
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
-      const afterShinsal = scrubShinsal(o);
+      const isTag = label.endsWith(".tag");
+      const afterShinsal = isTag ? scrubShinsal(o) : scrubGradeAlpha(scrubShinsal(o));
       const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
       return scrubForbiddenPredictions(afterHanja, label);
     }
@@ -139,6 +153,17 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
     return o;
   };
   walk(blocks, "");
+
+  // 5) walk 스크럽 후 advice 재검증 — 스크럽이 text/tag를 비웠으면 항목 통째 컷(빈 근거태그 출고 방지).
+  if (Array.isArray(blocks.advice)) {
+    blocks.advice = blocks.advice.filter((a: any) => {
+      const ok =
+        typeof a?.text === "string" && a.text.trim().length >= 10 &&
+        typeof a?.tag === "string" && /\[근거:.+\]/.test(a.tag);
+      if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
+      return ok;
+    });
+  }
 
   return { blocks, violations };
 }

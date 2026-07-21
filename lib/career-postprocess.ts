@@ -193,10 +193,14 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
 
-  // 4) 위 스크럽들을 blocks 전체(배열/객체 중첩 어디든)에 재귀 적용
+  // 4) 위 스크럽들을 blocks 전체(배열/객체 중첩 어디든)에 재귀 적용.
+  // ★advice[].tag(라벨이 .tag로 끝남)에는 GRIP/GRADE 스크럽을 적용하지 않는다 — 프롬프트 tag
+  //  예시(`[근거:관다신약]`)와 자기모순으로 정상 태그가 매번 "[근거:이런 구조]"로 변형돼 상시
+  //  violation·불필요 재생성을 유발하던 결함(2026-07-21). 신살·한자·단정예언 스크럽은 tag에도 유지.
   const walk = (o: any, label: string): any => {
     if (typeof o === "string") {
-      const afterShinsal = scrubGradeAlpha(scrubGripTerms(scrubShinsal(o)));
+      const isTag = label.endsWith(".tag");
+      const afterShinsal = isTag ? scrubShinsal(o) : scrubGradeAlpha(scrubGripTerms(scrubShinsal(o)));
       const afterHanja = scrubStrayDecimals(scrubHanja(afterShinsal));
       return scrubForbiddenSentences(afterHanja, label);
     }
@@ -208,6 +212,19 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
     return o;
   };
   walk(blocks, "");
+
+  // 5) walk 스크럽 후 advice 재검증 — 스크럽이 text/tag를 비웠으면 항목 통째 컷(빈 근거태그 출고 방지).
+  // step 1의 원문 기준 필터는 유지(스크럽으로 위반이 가려진 항목을 살리지 않으려는 의도)하고, 여기서
+  // 스크럽 부작용(빈 태그)만 잡는다. violation이 찍혀 qa-regen 1회 재생성 유도 → 정상 태그면 무손실.
+  if (Array.isArray(blocks.advice)) {
+    blocks.advice = blocks.advice.filter((a: any) => {
+      const ok =
+        typeof a?.text === "string" && a.text.trim().length >= 10 &&
+        typeof a?.tag === "string" && /\[근거:.+\]/.test(a.tag);
+      if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
+      return ok;
+    });
+  }
 
   return { blocks, violations };
 }
