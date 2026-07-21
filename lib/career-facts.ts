@@ -143,6 +143,9 @@ const GWAN_STRONG_THRESHOLD_WHEN_WEAK = 8;
 // (목표 ≤50%) — 천간 투출 1개(weight 3)만으로 발화해 변별력이 낮았다. 4로 올려 "단일
 // 투출+α" 또는 "정기+중기"급 이상만 관인상생으로 인정(MC 재실측으로 범위 진입 확인).
 const MEANINGFUL_THRESHOLD = 4;
+// 관살혼잡 성립을 위한 개별 관성(정관/편관) "유력" 최소 hit 가중치. 투간(3)·정기(2)·중기(1.5)는
+// 유력, 여기(餘氣, 0.5 / 월지 0.75)만 있으면 유력 아님 → 관살혼잡 제외(정통 명리 기준).
+const GWAN_YURYEOK_THRESHOLD = 1.5;
 
 // ── 상관견관 위치 극 (marriage detectSpouseStarKeuk 이식, 공격자=상관 단독) ──
 // wealth bigeopTaljae(3c2f614)·marriage spouseStarDamaged(15b41fc)가 출시 후 "존재·강도만
@@ -228,14 +231,20 @@ export function deriveCareerFacts(
   const gwanseongStrength = Math.round((jeonggwanWeight + pyeongwanWeight) * 100) / 100;
   const hasJeonggwan = jeonggwanWeight > 0;
   const hasPyeongwan = pyeongwanWeight > 0;
+  // ★관살혼잡은 정관·편관 둘 다 "유력"(투간 or 정기/중기)해야 성립 — 정통 명리 기준.
+  // 한쪽이 여기(餘氣, 지장간 가중치 0.5/0.75)로만 있으면 관살혼잡이 아니라 우세형(편관격+정관 잡기)
+  // 이다(2026-07-21 명리 리서치 반영). 개별 hit 하나라도 중기급(1.5) 이상이면 유력으로 본다.
+  // (식상생재가 여기 하나로 발화하지 않게 한 SIKSSANG_MEANINGFUL_THRESHOLD와 같은 철학.)
+  const jeonggwanYuryeok = allHits.some((h) => h.star === "정관" && h.weight >= GWAN_YURYEOK_THRESHOLD);
+  const pyeongwanYuryeok = allHits.some((h) => h.star === "편관" && h.weight >= GWAN_YURYEOK_THRESHOLD);
   const gwanseongType: CareerFacts["gwanseongType"] =
-    hasJeonggwan && hasPyeongwan
-      ? "관살혼잡"
-      : hasJeonggwan
-        ? "정관우세"
-        : hasPyeongwan
-          ? "편관우세"
-          : "무관";
+    !hasJeonggwan && !hasPyeongwan
+      ? "무관"
+      : jeonggwanYuryeok && pyeongwanYuryeok
+        ? "관살혼잡"
+        : jeonggwanWeight >= pyeongwanWeight
+          ? "정관우세"
+          : "편관우세";
 
   // 3) 식상 — 식신/상관 분리(전문가 심화형 vs 독립·창의형)
   const siksinStrength = sumWeight(allHits, SIKSIN_SET);

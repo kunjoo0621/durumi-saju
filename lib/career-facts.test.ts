@@ -77,9 +77,32 @@ const gwansalHonjapChart: SajuData = {
   hour: { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
 };
 
-test("정관+편관 동시 → gwanseongType 관살혼잡", () => {
+test("정관+편관 둘 다 유력(투간/정기) → gwanseongType 관살혼잡", () => {
   const facts = deriveCareerFacts(stubEnriched("신약"), null, gwansalHonjapChart, "진로 탐색", 2026);
   assert.equal(facts.gwanseongType, "관살혼잡");
+});
+
+// ★관살혼잡 유력 기준(2026-07-21): 운영자 실사주 — 편관(己) 유력(未 정기·午 중기) + 정관(戊)은
+// 申 여기(가장 약)로만 존재. 전통 명리상 정관이 여기뿐이면 관살혼잡 아님 → 편관우세여야 한다.
+const operatorChart: SajuData = {
+  year: { heavenlyStem: "乙", earthlyBranch: "亥", hiddenStems: ["壬", "甲"] },
+  month: { heavenlyStem: "壬", earthlyBranch: "午", hiddenStems: ["丁", "己"] },
+  day: { heavenlyStem: "癸", earthlyBranch: "未", hiddenStems: ["己", "丁", "乙"] },
+  hour: { heavenlyStem: "庚", earthlyBranch: "申", hiddenStems: ["庚", "壬", "戊"] },
+};
+
+test("정관이 여기(餘氣)로만 있으면 관살혼잡 아님 → 편관우세 (운영자 실사주)", () => {
+  const facts = deriveCareerFacts(
+    stubEnriched("중화신강", { element: "수", eokbu: "토" }),
+    null,
+    operatorChart,
+    "이직 고민",
+    2026,
+  );
+  assert.notEqual(facts.gwanseongType, "관살혼잡", "정관이 여기뿐인데 관살혼잡으로 잡힘");
+  assert.equal(facts.gwanseongType, "편관우세");
+  // 관성 목록·무관 판정은 여전히 '존재' 기준(정관 戊 여기도 궁위엔 잡힘)
+  assert.equal(facts.gwanseongAbsent, false);
 });
 
 // ── F4: 무관 (金 전무) ──
