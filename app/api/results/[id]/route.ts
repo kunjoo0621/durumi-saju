@@ -30,6 +30,14 @@ export async function DELETE(
       return NextResponse.json({ error: "삭제할 결과를 찾을 수 없습니다." }, { status: 404 });
     }
 
+    // 감사 로그용: 삭제 직전 결과 정보 확보(하드 삭제되면 사라지므로 미리 읽는다).
+    // 이 조회 실패는 삭제를 막지 않는다 — 감사는 부가 기능.
+    const { data: victim } = await supabaseAdmin
+      .from("saju_results")
+      .select("input_hash, name, birth_date, full_json")
+      .eq("id", id)
+      .maybeSingle();
+
     const { data, error } = await supabaseAdmin
       .from("saju_results")
       .delete()
@@ -44,6 +52,25 @@ export async function DELETE(
     }
     if (!data || data.length === 0) {
       return NextResponse.json({ error: "삭제할 결과를 찾을 수 없습니다." }, { status: 404 });
+    }
+
+    // 감사 로그: "본인 삭제"임을 기록해, 이후 결제-무결과 케이스에서 삭제/손실을 구분한다.
+    // 실패해도 삭제는 이미 성공했으므로 막지 않는다(로그만).
+    try {
+      const fj = victim?.full_json as { _error?: boolean } | null | undefined;
+      const { error: auditErr } = await supabaseAdmin.from("result_deletions").insert({
+        user_id: userId,
+        result_id: id,
+        input_hash: victim?.input_hash ?? null,
+        name: victim?.name ?? null,
+        birth_date: victim?.birth_date ?? null,
+        was_delivered: fj != null && !fj._error,
+      });
+      if (auditErr) {
+        console.error("[DELETE /api/results] 감사 로그 적재 실패(삭제는 완료)", auditErr.message);
+      }
+    } catch (auditErr: any) {
+      console.error("[DELETE /api/results] 감사 로그 예외(삭제는 완료)", auditErr?.message);
     }
 
     // 대표 사주 승계: ON DELETE SET NULL 후 primary_result_id가 NULL이면 다음 결과로 설정
