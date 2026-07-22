@@ -1,20 +1,19 @@
 /**
  * 결제-무결과 판별 도구 (읽기 전용).
  *
- * "결제(spend)했는데 현재 정상 결과가 부족한" 유저를 뽑아,
- * 각 케이스를 [🟢본인삭제 / 🟡실패환불 / 🔵미완 / 🔴손실후보] 로 분류한다.
+ * "결제(spend)했는데 현재 정상 결과가 부족한" 유저를 뽑아 분류한다.
+ * 핵심 원칙: **삭제 감사 로그가 있어야만** 삭제를 확정할 수 있다. 로그가 없거나
+ * 로깅 라이브 이전 결제는 손실로 단정하지 않고 "보류"로 남긴다(삭제/reuse/손실 구분 불가).
  *
- * 판정 근거:
- *   - 정상결과  : saju_results 중 full_json 정상(전달완료)
- *   - 미완/pending: full_json = null
- *   - 에러      : full_json._error
- *   - 환불      : coin_transactions.type='refund'
- *   - 삭제      : result_deletions (감사 로그 — 20260722 마이그레이션 이후만)
+ * 판정 재료:
+ *   - 정상결과 : saju_results.full_json 정상        - 미완 : full_json = null
+ *   - 에러     : full_json._error                    - 환불 : coin_transactions.refund
+ *   - 삭제     : result_deletions (감사 로그, 20260722 마이그레이션 + 라우트 배포 이후만)
  *
  * 사용법:
- *   npx tsx scripts/triage-paid-no-result.mts            # 최근 7일
- *   npx tsx scripts/triage-paid-no-result.mts --days 14  # 최근 14일
- *   npx tsx scripts/triage-paid-no-result.mts <user_id>  # 특정 유저 딥다이브
+ *   npx tsx scripts/triage-paid-no-result.mts            # 최근 7일 스윕
+ *   npx tsx scripts/triage-paid-no-result.mts --days 14
+ *   npx tsx scripts/triage-paid-no-result.mts <user_id>  # 특정 유저 딥다이브(삭제기록 타임라인 포함)
  */
 import * as fs from "fs";
 import * as path from "path";
@@ -35,11 +34,14 @@ for (const line of fs.readFileSync(path.resolve(__dirname, "../.env.local"), "ut
 const { createClient } = await import("@supabase/supabase-js");
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
+// 삭제 감사 로깅이 프로덕션에 라이브된 시각(ISO). 배포 완료 후 이 값을 배포 시각으로 세팅한다.
+// null 이면 아직 로깅 전 → 모든 미설명 gap 은 "보류"(손실 단정 불가).
+const AUDIT_LIVE_AT: string | null = null;
+
 const kst = (iso: string) => new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(5, 16).replace("T", " ");
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// result_deletions 표 존재 여부(마이그레이션 적용 전이면 삭제=불명 처리).
-// head:true 조회는 없는 표(PGRST205)를 못 잡으므로 실제 select 로 확인한다.
+// result_deletions 표 존재 여부(head:true 는 없는 표 PGRST205 를 못 잡으므로 실 select).
 async function deletionLogAvailable(): Promise<boolean> {
   const { error } = await sb.from("result_deletions").select("id").limit(1);
   return !error;
@@ -57,16 +59,19 @@ type Stat = {
   deletions: number;
 };
 
-async function statFor(userId: string): Promise<Stat> {
-  const [{ data: u }, { count: spendC }, spendFirst, { data: rs }, { count: refundC }, { count: delC }] =
-    await Promise.all([
-      sb.from("users").select("nickname").eq("id", userId).maybeSingle(),
-      sb.from("coin_transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("type", "spend"),
-      sb.from("coin_transactions").select("created_at").eq("user_id", userId).eq("type", "spend").order("created_at").limit(1),
-      sb.from("saju_results").select("full_json").eq("user_id", userId),
-      sb.from("coin_transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("type", "refund"),
-      sb.from("result_deletions").select("id", { count: "exact", head: true }).eq("user_id", userId),
-    ]);
+async function statFor(userId: string, logAvailable: boolean): Promise<Stat> {
+  const [{ data: u }, { count: spendC }, spendFirst, { data: rs }, { count: refundC }] = await Promise.all([
+    sb.from("users").select("nickname").eq("id", userId).maybeSingle(),
+    sb.from("coin_transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("type", "spend"),
+    sb.from("coin_transactions").select("created_at").eq("user_id", userId).eq("type", "spend").order("created_at").limit(1),
+    sb.from("saju_results").select("full_json").eq("user_id", userId),
+    sb.from("coin_transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("type", "refund"),
+  ]);
+  let deletions = 0;
+  if (logAvailable) {
+    const { count } = await sb.from("result_deletions").select("id", { count: "exact", head: true }).eq("user_id", userId);
+    deletions = count ?? 0;
+  }
   let delivered = 0, pending = 0, errored = 0;
   for (const r of rs ?? []) {
     const fj = (r as any).full_json;
@@ -83,64 +88,72 @@ async function statFor(userId: string): Promise<Stat> {
     pending,
     errored,
     refunds: refundC ?? 0,
-    deletions: delC ?? 0,
+    deletions,
   };
 }
 
-// 유저 단위 회계: spend 가 (정상+환불+삭제+미완) 로 다 설명되는가?
-// 핵심: 삭제로그가 비어있으면 gap을 손실로 단정하지 않는다(삭제/reuse/손실 구분 불가 → 보류).
-function verdict(s: Stat, logAvailable: boolean, logStart: string | null) {
+// spend 가 (정상+환불+삭제+미완) 로 다 설명되는가? 미설명 gap 은 로깅 라이브 이후 결제일 때만
+// 🔴(손실/reuse 확인要)로 올린다. 그 외엔 보류(손실 단정 금지).
+function verdict(s: Stat, logAvailable: boolean) {
   const accounted = s.delivered + s.refunds + s.deletions + s.pending;
   const gap = s.spends - accounted;
   if (gap <= 0) return { tag: "🟢 설명됨", gap: 0, actionable: false, note: "" };
-  if (!logAvailable) return { tag: "⚪ 보류", gap, actionable: false, note: "삭제로그 미생성 → 삭제/reuse/손실 구분불가" };
-  // 로그 도입 이전 결제는 삭제 기록이 있을 수 없음 → 소급 판별 불가
-  const preLog = logStart && s.firstSpend && new Date(s.firstSpend) < new Date(logStart);
-  if (preLog) return { tag: "🟤 로그이전", gap, actionable: false, note: "감사로그 도입 전 결제 → 삭제 소급불가" };
-  // 로그 활성 이후인데도 설명 안 됨 = 진짜 확인 대상(단, reuse 중복결제일 수도)
-  return { tag: "🟠 미설명", gap, actionable: true, note: "삭제·환불·미완 아님 → reuse중복결제 or 손실, 확인要" };
+  if (!logAvailable) return { tag: "⚪ 보류", gap, actionable: false, note: "삭제로그 표 미생성" };
+  if (!AUDIT_LIVE_AT) return { tag: "⚪ 보류", gap, actionable: false, note: "로깅 라이브 전 → 삭제 소급불가" };
+  const allAfterLive = s.firstSpend && new Date(s.firstSpend) >= new Date(AUDIT_LIVE_AT);
+  if (!allAfterLive) return { tag: "🟤 로그이전포함", gap, actionable: false, note: "라이브 전 결제 포함 → 개별확인" };
+  return { tag: "🔴 미설명", gap, actionable: true, note: "로깅후 결제인데 삭제·환불·미완 없음 → 손실 or reuse중복, 확인要" };
+}
+
+async function deepDive(userId: string, logAvailable: boolean) {
+  const s = await statFor(userId, logAvailable);
+  const v = verdict(s, logAvailable);
+  console.log(`\n[딥다이브] ${s.nickname ?? "?"} ${userId}`);
+  console.log(`  spend ${s.spends} | 정상 ${s.delivered} · 미완 ${s.pending} · 에러 ${s.errored} · 환불 ${s.refunds} · 삭제로그 ${s.deletions}`);
+  console.log(`  판정 ${v.tag}${v.gap ? ` (gap ${v.gap})` : ""}  ${v.note}`);
+  if (logAvailable) {
+    const { data: dels } = await sb
+      .from("result_deletions")
+      .select("deleted_at, name, birth_date, was_delivered, result_id")
+      .eq("user_id", userId)
+      .order("deleted_at");
+    console.log(`\n  삭제 기록 ${dels?.length ?? 0}건:`);
+    for (const d of dels ?? []) {
+      const dd = d as any;
+      console.log(`    ${kst(dd.deleted_at)}  ${dd.name ?? "?"} ${dd.birth_date ?? ""}  ${dd.was_delivered ? "정상결과였음" : "미완/에러상태"}  result=${String(dd.result_id).slice(0, 8)}`);
+    }
+  } else {
+    console.log(`\n  (삭제로그 표 미생성 — 삭제 기록 조회 불가)`);
+  }
 }
 
 async function main() {
   const arg = process.argv[2];
   const logAvailable = await deletionLogAvailable();
-  const logStart = logAvailable
-    ? ((await sb.from("result_deletions").select("deleted_at").order("deleted_at").limit(1)).data?.[0] as any)?.deleted_at ?? null
-    : null;
 
-  console.log(`\n결제-무결과 판별  (삭제로그 ${logAvailable ? "사용가능" : "❌미생성(마이그레이션 전)"})`);
-  if (logAvailable && logStart) console.log(`감사로그 최초기록: ${kst(logStart)} — 이전 결제는 삭제 소급불가`);
+  console.log(`\n결제-무결과 판별  (삭제로그 ${logAvailable ? "사용가능" : "❌미생성(마이그레이션 전)"}${AUDIT_LIVE_AT ? ` · 로깅라이브 ${kst(AUDIT_LIVE_AT)}` : " · 로깅 라이브 전"})`);
 
-  // 딥다이브: 특정 유저
   if (arg && UUID_RE.test(arg)) {
-    const s = await statFor(arg);
-    const v = verdict(s, logAvailable, logStart);
-    console.log(`\n[딥다이브] ${s.nickname ?? "?"} ${arg}`);
-    console.log(`  spend ${s.spends} | 정상 ${s.delivered} · 미완 ${s.pending} · 에러 ${s.errored} · 환불 ${s.refunds} · 삭제로그 ${s.deletions}`);
-    console.log(`  판정 ${v.tag}${v.gap ? ` (gap ${v.gap})` : ""}  ${v.note}`);
+    await deepDive(arg, logAvailable);
     return;
   }
 
-  // 최근 N일 동안 spend 한 유저 전수
   const days = arg === "--days" ? Number(process.argv[3] || 7) : 7;
   const since = new Date(Date.now() - days * 86400e3).toISOString();
   const { data: spends } = await sb.from("coin_transactions").select("user_id").eq("type", "spend").gte("created_at", since);
   const userIds = [...new Set((spends ?? []).map((s: any) => s.user_id).filter(Boolean))];
   console.log(`최근 ${days}일 결제 유저 ${userIds.length}명 검사\n`);
 
-  const stats = await Promise.all(userIds.map(statFor));
-  const flagged = stats
-    .map((s) => ({ s, v: verdict(s, logAvailable, logStart) }))
-    .filter((x) => x.v.gap > 0)
-    .sort((a, b) => b.v.gap - a.v.gap);
+  const stats = await Promise.all(userIds.map((id) => statFor(id, logAvailable)));
+  const flagged = stats.map((s) => ({ s, v: verdict(s, logAvailable) })).filter((x) => x.v.gap > 0).sort((a, b) => b.v.gap - a.v.gap);
 
-  if (!logAvailable) {
-    console.log(`⚠️ 삭제로그(result_deletions) 미생성 — 아래 gap은 전부 "판별보류(참고용)".`);
-    console.log(`   마이그레이션 적용 후 재실행하면 삭제분은 자동으로 설명됩니다.\n`);
+  if (!logAvailable || !AUDIT_LIVE_AT) {
+    console.log(`⚠️ 삭제로그가 아직 ${!logAvailable ? "미생성" : "라이브 전"} — 아래 gap 은 전부 "보류(참고용)". 손실 단정 불가.`);
+    console.log(`   (표 생성 + 라우트 배포 + AUDIT_LIVE_AT 세팅 후 재실행하면 삭제분 자동설명·진짜 손실만 🔴)\n`);
   }
 
   if (flagged.length === 0) {
-    console.log("✅ 결제-무결과 gap 있는 유저 없음. 모두 결과 전달됨.");
+    console.log("✅ 결제-무결과 gap 있는 유저 없음.");
   } else {
     console.log(`gap 있는 유저 ${flagged.length}명:\n`);
     console.log(`  판정          닉네임        spend  정상 미완 에러 환불 삭제  gap  비고`);
@@ -151,11 +164,7 @@ async function main() {
       );
     }
     const actionable = flagged.filter((x) => x.v.actionable).length;
-    const hold = flagged.length - actionable;
-    console.log(`\n🟠 확인대상(미설명) ${actionable}명 · 보류(로그없음/로그이전) ${hold}명.`);
-    if (actionable === 0 && !logAvailable) {
-      console.log(`   → 지금은 로그가 없어 전부 보류. 손실 단정 불가(대부분 삭제/reuse로 추정).`);
-    }
+    console.log(`\n🔴 확인대상(손실/reuse 의심) ${actionable}명 · 보류 ${flagged.length - actionable}명.`);
   }
 }
 
