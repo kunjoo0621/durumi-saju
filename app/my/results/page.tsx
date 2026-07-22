@@ -190,11 +190,32 @@ function PopoverMenu({
   }, [onClose]);
 
   return (
-    <div
-      ref={ref}
-      className="absolute right-0 top-full mt-1 z-30 w-[160px] bg-[#242424] rounded-xl overflow-hidden shadow-lg"
-      style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)" }}
-    >
+    <>
+      {/*
+        백드롭: 팝오버가 아래 카드 <Link>를 덮은 상태에서 "삭제" 근처를 살짝 빗맞혀
+        팝오버 바깥을 터치하면, 그 터치가 밑의 카드 Link로 전달돼 결과 페이지로 이동해버렸다
+        ("삭제 눌렀는데 결과표가 켜짐" 버그). 카드 위(z-20)·팝오버 아래(z-30)에 투명 가림막을
+        깔아 메뉴 밖 터치는 여기서 흡수(닫기만)하고 카드로 새지 않게 한다. preventDefault로
+        touchstart 뒤 따라오는 ghost-click 네비게이션도 차단.
+      */}
+      <div
+        className="fixed inset-0 z-20"
+        aria-hidden
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onClose();
+        }}
+      />
+      <div
+        ref={ref}
+        className="absolute right-0 top-full mt-1 z-30 w-[160px] bg-[#242424] rounded-xl overflow-hidden shadow-lg"
+        style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)" }}
+      >
       {!isPrimary && (
         <>
           <button
@@ -222,7 +243,8 @@ function PopoverMenu({
       >
         삭제
       </button>
-    </div>
+      </div>
+    </>
   );
 }
 
