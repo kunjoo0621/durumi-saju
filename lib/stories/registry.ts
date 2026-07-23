@@ -154,10 +154,16 @@ import { sanAteez } from "./data/san-ateez";
 import { movingDream } from "./data/moving-dream";
 import { hyeonchimSal } from "./data/hyeonchim-sal";
 import { jaeseongWife } from "./data/jaeseong-wife";
+import { sibiunseong } from "./data/sibiunseong";
+import { moneyPickupDream } from "./data/money-pickup-dream";
+import { siksangYeonae } from "./data/siksang-yeonae";
 import type { Story, StoryCategory } from "./types";
 import { STORY_TAGS, TAG_META, TAG_ORDER, type TagMeta } from "./tags";
 
 const RAW_STORIES: Story[] = [
+  sibiunseong,
+  moneyPickupDream,
+  siksangYeonae,
   sanAteez,
   jeonggwanHusband,
   cheondeokWoldeokGwiin,
