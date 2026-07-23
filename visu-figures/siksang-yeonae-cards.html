@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>식상 연애 figure cards</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<style>
+  :root {
+    --bg: #0E0E13;
+    --panel: #16161E;
+    --panel2: #1B1B25;
+    --line: #2A2A38;
+    --ink: #F4F4F8;
+    --sub: #A7A7B8;
+    --purple: #A855F7;
+    --green: #34D399;   /* 식신 — 은근·따뜻 */
+    --amber: #FBBF24;   /* 상관 — 화려·예리 */
+    --pink: #F472B6;    /* 재성/결실 */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #06060a;
+    font-family: "Pretendard", -apple-system, sans-serif;
+    word-break: keep-all;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 40px;
+  }
+  .card {
+    width: 1080px;
+    height: 810px;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(168,85,247,0.10), transparent 60%),
+      var(--bg);
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    padding: 72px 76px;
+    display: flex;
+    flex-direction: column;
+    color: var(--ink);
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--purple);
+    margin-bottom: 18px;
+  }
+  .eyebrow .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--purple);
+    box-shadow: 0 0 18px rgba(168,85,247,0.7);
+  }
+  .title {
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1.24;
+    letter-spacing: -0.01em;
+  }
+  .title .hl { color: var(--purple); }
+  .subtitle {
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--sub);
+    line-height: 1.5;
+    margin-top: 20px;
+  }
+
+  /* ---------- Card 1 : 식상 개념 도식 ---------- */
+  .c1-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 24px;
+  }
+  .node-self {
+    width: 250px; height: 250px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #2b2140, #191225);
+    border: 3px solid var(--purple);
+    box-shadow: 0 0 60px rgba(168,85,247,0.35);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .node-self .big { font-size: 66px; font-weight: 800; }
+  .node-self .small { font-size: 25px; color: var(--sub); margin-top: 6px; }
+  .arrows {
+    display: flex; flex-direction: column;
+    gap: 22px;
+    flex: 1;
+    max-width: 470px;
+  }
+  .flow {
+    display: flex; align-items: center; gap: 20px;
+  }
+  .flow .arw { font-size: 40px; color: var(--green); flex-shrink: 0; }
+  .chip {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 6px solid var(--green);
+    border-radius: 16px;
+    padding: 20px 26px;
+    font-size: 30px;
+    font-weight: 700;
+  }
+  .chip small { display: block; font-size: 22px; font-weight: 500; color: var(--sub); margin-top: 4px; }
+
+  /* ---------- Card 2 : 식신 vs 상관 ---------- */
+  .cols {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 30px;
+  }
+  .col {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 40px 38px;
+    display: flex;
+    flex-direction: column;
+  }
+  .col.siksin { border-top: 8px solid var(--green); }
+  .col.sanggwan { border-top: 8px solid var(--amber); }
+  .col .name { font-size: 44px; font-weight: 800; }
+  .col.siksin .name { color: var(--green); }
+  .col.sanggwan .name { color: var(--amber); }
+  .col .tag {
+    font-size: 26px; font-weight: 600; color: var(--sub);
+    margin: 8px 0 26px;
+  }
+  .col .li {
+    display: flex; gap: 16px; align-items: flex-start;
+    font-size: 29px; font-weight: 500; line-height: 1.4;
+    padding: 15px 0;
+    border-top: 1px solid var(--line);
+  }
+  .col .li:first-of-type { border-top: none; }
+  .col .li .mk { font-size: 28px; flex-shrink: 0; }
+  .col.siksin .mk { color: var(--green); }
+  .col.sanggwan .mk { color: var(--amber); }
+
+  /* ---------- Card 3 : 식상생재 흐름 ---------- */
+  .c3-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 34px;
+    margin-top: 20px;
+  }
+  .flowline {
+    display: flex;
+    align-items: stretch;
+    gap: 24px;
+  }
+  .stepbox {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 34px 30px;
+    text-align: center;
+    display: flex; flex-direction: column; gap: 10px;
+    justify-content: center;
+  }
+  .stepbox.a { border-bottom: 7px solid var(--purple); }
+  .stepbox.b { border-bottom: 7px solid var(--pink); }
+  .stepbox .lab { font-size: 34px; font-weight: 800; }
+  .stepbox.a .lab { color: var(--purple); }
+  .stepbox.b .lab { color: var(--pink); }
+  .stepbox .desc { font-size: 26px; color: var(--sub); font-weight: 500; line-height: 1.4; }
+  .bigarw {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; color: var(--sub);
+    flex-shrink: 0; width: 70px;
+  }
+  .note {
+    background: rgba(168,85,247,0.10);
+    border: 1px solid rgba(168,85,247,0.35);
+    border-radius: 18px;
+    padding: 26px 32px;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .note b { color: var(--purple); }
+</style>
+</head>
+<body>
+
+  <!-- C1 : 식상이 뭔지 -->
+  <section class="card">
+    <span class="eyebrow"><span class="dot"></span>식상이란</span>
+    <div class="title">내 안의 마음을 <span class="hl">밖으로 꺼내는 힘</span></div>
+    <div class="subtitle">일간(나)이 낳아 내보내는 기운 — 연애에선 다가감과 매력으로 드러나요</div>
+    <div class="c1-stage">
+      <div class="node-self">
+        <div class="big">나</div>
+        <div class="small">일간</div>
+      </div>
+      <div class="arrows">
+        <div class="flow"><span class="arw">→</span><div class="chip">말·표정<small>감정을 바로 드러냄</small></div></div>
+        <div class="flow"><span class="arw">→</span><div class="chip">먼저 다가감<small>살갑게 챙기는 애정</small></div></div>
+        <div class="flow"><span class="arw">→</span><div class="chip">매력 발산<small>분위기를 끌어당김</small></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- C2 : 식신 vs 상관 -->
+  <section class="card">
+    <span class="eyebrow"><span class="dot"></span>같은 식상, 다른 결</span>
+    <div class="title">식신 <span style="color:var(--sub);font-weight:600">vs</span> 상관 — 사랑을 표현하는 방식</div>
+    <div class="cols">
+      <div class="col siksin">
+        <div class="name">식신</div>
+        <div class="tag">은근하고 따뜻한 표현</div>
+        <div class="li"><span class="mk">●</span><span>다정하게 챙기고 편안하게 곁을 내줌</span></div>
+        <div class="li"><span class="mk">●</span><span>꾸준하고 안정적인 애정</span></div>
+        <div class="li"><span class="mk">●</span><span>같이 있으면 마음이 놓이는 사람</span></div>
+      </div>
+      <div class="col sanggwan">
+        <div class="name">상관</div>
+        <div class="tag">화려하고 예리한 표현</div>
+        <div class="li"><span class="mk">◆</span><span>반짝이는 끼와 센스로 시선을 끔</span></div>
+        <div class="li"><span class="mk">◆</span><span>직설적이고 강렬한 표현</span></div>
+        <div class="li"><span class="mk">◆</span><span>말이 앞서 상대를 지적할 때가 있음</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- C3 : 식상생재 -->
+  <section class="card">
+    <span class="eyebrow"><span class="dot"></span>표현이 결실로</span>
+    <div class="title">넘치는 표현을 <span class="hl">한 사람에게 모으면</span></div>
+    <div class="subtitle">발산하는 힘(식상)이 흘러 실제 인연·결실(재성)로 이어지는 흐름 — 식상생재</div>
+    <div class="c3-stage">
+      <div class="flowline">
+        <div class="stepbox a">
+          <div class="lab">식상</div>
+          <div class="desc">표현·매력을<br/>발산하는 힘</div>
+        </div>
+        <div class="bigarw">→</div>
+        <div class="stepbox b">
+          <div class="lab">재성</div>
+          <div class="desc">실제 인연·<br/>관계의 결실</div>
+        </div>
+      </div>
+      <div class="note">흩어지면 <b>인기</b>로 끝나고, 한곳에 모이면 <b>결실</b>이 돼요</div>
+    </div>
+  </section>
+
+</body>
+</html>

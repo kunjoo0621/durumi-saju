@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>돈 줍는 꿈 해몽 — figure cards</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+  rel="stylesheet"
+/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0E0E13;
+    --bg2: #15151d;
+    --panel: #1b1b24;
+    --line: #2a2a36;
+    --ink: #F5F5F7;
+    --sub: #9aa0ac;
+    --gold: #F5B841;
+    --gold-soft: rgba(245, 184, 65, 0.14);
+    --gold-line: rgba(245, 184, 65, 0.42);
+    --cool: #6FA8DC;
+    --cool-soft: rgba(111, 168, 220, 0.14);
+    --cool-line: rgba(111, 168, 220, 0.42);
+  }
+  body {
+    font-family: "Pretendard", -apple-system, sans-serif;
+    background: #05050a;
+    color: var(--ink);
+    word-break: keep-all;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    padding: 32px;
+  }
+  .card {
+    position: relative;
+    width: 1080px;
+    height: 810px;
+    overflow: hidden;
+    background:
+      radial-gradient(1100px 620px at 82% -12%, #191922 0%, var(--bg) 58%),
+      var(--bg);
+    padding: 46px 72px 42px;
+    display: flex;
+    flex-direction: column;
+  }
+  .kicker {
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--gold);
+  }
+  .title {
+    margin-top: 14px;
+    font-size: 60px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.16;
+  }
+  .title .em { color: var(--gold); }
+  .sub {
+    margin-top: 18px;
+    font-size: 29px;
+    font-weight: 500;
+    color: var(--sub);
+    line-height: 1.45;
+  }
+
+  /* ---- C1 : two-branch compare ---- */
+  .split {
+    margin-top: 42px;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+  .branch {
+    border-radius: 26px;
+    border: 2px solid var(--line);
+    padding: 40px 40px 36px;
+    display: flex;
+    flex-direction: column;
+  }
+  .branch.good { background: var(--gold-soft); border-color: var(--gold-line); }
+  .branch.warn { background: var(--cool-soft); border-color: var(--cool-line); }
+  .branch .tag {
+    font-size: 26px;
+    font-weight: 700;
+    padding: 9px 22px;
+    border-radius: 999px;
+    align-self: flex-start;
+  }
+  .branch.good .tag { background: var(--gold); color: #201704; }
+  .branch.warn .tag { background: var(--cool); color: #0a1622; }
+  .branch h3 {
+    margin-top: 26px;
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .branch.good h3 { color: var(--gold); }
+  .branch.warn h3 { color: var(--cool); }
+  .branch ul { margin-top: 22px; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+  .branch li {
+    font-size: 28px;
+    font-weight: 500;
+    color: #dfe2e8;
+    padding-left: 34px;
+    position: relative;
+    line-height: 1.36;
+  }
+  .branch li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 13px;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+  }
+  .branch.good li::before { background: var(--gold); }
+  .branch.warn li::before { background: var(--cool); }
+
+  /* ---- C2 : situation table ---- */
+  .tbl { margin-top: 40px; flex: 1; display: flex; flex-direction: column; gap: 0; }
+  .row {
+    display: grid;
+    grid-template-columns: 1.15fr 1.55fr 0.72fr;
+    align-items: center;
+    gap: 20px;
+    padding: 15px 30px;
+    border-bottom: 1.5px solid var(--line);
+  }
+  .row.head {
+    padding: 16px 30px;
+    border-bottom: 2px solid var(--line);
+  }
+  .row.head span { font-size: 25px; font-weight: 700; color: var(--sub); }
+  .row .situ { font-size: 30px; font-weight: 700; }
+  .row .desc { font-size: 26px; font-weight: 500; color: #cdd1d9; line-height: 1.32; }
+  .pill {
+    justify-self: start;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.g { background: var(--gold-soft); color: var(--gold); border: 1.5px solid var(--gold-line); }
+  .pill.c { background: var(--cool-soft); color: var(--cool); border: 1.5px solid var(--cool-line); }
+  .pill.m {
+    background: rgba(154,160,172,0.12);
+    color: #c3c8d1;
+    border: 1.5px solid var(--line);
+  }
+
+  /* ---- C3 : mindset steps ---- */
+  .steps { margin-top: 32px; flex: 1; display: flex; flex-direction: column; gap: 16px; justify-content: center; }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    border-radius: 24px;
+    border: 2px solid var(--line);
+    background: var(--panel);
+    padding: 24px 40px;
+  }
+  .step .num {
+    flex: none;
+    width: 78px; height: 78px;
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 800;
+    background: var(--gold-soft);
+    color: var(--gold);
+    border: 2px solid var(--gold-line);
+  }
+  .step .body h4 { font-size: 36px; font-weight: 800; letter-spacing: -0.01em; }
+  .step .body p { margin-top: 9px; font-size: 27px; font-weight: 500; color: var(--sub); line-height: 1.4; }
+
+  .foot {
+    margin-top: 16px;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--sub);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .foot::before {
+    content: "";
+    width: 30px; height: 3px; border-radius: 2px;
+    background: var(--gold);
+  }
+</style>
+</head>
+<body>
+
+  <!-- C1 : 길 vs 흉 (반대꿈) -->
+  <section class="card">
+    <div class="kicker">돈 줍는 꿈 · 한 장 요약</div>
+    <div class="title">같은 꿈도 <span class="em">주울 때 마음</span>으로<br />길과 흉이 갈려요</div>
+    <div class="split">
+      <div class="branch good">
+        <span class="tag">기뻤다면 · 길</span>
+        <h3>굴러 들어오는 재물</h3>
+        <ul>
+          <li>뜻밖의 작은 이득·기회</li>
+          <li>동전·잔돈은 대체로 무난</li>
+          <li>주워서 돌려주면 덕이 복으로</li>
+        </ul>
+      </div>
+      <div class="branch warn">
+        <span class="tag">찜찜했다면 · 반대꿈</span>
+        <h3>나갈 돈·구설 점검</h3>
+        <ul>
+          <li>예상 밖 지출을 미리 비춤</li>
+          <li>몰래 주웠다면 뒤탈·말</li>
+          <li>겁낼 일 아닌 '점검 신호'</li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot">전통 해몽 통념 · 재미로 참고하세요</div>
+  </section>
+
+  <!-- C2 : 상황별 갈래표 -->
+  <section class="card">
+    <div class="kicker">상황별 갈래</div>
+    <div class="title">지폐냐 동전이냐, <span class="em">많이냐 조금이냐</span></div>
+    <div class="tbl">
+      <div class="row head">
+        <span>줍는 상황</span><span>전통적 통념</span><span>결</span>
+      </div>
+      <div class="row">
+        <div class="situ">지폐 · 큰 액수</div>
+        <div class="desc">액수 클수록 부담·책임도 함께</div>
+        <div class="pill m">감정 따라</div>
+      </div>
+      <div class="row">
+        <div class="situ">동전 · 잔돈</div>
+        <div class="desc">잔잔한 이득·소소한 행운</div>
+        <div class="pill g">무난한 길</div>
+      </div>
+      <div class="row">
+        <div class="situ">아주 많이 주움</div>
+        <div class="desc">받을 그릇보다 큰 기회, 무리 주의</div>
+        <div class="pill c">과하면 흉</div>
+      </div>
+      <div class="row">
+        <div class="situ">주인에게 돌려줌</div>
+        <div class="desc">덕을 쌓아 더 큰 복으로 돌아옴</div>
+        <div class="pill g">길</div>
+      </div>
+      <div class="row">
+        <div class="situ">빼앗기거나 잃음</div>
+        <div class="desc">들어온 기회를 놓침, 결정 서둘러</div>
+        <div class="pill c">점검</div>
+      </div>
+    </div>
+    <div class="foot">단정 아닌 통념 · 내 꿈과 가까운 결을 견줘보세요</div>
+  </section>
+
+  <!-- C3 : 꿈 뒤 마음가짐 -->
+  <section class="card">
+    <div class="kicker">꿈 뒤 마음가짐</div>
+    <div class="title">겁내지 말고 <span class="em">가볍게 챙겨두기</span></div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div class="body">
+          <h4>재미로 참고하기</h4>
+          <p>확정 예언 아닌 힌트 — 좋은 결이면 기분 좋게 받아들여요</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div class="body">
+          <h4>지출 한 번 점검</h4>
+          <p>찜찜한 꿈이었다면 이번 달 금전 약속·새는 돈만 살펴두면 돼요</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div class="body">
+          <h4>미룬 결정 챙기기</h4>
+          <p>빼앗기는 꿈이었다면 미뤄둔 결정·제안을 들여다볼 타이밍</p>
+        </div>
+      </div>
+    </div>
+    <div class="foot">어느 쪽이든 미리 알고 챙기는 게 대비의 전부</div>
+  </section>
+
+</body>
+</html>

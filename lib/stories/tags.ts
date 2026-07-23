@@ -43,6 +43,8 @@ export const TAG_META: Record<string, TagMeta> = {
   삼재: { label: "삼재", group: "주제", desc: "12년에 한 번 드는 3년의 전환기, 삼재의 결과 띠별 흐름." },
   공망: { label: "공망", group: "주제", desc: "사주에서 비어 있는 자리, 공망이 든 곳의 의미와 채우는 법." },
   "2026운세": { label: "2026 운세", group: "주제", desc: "병오년 2026, 재물과 흐름이 좋은 사주의 결." },
+  십성: { label: "십성", group: "주제", desc: "비겁·식상·재성·관성·인성 — 사주 열 글자의 십성으로 보는 성격과 인연의 결." },
+  사주기초: { label: "사주 기초", group: "주제", desc: "십이운성·신살·오행처럼 사주를 읽는 기본 개념을 쉽게 푼 글 모음." },
 
   // ── 인물 ──
   연예인: { label: "연예인 사주", group: "인물", desc: "공개된 생년월일로 본 연예인의 사주 원국과 풀이." },
@@ -59,7 +61,7 @@ export const TAG_META: Record<string, TagMeta> = {
 /** 브라우징 칩 노출 순서 (그룹 순서대로) */
 export const TAG_ORDER: string[] = [
   "연예인", "트로트", "아이돌", "배우",
-  "재물운", "연애운", "궁합", "결혼운", "직업운", "신살", "삼재", "공망", "2026운세",
+  "재물운", "연애운", "궁합", "결혼운", "직업운", "신살", "십성", "사주기초", "삼재", "공망", "2026운세",
   "꿈해몽", "동물꿈", "태몽",
   "갑목", "을목", "병화", "정화", "무토", "기토", "경금", "신금", "임수", "계수",
 ];
@@ -212,6 +214,7 @@ export const STORY_TAGS: Record<string, string[]> = {
   "house-dream": ["꿈해몽"],
   "moving-dream": ["꿈해몽"],
   "money-dream": ["꿈해몽", "재물운"],
+  "money-pickup-dream": ["꿈해몽", "재물운"],
   "pig-dream": ["꿈해몽", "동물꿈", "재물운"],
   "poop-dream": ["꿈해몽", "재물운"],
   "pregnancy-dream": ["꿈해몽", "태몽"],
@@ -225,6 +228,8 @@ export const STORY_TAGS: Record<string, string[]> = {
   "water-dream": ["꿈해몽"],
   "wedding-dream": ["꿈해몽", "결혼운"],
   "shoes-dream": ["꿈해몽"],
+  sibiunseong: ["사주기초"],
+  "siksang-yeonae": ["십성", "연애운"],
   "toilet-dream": ["꿈해몽", "재물운"],
   "car-dream": ["꿈해몽"],
   anyujin: ["연예인", "아이돌", "정화"],

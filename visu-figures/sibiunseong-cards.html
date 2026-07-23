@@ -1,0 +1,263 @@
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #0E0E13;
+    --bg2: #14141B;
+    --card: #1A1A22;
+    --line: #2A2A34;
+    --ink: #F4F4F6;
+    --sub: #A8A8B4;
+    --dim: #6E6E7C;
+    --spring: #34D399; /* 봄·성장 */
+    --summer: #F87171; /* 여름·절정 */
+    --autumn: #FBBF24; /* 가을·거둠 */
+    --winter: #60A5FA; /* 겨울·갈무리 */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #05050a;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    word-break: keep-all;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 40px 0;
+  }
+  .card {
+    width: 1080px;
+    height: 810px;
+    overflow: hidden;
+    background: radial-gradient(120% 100% at 50% 0%, #16161F 0%, var(--bg) 55%, #09090B 100%);
+    color: var(--ink);
+    position: relative;
+    padding: 64px 72px;
+    border: 1px solid var(--line);
+  }
+  .kicker {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--dim);
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+  }
+  .title {
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.18;
+  }
+  .title .accent { color: var(--spring); }
+  .brand {
+    position: absolute;
+    bottom: 40px;
+    right: 72px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--dim);
+  }
+
+  /* ===== C1 WHEEL ===== */
+  .clegend {
+    position: absolute; left: 540px; top: 512px;
+    transform: translateX(-50%);
+    width: 384px;
+    display: flex; flex-wrap: wrap; row-gap: 12px;
+  }
+  .clegend .li { width: 50%; display: flex; align-items: center; gap: 8px; font-size: 21px; font-weight: 700; color: var(--sub); white-space: nowrap; }
+  .clegend .dot { width: 15px; height: 15px; border-radius: 50%; flex: none; }
+  .wheel { position: absolute; left: 0; top: 0; width: 1080px; height: 810px; }
+  .node {
+    position: absolute;
+    width: 150px; height: 84px;
+    margin-left: -75px; margin-top: -42px;
+    border-radius: 18px;
+    background: var(--card);
+    border: 2px solid var(--line);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .node .nm { font-size: 30px; font-weight: 800; line-height: 1.05; }
+  .node .hj { font-size: 19px; font-weight: 600; color: var(--dim); margin-top: 2px; }
+  .node.spring { border-color: var(--spring); } .node.spring .nm { color: var(--spring); }
+  .node.summer { border-color: var(--summer); } .node.summer .nm { color: var(--summer); }
+  .node.autumn { border-color: var(--autumn); } .node.autumn .nm { color: var(--autumn); }
+  .node.winter { border-color: var(--winter); } .node.winter .nm { color: var(--winter); }
+  .hub {
+    position: absolute; left: 540px; top: 400px;
+    transform: translate(-50%, -50%);
+    width: 210px; height: 210px; border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed var(--line);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  }
+  .hub .h1 { font-size: 33px; font-weight: 800; line-height: 1.15; }
+  .hub .h2 { font-size: 21px; font-weight: 600; color: var(--sub); margin-top: 8px; line-height: 1.35; }
+
+  /* ===== C2 SEASONS ===== */
+  .cols { position: absolute; left: 72px; right: 72px; top: 210px; display: flex; gap: 22px; }
+  .col { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; }
+  .col .head { padding: 26px 22px 20px; text-align: center; }
+  .col .season { font-size: 40px; font-weight: 800; }
+  .col .role { font-size: 25px; font-weight: 700; color: var(--sub); margin-top: 6px; }
+  .col .body { padding: 8px 20px 26px; display: flex; flex-direction: column; gap: 14px; }
+  .chip { border-radius: 14px; padding: 16px 10px; text-align: center; font-size: 30px; font-weight: 800; background: var(--bg2); }
+  .col.spring .head { border-top: 8px solid var(--spring); } .col.spring .season { color: var(--spring); } .col.spring .chip { color: var(--spring); }
+  .col.summer .head { border-top: 8px solid var(--summer); } .col.summer .season { color: var(--summer); } .col.summer .chip { color: var(--summer); }
+  .col.autumn .head { border-top: 8px solid var(--autumn); } .col.autumn .season { color: var(--autumn); } .col.autumn .chip { color: var(--autumn); }
+  .col.winter .head { border-top: 8px solid var(--winter); } .col.winter .season { color: var(--winter); } .col.winter .chip { color: var(--winter); }
+  .note { position: absolute; left: 72px; right: 72px; bottom: 96px; text-align: center; font-size: 27px; font-weight: 600; color: var(--sub); }
+
+  /* ===== C3 READ ===== */
+  .anchor {
+    position: absolute; left: 72px; top: 216px; right: 72px;
+    background: linear-gradient(90deg, rgba(52,211,153,0.14), rgba(52,211,153,0.04));
+    border: 2px solid var(--spring); border-radius: 20px;
+    padding: 26px 34px; display: flex; align-items: center; gap: 22px;
+  }
+  .anchor .tag { font-size: 27px; font-weight: 800; color: var(--spring); white-space: nowrap; }
+  .anchor .desc { font-size: 30px; font-weight: 700; }
+  .lanes { position: absolute; left: 72px; right: 72px; top: 356px; display: flex; gap: 26px; }
+  .lane { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 34px 32px; }
+  .lane .where { display: inline-block; font-size: 25px; font-weight: 800; padding: 8px 18px; border-radius: 999px; margin-bottom: 20px; }
+  .lane.a .where { background: rgba(96,165,250,0.16); color: var(--winter); }
+  .lane.b .where { background: rgba(251,191,36,0.16); color: var(--autumn); }
+  .lane .what { font-size: 38px; font-weight: 800; line-height: 1.25; }
+  .lane .sub { font-size: 27px; font-weight: 600; color: var(--sub); margin-top: 16px; line-height: 1.45; }
+  .foot { position: absolute; left: 72px; right: 72px; bottom: 92px; text-align: center; font-size: 26px; font-weight: 600; color: var(--dim); }
+
+  /* ===== C4 MYTH ===== */
+  .myths { position: absolute; left: 72px; right: 72px; top: 226px; display: flex; gap: 24px; }
+  .myth { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 34px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .myth .big { font-size: 76px; font-weight: 800; line-height: 1; color: var(--winter); }
+  .myth .wrong { font-size: 26px; font-weight: 700; color: var(--dim); text-decoration: line-through; margin: 20px 0 18px; }
+  .myth .arrow { font-size: 30px; color: var(--summer); margin-bottom: 16px; }
+  .myth .right { font-size: 34px; font-weight: 800; line-height: 1.3; }
+  .myth .right b { color: var(--spring); }
+  .myth .cap { font-size: 25px; font-weight: 600; color: var(--sub); margin-top: 14px; line-height: 1.4; }
+  .closer { position: absolute; left: 72px; right: 72px; bottom: 92px; text-align: center; font-size: 28px; font-weight: 700; color: var(--ink); }
+  .closer b { color: var(--autumn); }
+</style>
+
+<!-- ================= CARD 1 : 12단계 사이클 휠 ================= -->
+<div class="card">
+  <div class="kicker">십이운성 · 개념 01</div>
+  <div class="title"><span class="accent">12단계</span>, 인생 한 바퀴로 돕니다</div>
+  <div class="wheel">
+    <!-- single ellipse: cx540 cy450 rh370 rv238, start top clockwise -->
+    <div class="node spring" style="left:540px; top:212px;"><div class="nm">장생</div><div class="hj">長生 · 새싹</div></div>
+    <div class="node spring" style="left:725px; top:244px;"><div class="nm">목욕</div><div class="hj">沐浴 · 성장통</div></div>
+    <div class="node spring" style="left:860px; top:331px;"><div class="nm">관대</div><div class="hj">冠帶 · 청년</div></div>
+    <div class="node summer" style="left:910px; top:450px;"><div class="nm">건록</div><div class="hj">建祿 · 자립</div></div>
+    <div class="node summer" style="left:860px; top:569px;"><div class="nm">제왕</div><div class="hj">帝旺 · 정점</div></div>
+    <div class="node autumn" style="left:725px; top:656px;"><div class="nm">쇠</div><div class="hj">衰 · 꺾임</div></div>
+    <div class="node autumn" style="left:540px; top:688px;"><div class="nm">병</div><div class="hj">病 · 쇠약</div></div>
+    <div class="node autumn" style="left:355px; top:656px;"><div class="nm">사</div><div class="hj">死 · 마무리</div></div>
+    <div class="node winter" style="left:220px; top:569px;"><div class="nm">묘</div><div class="hj">墓 · 갈무리</div></div>
+    <div class="node winter" style="left:170px; top:450px;"><div class="nm">절</div><div class="hj">絶 · 바닥</div></div>
+    <div class="node winter" style="left:220px; top:331px;"><div class="nm">태</div><div class="hj">胎 · 잉태</div></div>
+    <div class="node winter" style="left:355px; top:244px;"><div class="nm">양</div><div class="hj">養 · 길러짐</div></div>
+    <div class="hub">
+      <div class="h1">↻ 기운의<br>사계절</div>
+      <div class="h2">차오르고 · 비우고<br>다시 잉태</div>
+    </div>
+    <div class="clegend">
+      <div class="li"><span class="dot" style="background:var(--spring)"></span>봄·성장</div>
+      <div class="li"><span class="dot" style="background:var(--summer)"></span>여름·절정</div>
+      <div class="li"><span class="dot" style="background:var(--autumn)"></span>가을·거둠</div>
+      <div class="li"><span class="dot" style="background:var(--winter)"></span>겨울·갈무리</div>
+    </div>
+  </div>
+  <div class="brand">사주 보는 두루미</div>
+</div>
+
+<!-- ================= CARD 2 : 네 계절 묶음 ================= -->
+<div class="card">
+  <div class="kicker">십이운성 · 개념 02</div>
+  <div class="title">열둘을 <span class="accent">네 계절</span>로 묶으면 쉬워요</div>
+  <div class="cols">
+    <div class="col spring">
+      <div class="head"><div class="season">봄</div><div class="role">자라남</div></div>
+      <div class="body">
+        <div class="chip">장생</div><div class="chip">목욕</div><div class="chip">관대</div>
+      </div>
+    </div>
+    <div class="col summer">
+      <div class="head"><div class="season">여름</div><div class="role">절정</div></div>
+      <div class="body">
+        <div class="chip">건록</div><div class="chip">제왕</div>
+      </div>
+    </div>
+    <div class="col autumn">
+      <div class="head"><div class="season">가을</div><div class="role">거둠</div></div>
+      <div class="body">
+        <div class="chip">쇠</div><div class="chip">병</div><div class="chip">사</div>
+      </div>
+    </div>
+    <div class="col winter">
+      <div class="head"><div class="season">겨울</div><div class="role">갈무리</div></div>
+      <div class="body">
+        <div class="chip">묘</div><div class="chip">절</div><div class="chip">태</div><div class="chip">양</div>
+      </div>
+    </div>
+  </div>
+  <div class="note">여름엔 벌이고, 겨울엔 정리하고 준비하기 — 계절을 거스르지 않는 게 첫걸음</div>
+  <div class="brand">사주 보는 두루미</div>
+</div>
+
+<!-- ================= CARD 3 : 내 사주에서 읽는 법 ================= -->
+<div class="card">
+  <div class="kicker">십이운성 · 개념 03</div>
+  <div class="title">내 사주에선 <span class="accent">이렇게</span> 읽어요</div>
+  <div class="anchor">
+    <div class="tag">기준 = 일간</div>
+    <div class="desc">나를 뜻하는 글자가 열두 자리에서 어느 단계인지 본다</div>
+  </div>
+  <div class="lanes">
+    <div class="lane a">
+      <div class="where">일지에서</div>
+      <div class="what">타고난 기질의 힘</div>
+      <div class="sub">태어난 날의 지지에 붙은 단계로 성격과 에너지의 결을 읽어요.</div>
+    </div>
+    <div class="lane b">
+      <div class="where">대운·세운에서</div>
+      <div class="what">시기별 운의 파고</div>
+      <div class="sub">십 년·한 해마다 지나는 단계로 지금이 뻗을 때인지 숨 고를 때인지 봐요.</div>
+    </div>
+  </div>
+  <div class="foot">양(陽)의 일간은 순행, 음(陰)의 일간은 역행 — 같은 지지라도 붙는 단계가 달라요</div>
+  <div class="brand">사주 보는 두루미</div>
+</div>
+
+<!-- ================= CARD 4 : 오해 바로잡기 ================= -->
+<div class="card">
+  <div class="kicker">십이운성 · 개념 04</div>
+  <div class="title"><span class="accent">묘·절·사</span>, 끝이 아니에요</div>
+  <div class="myths">
+    <div class="myth">
+      <div class="big" style="color:var(--summer)">死</div>
+      <div class="wrong">죽음 · 끝</div>
+      <div class="arrow">↓ 진짜 뜻</div>
+      <div class="right"><b>마무리</b>와 전환</div>
+      <div class="cap">오래 붙든 걸 내려놓고<br>새 길로 갈아타는 결단</div>
+    </div>
+    <div class="myth">
+      <div class="big" style="color:var(--autumn)">墓</div>
+      <div class="wrong">무덤 · 흉</div>
+      <div class="arrow">↓ 진짜 뜻</div>
+      <div class="right"><b>갈무리</b>와 저장</div>
+      <div class="cap">한 분야를 깊이 파고들어<br>오래 축적하는 힘</div>
+    </div>
+    <div class="myth">
+      <div class="big" style="color:var(--winter)">絶</div>
+      <div class="wrong">단절 · 바닥</div>
+      <div class="arrow">↓ 진짜 뜻</div>
+      <div class="right"><b>비움</b>과 재출발</div>
+      <div class="cap">바닥이라 오히려<br>새로 시작하기 좋은 자리</div>
+    </div>
+  </div>
+  <div class="closer">십이운성은 좋고 나쁨을 매기는 잣대가 아니라 <b>내 기운의 온도계</b>예요</div>
+  <div class="brand">사주 보는 두루미</div>
+</div>
