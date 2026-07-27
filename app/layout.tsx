@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Providers from "./providers";
 import { SAME_AS_URLS } from "@/lib/social-links";
@@ -129,6 +130,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <Providers>{children}</Providers>
+        {/* 조회수·유입경로 계측. 자기 도메인(/_vercel/insights)으로 전송해
+            광고차단에 막히지 않는다 — PostHog 이 조용히 0 이던 문제의 대체. */}
+        <Analytics />
       </body>
     </html>
   );
