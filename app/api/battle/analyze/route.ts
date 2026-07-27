@@ -14,7 +14,39 @@ import { calculateBattleInteraction } from "@/lib/utils/battle-interaction";
 import { normalizeGender } from "@/lib/utils/gender";
 import { hashToken, getTokensFromCookie, getDbExpiresAt } from "@/lib/guest-token";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
+import {
+  findBattleBySession,
+  insertBattleIdempotent,
+  type BattleStore,
+} from "@/lib/battle-idempotency";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
+
+/** lib/battle-idempotency 의 순수 로직에 Supabase 를 물리는 어댑터 */
+function createBattleStore(): BattleStore {
+  return {
+    async findBySessionId(sessionId) {
+      const { data, error } = await supabaseAdmin
+        .from("saju_battles")
+        .select("id, session_id, full_result")
+        .eq("session_id", sessionId)
+        .maybeSingle();
+      if (error) {
+        // 조회 실패로 분석을 막지 않는다(fail-open) — 최악의 경우 기존처럼 중복 1건.
+        console.warn("[BATTLE_ANALYZE] session 조회 실패:", error.message);
+        return null;
+      }
+      return data ?? null;
+    },
+    async insert(row) {
+      const { data, error } = await supabaseAdmin
+        .from("saju_battles")
+        .insert(row)
+        .select("id, session_id, full_result")
+        .single();
+      return { row: data ?? null, error };
+    },
+  };
+}
 
 type BattleAnalyzeBody = {
   playerA: BattlePlayerInput;
@@ -92,6 +124,24 @@ export async function POST(request: NextRequest) {
 
     if (!hasRequiredBattleInput(body.playerA) || !hasRequiredBattleInput(body.playerB)) {
       return NextResponse.json({ error: "양쪽 플레이어 정보가 부족합니다." }, { status: 400 });
+    }
+
+    // ── 멱등 1단: 이 결제 세션으로 이미 만든 배틀이 있으면 LLM 자체를 돌지 않는다 ──
+    //   더블탭·재시도·화면복귀가 Gemini 재호출 + row 중복을 만들던 원인 차단.
+    //   (게스트는 sessionId 없음 → 기존 동작 유지)
+    const battleStore = createBattleStore();
+    const alreadyDone = await findBattleBySession(battleStore, body.sessionId);
+    if (alreadyDone) {
+      console.info("[BATTLE_ANALYZE] 중복 호출 — 기존 배틀 반환", {
+        battleId: alreadyDone.id,
+        sessionId: body.sessionId,
+      });
+      return NextResponse.json({
+        ok: true,
+        result: alreadyDone.full_result,
+        battleId: alreadyDone.id,
+        reused: true,
+      });
     }
 
     // Enrich + score Player A & B (병렬)
@@ -259,32 +309,32 @@ export async function POST(request: NextRequest) {
       battleRow.guest_token_expires_at = getDbExpiresAt();
     }
 
-    let battleId: string | null = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const { data: inserted, error: insertError } = await supabaseAdmin
-        .from("saju_battles")
-        .insert(battleRow)
-        .select("id")
-        .single();
+    // ── 멱등 2단: 선조회를 동시에 통과한 진짜 race 는 session_id UNIQUE 위반으로 잡아
+    //    기존 row 로 수렴시킨다 (일시 DB 오류 1회 재시도는 기존과 동일) ──
+    const saved = await insertBattleIdempotent(battleStore, battleRow, body.sessionId);
 
-      if (!insertError && inserted?.id) {
-        battleId = inserted.id;
-        break;
-      }
-
-      if (attempt === 0) {
-        console.warn("[BATTLE_ANALYZE] DB save attempt 1 failed, retrying:", insertError?.message);
-        await new Promise((r) => setTimeout(r, 500));
-      } else {
-        console.error("[BATTLE_ANALYZE] DB save failed after retry:", insertError?.message);
-        return NextResponse.json(
-          { error: "배틀 결과 저장에 실패했습니다. 다시 시도해주세요." },
-          { status: 500 }
-        );
-      }
+    if (saved.battleId === null) {
+      console.error("[BATTLE_ANALYZE] DB save failed after retry:", saved.error?.message);
+      return NextResponse.json(
+        { error: "배틀 결과 저장에 실패했습니다. 다시 시도해주세요." },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ ok: true, result, battleId });
+    if (saved.reused) {
+      console.info("[BATTLE_ANALYZE] 동시 호출 race — 기존 배틀로 수렴", {
+        battleId: saved.battleId,
+        sessionId: body.sessionId,
+      });
+      return NextResponse.json({
+        ok: true,
+        result: saved.result,
+        battleId: saved.battleId,
+        reused: true,
+      });
+    }
+
+    return NextResponse.json({ ok: true, result, battleId: saved.battleId });
   } catch (error: any) {
     console.error("[BATTLE_ANALYZE]", error);
     return NextResponse.json(
