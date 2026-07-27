@@ -21,29 +21,41 @@ import {
 } from "@/lib/battle-idempotency";
 import type { BattlePlayerInput, RelationshipType } from "@/types/battle";
 
-/** lib/battle-idempotency 의 순수 로직에 Supabase 를 물리는 어댑터 */
-function createBattleStore(): BattleStore {
+/**
+ * lib/battle-idempotency 의 순수 로직에 Supabase 를 물리는 어댑터.
+ *
+ * ★선조회는 반드시 요청자 소유로 스코프한다. sessionId 만으로 조회하면
+ * 남의 sessionId 를 아는 사람이 남의 배틀 full_result 를 그대로 받아간다
+ * (coins/spend 가 `.eq("user_id", userId)` 로 스코프하는 것과 같은 이유).
+ */
+function createBattleStore(userId: string | null, guestTokenHash: string | null): BattleStore {
+  const scoped = <T extends { eq: (c: string, v: any) => T }>(q: T): T =>
+    userId ? q.eq("user_id", userId) : q.eq("guest_token_hash", guestTokenHash);
+
   return {
     async findBySessionId(sessionId) {
-      const { data, error } = await supabaseAdmin
-        .from("saju_battles")
-        .select("id, session_id, full_result")
-        .eq("session_id", sessionId)
-        .maybeSingle();
+      const { data, error } = await scoped(
+        supabaseAdmin
+          .from("saju_battles")
+          .select("id, session_id, full_result")
+          .eq("session_id", sessionId) as any
+      ).maybeSingle();
       if (error) {
         // 조회 실패로 분석을 막지 않는다(fail-open) — 최악의 경우 기존처럼 중복 1건.
+        // fail-close 로 하면 일시적 DB 블립이 "알은 빠졌는데 분석 거부"가 된다.
         console.warn("[BATTLE_ANALYZE] session 조회 실패:", error.message);
         return null;
       }
-      return data ?? null;
+      return (data as any) ?? null;
     },
     async insert(row) {
+      // full_result 는 수십 KB 라 되받지 않는다 — 신규 경로는 메모리의 result 를 그대로 쓴다.
       const { data, error } = await supabaseAdmin
         .from("saju_battles")
         .insert(row)
-        .select("id, session_id, full_result")
+        .select("id, session_id")
         .single();
-      return { row: data ?? null, error };
+      return { row: data ? { ...data, full_result: row.full_result } : null, error };
     },
   };
 }
@@ -129,7 +141,7 @@ export async function POST(request: NextRequest) {
     // ── 멱등 1단: 이 결제 세션으로 이미 만든 배틀이 있으면 LLM 자체를 돌지 않는다 ──
     //   더블탭·재시도·화면복귀가 Gemini 재호출 + row 중복을 만들던 원인 차단.
     //   (게스트는 sessionId 없음 → 기존 동작 유지)
-    const battleStore = createBattleStore();
+    const battleStore = createBattleStore(userId, guestTokenHash);
     const alreadyDone = await findBattleBySession(battleStore, body.sessionId);
     if (alreadyDone) {
       console.info("[BATTLE_ANALYZE] 중복 호출 — 기존 배틀 반환", {
