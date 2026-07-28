@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import { getGradeColor, getGradeBadge } from "@/lib/utils/grade-colors";
+import KakaoShareButton from "@/components/share/KakaoShareButton";
 import { safeDisplayGrade } from "@/lib/gradeSystem";
 import OverallGradeBadgeSlot, { GRADE_GLOWS } from "@/components/result/OverallGradeBadgeSlot";
 import Reveal from "@/components/hub/Reveal";
@@ -107,24 +108,26 @@ const BODY = "text-[16px] leading-[1.85] text-text-secondary break-keep";
 
 export function PetResultBody({ data, variant = "own" }: { data: PetResultData; variant?: "own" | "share" }) {
   const router = useRouter();
+  const { status } = useSession();
   const isShare = variant === "share";
   const result = data.full_result;
   const gc = getGradeColor(data.label_grade);
   const petName = data.pet.name;
+  const [toastMsg, setToastMsg] = useState("");
+  const [showToast, setShowToast] = useState(false);
 
-  const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/pet/result/share/${data.id}`;
-    const shareText = `${petName}와의 궁합: ${data.label_text}\n${result.finalLine}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "두루미가 본 우리 아이 궁합", text: shareText, url: shareUrl });
-        return;
-      } catch {
-        // ignore (user cancelled)
-      }
-    }
-    await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => {});
-    alert("공유 링크가 복사됐어");
+  // 공유 보상 v2: Web Share API(시스템 공유 시트)와 alert를 걷어내고 카카오톡 공유로 통일.
+  // 시스템 시트는 전송 완료를 알 방법이 없어 보상 근거가 서지 않는다.
+  const shareBaseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_BASE_URL || "https://www.durumisaju.com";
+  const shareUrl = `${shareBaseUrl}/pet/result/share/${data.id}`;
+
+  const notify = (msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2600);
   };
 
   // 관계 유형 + 축 값 (구 PetManualCard 로직 이식·재사용)
@@ -319,17 +322,28 @@ export function PetResultBody({ data, variant = "own" }: { data: PetResultData; 
               >
                 다른 아이도 보기
               </button>
-              <button
-                type="button"
-                onClick={handleShare}
-                className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
-              >
-                결과 공유하기
-              </button>
+              <KakaoShareButton
+                kind="pet"
+                resultId={data.id}
+                shareUrl={shareUrl}
+                title={`두루미가 본 ${petName}와의 궁합`}
+                description={data.label_text}
+                imageUrl={`${shareBaseUrl}/og-image.png`}
+                isAuthenticated={status === "authenticated"}
+                onNotice={notify}
+                className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold disabled:opacity-60"
+              />
             </>
           )}
         </div>
       </footer>
+
+      {/* 공유 결과 토스트 */}
+      <div
+        className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      >
+        {toastMsg}
+      </div>
     </div>
   );
 }

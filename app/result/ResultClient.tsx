@@ -12,6 +12,8 @@ import { parseJson5Loose } from "@/lib/json5Utils";
 import { Warning } from "@phosphor-icons/react";
 import { FullScreenLoading } from "@/components/loading";
 import Modal from "@/components/Modal";
+import KakaoShareButton from "@/components/share/KakaoShareButton";
+import { safeDisplayGrade } from "@/lib/gradeSystem";
 
 const CORE_FEAR_LABELS: Record<string, string> = {
   DISMISS: "인간관계",
@@ -337,7 +339,6 @@ export default function ResultClient() {
 
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("결과 링크가 복사되었어요");
-  const shareRewardedRef = useRef(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingLeaveUrl, setPendingLeaveUrl] = useState<string | null>(null);
 
@@ -349,36 +350,13 @@ export default function ResultClient() {
       router.push(url);
     }
   };
-  const handleShare = async () => {
-    const id = resultId || resultIdParam;
-    if (!id) return;
-    const shareUrl = `${window.location.origin}/result/share/${id}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      // 복사 실패 시 공유가 안 된 것으로 보고 보상도 시도하지 않음
-      return;
-    }
-
-    let msg = "결과 링크가 복사되었어요";
-    // 로그인 사용자 최초 1회 공유 → 5알 적립 (멱등은 서버 RPC가 보장)
-    if (status === "authenticated" && !shareRewardedRef.current) {
-      shareRewardedRef.current = true;
-      try {
-        const res = await fetch("/api/coins/share-reward", { method: "POST" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.granted) msg = "링크 복사 완료! 공유 보상 5알 적립 🎁";
-        }
-      } catch {
-        // 보상 실패는 무시 (공유 자체는 이미 완료)
-      }
-    }
-
+  // 공유 보상 v2: 지급 근거가 "버튼 클릭"에서 "카카오톡 전송 성공(웹훅)"으로 바뀌었다.
+  // 문구는 KakaoShareButton이 폴링 결과에 따라 넘겨준다 — 여기서는 띄우기만 한다.
+  const notify = useCallback((msg: string) => {
     setToastMsg(msg);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2600);
-  };
+  }, []);
 
   if (analysisStatus === "pending") {
     return (
@@ -454,6 +432,23 @@ export default function ResultClient() {
 
   const shareableId = resultId || resultIdParam;
 
+  // 카톡 카드 소재. 카카오는 content.imageUrl을 직접 읽으므로 OG 메타와 무관하게
+  // 절대 URL이어야 한다(공개 접근 가능한 주소).
+  const shareBaseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_BASE_URL || "https://www.durumisaju.com";
+  const shareUrl = shareableId ? `${shareBaseUrl}/result/share/${shareableId}` : "";
+  const shareImageUrl = shareableId ? `${shareBaseUrl}/api/og/result/${shareableId}` : "";
+  const shareGrade = safeDisplayGrade(result?.tier?.grade);
+  const shareTitle = `두루미가 본 사주 — ${shareGrade}등급`;
+  const shareHeadline = result?.tier?.title || "";
+  // 연도가 박힌 헤드라인은 시간이 지나면 어색해진다(공유 페이지 metadata와 같은 규칙)
+  const shareDescription =
+    !shareHeadline || /\d{4}년/.test(shareHeadline)
+      ? `사주 ${shareGrade}등급 분석 결과`
+      : shareHeadline;
+
   return (
     <ResultView
       result={result}
@@ -470,12 +465,16 @@ export default function ResultClient() {
           <div className="px-6 py-8">
             <div className="max-w-[640px] mx-auto space-y-3">
               {shareableId && (
-                <button
-                  onClick={handleShare}
-                  className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
-                >
-                  결과 공유하기
-                </button>
+                <KakaoShareButton
+                  kind="result"
+                  resultId={shareableId}
+                  shareUrl={shareUrl}
+                  title={shareTitle}
+                  description={shareDescription}
+                  imageUrl={shareImageUrl}
+                  isAuthenticated={status === "authenticated"}
+                  onNotice={notify}
+                />
               )}
               <button
                 onClick={() => handleLeave("/menu")}
