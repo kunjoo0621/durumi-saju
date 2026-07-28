@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import { FullScreenLoading } from "@/components/loading";
 import { Warning } from "@phosphor-icons/react";
 import SectionList from "@/components/result/SectionList";
+import KakaoShareButton from "@/components/share/KakaoShareButton";
 import type { YearlyResult } from "@/lib/yearly-prompt";
 import { transformGradeText } from "@/lib/gradeSystem";
 
@@ -724,46 +725,41 @@ type ShareButtonProps = {
 };
 
 function ShareButton({ targetYear, resultId }: ShareButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const { status } = useSession();
+  const [toastMsg, setToastMsg] = useState("");
+  const [showToast, setShowToast] = useState(false);
 
-  const handleShare = async () => {
-    const url = typeof window !== "undefined"
-      ? `${window.location.origin}/yearly/result/share/${resultId}`
-      : "";
-    const text = `${targetYear}년 내 사주 운세 풀이 — 사주보는 두루미`;
+  // 공유 보상 v2: Web Share API(시스템 공유 시트)를 걷어내고 카카오톡 공유로 통일했다.
+  // 시스템 시트로 보내면 전송 완료를 알 방법이 없어 보상 근거가 서지 않는다.
+  const notify = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2600);
+  }, []);
 
-    // Web Share API 지원 (모바일 Safari·Chrome) → 시스템 공유 시트 (카카오톡 포함)
-    if (typeof navigator !== "undefined" && (navigator as any).share) {
-      try {
-        await (navigator as any).share({
-          title: `사주보는 두루미 — ${targetYear}년 운세`,
-          text,
-          url,
-        });
-        return;
-      } catch (err: any) {
-        if (err?.name === "AbortError") return;
-      }
-    }
-
-    // Fallback: URL 클립보드 복사
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2_000);
-    } catch {
-      window.prompt("URL을 복사해 친구에게 보내줘", url);
-    }
-  };
+  const baseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_BASE_URL || "https://www.durumisaju.com";
 
   return (
-    <button
-      onClick={handleShare}
-      className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold relative"
-      aria-label="결과 공유하기"
-    >
-      {copied ? "링크 복사됨!" : "친구에게 공유하기"}
-    </button>
+    <>
+      <KakaoShareButton
+        kind="yearly"
+        resultId={resultId}
+        shareUrl={`${baseUrl}/yearly/result/share/${resultId}`}
+        title={`사주보는 두루미 — ${targetYear}년 운세`}
+        description={`${targetYear}년 내 사주 운세 풀이`}
+        imageUrl={`${baseUrl}/yearly-share-kakao.jpg`}
+        isAuthenticated={status === "authenticated"}
+        onNotice={notify}
+      />
+      <div
+        className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      >
+        {toastMsg}
+      </div>
+    </>
   );
 }
 

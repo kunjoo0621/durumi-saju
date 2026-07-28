@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
+import KakaoShareButton from "@/components/share/KakaoShareButton";
 import BattleHero from "@/components/battle/BattleHero";
 import BattleCategorySwiper from "@/components/battle/BattleCategorySwiper";
 import BattleCompatibility from "@/components/battle/BattleCompatibility";
@@ -33,7 +34,9 @@ export default function BattleResultView({
 }: BattleResultViewProps) {
   const router = useRouter();
   const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
   const [hasPrimaryResult, setHasPrimaryResult] = useState<boolean | null>(null);
+  const { status } = useSession();
 
   const { playerA, playerB, comparison, llmAnalysis } = result;
 
@@ -52,18 +55,28 @@ export default function BattleResultView({
         .filter((m) => m.winner === comparison.overallWinner)
         .sort((a, b) => b.diff - a.diff)[0]?.category;
 
-  const handleShare = useCallback(async () => {
-    if (!shareableId) return;
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const shareUrl = `${baseUrl}/battle/result/share/${shareableId}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2000);
-    } catch {
-      // clipboard failed silently
-    }
-  }, [shareableId]);
+  // 공유 보상 v2: 지급 근거가 카카오톡 전송 성공(웹훅)이라, 문구는 KakaoShareButton이
+  // 폴링 결과에 따라 넘겨준다. 여기서는 띄우기만 한다.
+  const notify = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2600);
+  }, []);
+
+  const shareBaseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_BASE_URL || "https://www.durumisaju.com";
+  const shareUrl = shareableId ? `${shareBaseUrl}/battle/result/share/${shareableId}` : "";
+  const shareImageUrl = shareableId ? `${shareBaseUrl}/api/og/battle/${shareableId}` : "";
+  const winnerName =
+    comparison.overallWinner === "draw"
+      ? null
+      : comparison.overallWinner === "A"
+        ? playerA.name
+        : playerB.name;
+  const shareTitle = `${playerA.name} vs ${playerB.name} — 사주 배틀`;
+  const shareDescription = winnerName ? `${winnerName}의 승리` : "팽팽한 무승부";
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary animate-fadeIn">
@@ -132,13 +145,16 @@ export default function BattleResultView({
           {/* Share + CTA buttons (only on result page, not share page) */}
           {shareableId && (
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleShare}
-                className="btn-primary w-full h-[54px] rounded-xl text-[15px] font-semibold transition-colors duration-200"
-              >
-                결과 공유로 도발하기
-              </button>
+              <KakaoShareButton
+                kind="battle"
+                resultId={shareableId}
+                shareUrl={shareUrl}
+                title={shareTitle}
+                description={shareDescription}
+                imageUrl={shareImageUrl}
+                isAuthenticated={status === "authenticated"}
+                onNotice={notify}
+              />
               {hasPrimaryResult === true && (
                 <button
                   type="button"
@@ -190,11 +206,11 @@ export default function BattleResultView({
         </div>
       )}
 
-      {/* Clipboard toast */}
+      {/* 공유 결과 토스트 */}
       <div
         className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
-        결과 링크가 복사되었어요
+        {toastMsg}
       </div>
     </div>
   );

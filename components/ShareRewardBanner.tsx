@@ -7,7 +7,7 @@ export default function ShareRewardBanner() {
     <div className="bg-[#17142a] border-b border-[#6d5cff]/35 px-4 py-2.5">
       <p className="flex items-center justify-center gap-1.5 text-center text-[13px] font-medium text-white">
         <span aria-hidden>🎁</span>
-        <span>결과를 카카오톡으로 공유하면</span>
+        <span>결과마다 카카오톡으로 공유하면</span>
         <span className="rounded-full bg-[#6d5cff] px-2 py-0.5 text-[12px] font-bold text-white">
           5알 선물
         </span>
