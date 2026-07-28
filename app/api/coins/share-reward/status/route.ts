@@ -63,8 +63,11 @@ export async function GET(request: Request) {
         state: "granted",
         grantedKind: data.result_kind,
         grantedAt: grant?.granted_at ?? null,
-        // 이 공유로 새로 받은 게 아니라 이전에 이미 받아둔 종류인 경우
-        alreadyHad: !!grant && !!data.consumed_at && grant.granted_at < data.consumed_at,
+        // 이 공유로 새로 받은 게 아니라 이전에 이미 받아둔 종류인 경우.
+        // 문자열 비교는 timestamp 포맷이 흔들리면 오판하므로 시각으로 비교한다.
+        alreadyHad:
+          !!grant?.granted_at &&
+          new Date(grant.granted_at).getTime() < new Date(data.consumed_at).getTime(),
       });
     }
 

@@ -14,7 +14,8 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from("coin_transactions")
-      .select("id, type, amount, balance_after, created_at, package_id")
+      // reference_id: 공유 보상('share_reward:<kind>')을 충전 보너스와 구분하는 데 쓴다
+      .select("id, type, amount, balance_after, created_at, package_id, reference_id")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(10);

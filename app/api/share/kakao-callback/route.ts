@@ -114,7 +114,10 @@ async function handle(request: Request) {
     const adminKey = process.env.KAKAO_ADMIN_KEY;
     const auth = request.headers.get("authorization") || "";
     if (!adminKey || !safeEqual(auth, `KakaoAK ${adminKey}`)) {
-      await logWebhook({ verdict: "auth_fail", latencyMs: Date.now() - startedAt });
+      // 공개 엔드포인트라 아무나 때릴 수 있다. 여기서 DB에 행을 쌓으면
+      // 그 자체가 무제한 증식 벡터가 된다 → 로그는 서버 로그로만 남긴다.
+      // (키 오설정으로 전원 미지급되는 상황은 Vercel 로그에서 바로 보인다)
+      console.error("[KAKAO_WEBHOOK] auth_fail", { hasKey: !!adminKey });
       return ok();
     }
 

@@ -26,6 +26,7 @@ const TX_TYPE_LABELS: Record<string, string> = {
   spend: "사용",
   bonus: "보너스",
   refund: "환불",
+  share: "공유",   // 공유 보상(카카오톡 전송 확인 후 지급)
 };
 
 const TX_TYPE_COLORS: Record<string, string> = {
@@ -33,6 +34,7 @@ const TX_TYPE_COLORS: Record<string, string> = {
   spend: "text-primary",
   bonus: "text-saju-earth-muted",
   refund: "text-saju-wood-muted",
+  share: "text-saju-earth-muted",
 };
 
 export default function CoinsPage() {
@@ -236,7 +238,15 @@ export default function CoinsPage() {
     const merged: Array<{ id: string; type: string; amount: number; bonus?: number; balance_after: number; created_at: string }> = [];
     for (let i = 0; i < history.length; i++) {
       const tx = history[i];
-      if (tx.type === "bonus") continue;
+      if (tx.type === "bonus") {
+        // 충전에 딸린 보너스는 아래에서 charge 행에 합쳐진다. 하지만 공유 보상은
+        // 충전과 무관한 단독 bonus라, 여기서 걸러내면 내역에서 통째로 사라진다.
+        // (잔액만 늘고 이유가 안 보이면 그대로 CS가 된다)
+        if (typeof tx.reference_id === "string" && tx.reference_id.startsWith("share_reward")) {
+          merged.push({ ...tx, type: "share" });
+        }
+        continue;
+      }
       if (tx.type === "charge") {
         const next = history[i + 1];
         if (next?.type === "bonus" && Math.abs(new Date(tx.created_at).getTime() - new Date(next.created_at).getTime()) < 60000) {
@@ -310,6 +320,13 @@ export default function CoinsPage() {
           {/* 안내문 */}
           <p className="text-caption text-text-tertiary text-center">
             충전한 알은 1년간 유효합니다
+          </p>
+
+          {/* 공유 보상 안내.
+              카카오 웹훅이 늦게 도착하면 결과 화면에서는 아무 문구도 못 띄운다
+              (없는 사실을 만들어낼 수 없으므로). 그때 사용자가 기댈 곳이 여기다. */}
+          <p className="text-caption text-text-tertiary text-center">
+            카카오톡으로 친구에게 공유를 마치면 잠시 뒤 5알이 들어와요
           </p>
 
           {/* 이용 내역 (아코디언) */}

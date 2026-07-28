@@ -58,7 +58,10 @@ export function loadKakaoSdk(): Promise<KakaoSdk> {
     };
     const onError = () => {
       clearTimeout(timer);
-      // 다음 시도에서 다시 받아볼 수 있게 캐시를 비운다
+      // 실패한 script 태그를 남겨두면 다음 시도에서 그걸 재사용하게 되는데,
+      // 이미 끝난 태그는 load를 다시 발화하지 않아 매번 타임아웃만 먹는다.
+      // 세션 내 복구가 영영 안 되므로 태그째 제거한다.
+      script.remove();
       loadPromise = null;
       reject(new Error("kakao sdk load failed"));
     };

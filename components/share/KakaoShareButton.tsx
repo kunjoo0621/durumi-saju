@@ -42,6 +42,8 @@ export default function KakaoShareButton({
   const [busy, setBusy] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStop = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onVisible = useRef<(() => void) | null>(null);
+  const rejectNotified = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -62,6 +64,10 @@ export default function KakaoShareButton({
   const clearPolling = useCallback(() => {
     if (pollTimer.current) clearInterval(pollTimer.current);
     if (pollStop.current) clearTimeout(pollStop.current);
+    if (onVisible.current) {
+      document.removeEventListener("visibilitychange", onVisible.current);
+      onVisible.current = null;
+    }
     pollTimer.current = null;
     pollStop.current = null;
   }, []);
@@ -71,6 +77,7 @@ export default function KakaoShareButton({
   const startPolling = useCallback(
     (nonce: string) => {
       clearPolling();
+      rejectNotified.current = false;
 
       const tick = async () => {
         try {
@@ -86,12 +93,12 @@ export default function KakaoShareButton({
               onNotice("공유 완료! 5알이 들어왔어요 🎁");
               setAlreadyGranted(true);
             }
-          } else if (data.state === "rejected") {
-            clearPolling();
+          } else if (data.state === "rejected" && !rejectNotified.current) {
+            // 거부는 nonce를 소모하지 않는다 — 사용자가 곧바로 친구에게 다시 보내면
+            // 같은 nonce로 지급된다. 그래서 폴링을 멈추지 않고, 안내만 한 번 띄운다.
+            rejectNotified.current = true;
             if (data.rejectReason === "memo_chat" || data.rejectReason === "single_chatroom") {
               onNotice("나와의 채팅은 제외돼요. 친구에게 보내주세요");
-            } else {
-              onNotice("공유 완료!");
             }
           }
         } catch {
@@ -101,6 +108,18 @@ export default function KakaoShareButton({
 
       pollTimer.current = setInterval(tick, POLL_INTERVAL_MS);
       pollStop.current = setTimeout(clearPolling, POLL_TIMEOUT_MS);
+
+      // sendDefault는 즉시 반환한다 — 카톡에서 친구를 고르는 동안 30초가 그냥 흘러버린다.
+      // 카톡 앱에서 브라우저로 돌아온 시점(=전송을 마쳤을 시점)에 창을 다시 열어준다.
+      const handler = () => {
+        if (document.visibilityState !== "visible") return;
+        if (!pollTimer.current) return; // 이미 끝난 폴링은 되살리지 않는다
+        if (pollStop.current) clearTimeout(pollStop.current);
+        pollStop.current = setTimeout(clearPolling, POLL_TIMEOUT_MS);
+        void tick();
+      };
+      onVisible.current = handler;
+      document.addEventListener("visibilitychange", handler);
     },
     [clearPolling, onNotice]
   );
@@ -131,6 +150,10 @@ export default function KakaoShareButton({
             const data = await res.json();
             nonce = data.nonce ?? null;
             if (typeof data.alreadyGranted === "boolean") setAlreadyGranted(data.alreadyGranted);
+          } else {
+            // 보상 대상이 아닌 결과(게스트 배틀 등)라면 "5알 받기" 약속을 거둔다.
+            // 라벨이 못 지킬 약속을 하고 있는 편이 조용한 무보상보다 나쁘다.
+            setAlreadyGranted(true);
           }
           // 실패해도 공유 자체는 막지 않는다. 보상만 없다.
         } catch {
