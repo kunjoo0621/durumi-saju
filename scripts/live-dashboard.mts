@@ -127,6 +127,8 @@ async function main() {
   // ── 1. 핵심 지표 테이블 ──────────────────────────
   const periods = [
     { label: "1시간", since: H1 },
+    // 오늘 = KST 자정 이후. "최근 24시간"은 어제치가 섞여 들어와 어제 요약과 잣대가 달라진다.
+    { label: "오늘", since: TODAY_START },
     { label: "24시간", since: H24 },
     { label: "7일", since: D7 },
   ];
@@ -175,8 +177,9 @@ async function main() {
 
   // ── 1-1. 운영 요약 ──────────────────────────
   const h1 = rows[0];
+  // 비율·객단가는 "오늘"(KST) 기준. 어제 요약과 같은 잣대로 읽혀야 비교가 된다.
   const d1 = rows[1];
-  const d7row = rows[2];
+  const d7row = rows[3];
   const signupToAnalysis = pct(d1.results, d1.users);
   const signupToPay = pct(d1.pays, d1.users);
   const avgPay = d1.pays > 0 ? Math.round(d1.revenue / d1.pays) : 0;
@@ -184,7 +187,7 @@ async function main() {
 
   section("🧭  운영 요약");
   console.log(`  지금 1시간   가입 ${c.green}${h1.users}${c.reset} · 개인 ${c.cyan}${h1.results}${c.reset} · 결제 ${c.yellow}${h1.pays}${c.reset} · 매출 ${c.yellow}${h1.revenue.toLocaleString()}원${c.reset}`);
-  console.log(`  24시간 비율  개인/가입 ${c.bold}${signupToAnalysis}%${c.reset}${c.dim}(반복 포함)${c.reset}  결제/가입 ${c.bold}${signupToPay}%${c.reset}  객단가 ${c.bold}${avgPay.toLocaleString()}원${c.reset}  가입당매출 ${c.bold}${avgRevenuePerSignup.toLocaleString()}원${c.reset}`);
+  console.log(`  오늘 비율    개인/가입 ${c.bold}${signupToAnalysis}%${c.reset}${c.dim}(반복 포함)${c.reset}  결제/가입 ${c.bold}${signupToPay}%${c.reset}  객단가 ${c.bold}${avgPay.toLocaleString()}원${c.reset}  가입당매출 ${c.bold}${avgRevenuePerSignup.toLocaleString()}원${c.reset}`);
   console.log(`  7일 규모     가입 ${c.green}${d7row.users}명${c.reset} · 개인 ${c.cyan}${d7row.results}건${c.reset} · 결제 ${c.yellow}${d7row.pays}건${c.reset} · 매출 ${c.yellow}${d7row.revenue.toLocaleString()}원${c.reset}`);
   console.log(`  올해 운세    실사용 ${d1.yearly > 0 ? c.yellow + d1.yearly + c.reset : c.dim + "0" + c.reset}건 ${c.dim}(운영자 테스트 제외)${c.reset}`);
 
