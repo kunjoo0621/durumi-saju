@@ -26,7 +26,7 @@
 | 2 | 동작 조건 | 콘솔 [앱] > [웹훅] > [카카오톡 공유 웹훅]에 URL 등록 + SDK 호출 시 **`serverCallbackArgs` 필수**(없으면 웹훅 미발송). 예약어 `CHAT_TYPE`/`HASH_CHAT_ID`/`TEMPLATE_ID`는 커스텀 키 불가. 검수 요구 언급 없음(단정 미확인 → Phase 0) | [웹훅](https://developers.kakao.com/docs/ko/kakaotalk-share/callback), [JS 가이드](https://developers.kakao.com/docs/ko/kakaotalk-share/js-link) |
 | 3 | JS SDK `Kakao.Share.send*` 클라이언트 성공 콜백 | **없음.** 클라이언트만으로 전송 완료 확인 불가 — **유일한 확인 수단 = 서버 웹훅** | [SDK 레퍼런스](https://developers.kakao.com/sdk/reference/js/release/index.html) |
 | 4 | 커스텀 템플릿 | 불필요 — `sendDefault`에 `serverCallbackArgs` 있음 | 상동 |
-| 5 | 도메인 등록 | 필요 — JS 키 `Kakao.init` + 플랫폼 Web 도메인 등록 | [JS 가이드](https://developers.kakao.com/docs/ko/kakaotalk-share/js-link) |
+| 5 | 도메인 등록 | **2곳 모두 필요** (2025-12 콘솔 개편으로 구 "플랫폼 Web 사이트 도메인"이 용도별 2곳으로 분리): ① **[앱] > [플랫폼 키] > [JavaScript 키] > [JavaScript SDK 도메인]** — SDK API 호출 검증용. **여기 미등록이면 공유창에서 4019 "잘못된 요청으로 인증에 실패"** ② [앱] > [제품 링크 관리] > [웹 도메인] — 메시지 내 링크 검증용. 4019 에러 화면 문구는 ②만 안내하지만 실제 원인은 대부분 ① 누락(데브톡 공식 답변 3건 일치) | [JS 가이드](https://developers.kakao.com/docs/ko/kakaotalk-share/js-link), [앱 키 개편 안내](https://developers.kakao.com/docs/ko/getting-started/app-key-migration), [데브톡 148809](https://devtalk.kakao.com/t/kakao-javascript-sdk/148809)·[149398](https://devtalk.kakao.com/t/api-4019/149398)·[150641](https://devtalk.kakao.com/t/topic/150641) |
 | 6 | 웹훅 계약 | GET/POST. 헤더 `Authorization: KakaoAK {PRIMARY_ADMIN_KEY}` + `X-Kakao-Resource-ID` + `User-Agent: KakaoOpenAPI/1.0`. 바디 `CHAT_TYPE` 5종·`HASH_CHAT_ID`·`IS_SINGLE_CHATROOM`/`CHAT_MEMBER_COUNT_RANGE`(유료 설정 표기, 실수신 Phase 0 확인)·커스텀 키. **3초 내 2XX 필수. 재시도 정책 미문서화** | [웹훅](https://developers.kakao.com/docs/ko/kakaotalk-share/callback) |
 | 7 | 위조 방어 | HMAC 서명 미제공 → 어드민 키 대조 + nonce 단일 소모 2중(§4.4) | 상동 |
 | 8 | PC/미설치/인앱 동작 | **문서에 없음 — 미확인.** Phase 0 최우선 실측 | [SDK 레퍼런스](https://developers.kakao.com/sdk/reference/js/release/index.html) |
@@ -271,7 +271,9 @@ kind당 1회 지급이 되면서 **"클라이언트가 kind를 조작해 다른 
 ### Phase 0 — 콘솔 설정 + 실측 스파이크 (반나절, 머지 없음) — 운영자가 순서대로 따라 하는 체크리스트
 
 1. **[콘솔] 키 확인**: https://developers.kakao.com → 내 애플리케이션 → 두루미 앱 선택 → **[앱 설정 > 앱 키]**에서 ① JavaScript 키(→ env `NEXT_PUBLIC_KAKAO_JS_KEY`) ② 어드민 키(→ env `KAKAO_ADMIN_KEY`, **서버 전용 — NEXT_PUBLIC 금지**) 확보 → Vercel 환경변수 + 로컬 `.env.local` 등록.
-2. **[콘솔] 도메인 등록**: [앱 설정 > 플랫폼 > Web]에 서비스 도메인 확인(OAuth용으로 이미 등록돼 있을 가능성 높음) + 테스트용 프리뷰/터널 도메인 추가.
+2. **[콘솔] 도메인 등록 — 2곳 모두** (§0-5, 2025-12 콘솔 개편 반영):
+   - ① **[앱] > [플랫폼 키] > [JavaScript 키(Default JS Key)] > [JavaScript SDK 도메인]**: `https://www.durumisaju.com` / `https://durumisaju.com` / `https://durumi-saju.vercel.app` / `http://localhost:3000` 전부 등록. **여기 빠지면 공유창은 뜨되 전송 단계에서 4019.** (기존 카카오 로그인은 서버측 OAuth라 이 목록 없이도 동작 — "로그인 되니까 도메인 OK"로 착각 금지)
+   - ② [앱] > [제품 링크 관리] > [웹 도메인]: 동일 도메인 등록(2026-07-28 등록 확인됨).
 3. **[콘솔] 웹훅 등록**: [앱] > [웹훅] > **[카카오톡 공유 웹훅]**에 콜백 URL 등록(테스트: 프리뷰 배포 또는 터널의 `/api/share/kakao-callback`). **이 메뉴에서 검수·비즈앱 요구가 뜨는지 여기서 확정**(문서상 언급 없음 — 미확인 항목).
 4. **[실측] 공유 매트릭스**: 테스트 페이지 1장으로 `sendDefault + serverCallbackArgs:{n:'test'}` 전송. 각 케이스에서 (웹훅 도달 / 지연 ms / 중복 도착 / 실제 메소드 / 바디 원문)을 기록:
    - **PC 크롬, PC 사파리 (최우선)** — 공유 UI가 뜨는지부터. §11-① 결정 근거
