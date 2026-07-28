@@ -160,15 +160,25 @@ export function deriveMarriageFacts(
 
   // 1) 배우자성 탐지 (천간 투출 + 지장간)
   const spouseStars: SpouseStarHit[] = [];
+  // 유력(투간 또는 지장간 본기·중기)한 배우자성 종류 — 혼잡 판정 전용
+  const yuryeok = new Set<string>();
   for (const pos of PILLARS) {
     const pillar = sajuData[pos];
     if (!pillar?.heavenlyStem) continue;
     const st = tenStarOf(dayStem, pillar.heavenlyStem);
-    if (st && spouseSet.has(st)) spouseStars.push({ pillar: pos, source: "천간", star: st as SpouseStarHit["star"] });
-    for (const hidden of pillar.hiddenStems ?? []) {
-      const hs = tenStarOf(dayStem, hidden);
-      if (hs && spouseSet.has(hs)) spouseStars.push({ pillar: pos, source: "지장간", star: hs as SpouseStarHit["star"] });
+    if (st && spouseSet.has(st)) {
+      spouseStars.push({ pillar: pos, source: "천간", star: st as SpouseStarHit["star"] });
+      yuryeok.add(st);
     }
+    (pillar.hiddenStems ?? []).forEach((hidden, idx) => {
+      const hs = tenStarOf(dayStem, hidden);
+      if (!hs || !spouseSet.has(hs)) return;
+      spouseStars.push({ pillar: pos, source: "지장간", star: hs as SpouseStarHit["star"] });
+      // ★유력 판정(2026-07-28): 본기(0)·중기(1)만 유력. 여기(2, 스쳐가는 기운)는 제외.
+      //   career-facts 의 GWAN_YURYEOK_THRESHOLD(여기 0.5는 유력 아님)와 같은 철학을
+      //   결혼 엔진에 이식한 것 — 같은 개념이 두 곳에서 다르게 정의돼 있던 것을 맞춘다.
+      if (idx <= 1) yuryeok.add(hs);
+    });
   }
   const spouseStarAbsent = spouseStars.length === 0;
   const jeong = sex === "female" ? "정관" : "정재";
@@ -176,7 +186,8 @@ export function deriveMarriageFacts(
   // 필드명은 gwansalHonjap 하나지만 남명은 실제로 "정편재혼잡"(정재+편재 동시)이다. 필드명을
   // rename하지 않는 이유: DB 컬럼(gwansal_honjap)·teaser_json·share-marriage·API 응답까지 파급.
   // 프롬프트 노출 라벨은 성별에 맞춰 marriage-prompt.ts buildFactBlock에서 분기한다.
-  const gwansalHonjap = spouseStars.some(s => s.star === jeong) && spouseStars.some(s => s.star === pyeon);
+  // ★혼잡은 정·편 둘 다 '유력'해야 성립(2026-07-28). 한쪽이 여기로만 있으면 우세형이지 혼잡이 아니다.
+  const gwansalHonjap = yuryeok.has(jeong) && yuryeok.has(pyeon);
 
   // 2) 일지 지장간 십성 — 본기/중기/여기 층위 구조화(배우자의 겉결/속결/스치는 결).
   // BRANCH_INFO.jijanggan 인덱스 0=본기, 1=중기, 2=여기 (wealth-facts 가중치 관행과 동일).

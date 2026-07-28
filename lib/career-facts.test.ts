@@ -130,9 +130,28 @@ const sanggwanGyeongwanChart: SajuData = {
   hour: { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
 };
 
-test("상관(월간 丁)이 인접 지지(년지 申)의 관성(庚 정기)을 극 → sanggwanGyeongwan true", () => {
+// ★2026-07-28 명리 교정: 이 차트의 타깃 申(庚 정기)은 甲 일간 기준 **편관**이다.
+// 상관이 편관을 만나는 건 상관견관(위화백단)이 아니라 **제살(制殺)** — 칠살을 다스리는
+// 능력으로 길하게 보는 게 통설이다. 기존 코드는 공격자 쪽에서 "식신은 식신제살이라 제외"를
+// 정확히 판단해놓고 타깃 쪽에서 같은 구분을 하지 않아, 압박을 생산적으로 다루는 구조에
+// 반골·구설 서사를 붙이고 있었다. 이 테스트는 그 옛 동작을 박제하고 있었으므로 뒤집는다.
+test("상관(월간 丁)이 편관 지지(년지 申, 庚 정기)를 극 → sanggwanGyeongwan false (제살)", () => {
   const facts = deriveCareerFacts(stubEnriched("신강"), null, sanggwanGyeongwanChart, "현직 성장", 2026);
   assert.equal(facts.gwanseongAbsent, false, "관성(庚)이 있어야 의미 있음");
+  assert.equal(facts.sanggwanGyeongwan, false, "상관+편관은 제살이라 견관이 아니다");
+});
+
+// 진짜 상관견관 — 타깃이 정관(酉의 辛 정기 = 甲 일간 기준 정관)일 때만 성립.
+const sanggwanJeonggwanChart: SajuData = {
+  year: { heavenlyStem: "甲", earthlyBranch: "酉", hiddenStems: ["辛"] },
+  month: { heavenlyStem: "丁", earthlyBranch: "卯", hiddenStems: ["乙"] },
+  day: { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+  hour: { heavenlyStem: "甲", earthlyBranch: "子", hiddenStems: ["癸"] },
+};
+
+test("상관(월간 丁)이 인접 지지(년지 酉)의 정관(辛 정기)을 극 → sanggwanGyeongwan true", () => {
+  const facts = deriveCareerFacts(stubEnriched("신강"), null, sanggwanJeonggwanChart, "현직 성장", 2026);
+  assert.equal(facts.gwanseongAbsent, false, "관성(辛)이 있어야 의미 있음");
   assert.equal(facts.sanggwanGyeongwan, true);
 });
 
