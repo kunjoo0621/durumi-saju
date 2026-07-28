@@ -1,3 +1,4 @@
+import { findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
 import { collapseEchoParens, makeScrubGradeAlpha, makeScrubGripTerms, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 재물운 심층 검사 — 품질 가드(후처리)
 // lib/marriage-postprocess.ts 구조 미러 — 재귀 스크럽(중첩 문자열 전부, advice/최상위만이 아니라)을
@@ -106,7 +107,7 @@ export function validateWealthBlocks(parsed: any, opts?: { minAdvice?: number })
 const WEALTH_GRIP_TERMS = /\uc2e0\uc655\uc7ac\uc655|\uc2e0\uc655\uc7ac\uc1e0|\uc2e0\uc655\uc7ac\uc18c|\uc7ac\ub2e4\uc2e0\uc57d|\uc2e0\uc57d\uc7ac\uc18c/g;
 // teaser \ub4f1\uae09 \uc54c\ud30c\ubcb3 \ub178\ucd9c \ubc29\uc9c0(\uc720\ub8cc \uc804 \uc2a4\ud3ec\uc77c\ub7ec+\uc11c\uc5f4\ud654). "S\ub4f1\uae09\uc758/S\ub4f1\uae09\ub2e4\uc6b4" \uc811\ubbf8\uae4c\uc9c0 \uc81c\uac70.
 
-export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: string): WealthGuardResult {
+export function applyWealthGuards(parsed: any, facts: any, _primarySummary: string): WealthGuardResult {
   const violations: string[] = [];
   const blocks = JSON.parse(JSON.stringify(parsed ?? {}));
 
@@ -202,6 +203,28 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
       if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
       return ok;
     });
+  }
+
+  // ── 명리 사실성 대조(2026-07-28 3차 사이클) ──
+  // 지장간 hit 를 "떠 있다"로 승격하는 궁위 과장 + 근거 없는 매력의 해·대운 주장을
+  // 엔진 ground truth 와 대조해 violations 로만 흘린다(문장은 안 고침 — 조사 파손 리스크).
+  {
+    const proseForFacts = ["jaeseongDiagnosis", "jaeGripDiagnosis", "savingStyle", "riskAndPace", "timingFlow"]
+      .map((k) => (typeof (blocks as any)?.[k] === "string" ? (blocks as any)[k] : ""))
+      .filter(Boolean)
+      .join(" ");
+    if (proseForFacts) {
+      violations.push(
+        ...findProminenceFabrications(proseForFacts, (facts as any)?.jaeseong ?? [])
+      );
+      violations.push(
+        ...findTimingFabrications(
+          proseForFacts,
+          (facts as any)?.timingWindows ?? [],
+          (blocks as any)?.serverTimeline?.daeun ?? []
+        )
+      );
+    }
   }
 
   return { blocks, violations };

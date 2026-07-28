@@ -150,3 +150,17 @@ test("Task7: 확정 유행어는 조용히 치환되고 문장이 자연스럽�
   assert.equal(scrubStrayDecimals("결정 속도가 5G급이야"), "결정 속도가 빛의 속도야");
   assert.equal(scrubStrayDecimals("남들이 5G급으로 성장한다고"), "남들이 빛의 속도로 성장한다고");
 });
+
+// ── ③ 기법 라벨 누출 (marriage-2 실측 3필드) ──────────────
+test("기법 이름이 라벨로 새어나오면 제거된다", () => {
+  assert.equal(
+    scrubStrayDecimals("펀치라인: 네가 찾는 그 듬직한 어깨가 곧 온다"),
+    "네가 찾는 그 듬직한 어깨가 곧 온다"
+  );
+  assert.equal(
+    scrubStrayDecimals("돈은 물처럼 흘러. 비유: 네 돈은 강물이야"),
+    "돈은 물처럼 흘러. 네 돈은 강물이야"
+  );
+  // 정상 문장의 콜론은 보존
+  assert.equal(scrubStrayDecimals("결론 정리: 천천히 가"), "결론 정리: 천천히 가");
+});

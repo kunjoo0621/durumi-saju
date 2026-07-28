@@ -1,3 +1,4 @@
+import { findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
 import { collapseEchoParens, makeScrubGradeAlpha, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 단정 예언 금지어 — 문장 단위로만 컷하므로(scrubForbiddenPredictions) 긍정 맥락 문장은
 // 안전하다. 예: "이별의 아픔을 딛고"는 /이별수/에 안 걸린다. 결측/빈 블록은 F-2가 후단에서 잡는다.
@@ -140,6 +141,28 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
       if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
       return ok;
     });
+  }
+
+  // ── 명리 사실성 대조(2026-07-28 3차 사이클) ──
+  // 지장간 hit 를 "떠 있다"로 승격하는 궁위 과장 + 근거 없는 매력의 해·대운 주장을
+  // 엔진 ground truth 와 대조해 violations 로만 흘린다(문장은 안 고침 — 조사 파손 리스크).
+  {
+    const proseForFacts = ["spousePalace", "spouseStar", "partnerProfile", "relationshipPattern", "timingFlow"]
+      .map((k) => (typeof (blocks as any)?.[k] === "string" ? (blocks as any)[k] : ""))
+      .filter(Boolean)
+      .join(" ");
+    if (proseForFacts) {
+      violations.push(
+        ...findProminenceFabrications(proseForFacts, (facts as any)?.spouseStars ?? [])
+      );
+      violations.push(
+        ...findTimingFabrications(
+          proseForFacts,
+          (facts as any)?.timingWindows ?? [],
+          (blocks as any)?.serverTimeline?.daeun ?? []
+        )
+      );
+    }
   }
 
   return { blocks, violations };

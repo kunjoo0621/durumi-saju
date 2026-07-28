@@ -1,3 +1,4 @@
+import { findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
 import { collapseEchoParens, makeScrubGradeAlpha, makeScrubGripTerms, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 커리어운 심층 검사 — 품질 가드(후처리)
 // lib/wealth-postprocess.ts(main) 구조 미러 — 재귀 스크럽(중첩 문자열 전부) 그대로 유지.
@@ -90,7 +91,7 @@ export function validateCareerBlocks(parsed: any, opts?: { minAdvice?: number })
 }
 
 
-export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: string): CareerGuardResult {
+export function applyCareerGuards(parsed: any, facts: any, _primarySummary: string): CareerGuardResult {
   const violations: string[] = [];
   const blocks = JSON.parse(JSON.stringify(parsed ?? {}));
 
@@ -189,6 +190,28 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
       if (!ok) violations.push(`스크럽 후 조언 재검증 컷: ${String(a?.text ?? "").slice(0, 20)}`);
       return ok;
     });
+  }
+
+  // ── 명리 사실성 대조(2026-07-28 3차 사이클) ──
+  // 지장간 hit 를 "떠 있다"로 승격하는 궁위 과장 + 근거 없는 매력의 해·대운 주장을
+  // 엔진 ground truth 와 대조해 violations 로만 흘린다(문장은 안 고침 — 조사 파손 리스크).
+  {
+    const proseForFacts = ["gwanseongDiagnosis", "careerGripDiagnosis", "workStyle", "riskAndPace", "timingFlow"]
+      .map((k) => (typeof (blocks as any)?.[k] === "string" ? (blocks as any)[k] : ""))
+      .filter(Boolean)
+      .join(" ");
+    if (proseForFacts) {
+      violations.push(
+        ...findProminenceFabrications(proseForFacts, (facts as any)?.gwanseong ?? [])
+      );
+      violations.push(
+        ...findTimingFabrications(
+          proseForFacts,
+          (facts as any)?.timingWindows ?? [],
+          (blocks as any)?.serverTimeline?.daeun ?? []
+        )
+      );
+    }
   }
 
   return { blocks, violations };

@@ -126,6 +126,8 @@ export function makeScrubGripTerms(terms: RegExp, violations: string[]) {
  */
 function scrubBuzzwords(s: string): string {
   return s
+    // ③ 프롬프트 기법 이름이 라벨로 새어나온 것 — "펀치라인: 네가 찾는…"(marriage-2 실측 3필드)
+    .replace(/(^|[\s"'(])?(펀치라인|비유|장면|한\s*줄)\s*[:：]\s*/g, "$1")
     .replace(/5G급으로/g, "빛의 속도로")
     .replace(/5G급이(야|라|다)/g, "빛의 속도$1")
     .replace(/5G급/g, "빛의 속도")
