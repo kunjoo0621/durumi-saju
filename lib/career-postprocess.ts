@@ -1,3 +1,4 @@
+import { collapseEchoParens, makeScrubGradeAlpha, makeScrubGripTerms, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 커리어운 심층 검사 — 품질 가드(후처리)
 // lib/wealth-postprocess.ts(main) 구조 미러 — 재귀 스크럽(중첩 문자열 전부) 그대로 유지.
 // 십성 축만 커리어로 치환하고, 재무자문 스크럽 자리에 "인생 중대 결정 실행 단정" 스크럽을 둔다.
@@ -57,7 +58,6 @@ const FORBIDDEN_SHINSAL = [
 // 비교 서열화도 함께 잡힌다.
 const GRIP_TERMS = /신왕관왕|신왕관쇠|관다신약|신약관소|신약관다/g;
 // teaser 등급 알파벳 노출 방지(유료 전 스포일러+서열화). "S등급다운/S등급의" 접미까지 제거.
-const GRADE_ALPHA = /(SS|[SABCD])\s*등급(다운|답게|다워|스러운|의|이|은|을|급)?/g;
 
 export interface CareerGuardResult {
   blocks: any;
@@ -89,8 +89,6 @@ export function validateCareerBlocks(parsed: any, opts?: { minAdvice?: number })
   return issues;
 }
 
-const HANJA_RE = /[㐀-鿿豈-﫿]/;
-const HANJA_GLOBAL = /[㐀-鿿豈-﫿]/g;
 
 export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: string): CareerGuardResult {
   const violations: string[] = [];
@@ -155,53 +153,10 @@ export function applyCareerGuards(parsed: any, _facts: any, _primarySummary: str
     return keptLines.join("\n").trim();
   };
 
-  // 3-b) 한자 제거 스크럽 — 본문 순수 한글(신살명 한자병기·오타 방지). 조용히(violations 미기록).
-  const scrubHanja = (s: string): string => {
-    if (!HANJA_RE.test(s)) return s;
-    return s
-      .replace(HANJA_GLOBAL, "")
-      .replace(/\(\s*[,，、·\s]*\)/g, "")
-      .replace(/\(\s*[,，、]\s*/g, "(")
-      .replace(/\s+([,.、·)])/g, "$1")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  };
-
-  // 강도값 누출(소수점 + 정수) + 상투적 필러 제거 — 조용히.
-  // ★정수 강도도 잡는다: "힘도 5 정도로", "인성이 3쯤" 같은 raw 강도 정수 누출(소수점 스크럽만으론
-  //  안 잡히던 갭 — 2026-07-21 실측 발견). "\d 정도/쯤" 패턴은 연도(년)·나이(세)가 사이에 오지 않아
-  //  안전(2028년·34세는 미매치). "강도/힘/세력 + \d"도 커버.
-  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
-  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
-  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
-  const collapseEchoParens = (s: string): string =>
-    s
-      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
-      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
-
-  const scrubStrayDecimals = (s: string): string => {
-    let out = /\d+\.\d+/.test(s)
-      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
-      : s;
-    out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, ""); // "5 정도로" → 제거
-    out = out.replace(/(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g, "$1$2"); // "강도 6" → "강도"
-    out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
-    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
-  };
-
-  // 3-c) 그릇 4상한 용어 노출 → 중립어 치환(문장 보존). 3-d) 등급 알파벳 노출 → 제거.
-  const scrubGripTerms = (s: string): string => {
-    const out = s.replace(GRIP_TERMS, "이런 구조");
-    if (out === s) return s;
-    violations.push("그릇용어 노출 치환");
-    return out.replace(/\s{2,}/g, " ").trim();
-  };
-  const scrubGradeAlpha = (s: string): string => {
-    const out = s.replace(GRADE_ALPHA, "");
-    if (out === s) return s;
-    violations.push("등급노출 스크럽");
-    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
-  };
+  // scrubHanja·collapseEchoParens·scrubStrayDecimals 는 순수 함수라 공용 모듈에서 직접 쓴다.
+  // violations 를 닫아야 하는 것만 팩토리로 만든다. → lib/report-scrub.ts
+  const scrubGripTerms = makeScrubGripTerms(GRIP_TERMS, violations);
+  const scrubGradeAlpha = makeScrubGradeAlpha(violations);
 
   // 4) 위 스크럽들을 blocks 전체(배열/객체 중첩 어디든)에 재귀 적용.
   // ★advice[].tag(라벨이 .tag로 끝남)에는 GRIP/GRADE 스크럽을 적용하지 않는다 — 프롬프트 tag

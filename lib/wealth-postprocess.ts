@@ -1,3 +1,4 @@
+import { collapseEchoParens, makeScrubGradeAlpha, makeScrubGripTerms, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 재물운 심층 검사 — 품질 가드(후처리)
 // lib/marriage-postprocess.ts 구조 미러 — 재귀 스크럽(중첩 문자열 전부, advice/최상위만이 아니라)을
 // 그대로 유지한다. 결혼운 리뷰에서 확정된 FIXED 버전(2026-07-18)을 그대로 상속.
@@ -99,14 +100,11 @@ export function validateWealthBlocks(parsed: any, opts?: { minAdvice?: number })
 }
 
 // 본문에서 제거할 한자(CJK 통합한자) — 순수 한글 원칙. test용(비-global)과 replace용(global) 분리.
-const HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
-const HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
 
 // \uadf8\ub987 4\uc0c1\ud55c \uc6a9\uc5b4 \ubcf8\ubb38 \ub178\ucd9c \ubc29\uc9c0(\ud504\ub86c\ud504\ud2b8 \uaddc\uce59 wealth-prompt.ts:245 \uc704\ubc18 \ub204\ucd9c 2\ucc28\ub9dd, 2026-07-21
 // \ucee4\ub9ac\uc5b4\uc6b4 \uc5ed\ud3ec\ud305). \ubb38\uc7a5 \ucef7 \uc544\ub2c8\ub77c \uc6a9\uc5b4\ub9cc \uc911\ub9bd\uc5b4 \uce58\ud658 \u2014 \uc7ac\ud574\uc11d \ubb38\uc7a5 \ubcf4\uc874. \uc624\uae30 \ubcc0\ud615(\uc2e0\uc655\uc7ac\uc1e0\u2192\uc2e0\uc655\uc7ac\uc18c)\ub3c4 \ud3ec\ud568.
 const WEALTH_GRIP_TERMS = /\uc2e0\uc655\uc7ac\uc655|\uc2e0\uc655\uc7ac\uc1e0|\uc2e0\uc655\uc7ac\uc18c|\uc7ac\ub2e4\uc2e0\uc57d|\uc2e0\uc57d\uc7ac\uc18c/g;
 // teaser \ub4f1\uae09 \uc54c\ud30c\ubcb3 \ub178\ucd9c \ubc29\uc9c0(\uc720\ub8cc \uc804 \uc2a4\ud3ec\uc77c\ub7ec+\uc11c\uc5f4\ud654). "S\ub4f1\uae09\uc758/S\ub4f1\uae09\ub2e4\uc6b4" \uc811\ubbf8\uae4c\uc9c0 \uc81c\uac70.
-const GRADE_ALPHA = /(SS|[SABCD])\s*\ub4f1\uae09(\ub2e4\uc6b4|\ub2f5\uac8c|\ub2e4\uc6cc|\uc2a4\ub7ec\uc6b4|\uc758|\uc774|\uc740|\uc744|\uae09)?/g;
 
 export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: string): WealthGuardResult {
   const violations: string[] = [];
@@ -171,56 +169,10 @@ export function applyWealthGuards(parsed: any, _facts: any, _primarySummary: str
     return keptLines.join("\n").trim();
   };
 
-  // 3-b) 한자 제거 스크럽 — 본문은 순수 한글이어야 한다(신살명 한자병기·오타 방지).
-  // "홍염살(紅艶殺)의" → "홍염살의", "겁재(劫財, 다투는 기운)" → "겁재(다투는 기운)".
-  // 한자는 조용히 제거한다(violations에 넣지 않음) — minor 스타일이라 재생성 유발할 필요 없음.
-  const scrubHanja = (s: string): string => {
-    if (!HANJA_RE.test(s)) return s;
-    return s
-      .replace(HANJA_GLOBAL, "")
-      .replace(/\(\s*[,，、·\s]*\)/g, "")
-      .replace(/\(\s*[,，、]\s*/g, "(")
-      .replace(/\s+([,.、·)])/g, "$1")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  };
-
-  // 소수점 수치(강도값 누출) + 상투적 필러 연결어 제거 — 조용히(재생성 불필요).
-  // "비겁이 10.5로 강하다"→"비겁이 강하다", "비유하자면, 넌 물이야"→"넌 물이야".
-  // 필러는 프롬프트로 금지하면 오히려 프라이밍돼 늘어나므로 후처리 결정론 제거가 유일하게 확실하다.
-  // ★정수 강도도 잡는다: "힘도 5 정도로", "강도 6" 같은 raw 강도 정수 누출(소수점 스크럽만으론 안
-  //  잡히던 갭). "\d 정도/쯤" 패턴은 연도(년)·나이(세)가 사이에 오지 않아 안전(2028년·34세 미매치).
-  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
-  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
-  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
-  const collapseEchoParens = (s: string): string =>
-    s
-      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
-      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
-
-  const scrubStrayDecimals = (s: string): string => {
-    let out = /\d+\.\d+/.test(s)
-      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
-      : s;
-    out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, "");
-    out = out.replace(/(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g, "$1$2");
-    out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
-    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
-  };
-
-  // 3-c) 그릇 4상한 용어 → 중립어 치환(문장 보존). 3-d) 등급 알파벳 → 제거.
-  const scrubGripTerms = (s: string): string => {
-    const out = s.replace(WEALTH_GRIP_TERMS, "이런 구조");
-    if (out === s) return s;
-    violations.push("그릇용어 노출 치환");
-    return out.replace(/\s{2,}/g, " ").trim();
-  };
-  const scrubGradeAlpha = (s: string): string => {
-    const out = s.replace(GRADE_ALPHA, "");
-    if (out === s) return s;
-    violations.push("등급노출 스크럽");
-    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
-  };
+  // scrubHanja·collapseEchoParens·scrubStrayDecimals 는 순수 함수라 공용 모듈에서 직접 쓴다.
+  // violations 를 닫아야 하는 것만 팩토리로 만든다. → lib/report-scrub.ts
+  const scrubGripTerms = makeScrubGripTerms(WEALTH_GRIP_TERMS, violations);
+  const scrubGradeAlpha = makeScrubGradeAlpha(violations);
 
   // 4) 위 스크럽들을 blocks 전체(배열/객체 어디에 중첩돼 있든)에 재귀 적용.
   // ★advice[].tag(.tag로 끝남)에는 GRIP/GRADE 스크럽 제외 — 프롬프트 tag 예시(`[근거:재다신약]`)와의

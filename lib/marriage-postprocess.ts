@@ -1,3 +1,4 @@
+import { collapseEchoParens, makeScrubGradeAlpha, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 단정 예언 금지어 — 문장 단위로만 컷하므로(scrubForbiddenPredictions) 긍정 맥락 문장은
 // 안전하다. 예: "이별의 아픔을 딛고"는 /이별수/에 안 걸린다. 결측/빈 블록은 F-2가 후단에서 잡는다.
 // ★관계상태 분기(2026-07-19): "다시 혼자"(이혼·사별) 사용자에게 /재혼/·/사별/·/이혼/ 무조건
@@ -60,54 +61,16 @@ export function validateMarriageBlocks(parsed: any, opts?: { minAdvice?: number 
 }
 
 // 본문에서 제거할 한자(CJK 통합한자) — 순수 한글 원칙. 신살명 한자병기·오타 방지.
-const MARR_HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
-const MARR_HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
-// teaser \ub4f1\uae09 \uc54c\ud30c\ubcb3 \ub178\ucd9c \ubc29\uc9c0(\uc720\ub8cc \uc804 \uc2a4\ud3ec\uc77c\ub7ec+\uc11c\uc5f4\ud654, 2026-07-21 \ucee4\ub9ac\uc5b4\uc6b4 \uc5ed\ud3ec\ud305).
-const GRADE_ALPHA = /(SS|[SABCD])\s*\ub4f1\uae09(\ub2e4\uc6b4|\ub2f5\uac8c|\ub2e4\uc6cc|\uc2a4\ub7ec\uc6b4|\uc758|\uc774|\uc740|\uc744|\uae09)?/g;
+// \ud55c\uc790\u00b7\uac15\ub3c4\uac12\u00b7\ub3c5\uc74c\uad04\ud638\u00b7\ub4f1\uae09\uc54c\ud30c\ubcb3 \uc2a4\ud06c\ub7fd\uc740 3\uac80\uc0ac \uacf5\uc6a9 \u2192 lib/report-scrub.ts \ub2e8\uc77c \uc18c\uc2a4.
 
 export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: string): MarriageGuardResult {
   const violations: string[] = [];
   const blocks = JSON.parse(JSON.stringify(parsed ?? {}));
   const forbidden = forbiddenPredictionsFor(facts?.maritalStatus); // ★ status-aware
 
-  // 한자는 조용히 제거(violations 미포함) — minor 스타일, 재생성 불필요.
-  const scrubHanja = (s: string): string => {
-    if (!MARR_HANJA_RE.test(s)) return s;
-    return s
-      .replace(MARR_HANJA_GLOBAL, "")
-      .replace(/\(\s*[,，、·\s]*\)/g, "")
-      .replace(/\(\s*[,，、]\s*/g, "(")
-      .replace(/\s+([,.、·)])/g, "$1")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  };
-
-  // 소수점 수치(강도값) + 상투적 필러 연결어("비유하자면") 제거 — 조용히(재생성 불필요).
-  // 독음 반복 괄호 collapse(조용히) — "정관(정관, 바른 규칙)"→"정관(바른 규칙)", "축토(축토)"→"축토".
-  // 한자병기 금지 학습으로 모델이 한자 자리에 독음을 반복 기입한 산물. 선행 단어와 괄호 첫 토큰이
-  // 완전 동일할 때만 발동 → 정상 풀이 괄호("편재(유동적인 큰돈)")는 무변형.
-  const collapseEchoParens = (s: string): string =>
-    s
-      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*[,\uff0c\u00b7]\s*/g, "$1(")
-      .replace(/([\uac00-\ud7a3]{1,6})\s*\(\s*\1\s*\)/g, "$1");
-
-  const scrubStrayDecimals = (s: string): string => {
-    let out = /\d+\.\d+/.test(s)
-      ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
-      : s;
-    // 정수 강도 누출("힘도 5 정도로")도 제거 — 연도(년)·나이(세)는 사이 글자로 미매치(안전).
-    out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, "");
-    out = out.replace(/(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g, "$1$2");
-    out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
-    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
-  };
-  // teaser 등급 알파벳 → 제거(스포일러 방지).
-  const scrubGradeAlpha = (s: string): string => {
-    const out = s.replace(GRADE_ALPHA, "");
-    if (out === s) return s;
-    violations.push("등급노출 스크럽");
-    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
-  };
+  // scrubHanja·collapseEchoParens·scrubStrayDecimals 는 순수 함수라 공용 모듈에서 직접 쓴다.
+  // violations 를 닫아야 하는 것만 팩토리로 만든다. → lib/report-scrub.ts
+  const scrubGradeAlpha = makeScrubGradeAlpha(violations);
 
   // 1) 조언: 근거 태그 필수 + 단정 예언이 있는 항목은 통째로 컷 (원문 기준 판정)
   if (Array.isArray(blocks.advice)) {
