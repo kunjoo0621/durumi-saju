@@ -15,12 +15,26 @@
  */
 
 /** CJK 통합/확장A + 호환 한자 */
-export const HANJA_RE = /[㐀-鿿豈-﫿]/;
-export const HANJA_GLOBAL = /[㐀-鿿豈-﫿]/g;
+export const HANJA_RE = /[\u3400-\u9fff\uf900-\ufaff]/;
+export const HANJA_GLOBAL = /[\u3400-\u9fff\uf900-\ufaff]/g;
 
 /** 등급 알파벳 노출(정방향: "S등급", "B등급다운") — teaser 스포일러·서열화 방지 */
 export const GRADE_ALPHA =
   /(SS|[SABCD])\s*등급(다운|답게|다워|스러운|의|이|은|을|급)?/g;
+
+/**
+ * 한자 + (한글 독음) 괄호를 독음으로 풀어낸다 — `申(신금)` → `신금`.
+ *
+ * 왜 필요: scrubHanja 가 한자만 떼면 `(신금)` 고아 괄호가 남아 유료 본문에
+ * "네 배우자 자리는 (신금)이야" 로 출고됐다(2026-07-28 marriage-2 실측 3회).
+ * 정상 뜻풀이 괄호(`편재(유동적인 큰돈)`)는 선행이 한글이라 미매치 — 무변형.
+ */
+export function unwrapHanjaReading(s: string): string {
+  return s.replace(
+    /[\u3400-\u9fff\uf900-\ufaff]+\s*\(\s*([가-힣][가-힣\s·]{0,8})\s*\)/g,
+    "$1"
+  );
+}
 
 /**
  * 본문 한자 제거 — 순수 한글 유지(신살명 한자병기·오타 방지).
@@ -28,6 +42,9 @@ export const GRADE_ALPHA =
  * 조용히 동작한다(violations 미기록) — minor 스타일이라 재생성 유발할 필요 없음.
  */
 export function scrubHanja(s: string): string {
+  if (!HANJA_RE.test(s)) return s;
+  // ★독음 괄호 unwrap 을 무차별 제거보다 먼저 — 순서가 바뀌면 고아 괄호가 남는다.
+  s = unwrapHanjaReading(s);
   if (!HANJA_RE.test(s)) return s;
   return s
     .replace(HANJA_GLOBAL, "")
@@ -59,12 +76,15 @@ export function scrubStrayDecimals(s: string): string {
   let out = /\d+\.\d+/.test(s)
     ? s.replace(/\s?\d+\.\d+\s*(으?로|인|이라|짜리|점|씩)?/g, "")
     : s;
-  out = out.replace(/\s?\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, "");
+  // ★비율·구간 문맥 제외: 직전이 숫자/`:`/`~` 면 강도값이 아니다.
+  //   "투자 비중을 7:3 정도로" 의 3 을 삼켜 "7: 유지하는 걸" 로 출고된 사고(wealth-2 실측).
+  out = out.replace(/\s?(?<![\d:~])\d{1,2}\s*(정도|쯤)(으?로|의|는|야|지)?/g, "");
   out = out.replace(
     /(강도|힘|세력|기운)([은는이가도을를]?)\s*\d{1,2}(?=\s|인|이라|점|$)/g,
     "$1$2"
   );
   out = out.replace(/(^|[\s"'(])비유하자면[,\s]*/g, "$1");
+  out = scrubBuzzwords(out);
   return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
 }
 
@@ -75,17 +95,66 @@ export function scrubStrayDecimals(s: string): string {
  */
 export function makeScrubGripTerms(terms: RegExp, violations: string[]) {
   return (s: string): string => {
-    const out = s.replace(terms, "이런 구조");
-    if (out === s) return s;
+    if (!new RegExp(terms.source).test(s)) return s;
+
+    // 1) 명명 프레임("명리학에서는 이걸 재다신약(…)이라고 불러") 문장은 통째로 컷.
+    //    이 문장은 '용어 소개' 자체가 목적이라 치환해도 값어치가 0이고, 치환하면
+    //    "이런 구조이라고 불러" 라는 비문이 남았다(wealth-4 실측 출고).
+    const sentences = s.split(/(?<=[.!?])\s+/);
+    const kept = sentences.filter((sent) => {
+      const hasTerm = new RegExp(terms.source).test(sent);
+      const isNaming =
+        /(이?라고|이?라)\s*(불러|부른다|부르|하는데|해)/.test(sent) ||
+        /(라고|라)\s*(불려|불린다)/.test(sent);
+      return !(hasTerm && isNaming);
+    });
+    let out = kept.join(" ");
+
+    // 2) 남은 위치는 치환 후 조사 정규화 — 치환어가 모음 종결이라 "이" 계열만 정리하면 충분.
+    out = out.replace(terms, "이런 구조");
+    out = out.replace(/이런 구조이(라|다|야)/g, "이런 구조$1");
+
     violations.push("그릇용어 노출 치환");
-    return out.replace(/\s{2,}/g, " ").trim();
+    return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
   };
 }
+
+/**
+ * 확정 유행어만 소수 정예로 조용히 치환(재생성 불필요).
+ * 프롬프트 금지가 이미 있는데 새는 것만 — 목록 비대화는 유지보수 부채라 실측 누출만 등록.
+ * 실측: wealth-3 "남들이 5G급으로 성장한다고" (시니어 타깃 부적합).
+ */
+function scrubBuzzwords(s: string): string {
+  return s
+    .replace(/5G급으로/g, "빛의 속도로")
+    .replace(/5G급이(야|라|다)/g, "빛의 속도$1")
+    .replace(/5G급/g, "빛의 속도")
+    .replace(/팩트폭격|팩폭/g, "직언");
+}
+
+/**
+ * 등급 알파벳 노출 역방향("인연의 등급은 B지만") — 정방향 정규식이 못 잡던 구멍.
+ * 알파벳만 지우면 "등급은 지만" 비문이 남으므로 **문장 단위 컷**이 맞다(marriage-4 실측 출고).
+ * 뒤가 라틴 문자면 오탐(예: "등급은 Silver") 방지로 미매치.
+ */
+const GRADE_ALPHA_REVERSE = /등급[은는이]?\s*(SS|[SABCD])(?![A-Za-z])/;
 
 /** 등급 알파벳 → 제거(스포일러 방지). 위반 기록 O. */
 export function makeScrubGradeAlpha(violations: string[]) {
   return (s: string): string => {
-    const out = s.replace(GRADE_ALPHA, "");
+    let out = s;
+
+    // 1) 역방향은 문장 컷
+    if (GRADE_ALPHA_REVERSE.test(out)) {
+      const kept = out
+        .split(/(?<=[.!?])\s+/)
+        .filter((sent) => !GRADE_ALPHA_REVERSE.test(sent));
+      out = kept.join(" ");
+    }
+
+    // 2) 정방향은 기존대로 어구 제거
+    out = out.replace(GRADE_ALPHA, "");
+
     if (out === s) return s;
     violations.push("등급노출 스크럽");
     return out.replace(/\s{2,}/g, " ").replace(/\s+([,.])/g, "$1").trim();
