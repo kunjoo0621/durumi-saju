@@ -1048,8 +1048,14 @@ const SHINSAL_DEFS: ShinsalDef[] = [
   {
     key: "hongryeom", label: "홍염살(紅艶殺)", type: "neutral", requiredPillars: 3,
     detect(ctx) {
+      // ★일지 포함(2026-07-28 수정). 홍염살은 통설에서 **일주로 정의**되는 신살이라
+      //   (甲午·丙寅·丁未·戊辰·庚戌·壬子·辛酉 가 교과서적 홍염 일주) 일지를 빼면
+      //   대표 사례를 통째로 놓친다. 실측: 400명 격자에서 9.3%가 일지 홍염인데 미검출이었고,
+      //   누락 일주 목록이 정확히 위 고전 목록과 일치했다.
+      //   otherBranchSet(일지 제외)은 다른 일간기반 신살(양인·천을)과 공유하므로 건드리지 않고
+      //   여기서만 allBranches 를 쓴다.
       const target = HONGRYEOM_STEMS[ctx.dayStem];
-      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      if (!target || !ctx.allBranches.includes(target)) return null;
       return {
         key: this.key, label: this.label, type: this.type,
         evidence: [`일간 ${ctx.dayStem} → 홍염 ${target}(${branchKorean(target)})`],

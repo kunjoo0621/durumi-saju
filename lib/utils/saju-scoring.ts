@@ -11,7 +11,12 @@ import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichm
 /** 스코어링 로직 버전. 알고리즘 변경 시 반드시 올려야 DB 캐시 무효화됨. */
 // v18: ①비겁 개수보존(tenStarsFull) + ②axisAdj 단조성 수정 + C컷 52→50.
 // 산식 변경이므로 캐시 무효화 위해 버전 상향. 단 이미 언락된 결과는 grandfather(하향 금지)로 보호.
-export const SCORING_VERSION = 18;
+// v19(2026-07-28): 홍염살 검출에 일지 포함(saju-enrichment). 홍염은 통설에서 일주로 정의되는
+// 신살인데 일지를 빼고 있어 교과서적 홍염 일주(甲午·丙寅·丁未·戊辰·庚戌·壬子·辛酉)를 통째로
+// 놓쳤다. 검출률 21.8%→28.8%(600명 격자). 연애운 +6 이 걸려 있어 채점 입력이 바뀌므로 버전 상향.
+// ★등급 영향은 무시 수준(S 7.7→7.8 · C 43.5→43.2 · composite 중앙 67 불변) — 연애운이 5개
+//   카테고리 중 하나라 합산에서 희석된다. 기존 결제자는 grandfather 로 재계산되지 않는다.
+export const SCORING_VERSION = 19;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;
