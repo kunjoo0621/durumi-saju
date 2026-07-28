@@ -59,7 +59,7 @@ type Person = {
 };
 
 const PEOPLE: Person[] = [
-  { label: "운영자(1995-06-21 계미)", y: 1995, m: 6, d: 21, hh: 14, mm: 30, gender: "남성", marital: "솔로", interest: "투자로 불리기" },
+  { label: "운영자(1995-06-21 16:30 계미)", y: 1995, m: 6, d: 21, hh: 16, mm: 30, gender: "남성", marital: "솔로", interest: "투자로 불리기" },
   { label: "기혼여성(1988-03-15)", y: 1988, m: 3, d: 15, hh: 9, mm: 0, gender: "여성", marital: "기혼", interest: "목돈·노후 준비" },
   { label: "다시혼자여성(1975-11-02)", y: 1975, m: 11, d: 2, hh: 22, mm: 0, gender: "여성", marital: "다시 혼자", interest: "지출·빚 관리" },
   { label: "연애중남성(1992-07-20)", y: 1992, m: 7, d: 20, hh: 6, mm: 30, gender: "남성", marital: "연애중", interest: "사업·수입 키우기" },

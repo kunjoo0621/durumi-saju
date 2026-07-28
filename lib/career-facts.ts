@@ -163,15 +163,26 @@ const ADJACENT_PILLARS: Record<
   hour: ["day"],
 };
 
-// 지지가 관성(정관/편관)을 정기(index0)·중기(index1)로 담았는지 — 여기(0.5)만 스쳐가는
+// 지지가 관성을 정기(index0)·중기(index1)로 담았는지 — 여기(0.5)만 스쳐가는
 // 경우는 제외(과발화 방지, wealth branchHasStrongJae와 동일 철학).
-function branchHasStrongGwan(dayStem: string, branch: string | undefined): boolean {
+//
+// ★jeonggwanOnly(2026-07-28 수정): 상관견관 판정에는 **정관만** 타깃으로 본다.
+//   "상관견관 위화백단(傷官見官 爲禍百端)"은 상관이 **정관**을 상하게 하는 것이고,
+//   상관이 **편관(칠살)**을 만나는 건 오히려 제살·가살로 길하게 보는 경우가 많다.
+//   기존 코드는 공격자 쪽에서 "식신은 식신제살이라 제외"를 정확히 판단해놓고
+//   타깃 쪽에서 같은 구분을 하지 않아, 압박을 생산적으로 다루는 구조(상관+편관)에
+//   반골·구설 서사를 붙이고 있었다(Fable 명리 검수 발견).
+function branchHasStrongGwan(
+  dayStem: string,
+  branch: string | undefined,
+  opts: { jeonggwanOnly?: boolean } = {}
+): boolean {
   if (!branch) return false;
   const info = BRANCH_INFO[branch];
   if (!info) return false;
   return info.jijanggan.slice(0, 2).some((j) => {
     const st = tenStarOf(dayStem, j.stem);
-    return st === "정관" || st === "편관";
+    return opts.jeonggwanOnly ? st === "정관" : st === "정관" || st === "편관";
   });
 }
 
@@ -187,13 +198,15 @@ function isSanggwanStem(
   return tenStarOf(dayStem, stem) === "상관";
 }
 
-// 극(剋) 감지 — 상관 천간이 관성 지지 바로 위(개두) 또는 인접 기둥에 앉아 있는지.
+// 극(剋) 감지 — 상관 천간이 **정관** 지지 바로 위(개두) 또는 인접 기둥에 앉아 있는지.
+// 타깃을 정관으로 한정하는 이유는 branchHasStrongGwan 주석 참조(상관+편관=제살이라 흉이 아님).
+const GWAN_TARGET = { jeonggwanOnly: true } as const;
 function detectSanggwanGyeongwan(dayStem: string, sajuData: SajuData): boolean {
   for (const pos of PILLARS) {
     if (!isSanggwanStem(dayStem, pos, sajuData)) continue;
-    if (branchHasStrongGwan(dayStem, sajuData[pos]?.earthlyBranch)) return true;
+    if (branchHasStrongGwan(dayStem, sajuData[pos]?.earthlyBranch, GWAN_TARGET)) return true;
     for (const adj of ADJACENT_PILLARS[pos]) {
-      if (branchHasStrongGwan(dayStem, sajuData[adj]?.earthlyBranch)) return true;
+      if (branchHasStrongGwan(dayStem, sajuData[adj]?.earthlyBranch, GWAN_TARGET)) return true;
     }
   }
   return false;

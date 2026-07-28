@@ -160,15 +160,29 @@ export function deriveMarriageFacts(
 
   // 1) 배우자성 탐지 (천간 투출 + 지장간)
   const spouseStars: SpouseStarHit[] = [];
+  // 유력(투간 또는 지장간 본기·중기)한 배우자성 종류 — 혼잡 판정 전용
+  const yuryeok = new Set<string>();
   for (const pos of PILLARS) {
     const pillar = sajuData[pos];
     if (!pillar?.heavenlyStem) continue;
     const st = tenStarOf(dayStem, pillar.heavenlyStem);
-    if (st && spouseSet.has(st)) spouseStars.push({ pillar: pos, source: "천간", star: st as SpouseStarHit["star"] });
-    for (const hidden of pillar.hiddenStems ?? []) {
-      const hs = tenStarOf(dayStem, hidden);
-      if (hs && spouseSet.has(hs)) spouseStars.push({ pillar: pos, source: "지장간", star: hs as SpouseStarHit["star"] });
+    if (st && spouseSet.has(st)) {
+      spouseStars.push({ pillar: pos, source: "천간", star: st as SpouseStarHit["star"] });
+      yuryeok.add(st);
     }
+    (pillar.hiddenStems ?? []).forEach((hidden) => {
+      const hs = tenStarOf(dayStem, hidden);
+      if (!hs || !spouseSet.has(hs)) return;
+      spouseStars.push({ pillar: pos, source: "지장간", star: hs as SpouseStarHit["star"] });
+      // ★유력 판정(2026-07-28): BRANCH_INFO 무게 상위 2개만 유력, 최약 지장간은 스침으로 제외.
+      //   career 의 JIJANGGAN_POSITION_WEIGHT + 임계 1.5 와 같은 규칙이다.
+      //   ★pillar.hiddenStems(saju.ts) 의 인덱스를 쓰면 안 된다 — 巳만 두 테이블의 순서가
+      //     달라(saju.ts [丙,戊,庚] vs BRANCH_INFO [丙5,庚3,戊2]) 巳中庚(금 장생)을 버리고
+      //     戊를 유력으로 잡아 career 와 정반대 결과가 난다. 무게 테이블을 단일 진실원으로 쓴다.
+      const rank = (BRANCH_INFO[pillar.earthlyBranch]?.jijanggan ?? [])
+        .findIndex((j) => j.stem === hidden);
+      if (rank >= 0 && rank <= 1) yuryeok.add(hs);
+    });
   }
   const spouseStarAbsent = spouseStars.length === 0;
   const jeong = sex === "female" ? "정관" : "정재";
@@ -176,7 +190,8 @@ export function deriveMarriageFacts(
   // 필드명은 gwansalHonjap 하나지만 남명은 실제로 "정편재혼잡"(정재+편재 동시)이다. 필드명을
   // rename하지 않는 이유: DB 컬럼(gwansal_honjap)·teaser_json·share-marriage·API 응답까지 파급.
   // 프롬프트 노출 라벨은 성별에 맞춰 marriage-prompt.ts buildFactBlock에서 분기한다.
-  const gwansalHonjap = spouseStars.some(s => s.star === jeong) && spouseStars.some(s => s.star === pyeon);
+  // ★혼잡은 정·편 둘 다 '유력'해야 성립(2026-07-28). 한쪽이 여기로만 있으면 우세형이지 혼잡이 아니다.
+  const gwansalHonjap = yuryeok.has(jeong) && yuryeok.has(pyeon);
 
   // 2) 일지 지장간 십성 — 본기/중기/여기 층위 구조화(배우자의 겉결/속결/스치는 결).
   // BRANCH_INFO.jijanggan 인덱스 0=본기, 1=중기, 2=여기 (wealth-facts 가중치 관행과 동일).

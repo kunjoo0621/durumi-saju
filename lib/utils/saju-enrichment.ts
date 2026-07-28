@@ -1002,11 +1002,11 @@ const SHINSAL_DEFS: ShinsalDef[] = [
     key: "yangin", label: "양인살(羊刃殺)", type: "bad", requiredPillars: 3,
     detect(ctx) {
       const target = YANGIN_STEMS[ctx.dayStem];
-      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      if (!target || !ctx.allBranches.includes(target)) return null;
       return {
         key: this.key, label: this.label, type: this.type,
         evidence: [`일간 ${ctx.dayStem}(양간) → 양인 ${target}(${branchKorean(target)})`],
-        detectedAt: findBranchPositions(ctx.allBranches, target, 2),
+        detectedAt: findBranchPositions(ctx.allBranches, target),
       };
     },
   },
@@ -1015,11 +1015,11 @@ const SHINSAL_DEFS: ShinsalDef[] = [
     detect(ctx) {
       const targets = CHUNEUL_STEMS[ctx.dayStem];
       if (!targets) return null;
-      const found = targets.filter((t) => ctx.otherBranchSet.has(t));
+      const found = targets.filter((t) => ctx.allBranches.includes(t));
       if (found.length === 0) return null;
       const detectedAt: PillarPosition[] = [];
       for (const t of found) {
-        for (const p of findBranchPositions(ctx.allBranches, t, 2)) {
+        for (const p of findBranchPositions(ctx.allBranches, t)) {
           if (!detectedAt.includes(p)) detectedAt.push(p);
         }
       }
@@ -1037,23 +1037,29 @@ const SHINSAL_DEFS: ShinsalDef[] = [
     key: "munchang", label: "문창귀인(文昌貴人)", type: "good", requiredPillars: 3,
     detect(ctx) {
       const target = MUNCHANG_STEMS[ctx.dayStem];
-      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      if (!target || !ctx.allBranches.includes(target)) return null;
       return {
         key: this.key, label: this.label, type: this.type,
         evidence: [`일간 ${ctx.dayStem} → 문창 ${target}(${branchKorean(target)})`],
-        detectedAt: findBranchPositions(ctx.allBranches, target, 2),
+        detectedAt: findBranchPositions(ctx.allBranches, target),
       };
     },
   },
   {
     key: "hongryeom", label: "홍염살(紅艶殺)", type: "neutral", requiredPillars: 3,
     detect(ctx) {
+      // ★일지 포함(2026-07-28 수정). 홍염살은 통설에서 **일주로 정의**되는 신살이라
+      //   (甲午·丙寅·丁未·戊辰·庚戌·壬子·辛酉 가 교과서적 홍염 일주) 일지를 빼면
+      //   대표 사례를 통째로 놓친다. 실측: 400명 격자에서 9.3%가 일지 홍염인데 미검출이었고,
+      //   누락 일주 목록이 정확히 위 고전 목록과 일치했다.
+      //   otherBranchSet(일지 제외)은 다른 일간기반 신살(양인·천을)과 공유하므로 건드리지 않고
+      //   여기서만 allBranches 를 쓴다.
       const target = HONGRYEOM_STEMS[ctx.dayStem];
-      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      if (!target || !ctx.allBranches.includes(target)) return null;
       return {
         key: this.key, label: this.label, type: this.type,
         evidence: [`일간 ${ctx.dayStem} → 홍염 ${target}(${branchKorean(target)})`],
-        detectedAt: findBranchPositions(ctx.allBranches, target, 2),
+        detectedAt: findBranchPositions(ctx.allBranches, target),
       };
     },
   },
@@ -1170,7 +1176,7 @@ const SHINSAL_DEFS: ShinsalDef[] = [
         if (!foundOther) return null;
       }
       // 천덕은 천간/지지 모두 가능하므로 지지에서 감지된 위치만 기록
-      const detectedAt = isBranch ? findBranchPositions(ctx.allBranches, target, 2) : [];
+      const detectedAt = isBranch ? findBranchPositions(ctx.allBranches, target) : [];
       // 천간에서 발견된 경우 해당 천간의 주 위치
       if (!isBranch && ctx.allStems) {
         for (let i = 0; i < ctx.allStems.length; i++) {
@@ -1212,11 +1218,11 @@ const SHINSAL_DEFS: ShinsalDef[] = [
     key: "hakdang", label: "학당귀인(學堂貴人)", type: "good", requiredPillars: 3,
     detect(ctx) {
       const target = HAKDANG_STEMS[ctx.dayStem];
-      if (!target || !ctx.otherBranchSet.has(target)) return null;
+      if (!target || !ctx.allBranches.includes(target)) return null;
       return {
         key: this.key, label: this.label, type: this.type,
         evidence: [`일간 ${ctx.dayStem}(${stemKorean(ctx.dayStem)}) → 학당 ${target}(${branchKorean(target)})`],
-        detectedAt: findBranchPositions(ctx.allBranches, target, 2),
+        detectedAt: findBranchPositions(ctx.allBranches, target),
       };
     },
   },
