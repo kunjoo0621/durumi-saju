@@ -64,6 +64,9 @@ const PEOPLE: Person[] = [
   { label: "다시혼자여성(1975-11-02)", y: 1975, m: 11, d: 2, hh: 22, mm: 0, gender: "여성", marital: "다시 혼자", interest: "지출·빚 관리" },
   { label: "연애중남성(1992-07-20)", y: 1992, m: 7, d: 20, hh: 6, mm: 30, gender: "남성", marital: "연애중", interest: "사업·수입 키우기" },
   { label: "시간모름여성(2000-01-10)", y: 2000, m: 1, d: 10, unknown: true, gender: "여성", marital: "솔로", interest: "목돈·노후 준비" },
+  // ★2026-07-28 3차 사이클: 궁위 fabrication 이 실제로 발생한 원국(丙子/庚寅/甲午/丁卯,
+  //   일간 甲, 오행 토 0개 → 재성이 寅·午 지장간에만 존재). "월주에 편재가 떠 있다"로 출고됐던 케이스.
+  { label: "지장간재성남성(1996-02-27)", y: 1996, m: 2, d: 27, hh: 6, mm: 0, gender: "남성", marital: "다시 혼자", interest: "사업·수입 키우기" },
 ];
 
 const argN = process.argv.find((a) => /^\d+$/.test(a));
