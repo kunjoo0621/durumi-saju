@@ -1,4 +1,4 @@
-import { findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
+import { findAdviceEchoes, findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
 import { collapseEchoParens, makeScrubGradeAlpha, makeScrubGripTerms, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 재물운 심층 검사 — 품질 가드(후처리)
 // lib/marriage-postprocess.ts 구조 미러 — 재귀 스크럽(중첩 문자열 전부, advice/최상위만이 아니라)을
@@ -224,6 +224,7 @@ export function applyWealthGuards(parsed: any, facts: any, _primarySummary: stri
           (blocks as any)?.serverTimeline?.daeun ?? []
         )
       );
+      violations.push(...findAdviceEchoes((blocks as any)?.advice));
     }
   }
 

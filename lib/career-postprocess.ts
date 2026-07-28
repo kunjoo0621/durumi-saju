@@ -1,4 +1,4 @@
-import { findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
+import { findAdviceEchoes, findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
 import { collapseEchoParens, makeScrubGradeAlpha, makeScrubGripTerms, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 커리어운 심층 검사 — 품질 가드(후처리)
 // lib/wealth-postprocess.ts(main) 구조 미러 — 재귀 스크럽(중첩 문자열 전부) 그대로 유지.
@@ -211,6 +211,7 @@ export function applyCareerGuards(parsed: any, facts: any, _primarySummary: stri
           (blocks as any)?.serverTimeline?.daeun ?? []
         )
       );
+      violations.push(...findAdviceEchoes((blocks as any)?.advice));
     }
   }
 

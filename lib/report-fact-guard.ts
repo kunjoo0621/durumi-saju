@@ -125,3 +125,38 @@ export function findTimingFabrications(
   }
   return violations;
 }
+
+/**
+ * advice 재탕 탐지 — "근거는 tag 가 담당, text 는 '어떻게'만" 규칙의 결정론 백스톱.
+ *
+ * 왜: 프롬프트가 "왜 이 조언인지 사주 근거가 문장 안에 드러나야 한다"고 시켜서
+ * 모델이 성실히 따른 결과가 본문 재탕이었다(2026-07-28 실측: 리포트당 조언 4개 중 2~3개).
+ * 근거는 이미 `[근거:...]` 태그가 담고 있어 문장에서 또 말할 이유가 없다.
+ *
+ * ★12자 문자열 겹침으로는 안 잡힌다(표현만 바꾸면 통과) — 그래서 "명리 용어가 text 에
+ * 들어있으면 근거 재진술"이라는 프록시로 잡는다. tag 는 검사 대상이 아니다(교훈: tag 스크럽은
+ * 상시 재생성을 유발한다).
+ */
+const MYEONGRI_TERMS =
+  /(겁재탈재|재다신약|식상생재|군겁쟁재|신왕재왕|신왕재쇠|신약재소|관인상생|상관견관|관다신약|신왕관왕|신약관소|관살혼잡|비겁극재|충거|정편재혼잡)/;
+
+/** 행동·기한·수량이 하나도 없으면 '어떻게'가 아니라 '왜'만 말한 조언이다. */
+const HOW_MARKER = /(\d|당일|하루|이틀|사흘|일주일|한\s*달|매달|매주|먼저|바로|미리|나눠|적어|기록|정해|옮겨|묶어|빼놓|따로)/;
+
+export function findAdviceEchoes(
+  advice: Array<{ text?: string; tag?: string }> | undefined
+): string[] {
+  if (!Array.isArray(advice)) return [];
+  const violations: string[] = [];
+  for (const a of advice) {
+    const text = typeof a?.text === "string" ? a.text : "";
+    if (!text) continue;
+    // ★실제 출고문은 "겁재 탈재의 영향으로"처럼 띄어 쓴다 — 공백을 지우고 대조해야 잡힌다.
+    const term = text.replace(/\s+/g, "").match(MYEONGRI_TERMS)?.[1];
+    if (term) violations.push(`advice 근거 재진술: 본문 용어 "${term}" 가 조언 문장에 들어감`);
+    if (!HOW_MARKER.test(text)) {
+      violations.push(`advice 실행정보 없음: "${text.slice(0, 24)}…" (구체 행동·기한·수량 부재)`);
+    }
+  }
+  return violations;
+}

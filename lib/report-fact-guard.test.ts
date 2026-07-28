@@ -134,3 +134,32 @@ test("타이밍: 대운 데이터가 있으면 대운 서술 정상", () => {
   );
   assert.equal(v.length, 0);
 });
+
+// ── advice 재탕 (2026-07-28 실측: 운영자 재물운 조언 4개 중 2개가 본문 재진술) ──
+import { findAdviceEchoes } from "./report-fact-guard";
+
+test("advice: 명리 용어가 문장에 들어가면 근거 재진술로 잡는다", () => {
+  const v = findAdviceEchoes([
+    { tag: "[근거:겁재탈재]", text: "겁재 탈재의 영향으로 돈이 새기 쉬우니 수익금 일부는 30% 묶어둬." },
+  ]);
+  assert.ok(v.some((x) => x.includes("겁재탈재")), JSON.stringify(v));
+});
+
+test("advice: 근거 없이 '어떻게'만 말하면 통과", () => {
+  const v = findAdviceEchoes([
+    { tag: "[근거:겁재탈재]", text: "수익이 들어온 당일에 30%를 인출 못 하는 곳으로 옮겨." },
+  ]);
+  assert.equal(v.length, 0, JSON.stringify(v));
+});
+
+test("advice: 구체 행동·기한·수량이 없으면 실행정보 부재로 잡는다", () => {
+  const v = findAdviceEchoes([{ tag: "[근거:편재]", text: "돈을 소중히 여기는 마음을 가져봐." }]);
+  assert.ok(v.some((x) => x.includes("실행정보")), JSON.stringify(v));
+});
+
+test("advice: tag 는 검사 대상이 아니다(태그 스크럽은 상시 재생성 유발)", () => {
+  const v = findAdviceEchoes([
+    { tag: "[근거:재다신약]", text: "큰 기회가 와도 사흘은 두고 봐." },
+  ]);
+  assert.equal(v.length, 0, JSON.stringify(v));
+});

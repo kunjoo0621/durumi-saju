@@ -1,4 +1,4 @@
-import { findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
+import { findAdviceEchoes, findProminenceFabrications, findTimingFabrications } from "./report-fact-guard";
 import { collapseEchoParens, makeScrubGradeAlpha, scrubHanja, scrubStrayDecimals } from "./report-scrub";
 // 단정 예언 금지어 — 문장 단위로만 컷하므로(scrubForbiddenPredictions) 긍정 맥락 문장은
 // 안전하다. 예: "이별의 아픔을 딛고"는 /이별수/에 안 걸린다. 결측/빈 블록은 F-2가 후단에서 잡는다.
@@ -162,6 +162,7 @@ export function applyMarriageGuards(parsed: any, facts: any, _primarySummary: st
           (blocks as any)?.serverTimeline?.daeun ?? []
         )
       );
+      violations.push(...findAdviceEchoes((blocks as any)?.advice));
     }
   }
 
