@@ -222,6 +222,12 @@ import { insinHyung } from "./data/relation/insin-hyung";
 import { chuksulmiHyung } from "./data/relation/chuksulmi-hyung";
 import { jamyoHyung } from "./data/relation/jamyo-hyung";
 import { jahyung } from "./data/relation/jahyung";
+import { jamiHae } from "./data/relation/jami-hae";
+import { chukoHae } from "./data/relation/chuko-hae";
+import { insaHae } from "./data/relation/insa-hae";
+import { myojinHae } from "./data/relation/myojin-hae";
+import { sinhaeHae } from "./data/relation/sinhae-hae";
+import { yusulHae } from "./data/relation/yusul-hae";
 import { sangsaeng as ohaengSangsaeng } from "./data/ohaeng/sangsaeng";
 import { sanggeuk as ohaengSanggeuk } from "./data/ohaeng/sanggeuk";
 import { bihwa as ohaengBihwa } from "./data/ohaeng/bihwa";
@@ -457,6 +463,12 @@ const ENTRY_LIST: DictEntry[] = [
   chuksulmiHyung,
   jamyoHyung,
   jahyung,
+  jamiHae,
+  chukoHae,
+  insaHae,
+  myojinHae,
+  sinhaeHae,
+  yusulHae,
   ohaengSangsaeng,
   ohaengSanggeuk,
   ohaengBihwa,
