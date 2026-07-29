@@ -91,6 +91,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── 로그인 유저: 기존 결과 체크 ──
+    // 결제는 로그인이 필수라, 위 게스트 전용 분기 때문에 "이미 같은 사주로 본 결과가 있어" 모달이
+    // 정작 돈 낼 수 있는 유저에겐 한 번도 뜨지 않았다(실측). 재사용 이중과금 75건/54명의 UX 쪽 원인.
+    // 서버(/api/coins/spend)가 이미 차감을 막지만, 유저가 결제 버튼을 누르기 전에 알려주는 게 맞다.
+    // 세션은 그대로 만든다 — 모달에서 "태어난 시간 고치기"로 빠지거나 그냥 진행할 수 있어야 한다.
+    // ★산식 버전(scoringVersion) 비교는 넣지 않는다: 버전 업그레이드는 대외비이고,
+    //   서버 재사용도 버전 무관이라 감지도 무관해야 일관된다.
+    let existingResultId: string | null = null;
+    if (userId) {
+      const { data: unlock } = await supabaseAdmin
+        .from("result_unlocks")
+        .select("result_id")
+        .eq("user_id", userId)
+        .eq("input_hash", inputHash)
+        .maybeSingle();
+
+      if (unlock?.result_id) {
+        const { data: existing } = await supabaseAdmin
+          .from("saju_results")
+          .select("id, full_json")
+          .eq("id", unlock.result_id)
+          .maybeSingle();
+
+        // full_json이 null이면 분석 진행 중 — 그것도 "이미 있는 결과"로 안내한다.
+        if (existing?.id && !(existing.full_json as any)?._error) {
+          existingResultId = existing.id;
+        }
+      }
+    }
+
     const payload = {
       ...input,
       name: input.name.trim(),
@@ -124,7 +154,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "세션 생성에 실패했습니다." }, { status: 500 });
     }
 
-    const response = NextResponse.json({ sessionId: data.id });
+    const response = NextResponse.json({
+      sessionId: data.id,
+      ...(existingResultId ? { existingResultId } : {}),
+    });
 
     if (rawToken) {
       await addTokenToCookie(response, rawToken);

@@ -71,9 +71,13 @@ function navigateToResult(
   router: ReturnType<typeof import("next/navigation").useRouter>,
   method: "push" | "replace" = "replace",
   pending = false,
+  noCharge = false,
 ) {
   sessionStorage.setItem("sajuJustPaid", "1");
   sessionStorage.removeItem("sajuOrderId");
+  // 재사용(기존 결과 재노출)이라 알을 안 썼으면 결과 화면에서 그 사실을 알려준다.
+  // 모달을 거치지 않는 경로(충전 후 자동 spend 등)도 있어서 서버 응답 기준으로 표시한다.
+  if (noCharge) sessionStorage.setItem("sajuNoCharge", "1");
   const params = new URLSearchParams();
   if (resultId) params.set("resultId", resultId);
   if (pending) params.set("pending", "true");
@@ -503,7 +507,7 @@ function CheckoutForm({
         // 사주 분석: spend 완료 → 결과 페이지로 즉시 이동
         setConfirming(true);
         setPaying(false);
-        navigateToResult(data.resultId, router, "push", Boolean(data.pending));
+        navigateToResult(data.resultId, router, "push", Boolean(data.pending), data.charged === false);
       }
     } catch (err: any) {
       setError(err?.message || "처리에 실패했습니다.");
@@ -773,30 +777,48 @@ function CheckoutForm({
       >
         <div className="p-6">
           <h3 className="text-[17px] font-bold text-text-primary text-center mb-2">
-            이미 같은 사주로 본 결과가 있어
+            이미 보신 결과가 있어요
           </h3>
           <p className="text-[13px] text-text-secondary text-center mb-6">
-            기존 결과를 볼 수도 있고, 새로 결제할 수도 있어
+            같은 정보로 본 결과예요. 알은 쓰지 않아도 돼요
           </p>
           <div className="space-y-2.5">
             <button
               type="button"
               onClick={() => router.push(`/result?resultId=${existingResultId}`)}
-              className="btn-primary w-full h-[48px] rounded-xl text-[15px] font-semibold"
+              className="btn-primary w-full h-[52px] rounded-xl text-[16px] font-semibold"
             >
-              결과 보러가기
+              그 결과 다시 보기
             </button>
+            {/* "새로 결제하기"는 뺐다 — 같은 정보면 계산도 등급도 똑같아서 새로 만들 게 없다.
+                버튼이 있으면 "새로=더 좋은 것"으로 오해하고 눌러 알만 나간다. 정보를 실제로
+                고치는 길(=다른 결과가 나오는 유일한 길)만 남긴다. [[reuse-charge]] */}
             <button
               type="button"
-              onClick={() => {
-                setShowDuplicateModal(false);
-                setExistingResultId(null);
-                handlePayWithEggs();
-              }}
-              className="w-full h-[48px] rounded-xl text-[15px] font-semibold text-text-secondary bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+              onClick={() => router.push("/start")}
+              className="w-full h-[48px] rounded-xl text-[14px] text-text-secondary hover:text-text-primary transition-colors"
             >
-              새로 결제하기
+              태어난 시간을 고칠래요
             </button>
+          </div>
+          <div className="mt-5 pt-5 border-t border-white/[0.08]">
+            <p className="text-[13px] text-text-tertiary text-center mb-3">다른 운세도 있어요</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => router.push("/yearly")}
+                className="flex-1 h-[44px] rounded-xl text-[14px] font-medium text-text-secondary bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+              >
+                올해의 운세
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/today")}
+                className="flex-1 h-[44px] rounded-xl text-[14px] font-medium text-text-secondary bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+              >
+                오늘의 운세
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
