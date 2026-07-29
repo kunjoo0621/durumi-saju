@@ -101,13 +101,28 @@ export async function POST(request: NextRequest) {
         .eq("input_hash", inputHash)
         .maybeSingle();
 
+      // ★fail-closed: 조회가 실패하면 "기존 결과 없음"으로 오판하면 안 된다.
+      // 오판하면 차감 → 아래 upsert가 (user_id,input_hash) 충돌로 기존 완성 row의
+      // full_json을 null로 덮어써 결과가 파괴되고, 재분석 시 최신 산식이 적용돼
+      // grandfather(기존 결과 등급 동결)까지 깨진다. 차감 전이라 그냥 실패시키는 게 안전하다.
+      if (existingUnlock.error) {
+        console.error("[SPEND] unlock lookup error", existingUnlock.error.message);
+        return NextResponse.json({ error: "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해줘." }, { status: 500 });
+      }
+
       if (existingUnlock.data?.result_id) {
         const existingResultId = existingUnlock.data.result_id;
-        const { data: existingResult } = await supabaseAdmin
+        const { data: existingResult, error: existingResultError } = await supabaseAdmin
           .from("saju_results")
           .select("full_json")
           .eq("id", existingResultId)
           .maybeSingle();
+
+        // 같은 이유로 fail-closed. row가 진짜 없는 경우(data null·error 없음)만 신규 생성으로 흘린다.
+        if (existingResultError) {
+          console.error("[SPEND] existing result lookup error", existingResultError.message);
+          return NextResponse.json({ error: "처리 중 오류가 발생했습니다. 잠시 후 다시 시도해줘." }, { status: 500 });
+        }
 
         if (existingResult) {
           const fullJson = existingResult.full_json as any;
