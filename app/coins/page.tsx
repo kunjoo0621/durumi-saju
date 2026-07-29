@@ -163,6 +163,8 @@ export default function CoinsPage() {
             } else {
               // 사주 분석: 결과 페이지로
               sessionStorage.setItem("sajuJustPaid", "1");
+              // 재사용이라 알을 안 썼으면 결과 화면에서 안내(이 경로는 모달을 거치지 않는다).
+              if (spendData.charged === false) sessionStorage.setItem("sajuNoCharge", "1");
               const resultParams = new URLSearchParams();
               if (spendData.resultId) resultParams.set("resultId", spendData.resultId);
               if (spendData.pending) resultParams.set("pending", "true");

@@ -358,6 +358,15 @@ export default function ResultClient() {
     setTimeout(() => setShowToast(false), 2600);
   }, []);
 
+  // 같은 정보라 기존 결과를 그대로 열어준 경우 — 알이 안 나갔다는 걸 알려준다.
+  // (결제 버튼을 눌렀는데 잔액이 그대로면 유저가 어리둥절하므로.)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem("sajuNoCharge") !== "1") return;
+    sessionStorage.removeItem("sajuNoCharge");
+    notify("이미 보신 결과예요. 알은 쓰지 않았어요");
+  }, [notify]);
+
   if (analysisStatus === "pending") {
     return (
       <FullScreenLoading
