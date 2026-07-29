@@ -168,8 +168,25 @@ function verify(slug: string): Row[] {
     const others = getAllStories()
       .filter((s) => s.category === "celebrity" && s.slug !== slug && s.celebrity?.name)
       .map((s) => s.celebrity!.name);
-    for (const nm of others)
-      if (text.includes(nm)) fail("M-CEL-02", `다른 연예인 이름 '${nm}' 언급 — 각 글 독립 원칙 위반`);
+
+    // ★2026-07-29: 예전 판은 text.includes(nm)라 짧은 예명이 흔한 낱말에 걸렸다.
+    //   '산'(ATEEZ)이 "부산"에, '정원'이 "정원의 흙"에 오탐 → 멀쩡한 문장을 고쳐 썼다.
+    //   ① 앞 글자가 한글이면 더 긴 낱말의 일부다 → 건너뛴다("부산"의 '산').
+    //   ② 2글자 이하 예명은 낱말 충돌이 잦아 FAIL 대신 WARN + 문맥을 보여 사람이 가린다.
+    //      3글자 이상 실명(남주혁·이채민 등)은 오탐이 사실상 없으므로 그대로 FAIL.
+    const isHangul = (ch: string) => /[가-힣]/.test(ch);
+    for (const nm of others) {
+      for (let i = text.indexOf(nm); i !== -1; i = text.indexOf(nm, i + 1)) {
+        if (i > 0 && isHangul(text[i - 1])) continue;          // 더 긴 낱말의 꼬리
+        const ctx = text.slice(Math.max(0, i - 12), i + nm.length + 12).replace(/\s+/g, " ");
+        if (nm.length >= 3) {
+          fail("M-CEL-02", `다른 연예인 이름 '${nm}' 언급 — 각 글 독립 원칙 위반  …${ctx}…`);
+        } else {
+          warn("M-CEL-02", `짧은 예명 '${nm}'과 겹침 — 사람이 확인  …${ctx}…`);
+        }
+        break;
+      }
+    }
   }
 
   for (const w of NEGATIVE) if (text.includes(w)) fail("M-CEL-03", `부정 단정 어미 '${w}'`);
