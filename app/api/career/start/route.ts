@@ -13,6 +13,7 @@ import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
+import { checkRateLimit } from "@/lib/server/rateLimit";
 import { getPrimarySajuData } from "@/lib/server/get-primary-saju";
 import { calculateSaju, enrichSajuData, formatSajuText } from "@/lib/utils/saju";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
@@ -57,6 +58,30 @@ export async function POST(request: NextRequest) {
     const userId = await getSupabaseUserId(session);
     if (!userId) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
+    // 유저별 rate limit — "비용 상한"(3층). 이 라우트는 무과금이지만 요청마다
+    // calculateSaju+calculateFortune가 돌아 비싸다. 2026-07-29에 클라이언트 무한루프가
+    // 5분간 22,674건을 쏴 평소 하루치 인보케이션(24K)을 태웠다.
+    //
+    // ★ 역할을 혼동하지 말 것: 루프 차단은 클라이언트(1층 useShallow·2층 키+ref 가드)가 한다.
+    // 429는 루프를 멈추지 못한다 — 기존 코드에서 에러 상태도 고정점에 도달하지 않고
+    // error↔loading으로 진동했고, 429는 사주 계산을 건너뛰어 응답이 빨라지므로 오히려
+    // 루프가 가속된다. 이 가드의 목적은 "어떤 클라이언트 버그가 나도 비싼 계산은 돌지 않게"
+    // 천장을 씌우는 것이다.
+    //
+    // IP가 아니라 userId로 잡는다: 모바일 캐리어 NAT·가족 공유 IP에서 오탐이 나면 유료
+    // 퍼널이 깨진다. getSupabaseUserId는 정상 케이스에서 세션값을 그대로 반환하므로(DB 미조회)
+    // 이 위치가 충분히 싸다. 정상 사용량은 진입 1 + 결제 1 + 충전복귀 1 수준이라 여유가 크다.
+    const rlMinute = checkRateLimit(`career_start:${userId}:m`, 20, 60_000);
+    const rlHour = checkRateLimit(`career_start:${userId}:h`, 120, 60 * 60_000);
+    if (!rlMinute.allowed || !rlHour.allowed) {
+      console.warn("[RATE_LIMIT] /api/career/start", { userId });
+      const retryAfter = Math.max(rlMinute.retryAfter, rlHour.retryAfter);
+      return NextResponse.json(
+        { error: "요청이 너무 많아. 잠시 후 다시 시도해줘." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
     }
 
     const body = (await request.json().catch(() => ({}))) as StartBody;
