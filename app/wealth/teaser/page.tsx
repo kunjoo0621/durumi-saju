@@ -107,6 +107,18 @@ export default function WealthTeaserPage() {
     unknownBirthTime: inputs.unknownBirthTime,
   }), [inputs]);
 
+  // ★ 재발 차단(2층): teaser fetch는 객체가 아니라 이 "문자열 키"로만 걸린다.
+  // 서버가 buildInputHash에 쓰는 필드 전부 + interest를 담으므로, 정상 재진입(입력 수정·관심사
+  // 변경)은 키가 바뀌어 정상 재요청되고, 참조만 새로 생기는 경우는 키가 같아 재요청이 불가능하다.
+  // 2026-07-29 사고: 미러 파일인 career/teaser에서 selfInput 참조가 렌더마다 새로 생겨 effect가
+  // 무한 재실행되며 /api/career/start에 5분간 22,674건이 나갔다. 1층(useShallow)이 원인을
+  // 없앴지만, 이 키+ref 가드는 selector가 다시 깨져도 루프가 열리지 않게 하는 구조적 차단이다.
+  const teaserKey = useMemo(
+    () => JSON.stringify({ selfInput, interest }),
+    [selfInput, interest],
+  );
+  const teaserFetchedKeyRef = useRef<string | null>(null);
+
   // 화면 상태
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
   const [calculating, setCalculating] = useState(true);
@@ -116,6 +128,9 @@ export default function WealthTeaserPage() {
   const [teaserState, setTeaserState] = useState<"loading" | "ready" | "error">("loading");
   const [teaserFacts, setTeaserFacts] = useState<TeaserFacts | null>(null);
   const [grade, setGrade] = useState<WealthGrade | null>(null);
+  // 재시도는 유저 탭으로만 일어난다(자동 재시도 없음) — 자동 재시도를 두면 실패 응답이 다시
+  // 루프의 연료가 된다. 가드가 막다른 화면을 만들지 않도록 에러 UI에 "다시 시도"를 붙였다.
+  const [teaserRetry, setTeaserRetry] = useState(0);
 
   const [confirming, setConfirming] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -176,6 +191,10 @@ export default function WealthTeaserPage() {
   // teaser(무료) 생성 — 등급/재성 유형 구조값 로드. 생명선 selfInput 사용.
   useEffect(() => {
     if (!hydrated || !hasRequiredInput || !isAuthenticated || !interest) return;
+    // 같은 요청은 두 번 쏘지 않는다. 이 가드가 열리는 건 (a) 키가 실제로 바뀌었을 때,
+    // (b) 유저가 "다시 시도"를 눌러 ref를 비웠을 때 뿐이다 → 자가발전 루프가 불가능하다.
+    if (teaserFetchedKeyRef.current === teaserKey) return;
+    teaserFetchedKeyRef.current = teaserKey;
     let cancelled = false;
     (async () => {
       setTeaserState("loading");
@@ -203,7 +222,16 @@ export default function WealthTeaserPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [hydrated, hasRequiredInput, isAuthenticated, interest, selfInput]);
+    // selfInput은 의존성에서 의도적으로 뺐다 — 참조가 아니라 teaserKey(값 직렬화)로 걸어야
+    // 루프가 막힌다. selfInput의 모든 필드가 teaserKey에 들어있으므로 값이 바뀌면 키가 바뀐다.
+  }, [hydrated, hasRequiredInput, isAuthenticated, interest, teaserKey, teaserRetry]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 유저가 명시적으로 누르는 재시도 — ref를 비워 가드를 한 번만 열어준다.
+  const retryTeaser = useCallback(() => {
+    teaserFetchedKeyRef.current = null;
+    setError(null);
+    setTeaserRetry((n) => n + 1);
+  }, []);
 
   // 결제 + 분석 — start(row 보장) → analyze(차감·분석). 생명선 selfInput을 양쪽에 동일하게 넘긴다.
   const runUnlock = useCallback(async (overrideBalance?: number) => {
@@ -389,7 +417,16 @@ export default function WealthTeaserPage() {
                   <SkeletonBar className="h-5 w-28 mt-4" />
                 </>
               ) : teaserState === "error" ? (
-                <p className="text-body-2 text-text-secondary py-8">{error || "미리보기를 준비하지 못했어."}</p>
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <p className="text-body-2 text-text-secondary">{error || "미리보기를 준비하지 못했어."}</p>
+                  <button
+                    type="button"
+                    onClick={retryTeaser}
+                    className="btn-secondary h-[44px] rounded-xl px-5 text-[15px] font-bold active:scale-[0.98] transition-transform"
+                  >
+                    다시 시도
+                  </button>
+                </div>
               ) : (
                 <>
                   <OverallGradeBadgeSlot grade={internalGrade} size={108} />
