@@ -19,6 +19,7 @@ import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildInputHash, type InputPayload } from "@/lib/analysis";
 import { getSupabaseUserId } from "@/lib/server/user";
+import { checkRateLimit } from "@/lib/server/rateLimit";
 import { getPrimarySajuData } from "@/lib/server/get-primary-saju";
 import { calculateSaju, enrichSajuData, formatSajuText } from "@/lib/utils/saju";
 import { calculateFortune } from "@/lib/utils/saju-fortune";
@@ -63,6 +64,23 @@ export async function POST(request: NextRequest) {
     const userId = await getSupabaseUserId(session);
     if (!userId) {
       return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+    }
+
+    // 유저별 rate limit — "비용 상한"(3층). career/start와 동일 근거·동일 임계값.
+    // 무과금이지만 요청마다 calculateSaju+calculateFortune가 돌아 비싸다. 루프 차단은
+    // 클라이언트(1층 useShallow·2층 키+ref 가드)가 하고, 이 가드는 어떤 클라이언트 버그가
+    // 나도 비싼 계산이 돌지 않게 천장을 씌운다. 429는 루프를 멈추지 못한다(응답이 빨라져
+    // 오히려 가속) — 목적이 다르다. IP가 아니라 userId로 잡는 이유는 모바일 캐리어 NAT·
+    // 가족 공유 IP 오탐이 유료 퍼널을 깨뜨리기 때문.
+    const rlMinute = checkRateLimit(`wealth_start:${userId}:m`, 20, 60_000);
+    const rlHour = checkRateLimit(`wealth_start:${userId}:h`, 120, 60 * 60_000);
+    if (!rlMinute.allowed || !rlHour.allowed) {
+      console.warn("[RATE_LIMIT] /api/wealth/start", { userId });
+      const retryAfter = Math.max(rlMinute.retryAfter, rlHour.retryAfter);
+      return NextResponse.json(
+        { error: "요청이 너무 많아. 잠시 후 다시 시도해줘." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
     }
 
     const body = (await request.json().catch(() => ({}))) as StartBody;
