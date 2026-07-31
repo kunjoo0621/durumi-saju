@@ -23,7 +23,7 @@ export const jiminBts: Story = {
         {
           kind: "table",
           caption:
-            "지민의 사주 세 기둥. 시각이 알려지지 않아 시주 칸은 물음표로 남겨 뒀어요.",
+            "지민의 사주 세 기둥. 시각이 알려지지 않아 시주는 비워 뒀어요.",
           headers: ["기둥", "천간", "지지", "지지의 성격"],
           rows: [
             ["년주", "을목(乙)", "해수(亥)", "겨울이 시작되는 물"],
@@ -63,7 +63,7 @@ export const jiminBts: Story = {
         },
         {
           kind: "p",
-          text: "사전이 정화에게 권하는 직업 줄기도 같은 방향입니다. 한 작품에 정성을 쏟는 자리 — 예술가·연구자·정밀 공예처럼 깊이가 무기가 되는 영역이에요. 몸을 오래 훈련해 한 동작을 다듬는 일도 이 줄기에서 멀지 않습니다.",
+          text: "사전이 정화에게 권하는 직업 줄기도 같은 방향입니다. 한 작품에 정성을 쏟는 자리 — 예술가·연구자·정밀 공예처럼 깊이가 무기가 되는 영역이에요.",
         },
         {
           kind: "p",
@@ -81,6 +81,10 @@ export const jiminBts: Story = {
         {
           kind: "p",
           text: "[정축(丁丑)일주](/dict/gabja/jeongchuk) 항목은 이 축토를 **금고(金庫)의 자리**라고 적어 둡니다. 사유축 삼합의 마지막 칸이라 쇠 기운을 거둬들이는 자리라는 뜻이에요.",
+        },
+        {
+          kind: "p",
+          text: "그리고 이 두 창고는 서로 맞물려 있어요. 월지 술과 일지 축이 [축술형(丑戌刑)](/dict/relation/chuksulmi-hyung)을 이룹니다. 같은 흙끼리 부딪히는 자리라 겉으로 크게 터지지는 않지만, 잠겨 있던 칸이 흔들리며 안쪽에 담긴 것이 표면으로 올라오는 구조로 봐요. 담아 두기만 하는 창고가 아니라, 열릴 계기가 원국 안에 이미 들어 있는 셈입니다.",
         },
         {
           kind: "p",
@@ -129,7 +133,7 @@ export const jiminBts: Story = {
       blocks: [
         {
           kind: "p",
-          text: "십성은 일간이 나머지 글자를 어떻게 대하는지에 따라 갈리는 열 가지 이름이에요. 세 기둥에서는 다섯 개가 잡힙니다. 년간 을목이 [편인](/dict/sipsung/pyeonin), 월간 병화가 [겁재](/dict/sipsung/gyeopjae), 년지 해수가 [정관](/dict/sipsung/jeonggwan), 월지 술토가 [상관](/dict/sipsung/sanggwan), 일지 축토가 [식신](/dict/sipsung/sikshin)이에요.",
+          text: "십성은 일간이 나머지 글자를 어떻게 대하는지에 따라 갈리는 열 가지 이름이에요. 여기서는 다섯 개가 잡힙니다. 년간 을목이 [편인](/dict/sipsung/pyeonin), 월간 병화가 [겁재](/dict/sipsung/gyeopjae), 년지 해수가 [정관](/dict/sipsung/jeonggwan), 월지 술토가 [상관](/dict/sipsung/sanggwan), 일지 축토가 [식신](/dict/sipsung/sikshin)이에요.",
         },
         {
           kind: "checklist",
@@ -153,7 +157,7 @@ export const jiminBts: Story = {
       blocks: [
         {
           kind: "p",
-          text: "12운성은 각 지지에서 일간의 기운이 어느 단계에 놓이는지를 사람의 일생에 빗대 매긴 눈금이에요. 지민의 세 기둥은 년주 [태(胎)](/dict/unseong12/tae), 월주 [양(養)](/dict/unseong12/yang), 일주 [묘(墓)](/dict/unseong12/myo)로 나옵니다.",
+          text: "12운성은 각 지지에서 일간의 기운이 어느 단계에 놓이는지를 사람의 일생에 빗대 매긴 눈금이에요. 지민의 경우 년주 [태(胎)](/dict/unseong12/tae), 월주 [양(養)](/dict/unseong12/yang), 일주 [묘(墓)](/dict/unseong12/myo)로 나옵니다.",
         },
         {
           kind: "p",
@@ -171,7 +175,7 @@ export const jiminBts: Story = {
       blocks: [
         {
           kind: "p",
-          text: "세 기둥에서 잡히는 신살이 유난히 많은 사주예요. 그중 강점으로 보기 좋은 쪽부터 짚으면 귀인이 셋입니다. [천을귀인](/dict/sinsal/cheonyl-gwiin) · [천덕귀인](/dict/sinsal/cheondeok-gwiin) · [월덕귀인](/dict/sinsal/woldeok-gwiin)이에요.",
+          text: "신살이 유난히 많이 잡히는 사주예요. 강점 쪽부터 짚으면 귀인이 셋입니다. [천을귀인](/dict/sinsal/cheonyl-gwiin) · [천덕귀인](/dict/sinsal/cheondeok-gwiin) · [월덕귀인](/dict/sinsal/woldeok-gwiin)이에요.",
         },
         {
           kind: "p",
@@ -188,7 +192,7 @@ export const jiminBts: Story = {
       blocks: [
         {
           kind: "p",
-          text: "귀인만 있는 사주는 아니에요. 일반 신살로는 [백호살](/dict/sinsal/baekho)과 천살도 함께 잡힙니다.",
+          text: "귀인만 있는 사주는 아니에요. 일반 신살로는 [백호살](/dict/sinsal/baekho)과 천살도 함께 잡힙니다. 천살은 뒤에 나올 12신살에도 같은 이름으로 올라오는데, 두 체계가 같은 칸(월지 술)을 각자의 방식으로 집어낸 것이지 별이 둘인 게 아니에요.",
         },
         {
           kind: "p",
@@ -196,7 +200,7 @@ export const jiminBts: Story = {
         },
         {
           kind: "p",
-          text: "12신살 쪽에서는 [역마살](/dict/sipisinsal/yeokmasal), 월지의 [천살](/dict/sipisinsal/cheonsal), 일지의 [월살](/dict/sipisinsal/wolsal) 셋이 잡혀요. 역마는 이동과 변화의 별이라 이동이 본업인 직업군에서는 자산으로 읽습니다. 월살은 고초살이라고도 불리는 중립성 별로, 결핍을 느끼기에 더 노력하게 되는 동력으로 봐요. 천살은 내 의지 너머의 영역을 다루는 별이라, 사전도 무리하게 통제하기보다 받아들이는 자세를 권합니다.",
+          text: "12신살 쪽에서는 년지의 [역마살](/dict/sipisinsal/yeokmasal), 월지의 [천살](/dict/sipisinsal/cheonsal), 일지의 [월살](/dict/sipisinsal/wolsal) 셋이 잡혀요. 참고로 두루미는 12신살을 뽑을 때 년주 한 칸만 일지 삼합을 기준으로 잡습니다. 그래서 사전의 년지 기준 표와 년주 값이 다르게 보일 수 있어요. 역마는 이동과 변화의 별이라 이동이 본업인 직업군에서는 자산으로 읽습니다. 월살은 고초살이라고도 불리는 중립성 별로, 결핍을 느끼기에 더 노력하게 되는 동력으로 봐요. 천살은 내 의지 너머의 영역을 다루는 별이라, 사전도 무리하게 통제하기보다 받아들이는 자세를 권합니다.",
         },
         {
           kind: "image",
@@ -260,7 +264,7 @@ export const jiminBts: Story = {
       blocks: [
         {
           kind: "p",
-          text: "여기까지가 지민의 세 기둥에서 읽히는 배치예요. 같은 정축일주라도 태어난 해와 달이 다르면 그림은 통째로 달라집니다. 지지에 창고 글자가 한 칸도 없는 정축일주도 있고, 귀인이 하나도 안 잡히는 정축일주도 있어요.",
+          text: "여기까지가 세 기둥에서 읽히는 배치예요. 같은 정축일주라도 해와 달이 다르면 그림은 통째로 달라집니다. 지지에 창고 글자가 한 칸도 없는 정축일주도 있고, 귀인이 하나도 안 잡히는 정축일주도 있어요.",
         },
         {
           kind: "p",
