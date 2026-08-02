@@ -367,6 +367,65 @@ IO 트리거를 `threshold:.35`에서 `rootMargin:"0px 0px -25%"`로 — 요소�
 
 `will-change`는 뜸 시작·IO 진입 시 부착, 종료 +300ms에 제거. 스크롤 시 가시 인덱스 ±6장만 갱신(쓰기 468→72회/frame).
 
+#### ★ 구현 아키텍처 — 실측으로 검증됨
+
+프로토타입에서 폰 렉을 잡으며 확인한 것들. **실제 구현에서 그냥 rAF로 짜면 같은 렉이 다시 생긴다.**
+
+**① 덱 카드에 3D 플립 비계를 두지 마라 — 가장 큰 함정**
+
+`preserve-3d` + `backface-visibility` + `perspective`를 78장에 걸면 **애니메이션을 전부 꺼도 drawing layer 172개**다. 덱 카드는 절대 뒤집히지 않는다. 뒷면 한 장짜리 평면 요소면 된다. 플립 구조는 **공개 화면 3장에만.**
+
+| | 레이어 |
+|---|---|
+| 3D 비계 있음 | **172** |
+| 제거 후 | **42** |
+
+**② 스냅받는 요소와 변형되는 요소를 분리하라**
+
+`scroll-snap-align`의 스냅 영역은 **변형된 박스** 기준이다. 회전한 카드가 스냅 기준이 되면 스냅 위치가 transform에 다시 의존하는 순환이 생겨, 가운데로 보낸 카드가 **29.6px 빗나간다**(실측).
+
+```
+.pick   scroll-snap-align, 무변형
+  └ .fan  부챗살 transform·opacity를 여기가 소유
+```
+
+**③ 부챗살은 스크롤 구동 애니메이션으로**
+
+```css
+@supports (animation-timeline: view()){
+  .deck .pick>.fan{
+    animation:fan linear both;
+    animation-timeline:view(inline);
+    animation-range:cover 16% cover 84%;   /* 0~100%는 낙차가 평평하다 */
+  }
+}
+```
+
+스크롤은 컴포지터에서 돌고 rAF 계산은 메인 스레드에서 돈다 — **다른 스레드라 폰에서 손가락과 그림이 어긋난다.** `view(inline)`은 스크롤 위치를 진행률로 직결해 JS가 한 프레임도 개입하지 않는다. iOS Safari 26+ / Chrome Android 150+, 그 아래는 `@supports`로 갈라 rAF 폴백.
+
+⚠️ **회전 부호 주의** — 왼쪽 카드는 왼쪽으로, 오른쪽 카드는 오른쪽으로 누워야 손에 쥔 패처럼 **바깥으로** 벌어진다. 반대로 두면 가운데로 절하는 모양이 된다(실측으로 잡은 실수).
+
+⚠️ **keyframe에는 transform·opacity만.** filter나 background를 넣는 순간 메인 스레드로 떨어진다.
+
+⚠️ **`will-change`를 덱 카드에 걸지 마라.** 스크롤 구동이 이미 승격시키므로 중복이고, 78장에 걸면 승격이 고정된다.
+
+**④ 화면 밖 카드는 렌더에서 뺀다**
+
+스크롤 구동은 화면 밖 요소도 승격시킨다(레이어 95개). `content-visibility:auto` + `contain-intrinsic-size`로 **30개, 텍스처 10.2MB**까지 내려간다.
+
+**⑤ 뒷면은 이미지 한 장**
+
+`<use>`는 참조가 아니라 **복제**다. 문양 도형 106개 × 78장 = 7,800개가 렌더된다. 운영에서는 `back.png`를 `--back-img`로 정적 주입하고 `<link rel="preload">`. 프로토타입의 `bakeBack()`(런타임 SVG 굽기)은 **이식하지 않는다** — 실제로는 이미지가 오므로 불필요하다.
+
+**⑥ Next.js 이식 주의**
+
+- 부챗살 CSS는 Tailwind 말고 **plain CSS 한 블록**으로. `@keyframes`+`@supports`+`animation-timeline`은 어차피 CSS 파일행이다
+- **덱은 ref 기반 imperative island로.** rAF 폴백이 인라인 스타일을 직접 쓰는데 React가 `style` prop을 쥐고 있으면 리렌더 때 지워진다
+- **`.mid` 판정을 React state에 넣지 마라** — 스크롤 프레임마다 78노드가 리렌더된다
+- `globals.css:260`의 전역 `prefers-reduced-motion` 리셋이 뽑기까지 죽인다. 예외 필요(§4.7)
+
+**남은 리스크** — iOS Safari 26 실기기 미검증(Chromium에서만 실측). 스크롤 구동 × 스냅 × `content-visibility` 조합은 출시 전 실기기 확인 필수. 문제 시 Safari만 폴백으로 내리는 스위치를 준비해 둘 것.
+
 #### 잘라낼 것
 
 `framePulse`(sweep과 중복) · 별 무한반짝(1회 후 정지) · `bloom brightness(1.75)`(목판화를 클리핑한다) · `cardIn`의 `rotateX`(종이는 회전문이 아니다) · `.scr` 공통 전환(자체 안무 있는 화면에서 이중 모션) · **티끌 14→7**(어쩌다 하나 지나가야 티끌이다) · `saturate(1.2)`(인공 착색) · torch 농도 22%→12%
@@ -854,6 +913,8 @@ Phase 1~2가 먼저 서고 Phase 0이 늦어지면 임시 카드로 개발을 �
   유입(홈 히어로·블로그·스토어 소개)에서만 명시
 - 2026-08-02 — 카드 연출 안무표(§4.8). 이징 팔레트 7종, 뽑기 FLIP 여정,
   뜸 에너지 곡선 역전 수정, 자리별 차등은 소등으로. 현행 코드 스펙 위반 3건 발견
+- 2026-08-02 — 성능 아키텍처 실측 검증(§4.8). 덱 3D 비계 제거(레이어 172→42),
+  스냅/변형 분리(드리프트 29.6px→0), 스크롤 구동 부챗살, content-visibility
 - 2026-07-31 — 몽환 레이어 6종 + 덱 진입 연출 추가
 
 ---
