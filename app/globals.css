@@ -70,6 +70,17 @@
   --foreground: var(--text-primary);
 }
 
+/* ===== 세계별 accent — 타로보는 두루미 =====
+   세계 구분은 accent 컬러 하나뿐이다. 배경·타이포·카드 레이아웃은 사주와 공유한다.
+   --primary만 덮어쓰면 btn-primary·bg-primary·글로우까지 전부 따라온다.
+   app/tarot/layout.tsx가 data-world="tarot"을 건다. */
+[data-world="tarot"] {
+  --c-brand: 168 85 247;        /* #A855F7 자수정 */
+  --c-brand-hover: 192 132 252; /* #C084FC */
+  --primary: var(--c-brand);
+  --primary-hover: var(--c-brand-hover);
+}
+
 body {
   color: rgb(var(--text-primary));
   background: rgb(var(--bg-primary));

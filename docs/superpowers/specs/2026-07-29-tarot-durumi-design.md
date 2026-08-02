@@ -176,7 +176,7 @@
 | 단계 | 연출 | 시간 |
 |---|---|---|
 | 진입 | 아래에서 빛이 훑고 지나감 → 제목·안내·슬롯 순차 등장 → 카드가 34ms 간격으로 딜링 | ~1.1s |
-| 고르기 | 카드가 서로 겹친 채 부챗살로 벌어짐. 가운데만 평평하게 들리고 밝아짐 | 유저 페이스 |
+| 고르기 | 카드가 반듯이 선 채 서로 겹쳐 있음. 가운데 한 장만 들려 올라옴 | 유저 페이스 |
 | 선택 | 뽑힌 카드가 슬롯으로. 빈자리는 접혀 스프레드가 스스로 메워지고 덱이 재중심을 잡음 | 0.34s |
 | 뜸 | 뒤집기 탭 후 **정보 0**. 뒷면이 한 번 밝아지고 파문이 퍼짐 | **1.8s** |
 | 뒤집기 | `rotateY(180deg)` + `backface-visibility: hidden` | **0.7s** |
@@ -285,9 +285,10 @@ iOS Safari는 `DeviceOrientationEvent.requestPermission()`이 필수이고 **버
 
 #### ② 고르기
 
-**부챗살 낙차에 지수를 건다** — 선형이면 인접 카드가 scale .954로 가운데와 차이가 없어 부챗살이 평평하다. `t^0.6`이면 .918로 가운데가 확실히 선다.
-
-**스크롤 추적에서 transition을 뺀다** — `transition .16s`가 rAF 직접 기록과 싸워 부챗살이 손가락을 160ms 늦게 따라온다. 직결감이 없으면 "실물 패를 민다"는 은유가 무너진다.
+⚠️ 아래 두 항목은 **폐기됐다.** 부챗살 자체를 걷어냈기 때문이다(2026-08-02, §4.8 구현 아키텍처 ②).
+낙차 지수(`t^0.6`)도, 스크롤 추적 transition 제거도 이제 적용 대상이 없다.
+가운데 카드만 `translateY(-14px) scale(1.03)`으로 뜨고, 그 전환에는 transition을 **건다**(0.22s).
+손가락을 매 프레임 따라가는 요소가 없으므로 지연이 문제되지 않는다.
 
 **★ 뽑기 = FLIP 여정.** 지금은 카드가 덱에서 사라지고 슬롯에 다른 노드가 나타난다 — **의식의 핵심 행위인 '뽑기'에서 카드가 순간이동한다.**
 
@@ -379,52 +380,88 @@ IO 트리거를 `threshold:.35`에서 `rootMargin:"0px 0px -25%"`로 — 요소�
 |---|---|
 | 3D 비계 있음 | **172** |
 | 제거 후 | **42** |
+| 부챗살까지 제거 | **23** |
 
-**② 스냅받는 요소와 변형되는 요소를 분리하라**
+**② 카드는 전부 반듯이 세운다 — 부챗살을 걷어냈다** (운영자 확정 2026-08-02)
 
-`scroll-snap-align`의 스냅 영역은 **변형된 박스** 기준이다. 회전한 카드가 스냅 기준이 되면 스냅 위치가 transform에 다시 의존하는 순환이 생겨, 가운데로 보낸 카드가 **29.6px 빗나간다**(실측).
+카드를 부채처럼 눕히려면 각도를 스크롤 위치에 물려야 하는데, 그 대가가 셋이나 붙었다.
+
+1. 기운 카드의 윗모서리가 덱 상단에 잘린다
+2. 각도 방향이 뒤집힌다. `view(inline)`의 진행률 0%는 "왼쪽"이 아니라 **"막 들어오는 쪽"=오른쪽**이다. 그대로 쓰면 손에 쥔 패가 아니라 가운데로 절하는 모양이 된다
+3. 78장을 스크롤 내내 굴려야 해 폰에 은은한 렉이 남는다
+
+**겹침 + 가운데 카드 들어올림만으로 위계는 충분하다.** 부챗살을 버리는 대신 스크롤이 완전히 매끄러워진다. 운영자 판단도 같았다 — "부드러운 움직임이 더 중요해."
+
+그래서 스크롤 중 CSS가 하는 일이 **하나도 없다.** 애니메이션도, 스크롤 구동 타임라인도 걸지 않는다. 네이티브 스크롤과 스냅만 돌고, 가운데 카드가 바뀔 때 카드 **한 장**이 transition으로 뜬다.
+
+```css
+.pick{scroll-snap-align:center;flex:none;width:200px;aspect-ratio:5/8;
+  margin-right:-110px;position:relative;
+  content-visibility:auto;contain-intrinsic-size:200px 320px}
+.pick.mid{z-index:200}
+.pick.mid>.fan>.back{transform:translateY(-14px) scale(1.03)}   /* transform·shadow만 */
+```
+
+덱 상단 여백은 **26px**. 들어올림 14px + 확대 3%가 그 안에 들어가야 잘리지 않는다.
+
+**③ 스냅받는 요소와 변형되는 요소는 그래도 분리해 둔다**
+
+`scroll-snap-align`의 스냅 영역은 **변형된 박스** 기준이다. 지금은 회전이 없어 당장 문제가 안 나지만, `.mid`의 확대가 스냅 요소에 걸리면 스냅 위치가 transform에 다시 의존하는 순환이 생긴다(회전을 쓰던 시절 실측 **29.6px** 빗나감).
 
 ```
 .pick   scroll-snap-align, 무변형
-  └ .fan  부챗살 transform·opacity를 여기가 소유
+  └ .fan
+      └ .back   들어올림·그림자를 여기가 소유
 ```
 
-**③ 부챗살은 스크롤 구동 애니메이션으로**
+**④ 스크롤 핸들러에서 DOM을 읽지 마라 — 이게 "은은한 렉"의 진짜 정체였다**
 
-```css
-@supports (animation-timeline: view()){
-  .deck .pick>.fan{
-    animation:fan linear both;
-    animation-timeline:view(inline);
-    animation-range:cover 16% cover 84%;   /* 0~100%는 낙차가 평평하다 */
+부챗살보다 먼저 잡아야 했던 건 이쪽이다. 이전 코드는 프레임마다 카드 15장의 `getBoundingClientRect()`를 읽고 곧바로 스타일을 고쳐 썼다. 읽기와 쓰기가 번갈아 일어나면 **강제 동기 레이아웃**이 돈다. 레이어를 아무리 줄여도 이게 남아 있으면 렉은 사라지지 않는다.
+
+레이아웃 좌표는 **덱을 깔 때·뽑을 때·리사이즈 때만** 한 번씩 재서 배열에 캐시하고, 스크롤 중에는 캐시된 숫자만 비교해 클래스 하나를 옮긴다.
+
+```js
+function measure(){                     // .pick의 offsetParent가 position:relative인 .deck이라
+  PICKS = [...deck.querySelectorAll(".pick")];   // offsetLeft가 그대로 스크롤 좌표계다
+  CENTERS = PICKS.map(p => p.offsetLeft + p.offsetWidth/2);
+}
+function pickMid(){                     // DOM 읽기 0 · 스타일 쓰기 0 · 안 바뀌면 클래스 조작도 0
+  const c = deck.scrollLeft + deck.clientWidth/2;
+  let best=null, bd=Infinity;
+  for (let i=0;i<PICKS.length;i++){
+    if (PICKS[i].classList.contains("gone")) continue;
+    const d = Math.abs(CENTERS[i]-c); if (d<bd){bd=d;best=PICKS[i]}
   }
+  if (best===MIDEL) return;
+  MIDEL?.classList.remove("mid");       // 뽑혀나간 카드가 mid를 쥔 채 남으면 선택이 먹통이 된다
+  (MIDEL=best)?.classList.add("mid");
 }
 ```
 
-스크롤은 컴포지터에서 돌고 rAF 계산은 메인 스레드에서 돈다 — **다른 스레드라 폰에서 손가락과 그림이 어긋난다.** `view(inline)`은 스크롤 위치를 진행률로 직결해 JS가 한 프레임도 개입하지 않는다. iOS Safari 26+ / Chrome Android 150+, 그 아래는 `@supports`로 갈라 rAF 폴백.
+뽑은 카드가 접히는 동안(0.32s) 좌표가 계속 움직이므로 **접힘이 끝난 뒤에** 다시 잰다. 중간에 재면 이동 중인 값을 캐시한다.
 
-⚠️ **회전 부호 주의** — 왼쪽 카드는 왼쪽으로, 오른쪽 카드는 오른쪽으로 누워야 손에 쥔 패처럼 **바깥으로** 벌어진다. 반대로 두면 가운데로 절하는 모양이 된다(실측으로 잡은 실수).
+**⑤ 화면 밖 카드는 렌더에서 뺀다**
 
-⚠️ **keyframe에는 transform·opacity만.** filter나 background를 넣는 순간 메인 스레드로 떨어진다.
+`content-visibility:auto` + `contain-intrinsic-size`. 78장을 전부 그리면 레이어와 텍스처가 그대로 늘어난다.
 
-⚠️ **`will-change`를 덱 카드에 걸지 마라.** 스크롤 구동이 이미 승격시키므로 중복이고, 78장에 걸면 승격이 고정된다.
+**⑥ 금박은 공개 화면 3장에만**
 
-**④ 화면 밖 카드는 렌더에서 뺀다**
-
-스크롤 구동은 화면 밖 요소도 승격시킨다(레이어 95개). `content-visibility:auto` + `contain-intrinsic-size`로 **30개, 텍스처 10.2MB**까지 내려간다.
+가운데 카드에 걸면 `.mid`가 바뀔 때마다 430px짜리 conic-gradient가 새로 칠해져 스크롤 중에 미세한 끊김이 생긴다. 덱의 가운데 카드는 들어올림과 그림자만으로 충분히 구분된다.
 
 **⑤ 뒷면은 이미지 한 장**
 
 `<use>`는 참조가 아니라 **복제**다. 문양 도형 106개 × 78장 = 7,800개가 렌더된다. 운영에서는 `back.png`를 `--back-img`로 정적 주입하고 `<link rel="preload">`. 프로토타입의 `bakeBack()`(런타임 SVG 굽기)은 **이식하지 않는다** — 실제로는 이미지가 오므로 불필요하다.
 
-**⑥ Next.js 이식 주의**
+**⑦ Next.js 이식 주의**
 
-- 부챗살 CSS는 Tailwind 말고 **plain CSS 한 블록**으로. `@keyframes`+`@supports`+`animation-timeline`은 어차피 CSS 파일행이다
-- **덱은 ref 기반 imperative island로.** rAF 폴백이 인라인 스타일을 직접 쓰는데 React가 `style` prop을 쥐고 있으면 리렌더 때 지워진다
-- **`.mid` 판정을 React state에 넣지 마라** — 스크롤 프레임마다 78노드가 리렌더된다
+- 덱 CSS는 Tailwind 말고 **plain CSS 한 블록**으로. `content-visibility`·`scroll-snap`·겹침 마진은 토큰화할 게 없다
+- **덱은 ref 기반 imperative island로.** 가운데 판정이 클래스를 직접 옮기는데 React가 `className`을 쥐고 있으면 리렌더 때 되돌아간다
+- **`.mid` 판정을 React state에 넣지 마라** — 스크롤할 때마다 78노드가 리렌더된다
 - `globals.css:260`의 전역 `prefers-reduced-motion` 리셋이 뽑기까지 죽인다. 예외 필요(§4.7)
 
-**남은 리스크** — iOS Safari 26 실기기 미검증(Chromium에서만 실측). 스크롤 구동 × 스냅 × `content-visibility` 조합은 출시 전 실기기 확인 필수. 문제 시 Safari만 폴백으로 내리는 스위치를 준비해 둘 것.
+**실측** (Chromium, 390×844, DPR 3) — 회전 전부 0°, 상단 잘림 없음(여백 7px), 스냅 오차 0, 실제 스와이프 중 long task 0, 레이어 23. 3장 뽑기 회귀 통과.
+
+**남은 리스크** — iOS Safari 실기기 미검증(Chromium에서만 실측). `scroll-snap` × `content-visibility` 조합은 출시 전 실기기 확인 필수.
 
 #### 잘라낼 것
 

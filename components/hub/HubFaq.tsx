@@ -1,8 +1,14 @@
 // ⑥ FAQ — 네이티브 <details>/<summary> (JS 0). 목업 7문항 그대로. "무료" 오주장 없음(검수 통과).
+// 타로 홈이 같은 마크업에 다른 문답을 쓰므로 items를 받는다. 미지정이면 사주 홈 기본값.
 import { CaretDown } from "@phosphor-icons/react/dist/ssr";
 import Reveal from "./Reveal";
 
-const FAQ_ITEMS: { q: string; a: string }[] = [
+export interface HubFaqItem {
+  q: string;
+  a: string;
+}
+
+const FAQ_ITEMS: HubFaqItem[] = [
   {
     q: "돈 내기 전에 볼 수 있는 건 없나요?",
     a: "매거진과 사주 사전은 로그인 없이 전부 읽을 수 있어요. 분석 서비스는 알(코인)로 이용해요.",
@@ -33,12 +39,12 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
 ];
 
-export default function HubFaq() {
+export default function HubFaq({ items = FAQ_ITEMS }: { items?: HubFaqItem[] }) {
   return (
     <Reveal className="px-5 pt-10">
       <h2 className="mb-4 text-center font-aggro text-[22px]">자주 묻는 질문</h2>
       <div className="space-y-2">
-        {FAQ_ITEMS.map((item, i) => (
+        {items.map((item, i) => (
           <details
             key={item.q}
             open={i === 0}

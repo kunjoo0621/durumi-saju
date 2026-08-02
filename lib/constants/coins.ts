@@ -7,6 +7,8 @@ export const PET_COMPAT_LAUNCH_COST = 10; // 출시 할인가 (기간 미표기,
 export const MARRIAGE_COST = 10; // 결혼운/애정운 심층 검사 = 10알 (사주·yearly 동일, 풀 심층)
 export const WEALTH_COST = 10; // 재물운 심층 검사 = 10알 (사주·yearly·결혼운 동일, 풀 심층)
 export const CAREER_COST = 10; // 커리어운 심층 검사 = 10알 (사주·yearly·결혼운·재물운 동일, 풀 심층)
+export const TAROT_COST = 10;            // 타로 해석 전문 = 10알 (뽑기·카드 공개는 무료 — 미리보기 겸 법적 요건)
+export const TAROT_CLARIFIER_COST = 5;   // 클래리파이어 1장 = 5알 ("내가 못 보고 있는 것")
 
 export type CoinPackageId = 'basic' | 'popular' | 'value';
 
