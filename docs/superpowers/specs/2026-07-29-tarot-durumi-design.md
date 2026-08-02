@@ -418,6 +418,23 @@ IO 트리거를 `threshold:.35`에서 `rootMargin:"0px 0px -25%"`로 — 요소�
 }
 ```
 
+**★ 폴백도 반드시 연속이어야 한다.** 스크롤 구동을 못 쓰는 브라우저(아이폰 사파리 구버전)에 `.mid` 클래스 transition만 남기면 크기가 계단처럼 바뀌어 **"딱딱하다"**는 그 느낌이 그대로 돌아온다. 같은 곡선을 JS로 그린다 — 캐시된 좌표만 쓰므로 DOM 읽기 0, 대상은 `.live` 5장뿐이다.
+
+```js
+const SDA = CSS.supports("animation-timeline: view()");
+if (!SDA) deck.classList.add("jsfan");        // .deck.jsfan .pick>.fan{transition:none}
+function paint(c){                             // 매 스크롤 프레임, 5장만
+  for (const el of LIVE){
+    const t = Math.min(1, Math.abs(CENTERS[PICKS.indexOf(el)] - c) / (STEP*1.07));
+    const f = el.firstElementChild;
+    f.style.transform = `scale(${(1-.14*t).toFixed(3)})`;
+    f.style.opacity   = (1-.38*t).toFixed(3);
+  }
+}
+```
+
+폴백 경로에서는 **transition을 반드시 끈다.** 매 프레임 쓰는 값과 싸워 손가락을 240ms 늦게 따라온다. 창을 벗어난 카드는 인라인 스타일을 지워야 그 카드만 마지막 크기로 굳지 않는다. 두 경로가 같은 곡선을 내는지 실측으로 확인했다 — 표본 9개가 소수점 셋째 자리까지 일치(.86 → 1.0 → .86).
+
 **곡선이 좌우 대칭이라 진행률 방향 문제가 구조적으로 사라진다.** 0%와 100%가 같은 값이므로 `view(inline)`의 0%가 왼쪽이든 오른쪽이든 결과가 같다. 회전을 쓰던 시절의 함정이 없다. 실측으로 가운데 카드의 ViewTimeline 진행률이 **정확히 50%** — 스냅 지점이 곡선의 꼭대기다.
 
 **범위를 좁게 자르는 이유** — `cover 0~100%`는 (스크롤포트 + 카드) 640px에 걸쳐 진행되는데 카드 간격은 90px뿐이다. 전 구간을 쓰면 옆 카드가 scale .96이라 가운데가 서지 않는다.
@@ -487,7 +504,9 @@ function pickMid(){                     // DOM 읽기 0 · 스타일 쓰기 0 ·
 - **`.mid`·`.live` 판정을 React state에 넣지 마라** — 스크롤할 때마다 78노드가 리렌더된다
 - `globals.css:260`의 전역 `prefers-reduced-motion` 리셋이 뽑기까지 죽인다. 예외 필요(§4.7)
 
-**실측** (Chromium, 390×844, 실제 터치 스와이프) — 회전 전부 0°, 가운데 카드 상하 잘림 없음(위 10px·아래 26px 여유), 옆 카드 scale .86 / 가운데 1.0, 스냅 오차 0, 스와이프 중 long task 0, 레이어 32 · 텍스처 63.9MB. 3장 뽑기 → 공개 회귀 통과, 콘솔 에러 0.
+**실측** (Chromium, 실제 터치 스와이프) — 회전 전부 0°, 네 가지 뷰포트 전부 페이지 넘침 0 · 가운데 카드 잘림 없음, 옆 카드 scale .86 / 가운데 1.0, 스크롤 구동 경로와 JS 폴백 경로의 곡선 일치, 스냅 오차 0, 스와이프 중 long task 0, 레이어 32 · 텍스처 63.9MB. 3장 뽑기 → 공개 회귀 통과, 콘솔 에러 0.
+
+⚠️ **Chromium은 스크롤 구동을 지원하므로 폴백 경로는 `CSS.supports`를 가로채 강제로 태워야 검증된다.** 안 하면 절반이 안 돌아본 채 나간다.
 
 ⚠️ **주석 닫힘 하나로 `@supports` 블록이 통째로 죽은 적이 있다.** 스타일이 조용히 사라져도 화면은 그럴듯해 보인다. 이식 후에는 `getAnimations()`로 실제로 붙었는지 확인할 것 — `n:0`이면 안 붙은 것이다.
 
