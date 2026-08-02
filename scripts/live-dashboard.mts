@@ -118,9 +118,15 @@ async function countSince(table: string, since: string, internalColumn: "id" | "
 }
 
 // ── 유료 심층 리포트 4종 ────────────────────────────
-// 이 테이블들은 결제 언락 시점에만 row가 생긴다(전 row unlocked_at 채워짐 — 2026-08-02 실측).
-// 즉 row 1개 = 유료 리포트 1건. teaser는 같은 row의 teaser_json 컬럼에만 남으므로 과대집계 위험 없다.
-// 대시보드가 이 4종을 통째로 빼먹어서 "결제는 있는데 분석이 없다"로 잘못 읽히고 있었다(결혼운은 7일 32건으로 개인사주 다음가는 2위 상품).
+// 대시보드가 이 4종을 통째로 빼먹어서 "결제는 있는데 분석이 없다"로 잘못 읽히고 있었다
+// (결혼운은 최근 7일 23건으로 개인사주 다음가는 2위 상품).
+//
+// ★언락 판정 기준: full_json IS NOT NULL. row는 티저 단계에서 먼저 생기고, 결제 언락 시에
+// 본문(full_json)이 채워진다. unlocked_at은 `default now()`라 row 생성만으로도 박히므로
+// 결제 증거가 못 된다(2026-08-02 실측 — 이 컬럼을 믿었다가 티저를 결제로 오집계했다).
+// 검증: marriage/career/wealth 115행 전수 대조에서 full_json 유무 ⟺ *_result_unlocks 기록 유무가
+// 불일치 0으로 일치(60/60, 16/16, 24/24).
+// 펫은 full_result가 NOT NULL 제약이라 row 자체가 언락 단위다.
 const REPORT_KINDS = [
   { table: "marriage_results", kind: "결혼", gradeCol: "marriage_grade", color: c.magenta },
   { table: "career_results", kind: "커리어", gradeCol: "career_grade", color: c.blue },
@@ -137,6 +143,8 @@ type ReportRow = {
   region: string | null;
   grade: string | null;
   full_json: any;
+  /** 결제 언락 완료(본문 존재). false면 티저만 보고 이탈한 row다 — 매출·결과 집계에 넣으면 안 된다. */
+  unlocked: boolean;
 };
 
 // 4종을 한 번에 긁어온다. 펫 궁합은 스키마가 달라(full_result·pet_id, 인적사항 없음) 등급·집계만 채운다.
@@ -162,6 +170,7 @@ async function loadReportRows(startIso: string, endIso?: string): Promise<Report
         region: row.region ?? null,
         grade: row[r.gradeCol] ?? null,
         full_json: row.full_json,
+        unlocked: !!row.full_json,
       });
     }
   }
@@ -184,16 +193,15 @@ async function loadReportRows(startIso: string, endIso?: string): Promise<Report
         region: null,
         grade: row.label_grade ?? null,
         full_json: row.full_result,
+        unlocked: !!row.full_result,
       });
     }
   }
   return out;
 }
 
-// 리포트 본문 상태: full_json이 없으면 미완(생성중·중단), _error면 실패
-const reportFailed = (fj: any) => !!fj?._error;
-const reportPending = (fj: any) => !fj;
-const reportDelivered = (fj: any) => !!fj && !fj._error;
+// 언락된 리포트 중 본문이 실패(_error)로 채워진 것 = 돈 받고 결과 못 준 진짜 사고
+const reportFailed = (r: ReportRow) => r.unlocked && !!r.full_json?._error;
 
 async function gradeV18Monitor() {
   section("🎯  등급 산식 v18 영향 모니터링  " + c.dim + "(버전별 표시등급 분포 · 하향 감시)" + c.reset);
@@ -277,8 +285,10 @@ async function main() {
       loadReportRows(p.since, until),
     ]);
     const kakaoPaid = (payments.data ?? []).filter(isPayable);
+    // 언락된 리포트만 집계한다. 티저 row는 결제도 결과 제공도 아니다.
+    const unlockedReports = reportRows.filter((r) => r.unlocked);
     const reportByKind: Record<string, number> = {};
-    for (const r of reportRows) reportByKind[r.kind] = (reportByKind[r.kind] ?? 0) + 1;
+    for (const r of unlockedReports) reportByKind[r.kind] = (reportByKind[r.kind] ?? 0) + 1;
     rows.push({
       period: p.label,
       users,
@@ -286,7 +296,7 @@ async function main() {
       yearly,
       today,
       battles,
-      reports: reportRows.length,
+      reports: unlockedReports.length,
       reportByKind,
       pays: kakaoPaid.length,
       revenue: kakaoPaid.reduce((s, x) => s + (x.amount ?? 0), 0),
@@ -333,8 +343,9 @@ async function main() {
       ...((personalRes.data ?? []) as any[]).map((r) => ({ ...r, kind: "개인" })),
       ...((yearlyRes.data ?? []) as any[]).map((r) => ({ ...r, kind: "올해" })),
       ...((todayRes.data ?? []) as any[]).map((r) => ({ ...r, kind: "오늘" })),
-      // 유료 리포트 4종도 결과 제공 단위다. 빠져 있으면 리포트만 산 사용자가 "결제했는데 결과 없음"으로 오탐된다.
-      ...reportRows.map((r) => ({ ...r, kind: r.kind })),
+      // 언락된 유료 리포트도 결과 제공 단위다. 빠져 있으면 리포트만 산 사용자가 "결제했는데 결과 없음"으로 오탐된다.
+      // 티저 row(미언락)는 제외 — 결제하지 않았으므로 제공 의무가 없다.
+      ...reportRows.filter((r) => r.unlocked),
     ];
     const errRows = resultRows
       .filter((r) => (r.full_json as any)?._error)
@@ -588,8 +599,8 @@ async function main() {
     for (const row of personalRes.data ?? []) addResultState(row);
     for (const row of yearlyRes.data ?? []) addResultState(row);
     for (const row of todayRes.data ?? []) addResultState(row);
-    // 유료 리포트 4종(결혼·커리어·재물·펫)도 동일한 결과 제공 단위
-    for (const row of reportRows) addResultState(row);
+    // 유료 리포트 4종(결혼·커리어·재물·펫) — 언락된 것만 결과 제공 단위
+    for (const row of reportRows.filter((r) => r.unlocked)) addResultState(row);
     // 배틀은 저장된 row가 결과 제공 단위다. 실패 row는 별도 테이블에 남기지 않는 구조.
     for (const row of battleRes.data ?? []) if (row.user_id) deliveredUserIds.add(row.user_id);
 
@@ -763,7 +774,8 @@ async function main() {
       score: `${r.wins_a ?? 0}:${r.wins_b ?? 0}${r.draws ? `:${r.draws}` : ""}`,
     });
   }
-  for (const r of recentReportRows) {
+  // 언락된 리포트만 '분석'으로 센다(티저 열람은 분석이 아니다)
+  for (const r of recentReportRows.filter((x) => x.unlocked)) {
     recentAnalyses.push({
       created_at: r.created_at,
       user_id: r.user_id,
@@ -773,7 +785,7 @@ async function main() {
       gender: r.gender,
       region: r.region,
       // 리포트는 개인사주와 다른 자체 등급 체계(marriage_grade 등)를 쓴다. 점수 개념은 없다.
-      grade: reportFailed(r.full_json) ? "ERR" : reportPending(r.full_json) ? "..." : r.grade ?? "—",
+      grade: reportFailed(r) ? "ERR" : r.grade ?? "—",
       score: "—",
     });
   }
@@ -878,7 +890,7 @@ async function main() {
     const k = new Date(t.getTime() + 9 * 3600_000).toISOString().slice(5, 13).replace("T", " ") + "h";
     hourBuckets.set(k, { signups: 0, analyses: 0, yearly: 0, today: 0, reports: 0 });
   }
-  for (const r of rep24h) {
+  for (const r of rep24h.filter((x) => x.unlocked)) {
     const k = new Date(new Date(r.created_at).getTime() + 9 * 3600_000).toISOString().slice(5, 13).replace("T", " ") + "h";
     if (hourBuckets.has(k)) hourBuckets.get(k)!.reports++;
   }
@@ -953,7 +965,7 @@ async function main() {
     const k = new Date(d.getTime() + 9 * 3600_000).toISOString().slice(0, 10);
     dayBuckets.set(k, { signups: 0, analyses: 0, yearly: 0, today: 0, reports: 0, pays: 0, revenue: 0 });
   }
-  for (const r of rep14d) {
+  for (const r of rep14d.filter((x) => x.unlocked)) {
     const k = new Date(new Date(r.created_at).getTime() + 9 * 3600_000).toISOString().slice(0, 10);
     if (dayBuckets.has(k)) dayBuckets.get(k)!.reports++;
   }
@@ -1010,7 +1022,9 @@ async function main() {
   const weekReportRows = await loadReportRows(D7);
   const cumulative: Record<string, number> = {};
   for (const r of REPORT_KINDS) {
-    const { count } = await sb.from(r.table).select("*", { count: "exact", head: true }).not("user_id", "in", INTERNAL_ID_LIST);
+    const { count } = await sb.from(r.table).select("*", { count: "exact", head: true })
+      .not("full_json", "is", null)
+      .not("user_id", "in", INTERNAL_ID_LIST);
     cumulative[r.kind] = count ?? 0;
   }
   {
@@ -1018,34 +1032,38 @@ async function main() {
     cumulative["펫"] = count ?? 0;
   }
 
-  section("💎  유료 심층 리포트  " + c.dim + "(row 1개 = 결제 언락 1건)" + c.reset);
+  section("💎  유료 심층 리포트  " + c.dim + "(언락=결제 완료. 티저는 결제 전 미리보기)" + c.reset);
   const kindOrder = ["결혼", "커리어", "재물", "펫"];
-  const rHead = `${padR("상품", 10)} ${padL("오늘", 5)} ${padL("어제", 5)} ${padL("7일", 5)} ${padL("누적", 6)} ${padL("미완", 5)} ${padL("실패", 5)}`;
+  const rHead = `${padR("상품", 10)} ${padL("오늘", 5)} ${padL("어제", 5)} ${padL("7일", 5)} ${padL("누적", 6)} ${padL("티저이탈", 8)} ${padL("언락률", 6)} ${padL("실패", 5)}`;
   console.log("  " + c.dim + rHead + c.reset);
   console.log("  " + c.dim + "─".repeat(visualWidth(rHead)) + c.reset);
-  let weekTotal = 0, pendingTotal = 0, failedTotal = 0;
+  let weekTotal = 0, teaserTotal = 0, failedTotal = 0;
   for (const kind of kindOrder) {
     const wk = weekReportRows.filter((x) => x.kind === kind);
-    const pending = wk.filter((x) => reportPending(x.full_json)).length;
-    const failed = wk.filter((x) => reportFailed(x.full_json)).length;
-    weekTotal += wk.length;
-    pendingTotal += pending;
+    const unlocked = wk.filter((x) => x.unlocked);
+    const teaserOnly = wk.length - unlocked.length;
+    const failed = wk.filter(reportFailed).length;
+    weekTotal += unlocked.length;
+    teaserTotal += teaserOnly;
     failedTotal += failed;
-    const col = wk.length > 0 ? c.brand : c.dim;
+    const col = unlocked.length > 0 ? c.brand : c.dim;
+    const rate = wk.length > 0 ? `${pct(unlocked.length, wk.length)}%` : "—";
     console.log(
-      `  ${padR(kind, 10)} ${padL(String(rNow.reportByKind[kind] ?? 0), 5)} ${padL(String(rYesterday.reportByKind[kind] ?? 0), 5)} ${col}${padL(String(wk.length), 5)}${c.reset} ${padL(String(cumulative[kind] ?? 0), 6)} ${pending > 0 ? c.yellow : c.dim}${padL(String(pending), 5)}${c.reset} ${failed > 0 ? c.red : c.dim}${padL(String(failed), 5)}${c.reset}`,
+      `  ${padR(kind, 10)} ${padL(String(rNow.reportByKind[kind] ?? 0), 5)} ${padL(String(rYesterday.reportByKind[kind] ?? 0), 5)} ${col}${padL(String(unlocked.length), 5)}${c.reset} ${padL(String(cumulative[kind] ?? 0), 6)} ${teaserOnly > 0 ? c.yellow : c.dim}${padL(String(teaserOnly), 8)}${c.reset} ${padL(rate, 6)} ${failed > 0 ? c.red : c.dim}${padL(String(failed), 5)}${c.reset}`,
     );
   }
   console.log("  " + c.dim + "─".repeat(visualWidth(rHead)) + c.reset);
+  const totalRows = weekTotal + teaserTotal;
   console.log(
-    `  ${padR("합계", 10)} ${padL(String(rNow.reports), 5)} ${padL(String(rYesterday.reports), 5)} ${c.bold}${padL(String(weekTotal), 5)}${c.reset} ${padL(String(Object.values(cumulative).reduce((a, b) => a + b, 0)), 6)} ${pendingTotal > 0 ? c.yellow : c.dim}${padL(String(pendingTotal), 5)}${c.reset} ${failedTotal > 0 ? c.red : c.dim}${padL(String(failedTotal), 5)}${c.reset}`,
+    `  ${padR("합계", 10)} ${padL(String(rNow.reports), 5)} ${padL(String(rYesterday.reports), 5)} ${c.bold}${padL(String(weekTotal), 5)}${c.reset} ${padL(String(Object.values(cumulative).reduce((a, b) => a + b, 0)), 6)} ${teaserTotal > 0 ? c.yellow : c.dim}${padL(String(teaserTotal), 8)}${c.reset} ${padL(totalRows > 0 ? `${pct(weekTotal, totalRows)}%` : "—", 6)} ${failedTotal > 0 ? c.red : c.dim}${padL(String(failedTotal), 5)}${c.reset}`,
   );
   const personalWeek = rWeek.results;
   if (weekTotal > 0) {
     console.log(`  ${c.dim}7일 기준 개인사주 ${personalWeek}건 대비 리포트 ${weekTotal}건 (${pct(weekTotal, personalWeek + weekTotal)}%가 심층 리포트)${c.reset}`);
   }
-  if (failedTotal > 0 || pendingTotal > 0) {
-    console.log(`  ${c.yellow}참고${c.reset} 미완=본문 생성 전/중단, 실패=_error. 지속되면 리포트 생성 파이프라인 점검 필요.`);
+  console.log(`  ${c.dim}티저이탈 = 미리보기만 보고 결제 안 함(정상 이탈, 손실 아님). 실패 = 결제 후 본문 _error = 진짜 사고.${c.reset}`);
+  if (failedTotal > 0) {
+    console.log(`  ${c.red}주의${c.reset} 결제 후 본문 실패 ${failedTotal}건 — 환불·재생성 확인 필요.`);
   }
 
   // ── 3-1. 가입 보너스 회귀 감시 (평소엔 침묵) ─────────────
