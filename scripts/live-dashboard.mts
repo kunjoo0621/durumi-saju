@@ -1,5 +1,38 @@
 import { createClient } from "@supabase/supabase-js";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
+
+// ── 동시 실행 잠금 ────────────────────────────────
+// 2026-08-02, 이 대시보드를 두 개 동시에 돌린 직후 Supabase가 522로 77분간 죽었다.
+// 무료 nano(램 512MB)에 무거운 집계를 겹쳐 던지면 인스턴스가 넘어간다.
+// 실수로 두 번 띄우는 것 자체를 막는다. 스테일 락은 PID 생존 + 10분 경과로 자동 해제.
+const LOCK_FILE = "/tmp/durumi-live-dashboard.lock";
+const LOCK_STALE_MS = 10 * 60_000;
+function acquireLock() {
+  if (existsSync(LOCK_FILE)) {
+    try {
+      const [pidStr, startedAt] = readFileSync(LOCK_FILE, "utf-8").split("\n");
+      const pid = Number(pidStr);
+      const age = Date.now() - Number(startedAt || 0);
+      let alive = false;
+      try { process.kill(pid, 0); alive = true; } catch { alive = false; }
+      if (alive && age < LOCK_STALE_MS) {
+        console.error(
+          `\n  대시보드가 이미 실행 중입니다 (PID ${pid}, ${Math.round(age / 1000)}초 경과).\n` +
+          `  동시 실행은 DB(무료 nano)를 넘어뜨릴 수 있어 막습니다. 끝난 뒤 다시 실행하세요.\n` +
+          `  강제 해제: rm ${LOCK_FILE}\n`,
+        );
+        process.exit(1);
+      }
+    } catch { /* 손상된 락은 무시하고 덮어쓴다 */ }
+  }
+  writeFileSync(LOCK_FILE, `${process.pid}\n${Date.now()}`);
+  const release = () => { try { unlinkSync(LOCK_FILE); } catch {} };
+  process.on("exit", release);
+  for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+    process.on(sig, () => { release(); process.exit(130); });
+  }
+}
+acquireLock();
 
 const envText = readFileSync(".env.local", "utf-8");
 const envVars: Record<string, string> = {};
@@ -206,17 +239,26 @@ const reportFailed = (r: ReportRow) => r.unlocked && !!r.full_json?._error;
 async function gradeV18Monitor() {
   section("🎯  등급 산식 v18 영향 모니터링  " + c.dim + "(버전별 표시등급 분포 · 하향 감시)" + c.reset);
   const DISP: Record<string, string> = { S: "SS", A: "S", B: "A", C: "B", D: "C" };
+  // ★full_json 통째로 받지 말 것. 2,900행 × 9KB ≈ 26MB를 매 실행마다 끌어와
+  // nano 인스턴스(램 512MB)를 압박한다. 실제로 필요한 건 스칼라 3개뿐이므로
+  // PostgREST JSON 경로 투영으로 DB에서 뽑아 온다(전송량 100분의 1 이하).
+  // 2026-08-02 DB 다운(522, 77분) 재발 방지. → memory/project_durumi_supabase_outage
   let all: any[] = [], from = 0;
   while (true) {
-    const { data } = await sb.from("saju_results").select("full_json").not("full_json", "is", null).range(from, from + 999);
+    const { data, error } = await sb
+      .from("saju_results")
+      .select("grade:full_json->tier->>grade,composite:full_json->tier->>composite,ver:full_json->>scoringVersion,err:full_json->>_error")
+      .not("full_json", "is", null)
+      .range(from, from + 999);
+    if (error) { console.log(`  ${c.red}등급 집계 조회 실패${c.reset} ${error.message}`); return; }
     if (!data || !data.length) break;
     all.push(...data); from += 1000; if (data.length < 1000) break;
   }
-  const valid = all.filter((r: any) => !r.full_json?._error && typeof r.full_json?.tier?.composite === "number");
+  const valid = all.filter((r: any) => r.err == null && Number.isFinite(Number(r.composite)));
   const cohort = (pred: (v: number) => boolean) => {
-    const rows = valid.filter((r: any) => pred(r.full_json?.scoringVersion ?? 0));
+    const rows = valid.filter((r: any) => pred(Number(r.ver) || 0));
     const d: Record<string, number> = { SS: 0, S: 0, A: 0, B: 0, C: 0 };
-    for (const r of rows) { const g = DISP[r.full_json.tier.grade] ?? r.full_json.tier.grade; if (d[g] !== undefined) d[g]++; }
+    for (const r of rows) { const g = DISP[r.grade] ?? r.grade; if (d[g] !== undefined) d[g]++; }
     return { n: rows.length, d };
   };
   const v18 = cohort((v) => v >= 18);
