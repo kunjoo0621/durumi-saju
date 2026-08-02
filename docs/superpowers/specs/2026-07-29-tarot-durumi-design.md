@@ -390,19 +390,58 @@ IO 트리거를 `threshold:.35`에서 `rootMargin:"0px 0px -25%"`로 — 요소�
 2. 각도 방향이 뒤집힌다. `view(inline)`의 진행률 0%는 "왼쪽"이 아니라 **"막 들어오는 쪽"=오른쪽**이다. 그대로 쓰면 손에 쥔 패가 아니라 가운데로 절하는 모양이 된다
 3. 78장을 스크롤 내내 굴려야 해 폰에 은은한 렉이 남는다
 
-**겹침 + 가운데 카드 들어올림만으로 위계는 충분하다.** 부챗살을 버리는 대신 스크롤이 완전히 매끄러워진다. 운영자 판단도 같았다 — "부드러운 움직임이 더 중요해."
+**겹침 + 가운데 카드가 커지는 것만으로 위계는 충분하다.** 부챗살을 버리는 대신 스크롤이 매끄러워진다. 운영자 판단도 같았다 — "부드러운 움직임이 더 중요해."
 
-그래서 스크롤 중 CSS가 하는 일이 **하나도 없다.** 애니메이션도, 스크롤 구동 타임라인도 걸지 않는다. 네이티브 스크롤과 스냅만 돌고, 가운데 카드가 바뀔 때 카드 **한 장**이 transition으로 뜬다.
+**⚠️ 여기서 한 번 잘못 갔다.** 회전과 함께 연속 변화를 통째로 걷어내고 `.mid` 클래스 transition만 남겼더니 크기가 계단처럼 바뀌어 **더 끊겨 보였다.** 부챗살이 문제였지 연속성이 문제가 아니었다. 회전만 빼고 **크기·투명도는 스크롤에 직결**해야 한다(③).
 
 ```css
-.pick{scroll-snap-align:center;flex:none;width:200px;aspect-ratio:5/8;
-  margin-right:-110px;position:relative;
-  content-visibility:auto;contain-intrinsic-size:200px 320px}
-.pick.mid{z-index:200}
-.pick.mid>.fan>.back{transform:translateY(-14px) scale(1.03)}   /* transform·shadow만 */
+/* transform-origin을 아래로 — 카드들이 한 선 위에 서고 가운데 것만 위로 자란다.
+   가운데(50%)로 두면 작아진 카드가 위아래로 줄어 공중에 뜬 것처럼 보인다 */
+.pick>.fan{transform-origin:50% 100%;
+  transform:scale(.86);opacity:.62;                    /* 스크롤 구동 없을 때의 쉬는 값 */
+  transition:transform .24s var(--ease),opacity .24s}
+.pick.mid>.fan{transform:scale(1);opacity:1}
+.pick.mid>.fan>.back{transform:translateY(-10px)}      /* 크기는 .fan, 들어올림은 .back */
 ```
 
-덱 상단 여백은 **26px**. 들어올림 14px + 확대 3%가 그 안에 들어가야 잘리지 않는다.
+크기는 `.fan`이, 들어올림은 `.back`이 맡는다. 같은 요소에 두면 두 transform이 서로를 덮어쓴다.
+
+**★ 덱 높이를 고정하지 마라 — 카드 크기가 남는 공간을 따라가야 한다**
+
+356px로 못박았더니 사파리 툴바가 있는 실제 화면(664px)에서 페이지가 33px, iPhone SE에서 89px 넘쳤다. 넘친 만큼 덱이 화면 밖으로 밀려 **카드가 잘린 것처럼 보인다.** `#s-deck`의 `min-height`도 같은 원인이었다 — 섹션이 뷰포트를 넘겨 자란다.
+
+```css
+#s-deck[data-on]{height:calc(100dvh - 72px);overflow:hidden}   /* min-height 아님 */
+.deckwrap{flex:1 1 0;min-height:150px;max-height:356px}         /* 남는 만큼, 356에서 멈춤 */
+.deck{--ch:320px;padding:calc(var(--ch)*.0625) 0 calc(var(--ch)*.05)}
+.pick{scroll-snap-align:center;flex:none;position:relative;
+  height:var(--ch);width:calc(var(--ch)*.625);
+  margin-right:calc(var(--ch)*-.34375);                         /* 폭·겹침 전부 비례 */
+  content-visibility:auto;contain-intrinsic-size:calc(var(--ch)*.625) var(--ch)}
+.pick.mid{z-index:200}
+
+/* ★ --ch를 CSS가 직접 푼다. JS로 재서 나중에 고쳐 쓰면 첫 페인트는 틀린 크기로
+   그려지고 한 프레임 뒤에 튄다 — "잘렸다가 돌아오는" 게 그거다. 사후 보정이지 해결이 아니다.
+   컨테이너 쿼리 단위는 스타일 계산 시점에 풀리므로 처음부터 맞다.
+   1cqh = 덱 높이의 1%. 덱 높이 = ch × 1.1125 이므로 ch = 89.89cqh */
+@supports (container-type: size){
+  .deckwrap{container-type:size}
+  .deckwrap>.deck{--ch:89.89cqh}      /* 특이도로 위의 --ch:320px를 이긴다 */
+}
+```
+
+⚠️ `@supports` 블록을 `.deck{--ch:320px}`보다 **앞에** 두면 뒤 선언에 덮여 조용히 무시된다. 같은 특이도라 순서가 이긴다. 실제로 처음엔 이래서 안 먹었다(카드가 320 고정, 664에서 아래 11px 잘림). `.deckwrap>.deck`로 올려야 위치와 무관하게 이긴다.
+
+⚠️ **JS 보정은 컨테이너 쿼리를 못 쓰는 브라우저에만 남긴다.** 지원되는 브라우저에서 인라인 스타일로 덮으면 첫 프레임 튐이 그대로 돌아온다(인라인이 CSS를 이긴다). Safari 16 / Chrome 105 이상이면 전부 CSS 경로다.
+
+**검증법** — `toDeck` 직후 20프레임 동안 `pick.offsetHeight`를 기록해 **값이 하나뿐인지** 본다. 둘 이상이면 튀고 있는 것이다.
+
+| 뷰포트 | 카드 | 첫 20프레임 | 카드 위/아래 여유 | 페이지 넘침 |
+|---|---|---|---|---|
+| 390×844 | 320×200 | 값 1개 | 10 / 26 | 0 |
+| 390×664 (사파리 툴바) | 287×179 | 값 1개 | 8 / 24 | 0 |
+| 375×600 (SE+툴바) | 236×148 | 값 1개 | 5 / 22 | 0 |
+| 430×712 (Pro Max+툴바) | 346 높이 | 값 1개 | 9 / 25 | 0 |
 
 **③ 크기 변화는 스크롤 구동 애니메이션으로, 단 가운데 몇 장에만**
 
@@ -493,11 +532,11 @@ function pickMid(){                     // DOM 읽기 0 · 스타일 쓰기 0 ·
 
 가운데 카드에 걸면 `.mid`가 바뀔 때마다 430px짜리 conic-gradient가 새로 칠해져 스크롤 중에 미세한 끊김이 생긴다. 덱의 가운데 카드는 들어올림과 그림자만으로 충분히 구분된다.
 
-**⑤ 뒷면은 이미지 한 장**
+**⑧ 뒷면은 이미지 한 장**
 
 `<use>`는 참조가 아니라 **복제**다. 문양 도형 106개 × 78장 = 7,800개가 렌더된다. 운영에서는 `back.png`를 `--back-img`로 정적 주입하고 `<link rel="preload">`. 프로토타입의 `bakeBack()`(런타임 SVG 굽기)은 **이식하지 않는다** — 실제로는 이미지가 오므로 불필요하다.
 
-**⑧ Next.js 이식 주의**
+**⑨ Next.js 이식 주의**
 
 - 덱 CSS는 Tailwind 말고 **plain CSS 한 블록**으로. `content-visibility`·`scroll-snap`·겹침 마진은 토큰화할 게 없다
 - **덱은 ref 기반 imperative island로.** 가운데 판정과 `.live` 창이 클래스를 직접 옮기는데 React가 `className`을 쥐고 있으면 리렌더 때 되돌아간다
