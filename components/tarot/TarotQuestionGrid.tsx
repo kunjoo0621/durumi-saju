@@ -19,8 +19,9 @@ import { TAROT_COST } from "@/lib/constants/coins";
 function PosterPlaceholder() {
   return (
     <div className="absolute inset-0 grid place-items-center overflow-hidden bg-background-secondary">
+      {/* 14칸이 전부 자리표시자인 동안이라 물이 세면 홈 전체가 보라로 덮인다. 옅게 */}
       <div
-        className="absolute h-[120%] w-[120%] rounded-full opacity-[0.18] blur-[36px]"
+        className="absolute h-[110%] w-[110%] rounded-full opacity-[0.08] blur-[40px]"
         style={{ background: "rgb(var(--primary))" }}
       />
       <div className="relative h-[46%] w-[34%]">

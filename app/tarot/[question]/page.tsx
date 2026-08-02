@@ -84,9 +84,12 @@ export default async function TarotQuestionPage({
           </ol>
         </div>
 
-        <p className="mt-5 flex items-center gap-1.5 break-keep text-[13px] leading-relaxed text-text-tertiary">
-          <Egg size={14} weight="fill" className="shrink-0" />
-          카드를 뽑고 뒤집어 보는 데까지는 알이 들지 않아요. 해석 전문이 {TAROT_COST}알이에요.
+        {/* 아이콘이 문단 세로 가운데에 서면 떠도는 글머리표처럼 보인다. 첫 줄에 맞춘다 */}
+        <p className="mt-5 flex items-start gap-1.5 break-keep text-[13px] leading-relaxed text-text-tertiary">
+          <Egg size={14} weight="fill" className="mt-[3px] shrink-0" />
+          <span>
+            카드를 뽑고 뒤집어 보는 데까지는 알이 들지 않아요. 해석 전문이 {TAROT_COST}알이에요.
+          </span>
         </p>
 
         <div className="mt-10 rounded-2xl border border-dashed border-white/10 px-5 py-8 text-center">
