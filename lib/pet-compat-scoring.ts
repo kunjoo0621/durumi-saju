@@ -24,7 +24,12 @@ import { COMPOSITE_GRADE_CUTOFFS } from "./gradeSystem"; // 상대경로: tsx �
 //   — computeRuler/Lover/Loyalty 계수 리밸런스 (ruler mean 60.7→51.3, affectionGap +16.6→+6.1).
 //   — pickLabelAndArchetype 재설계 (라벨 top1 편중 완화, 아키타입 8종 전부 발생).
 //   — raw composite 분위수 재산정: REMAP_OLD [0,47,61,71,79,100] (p3/p25/p70/p92).
-export const PET_COMPAT_SCORING_VERSION = 5;
+// v6 (2026-08-03): 12신살 년주 기준 통일(saju-enrichment.ts getPillar12Shinsal — 년주만 일지 삼합
+//     기준이던 "방법B"를 사전 조견표와 같은 년지 기준으로 교정)에 따른 라벨링 버전업.
+//     hasShinsalKey가 pillar12Shinsal[*].name을 훑으므로 '역마' 등 키워드 매칭이 신규 분석의
+//     약 4.9%에서 변동(서브점수 ±6~8). 산식 자체는 무변경 — 저장분(full_result) 재계산 없음,
+//     v5/v6 라벨로 신구 산출 구분만 가능하게 한다.
+export const PET_COMPAT_SCORING_VERSION = 6;
 
 // v5 raw composite 분위수(p3/p25/p70/p92 = 47/61/71/79)를
 // 사주 마스터 컷(52/70/80/85) 스케일로 경계 보존 사상.

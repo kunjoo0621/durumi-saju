@@ -1093,7 +1093,10 @@ const SHINSAL_DEFS: ShinsalDef[] = [
     detect(ctx) { return makeSamhapMatch(this.key, this.label, this.type, ctx, SAMHAP_JISAL, "지살"); },
   },
   {
-    key: "mangsin", label: "망신살(亡身殺)", type: "bad", requiredPillars: 3,
+    // 한자 표기 통일(2026-08-03): 둘째 글자 身→神 표준화 (사전 sipisinsal/mangsinsal.ts와 동일 표기).
+    // 라벨 문자열 소비처는 한글 keyword includes 매칭(pet hasShinsalKey "도화"/"역마" 등,
+    // marriage-facts "도화"/"홍염")뿐이라 검출·점수 로직 무영향.
+    key: "mangsin", label: "망신살(亡神殺)", type: "bad", requiredPillars: 3,
     detect(ctx) { return makeSamhapMatch(this.key, this.label, this.type, ctx, SAMHAP_MANGSIN, "망신"); },
   },
   // ── 백호살 — 60갑자 7종 일주(또는 다른 기둥)에 들 때 발동 ──
@@ -1297,7 +1300,7 @@ export interface EnrichedSajuData {
   isTimeUnknown: boolean;
 }
 
-// ── 12신살 위치별 매핑 (방법B: 이중 테이블) ──
+// ── 12신살 위치별 매핑 (년지 기준) ──
 
 const TWELVE_SHINSAL_NAMES = [
   "겁살", "재살", "천살", "지살", "년살", "월살",
@@ -1335,9 +1338,18 @@ export interface Pillar12ShinsalResult {
 }
 
 /**
- * 12신살 위치별 매핑 (방법B: 이중 테이블)
- * - 년주: 일지의 삼합 그룹 사용
- * - 월/일/시주: 년지의 삼합 그룹 사용
+ * 12신살 위치별 매핑 — 년지(年支) 기준, 4기둥 동일 적용.
+ *
+ * 기준 근거:
+ * - 고전·주류 산출법 = 년지 삼합 기준. 사이트 사전(lib/dict/data/sipisinsal/intro.ts
+ *   "산출 기준: 년지(年支)를 기준으로…")과 조견표가 이 기준으로 작성돼 있다.
+ * - 일지 기준 유파도 실재하지만, 그 경우에도 4기둥 전체에 같은 기준을 적용한다.
+ * - 과거 구현("방법B", 82184d3)은 년주만 일지 삼합·나머지는 년지 삼합을 쓰는 혼합
+ *   방식이었는데, 이런 per-기둥 혼합을 쓰는 유파 근거를 찾지 못했고 사전 조견표와
+ *   년주 값이 어긋나는 실측 불일치(윤경호·태연·서인국 글)가 확인되어 년지 기준으로
+ *   통일했다 (2026-08-03).
+ * - 년지 기준의 필연적 결과: 년지는 자기 삼합 그룹에 속하므로 년주 12신살은 항상
+ *   지살(생지)·장성살(왕지)·화개살(고지) 중 하나다. 이는 조견표와 동일한 표준 결과.
  */
 export function getPillar12Shinsal(
   allBranches: string[],
@@ -1346,8 +1358,7 @@ export function getPillar12Shinsal(
   const yearBranch = allBranches[0];
   const dayBranch = allBranches[2];
 
-  const yearGroup = BRANCH_TO_SAMHAP_GROUP[yearBranch]; // 년지 삼합 → 월/일/시에 사용
-  const dayGroup = BRANCH_TO_SAMHAP_GROUP[dayBranch];   // 일지 삼합 → 년에 사용
+  const yearGroup = BRANCH_TO_SAMHAP_GROUP[yearBranch]; // 년지 삼합 → 4기둥 전체에 사용
 
   function getShinsalForBranch(branch: string, group: SamhapGroup): Pillar12ShinsalEntry {
     const branchIdx = BRANCHES_SEQ_SHINSAL.indexOf(branch);
@@ -1363,9 +1374,9 @@ export function getPillar12Shinsal(
   }
 
   return {
-    year: getShinsalForBranch(yearBranch, dayGroup),     // 년주 ← 일지 삼합
-    month: getShinsalForBranch(allBranches[1], yearGroup), // 월주 ← 년지 삼합
-    day: getShinsalForBranch(dayBranch, yearGroup),        // 일주 ← 년지 삼합
+    year: getShinsalForBranch(yearBranch, yearGroup),
+    month: getShinsalForBranch(allBranches[1], yearGroup),
+    day: getShinsalForBranch(dayBranch, yearGroup),
     hour: isTimeUnknown ? null : getShinsalForBranch(allBranches[3], yearGroup),
   };
 }
