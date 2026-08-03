@@ -176,9 +176,11 @@ export function deriveMarriageFacts(
       spouseStars.push({ pillar: pos, source: "지장간", star: hs as SpouseStarHit["star"] });
       // ★유력 판정(2026-07-28): BRANCH_INFO 무게 상위 2개만 유력, 최약 지장간은 스침으로 제외.
       //   career 의 JIJANGGAN_POSITION_WEIGHT + 임계 1.5 와 같은 규칙이다.
-      //   ★pillar.hiddenStems(saju.ts) 의 인덱스를 쓰면 안 된다 — 巳만 두 테이블의 순서가
+      //   ★pillar.hiddenStems(saju.ts) 의 인덱스를 쓰면 안 된다 — 과거 巳만 두 테이블의 순서가
       //     달라(saju.ts [丙,戊,庚] vs BRANCH_INFO [丙5,庚3,戊2]) 巳中庚(금 장생)을 버리고
-      //     戊를 유력으로 잡아 career 와 정반대 결과가 난다. 무게 테이블을 단일 진실원으로 쓴다.
+      //     戊를 유력으로 잡아 career 와 정반대 결과가 났다. 무게 테이블을 단일 진실원으로 쓴다.
+      //     (2026-08-03 saju.ts 순서를 정본에 맞춰 교정했고, 이제 lib/saju-facts-engine.test.ts
+      //      가 두 표의 순서 일치를 계약으로 강제한다. 그래도 규칙은 그대로 유지한다.)
       const rank = (BRANCH_INFO[pillar.earthlyBranch]?.jijanggan ?? [])
         .findIndex((j) => j.stem === hidden);
       if (rank >= 0 && rank <= 1) yuryeok.add(hs);

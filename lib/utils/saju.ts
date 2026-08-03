@@ -159,7 +159,14 @@ const EARTHLY_BRANCH_HIDDEN_STEMS: Record<string, string[]> = {
   寅: ["甲", "丙", "戊"],
   卯: ["乙"],
   辰: ["戊", "乙", "癸"],
-  巳: ["丙", "戊", "庚"],
+  // 巳 순서 교정(2026-08-03): 정본 BRANCH_INFO(saju-enrichment.ts)와 같은 丙·庚·戊 로 통일.
+  // 월률분야 서열상 중기 庚 > 여기 戊 이므로 enrichment 쪽이 옳다.
+  // 산출 무영향 확인: 이 표의 소비처는 (a) getMainHiddenStem = [0]=丙 (변화 없음),
+  // (b) career/wealth/marriage-facts의 pillar.hiddenStems 순회 — 무게·랭크는 전부
+  // BRANCH_INFO에서 다시 뽑고, 순회 결과가 배열 순서로 노출되는 곳(spouseStars·jaeseong·
+  // gwanseong 목록)은 단일 오행의 십성으로 필터하는데 丙(화)·庚(금)·戊(토)는 오행이 전부
+  // 달라 한 필터에 둘 이상 걸릴 수 없다. (c) getHiddenStems는 소비처 0.
+  巳: ["丙", "庚", "戊"],
   午: ["丁", "己"],
   未: ["己", "丁", "乙"],
   申: ["庚", "壬", "戊"],

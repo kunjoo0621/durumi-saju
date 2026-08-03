@@ -1,0 +1,26 @@
+# 사주 사실 정합성 게이트.
+#
+# 왜 있는가: 12신살 년주 기준 버그가 2026-02-22 커밋부터 6개월간 아무도
+# 모른 채 라이브로 나갔다. 사전·엔진·프롬프트가 서로 어긋나도 알려 주는
+# 장치가 없었기 때문이다. 손으로 안 돌려도 무조건 돌게 만든다.
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: 타입 체크
+        run: npx tsc --noEmit
+      - name: 테스트 (사실 정합성 대조 포함)
+        run: npm test
