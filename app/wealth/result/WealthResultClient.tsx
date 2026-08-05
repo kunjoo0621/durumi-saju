@@ -22,7 +22,7 @@
 //   게이지1(재성 강약) = jaeseongType(무재 여부) + jaeGrip(재왕/재쇠 성분)
 //   게이지2(재를 담는 그릇) = jaeGrip 4상한을 그대로 스펙트럼 포지션에 매핑
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -32,6 +32,7 @@ import OverallGradeBadgeSlot, { GRADE_GLOWS, type OverallGradeLabel } from "@/co
 import { WEALTH_COST } from "@/lib/constants/coins";
 import type { WealthGrade } from "@/lib/wealth-grade";
 import type { WealthInterest, WealthGrip } from "@/lib/wealth-facts";
+import KakaoShareButton from "@/components/share/KakaoShareButton";
 
 // ────────────────────────────────────────────────────────
 // 타입 — lib/wealth-prompt.ts OUTPUT_SCHEMA와 1:1
@@ -60,7 +61,7 @@ interface ServerTimelineView {
   daeun: Array<{ startAge: number; endAge: number; star: string }>;
 }
 
-interface WealthBlocks {
+export interface WealthBlocks {
   teaserSummary?: string;
   gradeHeadline: string;
   jaeseongDiagnosis: string;
@@ -335,10 +336,13 @@ export function WealthResultBody({
   data,
   result,
   router,
+  shareMode,
 }: {
   data: ApiResponse;
   result: WealthBlocks;
   router: ReturnType<typeof useRouter>;
+  /** 공개 share 페이지에서 렌더할 때 — 로그인 전용 동선과 공유 버튼을 감춘다 */
+  shareMode?: boolean;
 }) {
   const wealthGrade = data.wealthGrade;
   const internalGrade = WEALTH_TO_INTERNAL_GRADE[wealthGrade] ?? "D";
@@ -351,7 +355,7 @@ export function WealthResultBody({
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary pb-32">
-      <Header showBack sticky onBack={() => router.push("/menu")} />
+      <Header showBack={!shareMode} sticky onBack={() => router.push("/menu")} />
 
       <main className="max-w-[640px] mx-auto animate-fadeIn">
         {/* ① 오프닝 — 등급 공개 (풀블리드) */}
@@ -507,39 +511,56 @@ export function WealthResultBody({
           본 리포트는 명리 해석 콘텐츠이며 투자 자문이 아닙니다.
         </p>
 
+        {/* 공유 — 보상 지급은 카카오 전송 성공 웹훅 기준(Phase 2b) */}
+        {!shareMode && <WealthShareAction resultId={data.resultId} wealthGrade={wealthGrade} />}
+
         {/* 재열람 안내 — 결과는 "내 결과"에 저장돼 언제든 다시 볼 수 있다 */}
-        <div className="px-6 pt-5 text-center">
-          <p className="text-[13px] text-text-tertiary">이 결과는 내 결과에서 다시 볼 수 있어</p>
-          <button
-            type="button"
-            onClick={() => router.push("/my/results")}
-            className="mt-2 text-[14px] font-semibold text-primary underline underline-offset-4 active:opacity-80"
-          >
-            내 결과 보러가기
-          </button>
-        </div>
+        {!shareMode && (
+          <div className="px-6 pt-5 text-center">
+            <p className="text-[13px] text-text-tertiary">이 결과는 내 결과에서 다시 볼 수 있어</p>
+            <button
+              type="button"
+              onClick={() => router.push("/my/results")}
+              className="mt-2 text-[14px] font-semibold text-primary underline underline-offset-4 active:opacity-80"
+            >
+              내 결과 보러가기
+            </button>
+          </div>
+        )}
       </main>
 
-      {/* 하단 sticky 액션 바 */}
+      {/* 하단 sticky 액션 바 — share 페이지에서는 로그인 동선 대신 유입 CTA 하나로
+          (yearly share의 FooterSection shareMode 분기와 동일 결) */}
       <footer
         className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background-primary via-background-primary to-transparent pt-8 pb-5 px-5"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
       >
         <div className="max-w-[640px] mx-auto flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/wealth/input")}
-            className="btn-secondary flex-1 h-[54px] rounded-xl text-[15px] font-semibold"
-          >
-            다른 관심사로 다시 보기
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/yearly")}
-            className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
-          >
-            올해 재물 흐름 보기
-          </button>
+          {shareMode ? (
+            <a
+              href="/wealth"
+              className="btn-primary flex-1 h-[54px] rounded-xl text-[15px] font-semibold flex items-center justify-center"
+            >
+              나도 재물운 보기
+            </a>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => router.push("/wealth/input")}
+                className="btn-secondary flex-1 h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                다른 관심사로 다시 보기
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/yearly")}
+                className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                올해 재물 흐름 보기
+              </button>
+            </>
+          )}
         </div>
       </footer>
     </div>
@@ -824,4 +845,49 @@ function parseAdviceTag(tag: string | undefined | null): string | null {
   if (!tag) return null;
   const m = /\[근거:([^\]]+)\]/.exec(tag);
   return m ? m[1] : null;
+}
+
+// ────────────────────────────────────────────────────────
+// 카카오톡 공유 + 5알 보상. 지급 근거는 "버튼 클릭"이 아니라 카카오 전송 성공 웹훅이라,
+// 문구는 KakaoShareButton이 폴링 결과로 넘겨준다 — 여기서는 띄우기만 한다
+// (app/result/ResultClient.tsx의 notify 패턴 동일). 공유 컴포넌트 신설 금지 원칙에 따라
+// 파일 인라인으로 둔다.
+// ────────────────────────────────────────────────────────
+
+function WealthShareAction({
+  resultId,
+  wealthGrade,
+}: {
+  resultId: string;
+  wealthGrade: WealthGrade;
+}) {
+  const { status } = useSession();
+  const [toastMsg, setToastMsg] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  const notify = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2600);
+  }, []);
+
+  return (
+    <div className="px-6 pt-12">
+      <KakaoShareButton
+        kind="wealth"
+        resultId={resultId}
+        shareUrl={`https://www.durumisaju.com/wealth/result/share/${resultId}`}
+        title={`내 재물운은 ${wealthGrade}등급`}
+        description="두루미가 본 재물운 심층 검사 결과."
+        imageUrl="https://www.durumisaju.com/og-image.png"
+        isAuthenticated={status === "authenticated"}
+        onNotice={notify}
+      />
+      {showToast && (
+        <div className="fixed bottom-28 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/85 px-5 py-3 text-[13.5px] font-medium text-white shadow-lg">
+          {toastMsg}
+        </div>
+      )}
+    </div>
+  );
 }
