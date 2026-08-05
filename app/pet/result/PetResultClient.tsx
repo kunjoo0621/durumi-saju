@@ -148,7 +148,7 @@ export function PetResultBody({ data, variant = "own" }: { data: PetResultData; 
   ];
 
   return (
-    <div className={`min-h-screen bg-background-primary text-text-primary ${isShare ? "pb-32" : "pb-40"}`}>
+    <div className="min-h-screen bg-background-primary text-text-primary pb-32">
       {isShare ? <Header /> : <Header showBack sticky onBack={() => router.push("/menu")} />}
 
       <main className="max-w-[640px] mx-auto animate-fadeIn">
@@ -304,8 +304,7 @@ export function PetResultBody({ data, variant = "own" }: { data: PetResultData; 
         className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background-primary via-background-primary to-transparent pt-8 pb-5 px-5"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
       >
-        <div className="max-w-[640px] mx-auto">
-          <div className="flex gap-3">
+        <div className="max-w-[640px] mx-auto flex gap-3">
           {isShare ? (
             <button
               type="button"
@@ -335,14 +334,6 @@ export function PetResultBody({ data, variant = "own" }: { data: PetResultData; 
                 className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold disabled:opacity-60"
               />
             </>
-          )}
-          </div>
-          {/* 공유 버튼이 sticky 푸터 안이라 고지도 여기 붙는다. 늘어난 높이만큼
-              바깥 컨테이너 pb를 키워 본문 마지막 줄과 겹치지 않게 했다. */}
-          {!isShare && (
-            <p className="mt-2.5 text-center text-[12px] text-text-tertiary">
-              링크를 받은 사람도 결과 전문을 볼 수 있어
-            </p>
           )}
         </div>
       </footer>

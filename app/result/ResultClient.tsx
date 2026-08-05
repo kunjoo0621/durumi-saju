@@ -477,23 +477,16 @@ export default function ResultClient() {
           <div className="px-6 py-8">
             <div className="max-w-[640px] mx-auto space-y-3">
               {shareableId && (
-                /* 버튼과 고지를 한 div로 묶는다 — space-y-3의 자식이 둘로 갈리면
-                   고지가 버튼에서 12px 떨어져 별개 문장처럼 읽힌다. */
-                <div>
-                  <KakaoShareButton
-                    kind="result"
-                    resultId={shareableId}
-                    shareUrl={shareUrl}
-                    title={shareTitle}
-                    description={shareDescription}
-                    imageUrl={shareImageUrl}
-                    isAuthenticated={status === "authenticated"}
-                    onNotice={notify}
-                  />
-                  <p className="mt-2.5 text-center text-[12px] text-text-tertiary">
-                    링크를 받은 사람도 결과 전문을 볼 수 있어
-                  </p>
-                </div>
+                <KakaoShareButton
+                  kind="result"
+                  resultId={shareableId}
+                  shareUrl={shareUrl}
+                  title={shareTitle}
+                  description={shareDescription}
+                  imageUrl={shareImageUrl}
+                  isAuthenticated={status === "authenticated"}
+                  onNotice={notify}
+                />
               )}
               <button
                 onClick={() => handleLeave("/menu")}

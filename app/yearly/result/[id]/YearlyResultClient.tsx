@@ -744,23 +744,16 @@ function ShareButton({ targetYear, resultId }: ShareButtonProps) {
 
   return (
     <>
-      {/* 버튼과 고지를 한 div로 묶는다 — FooterSection의 space-y-3 자식이 둘로 갈리면
-          고지가 버튼에서 12px 떨어져 별개 문장처럼 읽힌다. */}
-      <div>
-        <KakaoShareButton
-          kind="yearly"
-          resultId={resultId}
-          shareUrl={`${baseUrl}/yearly/result/share/${resultId}`}
-          title={`사주보는 두루미 — ${targetYear}년 운세`}
-          description={`${targetYear}년 내 사주 운세 풀이`}
-          imageUrl={`${baseUrl}/yearly-share-kakao.jpg`}
-          isAuthenticated={status === "authenticated"}
-          onNotice={notify}
-        />
-        <p className="mt-2.5 text-center text-[12px] text-text-tertiary">
-          링크를 받은 사람도 결과 전문을 볼 수 있어
-        </p>
-      </div>
+      <KakaoShareButton
+        kind="yearly"
+        resultId={resultId}
+        shareUrl={`${baseUrl}/yearly/result/share/${resultId}`}
+        title={`사주보는 두루미 — ${targetYear}년 운세`}
+        description={`${targetYear}년 내 사주 운세 풀이`}
+        imageUrl={`${baseUrl}/yearly-share-kakao.jpg`}
+        isAuthenticated={status === "authenticated"}
+        onNotice={notify}
+      />
       <div
         className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[150] bg-background-tertiary text-text-primary px-4 py-2 rounded-lg text-[14px] shadow-lg transition-opacity duration-300 ${showToast ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
