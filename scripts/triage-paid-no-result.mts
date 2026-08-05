@@ -36,7 +36,12 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 
 // 삭제 감사 로깅이 프로덕션에 라이브된 시각(ISO). 배포 완료 후 이 값을 배포 시각으로 세팅한다.
 // null 이면 아직 로깅 전 → 모든 미설명 gap 은 "보류"(손실 단정 불가).
-const AUDIT_LIVE_AT: string | null = null;
+//
+// 2026-08-04까지 null로 방치돼 있어서 이 도구가 **구조적으로 아무것도 못 잡았다** —
+// 라우트는 7/23에 배포됐는데(PR #92) 판정은 전부 "⚪ 보류"로 떨어져 🔴 확인대상이 늘 0이었다.
+// 2026-08-05 실측으로 로그가 살아 있는 걸 확인하고(8/4 김민지 건, was_delivered=true) 값을 채운다.
+// 기준 = PR #92 머지 시각(2026-07-23 10:01 KST).
+const AUDIT_LIVE_AT: string | null = "2026-07-23T10:01:18+09:00";
 
 const kst = (iso: string) => new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(5, 16).replace("T", " ");
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -57,16 +62,59 @@ type Stat = {
   errored: number;
   refunds: number;
   deletions: number;
+  /** 조회가 한 건이라도 실패했으면 true — 이 통계로는 손실을 단정할 수 없다. */
+  unreliable: boolean;
 };
 
+// ★조회 실패를 조용히 넘기면 "결과 없음"으로 둔갑한다.
+// 2026-08-05 실측: 스윕이 유저 전원을 동시 조회하다 일부가 실패했고, 그게 전부 유령 gap 이 돼
+// 같은 데이터에서 🔴 이 16명→4명→1명으로 매번 달라졌다(딥다이브는 🟢). 재시도 후에도 실패하면
+// 그 유저는 통계를 못 믿는 것으로 표시하고 절대 🔴 로 올리지 않는다.
+async function sel<T = any>(table: string, cols: string, userId: string): Promise<{ rows: T[]; failed: boolean }> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { data, error } = await sb.from(table).select(cols).eq("user_id", userId);
+    if (!error) return { rows: (data ?? []) as T[], failed: false };
+    // 표 자체가 없는 건 실패가 아니라 "해당 상품 없음"이다.
+    if (/PGRST205|does not exist|schema cache/i.test(error.message)) return { rows: [], failed: false };
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+    else return { rows: [], failed: true };
+  }
+  return { rows: [], failed: true };
+}
+
+// spend 는 상품 종류를 가리지 않는다. 그래서 결과 쪽도 **전 상품**을 세야 짝이 맞는다.
+// 2026-08-05까지 saju_results 하나만 세고 있어서, 올해운세·오늘운세·유료리포트·배틀을 산 사람이
+// 전부 유령 gap 으로 잡혔다(실측: 손지민 gap 2 = 어제 산 커리어·결혼 리포트 2건).
+const RESULT_TABLES = ["saju_results", "yearly_results", "today_results"] as const;
+const REPORT_TABLES = ["marriage_results", "career_results", "wealth_results", "pet_results"] as const;
+
 async function statFor(userId: string, logAvailable: boolean): Promise<Stat> {
-  const [{ data: u }, { count: spendC }, spendFirst, { data: rs }, { count: refundC }] = await Promise.all([
+  const [{ data: u }, { count: spendC }, spendFirst, { count: refundC }] = await Promise.all([
     sb.from("users").select("nickname").eq("id", userId).maybeSingle(),
     sb.from("coin_transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("type", "spend"),
     sb.from("coin_transactions").select("created_at").eq("user_id", userId).eq("type", "spend").order("created_at").limit(1),
-    sb.from("saju_results").select("full_json").eq("user_id", userId),
     sb.from("coin_transactions").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("type", "refund"),
   ]);
+
+  const rs: { full_json: any }[] = [];
+  let unreliable = false;
+  for (const t of RESULT_TABLES) {
+    const { rows, failed } = await sel<{ full_json: any }>(t, "full_json", userId);
+    unreliable ||= failed;
+    rs.push(...rows);
+  }
+  // 유료 리포트는 언락(full_json 존재)된 것만 결과 제공 단위다. 티저 row 는 결제도 제공도 아니다.
+  for (const t of REPORT_TABLES) {
+    const { rows, failed } = await sel<{ full_json: any }>(t, "full_json", userId);
+    unreliable ||= failed;
+    for (const r of rows) if (r.full_json) rs.push(r);
+  }
+  // 배틀은 저장된 row 자체가 결과 제공 단위(실패 row 를 남기지 않는 구조).
+  {
+    const { rows, failed } = await sel<{ id: string }>("saju_battles", "id", userId);
+    unreliable ||= failed;
+    for (const _ of rows) rs.push({ full_json: {} });
+  }
   let deletions = 0;
   if (logAvailable) {
     const { count } = await sb.from("result_deletions").select("id", { count: "exact", head: true }).eq("user_id", userId);
@@ -89,6 +137,7 @@ async function statFor(userId: string, logAvailable: boolean): Promise<Stat> {
     errored,
     refunds: refundC ?? 0,
     deletions,
+    unreliable,
   };
 }
 
@@ -98,6 +147,7 @@ function verdict(s: Stat, logAvailable: boolean) {
   const accounted = s.delivered + s.refunds + s.deletions + s.pending;
   const gap = s.spends - accounted;
   if (gap <= 0) return { tag: "🟢 설명됨", gap: 0, actionable: false, note: "" };
+  if (s.unreliable) return { tag: "⚪ 조회실패", gap, actionable: false, note: "결과 조회가 실패한 유저 — gap 을 손실로 읽지 말 것" };
   if (!logAvailable) return { tag: "⚪ 보류", gap, actionable: false, note: "삭제로그 표 미생성" };
   if (!AUDIT_LIVE_AT) return { tag: "⚪ 보류", gap, actionable: false, note: "로깅 라이브 전 → 삭제 소급불가" };
   const allAfterLive = s.firstSpend && new Date(s.firstSpend) >= new Date(AUDIT_LIVE_AT);
@@ -140,11 +190,26 @@ async function main() {
 
   const days = arg === "--days" ? Number(process.argv[3] || 7) : 7;
   const since = new Date(Date.now() - days * 86400e3).toISOString();
-  const { data: spends } = await sb.from("coin_transactions").select("user_id").eq("type", "spend").gte("created_at", since);
-  const userIds = [...new Set((spends ?? []).map((s: any) => s.user_id).filter(Boolean))];
+  // ★Supabase select 는 기본 1000행에서 말없이 잘린다 → 페이지네이션 필수.
+  //  안 하면 검사 대상 유저가 통째로 빠져 "gap 없음"이 조용한 오판이 된다.
+  const spends: { user_id: string }[] = [];
+  for (let page = 0; ; page++) {
+    const { data, error } = await sb
+      .from("coin_transactions").select("user_id").eq("type", "spend").gte("created_at", since)
+      .range(page * 1000, page * 1000 + 999);
+    if (error) throw new Error(`spend 조회 실패: ${error.message}`);
+    spends.push(...((data ?? []) as any[]));
+    if (!data || data.length < 1000) break;
+  }
+  const userIds = [...new Set(spends.map((s: any) => s.user_id).filter(Boolean))];
   console.log(`최근 ${days}일 결제 유저 ${userIds.length}명 검사\n`);
 
-  const stats = await Promise.all(userIds.map((id) => statFor(id, logAvailable)));
+  // 전원 동시 조회는 DB 부하 사고 전력이 있다(2026-08-02 Supabase 다운) → 소량 배치로 나눈다.
+  const stats: Stat[] = [];
+  const BATCH = 5;
+  for (let i = 0; i < userIds.length; i += BATCH) {
+    stats.push(...(await Promise.all(userIds.slice(i, i + BATCH).map((id) => statFor(id, logAvailable)))));
+  }
   const flagged = stats.map((s) => ({ s, v: verdict(s, logAvailable) })).filter((x) => x.v.gap > 0).sort((a, b) => b.v.gap - a.v.gap);
 
   if (!logAvailable || !AUDIT_LIVE_AT) {
@@ -156,11 +221,11 @@ async function main() {
     console.log("✅ 결제-무결과 gap 있는 유저 없음.");
   } else {
     console.log(`gap 있는 유저 ${flagged.length}명:\n`);
-    console.log(`  판정          닉네임        spend  정상 미완 에러 환불 삭제  gap  비고`);
+    console.log(`  판정          닉네임      계정      spend  정상 미완 에러 환불 삭제  gap  비고`);
     console.log(`  ─────────────────────────────────────────────────────────────────────────────`);
     for (const { s, v } of flagged) {
       console.log(
-        `  ${v.tag.padEnd(11)} ${(s.nickname ?? "?").padEnd(10)}  ${String(s.spends).padStart(4)}  ${String(s.delivered).padStart(3)} ${String(s.pending).padStart(3)} ${String(s.errored).padStart(3)} ${String(s.refunds).padStart(3)} ${String(s.deletions).padStart(3)}  ${String(v.gap).padStart(3)}  ${v.note}`,
+        `  ${v.tag.padEnd(11)} ${(s.nickname ?? "?").padEnd(8)}  ${s.userId.slice(0, 8)}  ${String(s.spends).padStart(4)}  ${String(s.delivered).padStart(3)} ${String(s.pending).padStart(3)} ${String(s.errored).padStart(3)} ${String(s.refunds).padStart(3)} ${String(s.deletions).padStart(3)}  ${String(v.gap).padStart(3)}  ${v.note}`,
       );
     }
     const actionable = flagged.filter((x) => x.v.actionable).length;
