@@ -471,30 +471,32 @@ export function MarriageResultBody({
           </Reveal>
         )}
 
-        {/* ⑤ 궁합 상품 CTA */}
-        <Reveal>
-          <section className="px-6 pt-16">
-            <div className="relative overflow-hidden rounded-3xl bg-background-secondary px-7 py-10 text-center">
-              <div
-                className="absolute inset-0 pointer-events-none opacity-70"
-                style={{ background: GRADE_GLOWS[internalGrade] }}
-                aria-hidden="true"
-              />
-              <div className="relative flex flex-col items-center">
-                <p className="text-[15.5px] leading-[1.8] text-text-secondary break-keep max-w-[420px]">
-                  {result.gunghapCta}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => router.push("/battle")}
-                  className="btn-primary mt-6 h-[52px] w-full max-w-[320px] rounded-xl text-[15px] font-semibold active:scale-[0.98] transition-transform"
-                >
-                  궁합 보기
-                </button>
+        {/* ⑤ 궁합 상품 CTA — share 페이지에서는 감춘다(유입 CTA는 하단 하나만) */}
+        {!shareMode && (
+          <Reveal>
+            <section className="px-6 pt-16">
+              <div className="relative overflow-hidden rounded-3xl bg-background-secondary px-7 py-10 text-center">
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-70"
+                  style={{ background: GRADE_GLOWS[internalGrade] }}
+                  aria-hidden="true"
+                />
+                <div className="relative flex flex-col items-center">
+                  <p className="text-[15.5px] leading-[1.8] text-text-secondary break-keep max-w-[420px]">
+                    {result.gunghapCta}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/battle")}
+                    className="btn-primary mt-6 h-[52px] w-full max-w-[320px] rounded-xl text-[15px] font-semibold active:scale-[0.98] transition-transform"
+                  >
+                    궁합 보기
+                  </button>
+                </div>
               </div>
-            </div>
-          </section>
-        </Reveal>
+            </section>
+          </Reveal>
+        )}
 
         <div className="px-6 pt-8 text-center text-[12px] text-text-tertiary">
           결혼운 {marriageGrade}등급 · {data.maritalStatus} ·{" "}
