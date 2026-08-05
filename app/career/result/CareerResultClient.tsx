@@ -29,6 +29,7 @@ import { FullScreenLoading } from "@/components/loading";
 import { getGradeColor } from "@/lib/utils/grade-colors";
 import OverallGradeBadgeSlot, { GRADE_GLOWS, type OverallGradeLabel } from "@/components/result/OverallGradeBadgeSlot";
 import { CAREER_COST } from "@/lib/constants/coins";
+import { SHARE_PATH_BY_KIND } from "@/lib/constants/share-reward";
 import type { CareerGrade } from "@/lib/career-grade";
 import type { CareerSituation, CareerGrip } from "@/lib/career-facts";
 import KakaoShareButton from "@/components/share/KakaoShareButton";
@@ -847,6 +848,11 @@ function parseAdviceTag(tag: string | undefined | null): string | null {
 // 파일 인라인으로 둔다.
 // ────────────────────────────────────────────────────────
 
+// 공유 링크는 프리뷰 origin이 아니라 항상 프로덕션 도메인을 가리킨다 — 카카오 SDK는
+// 플랫폼에 등록된 도메인이 아니면 링크를 거부한다. 그래서 window.location.origin을 쓰지 않는다.
+// (프리뷰에서 QA할 때는 카톡 링크 대신 <preview-url>/…/result/share/<id> 를 직접 열 것.)
+const SHARE_ORIGIN = "https://www.durumisaju.com";
+
 function CareerShareAction({
   resultId,
   careerGrade,
@@ -869,10 +875,10 @@ function CareerShareAction({
       <KakaoShareButton
         kind="career"
         resultId={resultId}
-        shareUrl={`https://www.durumisaju.com/career/result/share/${resultId}`}
+        shareUrl={`${SHARE_ORIGIN}${SHARE_PATH_BY_KIND.career(resultId)}`}
         title={`내 커리어운은 ${careerGrade}등급`}
         description="두루미가 본 커리어운 심층 검사 결과."
-        imageUrl="https://www.durumisaju.com/og-image.png"
+        imageUrl={`${SHARE_ORIGIN}/og-image.png`}
         isAuthenticated={status === "authenticated"}
         onNotice={notify}
       />

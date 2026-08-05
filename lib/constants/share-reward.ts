@@ -27,7 +27,7 @@ export const SHARE_PATH_BY_KIND: Record<ShareRewardKind, (id: string) => string>
   battle: (id) => `/battle/result/share/${id}`,
   yearly: (id) => `/yearly/result/share/${id}`,
   pet: (id) => `/pet/result/share/${id}`,
-  // Phase 2b에서 공개 share 라우트를 신설하며 함께 연결된다
+  // Phase 2b에서 공개 share 라우트가 신설되며 연결됐다
   wealth: (id) => `/wealth/result/share/${id}`,
   marriage: (id) => `/marriage/result/share/${id}`,
   career: (id) => `/career/result/share/${id}`,
