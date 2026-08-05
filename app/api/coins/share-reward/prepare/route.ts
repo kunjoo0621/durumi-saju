@@ -4,7 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
-import { isShareRewardKind, type ShareRewardKind } from "@/lib/constants/share-reward";
+import { isShareRewardKind } from "@/lib/constants/share-reward";
+import { SHARE_REWARD_KIND_CHECKS } from "@/lib/share-reward-kinds";
 
 // 공유 보상 nonce 발급.
 //
@@ -14,22 +15,6 @@ import { isShareRewardKind, type ShareRewardKind } from "@/lib/constants/share-r
 //   "본인 소유의 실물 결과 row"가 있는지 서버가 확인해야만 nonce가 나간다.
 //   → 다른 kind로 또 받으려면 그 상품을 실제로 구매해야 한다 = 정책이 의도한 정당한 지급.
 //   웹훅 쪽은 kind를 nonce row에서만 읽으므로, 이 지점만 지키면 전 구간이 닫힌다.
-
-type KindCheck = {
-  table: string;
-  /** 결제/분석 완료를 확인하는 추가 조건. 미검증 라인은 등록하지 않는다. */
-  requireNonNull?: string;
-};
-
-// Phase 1~2a 대상만 등록한다.
-// wealth/marriage/career는 결제 게이팅 구조를 아직 실측하지 않았다.
-// 공짜 티저 row에 보상이 나가면 정책이 무너지므로, 검증 전까지는 기본 거부로 둔다.
-const KIND_CHECKS: Partial<Record<ShareRewardKind, KindCheck>> = {
-  result: { table: "saju_results" },
-  battle: { table: "saju_battles" },
-  yearly: { table: "yearly_results" },
-  pet: { table: "pet_compat_results" },
-};
 
 const NONCE_TTL_MINUTES = 30;
 const MAX_NONCES_PER_HOUR = 10;
@@ -50,7 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
     }
 
-    const check = KIND_CHECKS[resultKind];
+    const check = SHARE_REWARD_KIND_CHECKS[resultKind];
     if (!check) {
       // 아직 열지 않은 라인 — 공유는 가능하되 보상은 없다
       return NextResponse.json({ error: "지원하지 않는 결과입니다." }, { status: 400 });

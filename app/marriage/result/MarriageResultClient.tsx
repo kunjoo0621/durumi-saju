@@ -11,7 +11,7 @@
 // `full_json: blocks` — applyMarriageGuards가 돌려주는 blocks를 그대로 저장하므로 nested "blocks"
 // 키가 아니라 최상위에 gradeHeadline/spousePalace/spouseStar/... 가 바로 있다).
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -19,8 +19,10 @@ import { FullScreenLoading } from "@/components/loading";
 import { getGradeColor } from "@/lib/utils/grade-colors";
 import OverallGradeBadgeSlot, { GRADE_GLOWS, type OverallGradeLabel } from "@/components/result/OverallGradeBadgeSlot";
 import { MARRIAGE_COST } from "@/lib/constants/coins";
+import { SHARE_PATH_BY_KIND } from "@/lib/constants/share-reward";
 import type { MarriageGrade } from "@/lib/marriage-grade";
 import type { MaritalStatus } from "@/lib/marriage-facts";
+import KakaoShareButton from "@/components/share/KakaoShareButton";
 
 // ────────────────────────────────────────────────────────
 // 타입 — lib/marriage-prompt.ts OUTPUT_SCHEMA와 1:1
@@ -49,7 +51,7 @@ interface ServerTimelineView {
   daeun: Array<{ startAge: number; endAge: number; star: string }>;
 }
 
-interface MarriageBlocks {
+export interface MarriageBlocks {
   teaserSummary?: string;
   gradeHeadline: string;
   spousePalace: string;
@@ -331,10 +333,13 @@ export function MarriageResultBody({
   data,
   result,
   router,
+  shareMode,
 }: {
   data: ApiResponse;
   result: MarriageBlocks;
   router: ReturnType<typeof useRouter>;
+  /** 공개 share 페이지에서 렌더할 때 — 로그인 전용 동선과 공유 버튼을 감춘다 */
+  shareMode?: boolean;
 }) {
   const marriageGrade = data.marriageGrade;
   const internalGrade = MARRIAGE_TO_INTERNAL_GRADE[marriageGrade] ?? "D";
@@ -348,7 +353,7 @@ export function MarriageResultBody({
 
   return (
     <div className="min-h-screen bg-background-primary text-text-primary pb-32">
-      <Header showBack sticky onBack={() => router.push("/menu")} />
+      <Header showBack={!shareMode} sticky onBack={() => router.push("/menu")} />
 
       <main className="max-w-[640px] mx-auto animate-fadeIn">
         {/* ① 오프닝 — 등급 공개 (풀블리드) */}
@@ -467,69 +472,88 @@ export function MarriageResultBody({
           </Reveal>
         )}
 
-        {/* ⑤ 궁합 상품 CTA */}
-        <Reveal>
-          <section className="px-6 pt-16">
-            <div className="relative overflow-hidden rounded-3xl bg-background-secondary px-7 py-10 text-center">
-              <div
-                className="absolute inset-0 pointer-events-none opacity-70"
-                style={{ background: GRADE_GLOWS[internalGrade] }}
-                aria-hidden="true"
-              />
-              <div className="relative flex flex-col items-center">
-                <p className="text-[15.5px] leading-[1.8] text-text-secondary break-keep max-w-[420px]">
-                  {result.gunghapCta}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => router.push("/battle")}
-                  className="btn-primary mt-6 h-[52px] w-full max-w-[320px] rounded-xl text-[15px] font-semibold active:scale-[0.98] transition-transform"
-                >
-                  궁합 보기
-                </button>
+        {/* ⑤ 궁합 상품 CTA — share 페이지에서는 감춘다(유입 CTA는 하단 하나만) */}
+        {!shareMode && (
+          <Reveal>
+            <section className="px-6 pt-16">
+              <div className="relative overflow-hidden rounded-3xl bg-background-secondary px-7 py-10 text-center">
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-70"
+                  style={{ background: GRADE_GLOWS[internalGrade] }}
+                  aria-hidden="true"
+                />
+                <div className="relative flex flex-col items-center">
+                  <p className="text-[15.5px] leading-[1.8] text-text-secondary break-keep max-w-[420px]">
+                    {result.gunghapCta}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/battle")}
+                    className="btn-primary mt-6 h-[52px] w-full max-w-[320px] rounded-xl text-[15px] font-semibold active:scale-[0.98] transition-transform"
+                  >
+                    궁합 보기
+                  </button>
+                </div>
               </div>
-            </div>
-          </section>
-        </Reveal>
+            </section>
+          </Reveal>
+        )}
 
         <div className="px-6 pt-8 text-center text-[12px] text-text-tertiary">
           결혼운 {marriageGrade}등급 · {data.maritalStatus} ·{" "}
           {new Date(data.createdAt).toLocaleDateString("ko-KR")}
         </div>
 
+        {/* 공유 — 보상 지급은 카카오 전송 성공 웹훅 기준(Phase 2b) */}
+        {!shareMode && <MarriageShareAction resultId={data.resultId} marriageGrade={marriageGrade} />}
+
         {/* 재열람 안내 — 결과는 "내 결과"에 저장돼 언제든 다시 볼 수 있다 */}
-        <div className="px-6 pt-5 text-center">
-          <p className="text-[13px] text-text-tertiary">이 결과는 내 결과에서 다시 볼 수 있어</p>
-          <button
-            type="button"
-            onClick={() => router.push("/my/results")}
-            className="mt-2 text-[14px] font-semibold text-primary underline underline-offset-4 active:opacity-80"
-          >
-            내 결과 보러가기
-          </button>
-        </div>
+        {!shareMode && (
+          <div className="px-6 pt-5 text-center">
+            <p className="text-[13px] text-text-tertiary">이 결과는 내 결과에서 다시 볼 수 있어</p>
+            <button
+              type="button"
+              onClick={() => router.push("/my/results")}
+              className="mt-2 text-[14px] font-semibold text-primary underline underline-offset-4 active:opacity-80"
+            >
+              내 결과 보러가기
+            </button>
+          </div>
+        )}
       </main>
 
-      {/* 하단 sticky 액션 바 */}
+      {/* 하단 sticky 액션 바 — share 페이지에서는 로그인 동선 대신 유입 CTA 하나로
+          (yearly share의 FooterSection shareMode 분기와 동일 결) */}
       <footer
         className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background-primary via-background-primary to-transparent pt-8 pb-5 px-5"
         style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
       >
         <div className="max-w-[640px] mx-auto flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/marriage/input")}
-            className="btn-secondary flex-1 h-[54px] rounded-xl text-[15px] font-semibold"
-          >
-            다른 상태로 다시 보기
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/battle")}
-            className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
-          >
-            궁합 보기
-          </button>
+          {shareMode ? (
+            <a
+              href="/marriage"
+              className="btn-primary flex-1 h-[54px] rounded-xl text-[15px] font-semibold flex items-center justify-center"
+            >
+              나도 결혼운 보기
+            </a>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => router.push("/marriage/input")}
+                className="btn-secondary flex-1 h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                다른 상태로 다시 보기
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/battle")}
+                className="btn-primary flex-[1.5] h-[54px] rounded-xl text-[15px] font-semibold"
+              >
+                궁합 보기
+              </button>
+            </>
+          )}
         </div>
       </footer>
     </div>
@@ -801,4 +825,54 @@ function parseAdviceTag(tag: string | undefined | null): string | null {
   if (!tag) return null;
   const m = /\[근거:([^\]]+)\]/.exec(tag);
   return m ? m[1] : null;
+}
+
+// ────────────────────────────────────────────────────────
+// 카카오톡 공유 + 5알 보상. 지급 근거는 "버튼 클릭"이 아니라 카카오 전송 성공 웹훅이라,
+// 문구는 KakaoShareButton이 폴링 결과로 넘겨준다 — 여기서는 띄우기만 한다
+// (app/result/ResultClient.tsx의 notify 패턴 동일). 공유 컴포넌트 신설 금지 원칙에 따라
+// 파일 인라인으로 둔다.
+// ────────────────────────────────────────────────────────
+
+// 공유 링크는 프리뷰 origin이 아니라 항상 프로덕션 도메인을 가리킨다 — 카카오 SDK는
+// 플랫폼에 등록된 도메인이 아니면 링크를 거부한다. 그래서 window.location.origin을 쓰지 않는다.
+// (프리뷰에서 QA할 때는 카톡 링크 대신 <preview-url>/…/result/share/<id> 를 직접 열 것.)
+const SHARE_ORIGIN = "https://www.durumisaju.com";
+
+function MarriageShareAction({
+  resultId,
+  marriageGrade,
+}: {
+  resultId: string;
+  marriageGrade: MarriageGrade;
+}) {
+  const { status } = useSession();
+  const [toastMsg, setToastMsg] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  const notify = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2600);
+  }, []);
+
+  return (
+    <div className="px-6 pt-12">
+      <KakaoShareButton
+        kind="marriage"
+        resultId={resultId}
+        shareUrl={`${SHARE_ORIGIN}${SHARE_PATH_BY_KIND.marriage(resultId)}`}
+        title={`내 결혼운은 ${marriageGrade}등급`}
+        description="두루미가 본 결혼운 심층 검사 결과."
+        imageUrl={`${SHARE_ORIGIN}/og-image.png`}
+        isAuthenticated={status === "authenticated"}
+        onNotice={notify}
+      />
+      {showToast && (
+        <div className="fixed bottom-28 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/85 px-5 py-3 text-[13.5px] font-medium text-white shadow-lg">
+          {toastMsg}
+        </div>
+      )}
+    </div>
+  );
 }
