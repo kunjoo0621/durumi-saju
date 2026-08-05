@@ -14,7 +14,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const row = await getSharedMarriageResult(id);
-  if (!row) return { title: `결혼운 | ${SITE_NAME}` };
+  // 없는 id·미결제 티저도 절대 색인되면 안 된다 — 조기 반환에도 robots를 단다
+  if (!row) return { title: `결혼운 | ${SITE_NAME}`, robots: { index: false, follow: false } };
 
   const title = `결혼운 ${row.marriage_grade}등급 — ${row.marital_status}`;
   const description = "두루미가 본 결혼운 심층 검사 결과.";
