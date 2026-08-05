@@ -148,6 +148,74 @@ type ReportRow = {
 };
 
 // 4종을 한 번에 긁어온다. 펫 궁합은 스키마가 달라(full_result·pet_id, 인적사항 없음) 등급·집계만 채운다.
+// ── "결제했는데 결과 없음" 판정 ──────────────────────────────────────────────
+// 이 지표는 창(그날 00:00~24:00) 안에서만 결과를 찾아서, 사고가 아닌 것 셋을 계속 빨갛게 띄웠다.
+// 2026-08-05 실측: 8/4에 뜬 1건은 손실이 아니라 **본인이 5분 뒤 삭제**한 건이었다.
+// 그래서 아래 셋을 먼저 설명하고, 설명 안 되는 것만 진짜 경고로 남긴다.
+//   ① 본인삭제 — result_deletions 에 was_delivered=true 로 남음
+//   ② 창밖완료 — 자정 직전에 결제하고 결과는 다음 날 새벽에 떨어진 경우
+//   ③ 재사용   — 차감은 됐는데 새 결과가 없고 예전 결과만 있는 경우(=이중과금 쪽 이슈, 손실과 구분해야 한다)
+const NO_RESULT_GRACE_MS = 3 * 3600_000;
+const DELIVERY_TABLES = [
+  { table: "saju_results", hasJson: true },
+  { table: "yearly_results", hasJson: true },
+  { table: "today_results", hasJson: true },
+  { table: "marriage_results", hasJson: true },
+  { table: "career_results", hasJson: true },
+  { table: "wealth_results", hasJson: true },
+  { table: "pet_results", hasJson: true },
+  { table: "saju_battles", hasJson: false }, // 배틀은 row 자체가 제공 단위(실패 row 를 안 남긴다)
+] as const;
+
+async function explainNoDelivery(userIds: string[], startIso: string, endIso: string) {
+  const explained = new Map<string, string>();
+  if (userIds.length === 0) return { unexplained: [] as string[], explained };
+  const graceEnd = new Date(+new Date(endIso) + NO_RESULT_GRACE_MS).toISOString();
+
+  // ① 본인 삭제
+  {
+    const { data, error } = await sb
+      .from("result_deletions")
+      .select("user_id, was_delivered, deleted_at")
+      .in("user_id", userIds)
+      .gte("deleted_at", startIso)
+      .lt("deleted_at", graceEnd);
+    if (!error) for (const d of (data ?? []) as any[]) if (d.was_delivered && d.user_id) explained.set(d.user_id, "본인삭제");
+  }
+
+  const remain = () => userIds.filter((id) => !explained.has(id));
+
+  // ② 창 경계를 넘겨 완료된 결과
+  for (const spec of DELIVERY_TABLES) {
+    const ids = remain();
+    if (ids.length === 0) break;
+    const cols = spec.hasJson ? "user_id, full_json" : "user_id";
+    const { data, error } = await sb.from(spec.table).select(cols).in("user_id", ids).gte("created_at", endIso).lt("created_at", graceEnd);
+    if (error) continue;
+    for (const r of (data ?? []) as any[]) {
+      if (!r.user_id) continue;
+      if (spec.hasJson && (!r.full_json || (r.full_json as any)._error)) continue;
+      explained.set(r.user_id, "창밖완료");
+    }
+  }
+
+  // ③ 창 이전의 옛 결과만 있는 경우(재사용 의심)
+  for (const spec of DELIVERY_TABLES) {
+    const ids = remain();
+    if (ids.length === 0) break;
+    const cols = spec.hasJson ? "user_id, full_json" : "user_id";
+    const { data, error } = await sb.from(spec.table).select(cols).in("user_id", ids).lt("created_at", startIso);
+    if (error) continue;
+    for (const r of (data ?? []) as any[]) {
+      if (!r.user_id) continue;
+      if (spec.hasJson && (!r.full_json || (r.full_json as any)._error)) continue;
+      explained.set(r.user_id, "재사용의심");
+    }
+  }
+
+  return { unexplained: remain(), explained };
+}
+
 async function loadReportRows(startIso: string, endIso?: string): Promise<ReportRow[]> {
   const out: ReportRow[] = [];
   for (const r of REPORT_KINDS) {
@@ -363,7 +431,9 @@ async function main() {
         .map((p) => p.user_id)
         .filter(Boolean),
     );
-    const paidNoDelivered = [...paidUserIds].filter((id) => !deliveredUserIds.has(id));
+    const candidates = [...paidUserIds].filter((id) => !deliveredUserIds.has(id));
+    // 창 안에서 결과를 못 찾았다고 바로 경고하지 않는다 — 본인삭제·창밖완료·재사용을 먼저 설명한다.
+    const { unexplained: paidNoDelivered, explained } = await explainNoDelivery(candidates, startIso, endIso);
     const profiles = new Map<string, any>();
     if (paidNoDelivered.length > 0) {
       const { data } = await sb
@@ -377,6 +447,7 @@ async function main() {
       label,
       errRows,
       paidNoDelivered: paidNoDelivered.map((id) => profiles.get(id) ?? { id }),
+      explained,
     };
   }
 
@@ -608,7 +679,10 @@ async function main() {
     const signupPaid = users.filter((u) => paidUserIds.has(u.id)).length;
     const signupDelivered = users.filter((u) => deliveredUserIds.has(u.id)).length;
     const signupNoPay = users.filter((u) => !paidUserIds.has(u.id));
-    const paidNoDelivered = [...paidUserIds].filter((id) => !deliveredUserIds.has(id));
+    const paidNoDeliveredRaw = [...paidUserIds].filter((id) => !deliveredUserIds.has(id));
+    // 창 안에서 결과를 못 찾았다고 바로 경고하지 않는다 — 본인삭제·창밖완료·재사용을 먼저 설명한다.
+    const { unexplained: paidNoDelivered, explained: noDeliveryReasons } =
+      await explainNoDelivery(paidNoDeliveredRaw, startIso, endIso);
     const revenue = paid.reduce((sum, p) => sum + (p.amount ?? 0), 0);
 
     return {
@@ -625,6 +699,7 @@ async function main() {
       failedResults,
       signupNoPay,
       paidNoDelivered,
+      noDeliveryReasons,
       signupUserIds,
     };
   }
@@ -650,6 +725,12 @@ async function main() {
     console.log(
       `  ${padR(f.label, 6)} ${padL(String(f.signups), 5)} ${padL(String(f.paidUsers), 6)} ${padL(payRate, 6)} ${padL(String(f.payCount), 6)} ${c.yellow}${padL(`${f.revenue.toLocaleString()}원`, 10)}${c.reset} ${padL(String(f.deliveredUsers), 6)} ${padL(deliveredRate, 9)} ${failedColor}${padL(String(f.failedResults), 5)}${c.reset} ${padL(String(noPayCount), 6)} ${paidNoDeliveredColor}${padL(String(paidNoDeliveredCount), 10)}${c.reset}`,
     );
+    if (f.noDeliveryReasons.size > 0) {
+      const tally: Record<string, number> = {};
+      for (const why of f.noDeliveryReasons.values()) tally[why] = (tally[why] ?? 0) + 1;
+      const detail = Object.entries(tally).map(([k, v]) => `${k} ${v}`).join(" · ");
+      console.log(`  ${c.dim}       └ 창 안에 결과가 없지만 설명된 ${f.noDeliveryReasons.size}명: ${detail}${c.reset}`);
+    }
   }
 
   const paidNoAnalysisUsers = new Map<string, { nickname: string | null; created_at: string; referrer: string | null; utm_source: string | null; landing_path: string | null }>();
