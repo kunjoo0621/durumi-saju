@@ -80,7 +80,27 @@ for (const t of RESULT_TABLES) {
 
 // 차감 시각 ±(직전 5초 ~ 이후 10분)에 어떤 결과든 새로 생겼으면 정상 과금이다.
 const WINDOW_MS = 10 * 60 * 1000;
+
+// ★환불로 상계된 차감은 이중과금이 아니다.
+// 2026-08-05 실측: 8/2 문수양 건이 유일한 "수정 배포 이후" 검출이었는데, 실제로는
+// 올해운세 환불(+10) 직후 재차감이라 순증이 0이었다. 환불을 안 보면 정상 재시도가
+// 영원히 이중과금으로 잡힌다.
+const refunds = (
+  await all("coin_transactions", "user_id, type, amount, created_at")
+).filter((t) => t.type === "refund");
+const refundsByUser = new Map<string, number[]>();
+for (const r of refunds) {
+  if (!r.user_id) continue;
+  (refundsByUser.get(r.user_id) ?? refundsByUser.set(r.user_id, []).get(r.user_id)!).push(+new Date(r.created_at));
+}
+const REFUND_WINDOW_MS = 10 * 60 * 1000;
+const offsetByRefund = (userId: string, atIso: string) => {
+  const t = +new Date(atIso);
+  return (refundsByUser.get(userId) ?? []).some((r) => Math.abs(r - t) <= REFUND_WINDOW_MS);
+};
+
 const hits: any[] = [];
+let skippedByRefund = 0;
 for (const sp of spends) {
   const s = sessById.get(sp.reference_id);
   if (!s) continue; // 세션 기반 spend가 아님(다른 상품 경로)
@@ -91,7 +111,9 @@ for (const sp of spends) {
     const d = new Date(c).getTime() - t0;
     return d > -5000 && d < WINDOW_MS;
   });
-  if (!madeNew) hits.push({ ...sp, prevAt: prev });
+  if (madeNew) continue;
+  if (offsetByRefund(s.user_id, sp.created_at)) { skippedByRefund++; continue; }
+  hits.push({ ...sp, prevAt: prev });
 }
 
 const users = await all("users", "id, nickname");
@@ -100,6 +122,7 @@ const nick = new Map(users.map((u) => [u.id, u.nickname]));
 hits.sort((a, b) => b.created_at.localeCompare(a.created_at));
 const scope = days ? `최근 ${days}일` : "전체 기간";
 console.log(`\n[재사용 이중과금] ${scope} — ${hits.length}건 / ${new Set(hits.map((h) => h.user_id)).size}명\n`);
+if (skippedByRefund > 0) console.log(`  (환불로 상계돼 제외한 차감 ${skippedByRefund}건 — 순증 0이라 이중과금 아님)`);
 
 const gap: Record<string, number> = { "1분 이내": 0, "1~10분": 0, "10분~1시간": 0, "1시간~1일": 0, "1일 이상": 0 };
 for (const h of hits) {
