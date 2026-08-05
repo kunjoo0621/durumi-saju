@@ -12,9 +12,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
+import { MARRIAGE_RESULT_COLUMNS } from "@/lib/constants/result-columns";
 
-const SELECT_COLUMNS =
-  "id, user_id, marital_status, marriage_grade, spouse_star_type, gwansal_honjap, spouse_star_absent, spouse_palace_stability, teaser_json, full_json, created_at";
+const SELECT_COLUMNS = MARRIAGE_RESULT_COLUMNS;
 
 export async function GET(request: NextRequest) {
   try {

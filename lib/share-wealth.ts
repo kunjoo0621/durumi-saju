@@ -9,13 +9,12 @@
 
 import { cache } from "react";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { WEALTH_SHARE_COLUMNS } from "@/lib/constants/result-columns";
 
 export const getSharedWealthResult = cache(async (id: string) => {
   const { data, error } = await supabaseAdmin
     .from("wealth_results")
-    .select(
-      "id, interest, wealth_grade, jaeseong_type, jaeda_shinyak, sikssang_saengjae, gunggeob_jaengjae, jae_grip, teaser_json, full_json, created_at",
-    )
+    .select(WEALTH_SHARE_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 

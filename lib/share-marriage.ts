@@ -10,13 +10,12 @@
 
 import { cache } from "react";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { MARRIAGE_SHARE_COLUMNS } from "@/lib/constants/result-columns";
 
 export const getSharedMarriageResult = cache(async (id: string) => {
   const { data, error } = await supabaseAdmin
     .from("marriage_results")
-    .select(
-      "id, marital_status, marriage_grade, spouse_star_type, gwansal_honjap, spouse_star_absent, spouse_palace_stability, teaser_json, full_json, created_at",
-    )
+    .select(MARRIAGE_SHARE_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 

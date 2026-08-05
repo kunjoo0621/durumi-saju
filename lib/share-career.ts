@@ -9,13 +9,12 @@
 
 import { cache } from "react";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { CAREER_SHARE_COLUMNS } from "@/lib/constants/result-columns";
 
 export const getSharedCareerResult = cache(async (id: string) => {
   const { data, error } = await supabaseAdmin
     .from("career_results")
-    .select(
-      "id, situation, career_grade, gwanseong_type, gwanda_sinyak, gwanin_sangsaeng, sanggwan_gyeongwan, career_grip, teaser_json, full_json, created_at",
-    )
+    .select(CAREER_SHARE_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 

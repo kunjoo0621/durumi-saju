@@ -49,8 +49,8 @@ export default async function ShareMarriagePage({
 }) {
   const { id } = await params;
   const row = await getSharedMarriageResult(id);
-  // 결제 전 티저(full_json null)는 공유 링크로도 열리면 안 된다
-  if (!row?.full_json) notFound();
+  // 결제 전 티저(full_json null)는 로더가 이미 null로 걸러낸다 — 여기 도달한 row는 결제 완료다
+  if (!row) notFound();
 
   const data: ApiResponse = {
     status: "completed",

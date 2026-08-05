@@ -10,9 +10,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseUserId } from "@/lib/server/user";
+import { CAREER_RESULT_COLUMNS } from "@/lib/constants/result-columns";
 
-const SELECT_COLUMNS =
-  "id, user_id, situation, career_grade, gwanseong_type, gwanda_sinyak, gwanin_sangsaeng, sanggwan_gyeongwan, career_grip, teaser_json, full_json, created_at";
+const SELECT_COLUMNS = CAREER_RESULT_COLUMNS;
 
 export async function GET(request: NextRequest) {
   try {
