@@ -882,6 +882,11 @@ function CareerShareAction({
         isAuthenticated={status === "authenticated"}
         onNotice={notify}
       />
+      {/* 공유되는 건 카드 한 장이 아니라 결과 전문이다. 5알 인센티브가 공유를 미는 만큼,
+          누르기 전에 무엇이 넘어가는지 알려준다 — 커리어운은 이직·적성 판단까지 들어간다. */}
+      <p className="mt-2.5 text-center text-[12px] text-text-tertiary">
+        링크를 받은 사람도 결과 전문을 볼 수 있어
+      </p>
       {showToast && (
         <div className="fixed bottom-28 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/85 px-5 py-3 text-[13.5px] font-medium text-white shadow-lg">
           {toastMsg}
