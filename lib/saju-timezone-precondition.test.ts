@@ -25,8 +25,11 @@ import assert from "node:assert/strict";
  * 둘 다 쓴다) 부분 패치는 깨지기 쉽다. 코드가 이미 `timeZone: "Asia/Seoul"` 로 선언한
  * 전제를 **프로세스에 고정**하는 게 맞다. 이 테스트가 그 고정을 강제한다.
  *
- * 깨졌다면: 실행 환경에 TZ=Asia/Seoul 을 설정하라 (CI=.github/workflows/test.yml,
- * 배포=Vercel 프로젝트 환경변수).
+ * 깨졌다면: 실행 환경 TZ를 Asia/Seoul 로 맞춰라.
+ *  - CI·로컬: .github/workflows/test.yml 의 env.TZ (또는 셸에서 TZ=Asia/Seoul)
+ *  - 프로덕션: instrumentation.ts 가 서버 기동 시 process.env.TZ 를 박는다.
+ *    ★Vercel 은 TZ 를 **예약 환경변수**로 잡아 프로젝트 설정으로는 넣을 수 없다
+ *      (2026-08-06 실측: 대시보드가 이름을 거부). 그래서 코드로 박는다.
  */
 test("프로세스 TZ가 Asia/Seoul이라 출생 시각이 KST 인스턴트로 만들어진다", () => {
   // 한국 벽시계 1996-02-27 06:00 의 진짜 인스턴트 = UTC 1996-02-26 21:00
