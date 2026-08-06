@@ -260,3 +260,43 @@ test("중복 괄호 collapse + 성사단정 컷 / 보존", () => {
   const keep = applyMarriageGuards({ timingFlow: "좋은 인연을 놓치지 마. 만나게 될 수도 있어." }, { maritalStatus: "미혼" } as any, "");
   assert.ok(keep.blocks.timingFlow.includes("놓치지 마") && keep.blocks.timingFlow.includes("수도 있어"));
 });
+
+// ★2026-08-06 실측 회귀: 대운 근거 오탐.
+// 가드는 blocks.serverTimeline?.daeun 을 봤는데 serverTimeline 은 가드가 끝난 뒤에야
+// route 에서 붙는다(marriage/analyze/route.ts). 그래서 대운 배열이 항상 [] 이 되어
+// **대운을 언급하는 모든 리포트가 무조건 위반** 처리됐다(결혼운 실측 34/38건).
+// 대조 검증: 그 리포트들의 대운 서술은 재계산 결과와 전부 일치했다 — LLM 은 무죄였다.
+// 근거는 facts.daeunSpouseYears(전체 구간)여야 한다. serverTimeline 은 upcoming 필터까지
+// 걸려 있어 "이미 지나온 대운"을 정확히 말한 문장도 걸리는 이중 오류였다.
+test("대운 근거가 facts 에 있으면 대운 언급을 위반으로 잡지 않는다", () => {
+  const facts = {
+    maritalStatus: "미혼",
+    daeunSpouseYears: [{ startAge: 27, endAge: 36, star: "정관" }, { startAge: 37, endAge: 46, star: "편관" }],
+  } as any;
+  const { violations } = applyMarriageGuards(
+    { timingFlow: "현재 넌 27세부터 이어진 정관 대운의 끝자락을 지나고 있어. 37세부터 시작되는 편관 대운이 진짜 중요해." },
+    facts, "",
+  );
+  assert.equal(violations.filter((v: string) => v.includes("대운 데이터가 비었")).length, 0);
+});
+
+test("대운 근거가 실제로 없으면 대운 주장은 여전히 위반", () => {
+  const { violations } = applyMarriageGuards(
+    { timingFlow: "47세부터 정관 대운이 들어와서 안정될 거야." },
+    { maritalStatus: "미혼", daeunSpouseYears: [] } as any, "",
+  );
+  assert.ok(violations.some((v: string) => v.includes("대운 데이터가 비었")));
+});
+
+// ★독립 검수(Fable, 2026-08-06)가 잡은 잔존 오탐.
+// DAEUN_CLAIM_RE 가 /대운/ 이라 단어만 나와도 걸리는데, marriage-prompt.ts:201 은
+// 배우자성 대운이 "없음"인 사람에게 **정확히** "인연은 대운·세운의 흐름을 더 타는 편"이라고
+// 쓰라고 지시한다. 프롬프트가 시킨 문장을 가드가 잡는 자기모순이었다.
+// 데이터가 있어야 하는 건 '구체 주장'(십성 특정 또는 나이 구간)뿐이다.
+test("대운 데이터가 없어도 일반적 언급은 위반이 아니다(프롬프트 지시 문장)", () => {
+  const { violations } = applyMarriageGuards(
+    { spouseStar: "원국에 배우자성이 뚜렷하지 않아 인연은 대운·세운의 흐름을 더 타는 편이야." },
+    { maritalStatus: "미혼", daeunSpouseYears: [] } as any, "",
+  );
+  assert.equal(violations.filter((v: string) => v.includes("대운 데이터가 비었")).length, 0);
+});

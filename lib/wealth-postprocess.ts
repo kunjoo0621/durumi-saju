@@ -221,7 +221,10 @@ export function applyWealthGuards(parsed: any, facts: any, _primarySummary: stri
         ...findTimingFabrications(
           proseForFacts,
           (facts as any)?.timingWindows ?? [],
-          (blocks as any)?.serverTimeline?.daeun ?? []
+          // ★근거는 facts 의 대운 구간 전체를 쓴다(2026-08-06 수정).
+          //   serverTimeline 은 이 가드가 끝난 뒤에야 route 에서 붙어 여기선 항상 undefined 였고,
+          //   upcoming 필터까지 걸려 있어 "이미 지나온 대운"을 정확히 말한 문장도 걸렸다.
+          (facts as any)?.daeunWealthYears ?? []
         )
       );
       violations.push(...findAdviceEchoes((blocks as any)?.advice));
