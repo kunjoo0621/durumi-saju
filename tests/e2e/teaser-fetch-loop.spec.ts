@@ -40,8 +40,8 @@ const SELF_INPUT = {
 const TEASER_OK = {
   ok: true,
   resultId: "00000000-0000-0000-0000-000000000001",
-  teaser: { grade: "B", gwanseongType: "정관우세", situation: "진로 탐색" },
-  grade: "B",
+  // 등급 필드 없음: 결제 전에는 서버가 grade를 스트립한다(app/api/career/start/route.ts).
+  teaser: { gwanseongType: "정관우세", situation: "진로 탐색" },
   alreadyUnlocked: false,
 };
 
@@ -80,7 +80,7 @@ test.describe("teaser 무한 fetch 루프 회귀", () => {
     await page.goto("/career/teaser");
 
     // 등급이 화면에 뜰 때까지 = teaser 로드 완료
-    await expect(page.locator("text=커리어운 B등급")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("text=커리어운 ?등급")).toBeVisible({ timeout: 30_000 });
 
     // 루프였다면 이 대기 동안 수백~수천 건이 쌓인다(사고 당시 초당 ~76회).
     await page.waitForTimeout(5_000);
@@ -127,7 +127,7 @@ test.describe("teaser 무한 fetch 루프 회귀", () => {
     await expect(retry).toBeVisible();
     await retry.click();
 
-    await expect(page.locator("text=커리어운 B등급")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("text=커리어운 ?등급")).toBeVisible({ timeout: 30_000 });
     await page.waitForTimeout(5_000);
 
     expect(startCalls, `재시도 포함 start 호출 ${startCalls}회 — 2회여야 한다`).toBe(2);
@@ -162,7 +162,7 @@ test.describe("teaser 무한 fetch 루프 회귀", () => {
       );
       await page.route(`**/api${m.path}/start`, (route) => {
         startCalls++;
-        route.fulfill({ json: { ok: true, resultId: "x", teaser: { grade: "B" }, grade: "B" } });
+        route.fulfill({ json: { ok: true, resultId: "x", teaser: {} } });
       });
 
       await page.goto(`${m.path}/teaser`);

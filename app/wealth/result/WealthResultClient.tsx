@@ -78,7 +78,6 @@ export interface WealthBlocks {
 type JaeseongType = "정재우세" | "편재우세" | "재성혼재" | "무재";
 
 interface TeaserFacts {
-  grade?: WealthGrade;
   jaeseongType?: JaeseongType;
   interest?: WealthInterest;
 }
@@ -87,7 +86,8 @@ export interface ApiResponse {
   status: "teaser" | "completed";
   resultId: string;
   interest: WealthInterest;
-  wealthGrade: WealthGrade;
+  /** 결제 완료(completed)에만 존재한다. teaser 분기는 서버가 등급을 내려주지 않는다. */
+  wealthGrade?: WealthGrade;
   jaeseongType?: JaeseongType;
   jaedaShinyak?: boolean;
   sikssangSaengjae?: boolean;
@@ -340,7 +340,11 @@ export function WealthResultBody({
   /** 공개 share 페이지에서 렌더할 때 — 로그인 전용 동선과 공유 버튼을 감춘다 */
   shareMode?: boolean;
 }) {
-  const wealthGrade = data.wealthGrade;
+  // ApiResponse.wealthGrade는 optional이다(결제 전 teaser 분기에서는 서버가 등급을 안 내려준다).
+  // 이 컴포넌트는 completed 분기에서만 렌더되고 그 분기는 서버가 등급을 항상 채우므로 단언한다.
+  // 기본값(예: "C")으로 메우지 않는다 — 데이터가 비었을 때 결제한 사람에게 남의 등급을
+  // 보여주느니 기존과 동일하게 비워두는 게 낫다(이 커밋은 결제 후 화면의 런타임을 바꾸지 않는다).
+  const wealthGrade = data.wealthGrade!;
   const internalGrade = WEALTH_TO_INTERNAL_GRADE[wealthGrade] ?? "D";
   const jaeseongType = data.jaeseongType ?? data.teaser?.jaeseongType ?? "무재";
   const jaeGrip = data.jaeGrip;
