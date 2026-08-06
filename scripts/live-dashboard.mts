@@ -304,8 +304,26 @@ async function loadReportRows(startIso: string, endIso?: string): Promise<Report
 // 언락된 리포트 중 본문이 실패(_error)로 채워진 것 = 돈 받고 결과 못 준 진짜 사고
 const reportFailed = (r: ReportRow) => r.unlocked && !!r.full_json?._error;
 
-async function gradeV18Monitor() {
-  section("🎯  등급 산식 v18 영향 모니터링  " + c.dim + "(버전별 표시등급 분포 · 하향 감시)" + c.reset);
+/**
+ * 현행 SCORING_VERSION을 산식 모듈에서 직접 읽는다.
+ * ★하드코딩하지 말 것. 2026-08-06, 이 모니터가 v18을 하드코딩한 채 코호트를 `v >= 18`로
+ *   묶는 바람에 v18(249건)과 v19(88건)가 한 칸에 합쳐져 표시됐고, 두 버전의 분포가
+ *   서로 반대 방향(v18 SS 5.6% / v19 SS 18.2%)이라 어느 쪽 신호도 안 보였다.
+ *   버전은 단일 출처(saju-scoring)에서만 온다.
+ */
+async function currentScoringVersion(): Promise<number | null> {
+  try {
+    const m: any = await import("@/lib/utils/saju-scoring");
+    const v = Number(m.SCORING_VERSION ?? m.default?.SCORING_VERSION);
+    return Number.isFinite(v) ? v : null;
+  } catch {
+    return null; // 임포트 실패 시 데이터에서 관측된 최대 버전으로 폴백
+  }
+}
+
+async function gradeVersionMonitor() {
+  const CUR = await currentScoringVersion();
+  section("🎯  등급 산식 버전별 모니터링  " + c.dim + "(버전마다 따로 · 합치지 않는다)" + c.reset);
   const DISP: Record<string, string> = { S: "SS", A: "S", B: "A", C: "B", D: "C" };
   // ★full_json 통째로 받지 말 것. 2,900행 × 9KB ≈ 26MB를 매 실행마다 끌어와
   // nano 인스턴스(램 512MB)를 압박한다. 실제로 필요한 건 스칼라 3개뿐이므로
@@ -323,33 +341,66 @@ async function gradeV18Monitor() {
     all.push(...data); from += 1000; if (data.length < 1000) break;
   }
   const valid = all.filter((r: any) => r.err == null && Number.isFinite(Number(r.composite)));
-  const cohort = (pred: (v: number) => boolean) => {
-    const rows = valid.filter((r: any) => pred(Number(r.ver) || 0));
+  if (!valid.length) { console.log(`  ${c.dim}집계할 결과 없음${c.reset}`); return; }
+
+  const cohort = (rows: any[]) => {
     const d: Record<string, number> = { SS: 0, S: 0, A: 0, B: 0, C: 0 };
     for (const r of rows) { const g = DISP[r.grade] ?? r.grade; if (d[g] !== undefined) d[g]++; }
-    return { n: rows.length, d };
+    const cs = rows.map((r: any) => Number(r.composite)).sort((a, b) => a - b);
+    return { n: rows.length, d, med: cs[Math.floor((cs.length - 1) / 2)] };
   };
-  const v18 = cohort((v) => v >= 18);
-  const old = cohort((v) => v < 18);
-  const line = (label: string, co: { n: number; d: Record<string, number> }) => {
-    if (co.n === 0) { console.log(`  ${padR(label, 16)} ${c.dim}데이터 없음${c.reset}`); return; }
+  const byVer = new Map<number, any[]>();
+  for (const r of valid) {
+    const v = Number(r.ver) || 0;
+    if (!byVer.has(v)) byVer.set(v, []);
+    byVer.get(v)!.push(r);
+  }
+  const versions = [...byVer.keys()].sort((a, b) => b - a);
+  const cur = CUR ?? versions[0] ?? 0;
+
+  const line = (label: string, co: ReturnType<typeof cohort>, hi = false) => {
     const parts = ["SS", "S", "A", "B", "C"].map((g) => {
       const p = ((co.d[g] / co.n) * 100).toFixed(1);
       const col = g === "C" ? c.red : c.reset;
       return `${col}${g} ${p}%${c.reset}`;
     }).join("  ");
-    console.log(`  ${padR(label, 16)} ${c.dim}n=${String(co.n).padStart(4)}${c.reset}  ${parts}`);
+    const lab = hi ? `${c.bold}${padR(label, 16)}${c.reset}` : padR(label, 16);
+    console.log(`  ${lab} ${c.dim}n=${String(co.n).padStart(4)}${c.reset}  ${parts}  ${c.dim}중앙 comp ${String(co.med).padStart(2)}${c.reset}`);
   };
-  console.log(`  ${c.dim}표시등급. 최하 ${c.red}C${c.reset}${c.dim} 비율 주시 — v18 예측 ~10%, 기존 ~7% (grandfather로 기존 결과는 동결).${c.reset}`);
-  line("v18 (신규)", v18);
-  line("v17이하 (기존)", old);
-  if (v18.n > 0) {
-    const cPct = (v18.d.C / v18.n) * 100;
-    const flag = cPct > 14 ? `${c.red}⚠ 예측(10%) 초과 — 확인 필요${c.reset}` : `${c.green}정상 범위${c.reset}`;
-    console.log(`  ${c.bold}v18 최하 C: ${cPct.toFixed(1)}%${c.reset}  ${flag}`);
-  } else {
-    console.log(`  ${c.dim}※ v18 배포 후 신규 결과가 쌓이면 여기서 하향 폭을 실시간 감시.${c.reset}`);
+
+  console.log(`  ${c.dim}표시등급(SS=내부 S=composite≥85). 버전이 다르면 산식이 다르므로 절대 합치지 않는다.${c.reset}`);
+  if (CUR == null) console.log(`  ${c.yellow}※ SCORING_VERSION 임포트 실패 — 데이터 관측 최대값 v${cur}을 현행으로 간주${c.reset}`);
+
+  // 최근 3개 버전은 개별로, 그 이전은 한 덩어리로.
+  const SHOW = 3;
+  for (const v of versions.slice(0, SHOW)) {
+    const isCur = v === cur;
+    line(`v${v}${isCur ? " (현행)" : ""}`, cohort(byVer.get(v)!), isCur);
   }
+  const rest = versions.slice(SHOW);
+  if (rest.length) {
+    const rows = rest.flatMap((v) => byVer.get(v)!);
+    line(`v${rest[0]}이하 (과거)`, cohort(rows));
+  }
+
+  // 감시 대상은 현행 버전 하나뿐. 이전 버전은 grandfather로 동결돼 움직이지 않는다.
+  const curRows = byVer.get(cur);
+  if (!curRows?.length) {
+    console.log(`  ${c.dim}※ v${cur} 신규 결과가 쌓이면 여기서 분포 이동을 감시.${c.reset}`);
+    return;
+  }
+  const co = cohort(curRows);
+  const cPct = (co.d.C / co.n) * 100;
+  const base = versions.find((v) => v !== cur && byVer.get(v)!.length >= 100);
+  const baseCo = base != null ? cohort(byVer.get(base)!) : null;
+  const cmp = baseCo ? ` ${c.dim}(직전 대량버전 v${base}: ${((baseCo.d.C / baseCo.n) * 100).toFixed(1)}%)${c.reset}` : "";
+  const flag = cPct > 14 ? `${c.red}⚠ 확인 필요${c.reset}` : `${c.green}정상 범위${c.reset}`;
+  console.log(`  ${c.bold}v${cur} 최하 C: ${cPct.toFixed(1)}%${c.reset}  ${flag}${cmp}`);
+  if (co.n < 150) {
+    console.log(`  ${c.dim}※ n=${co.n}은 표본이 작다. 상·하위 등급 비율은 몇 건 차이로 크게 흔들리니 단독 판단 금지.${c.reset}`);
+  }
+  console.log(`  ${c.dim}※ 버전 간 분포 차이는 산식 변경만이 아니라 그 기간에 누가 분석했는지(코호트)로도 생긴다.${c.reset}`);
+  console.log(`  ${c.dim}  산식 탓인지 가리려면 옛 코호트를 현행 엔진으로 재채점해 비교할 것.${c.reset}`);
 }
 
 async function main() {
@@ -1392,7 +1443,7 @@ async function main() {
     console.log(`  ${c.bgPink}${c.white} 🔥 최근 1시간 활발 — 모니터링 유지 권장 ${c.reset}`);
   }
 
-  await gradeV18Monitor();
+  await gradeVersionMonitor();
 
   writeFileSync(LAST_RUN_FILE, new Date(now).toISOString(), "utf-8");
   console.log("");
