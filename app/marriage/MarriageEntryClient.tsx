@@ -19,7 +19,7 @@ import Header from "@/components/layout/Header";
 import { SkeletonBar } from "@/components/loading";
 
 type FromPrimaryData = {
-  loveScore: number;
+  hasLoveScore: boolean;
   sourceResultId: string;
 };
 
@@ -44,7 +44,7 @@ const MARRIAGE_VALUES = [
 ] as const;
 
 // 결혼운으로 무엇을 봐주는지 — 모든 정상 상태에서 공통 노출(설명 열람은 비로그인도 가능).
-function AboutCard({ loveScore }: { loveScore?: number }) {
+function AboutCard({ hasLoveScore }: { hasLoveScore?: boolean }) {
   return (
     <div className="space-y-5">
       <div className="space-y-5">
@@ -69,11 +69,10 @@ function AboutCard({ loveScore }: { loveScore?: number }) {
           가벼운 운세 한 줄이 아니야. 사주 원국을 그대로 계산한 뒤,{" "}
           <span className="font-medium text-text-secondary">배우자 관점만 따로 깊이</span> 풀어줘.
         </p>
-        {typeof loveScore === "number" && loveScore > 0 && (
+        {hasLoveScore && (
           <p className="text-[13px] leading-relaxed text-text-tertiary break-keep">
-            지난 분석에서 연애운{" "}
-            <span className="font-medium text-text-secondary">{loveScore}점</span>이 나왔지. 그 점수
-            뒤에 있는 이유를 파볼게.
+            지난 분석에서 연애운은 이미 나와 있지. 그{" "}
+            <span className="font-medium text-text-secondary">결과 뒤에 있는 이유</span>를 파볼게.
           </p>
         )}
       </div>
@@ -110,7 +109,7 @@ export default function MarriageEntryClient() {
           setPrimaryError(data?.error || "결혼운 정보를 못 불러왔어.");
         } else {
           setPrimary({
-            loveScore: typeof data?.loveScore === "number" ? data.loveScore : 0,
+            hasLoveScore: data?.hasLoveScore === true,
             sourceResultId: data?.sourceResultId || "",
           });
         }
@@ -162,7 +161,7 @@ export default function MarriageEntryClient() {
           ) : primary ? (
             // 대표사주 있음 — 지름길(primary) + 다른 사주로 보기(self)
             <>
-              <AboutCard loveScore={primary.loveScore} />
+              <AboutCard hasLoveScore={primary.hasLoveScore} />
               <div className="px-1 space-y-3">
                 <button
                   onClick={() => router.push("/marriage/input")}

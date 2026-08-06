@@ -4,7 +4,8 @@
 // marriage와 차이:
 //  · 로그인 강제 없음(app/wealth/page.tsx가 requireSession 게이트를 제거) — 비로그인도 진입해
 //    설명을 보고 자체입력 경로로 들어갈 수 있다. 로그인은 SajuInputFlow 제출 시점에만.
-//  · 대표사주 응답에서 읽는 값은 loveScore가 아니라 wealthScore(개인사주 재물운 점수)다.
+//  · 대표사주 응답에서 읽는 값은 hasWealthScore(이전 분석 존재 여부)뿐이다. 점수 숫자는
+//    등급의 결정론 입력이라 결제 전에 내려받지 않는다.
 //  · 결제(10알)는 여기서 하지 않는다 — wealth/start는 무료 teaser, wealth/analyze에서만 차감.
 // 2-경로:
 //  · 대표사주 있음(로그인 + from-primary 200) → 지름길(/wealth/input, source:"primary")
@@ -19,7 +20,7 @@ import Header from "@/components/layout/Header";
 import { SkeletonBar } from "@/components/loading";
 
 type FromPrimaryData = {
-  wealthScore: number;
+  hasWealthScore: boolean;
   sourceResultId: string;
 };
 
@@ -45,7 +46,7 @@ const WEALTH_VALUES = [
 ] as const;
 
 // 재물운으로 무엇을 봐주는지 — 모든 정상 상태에서 공통 노출(설명 열람은 비로그인도 가능).
-function AboutCard({ wealthScore }: { wealthScore?: number }) {
+function AboutCard({ hasWealthScore }: { hasWealthScore?: boolean }) {
   return (
     <div className="space-y-5">
       <div className="space-y-5">
@@ -70,11 +71,10 @@ function AboutCard({ wealthScore }: { wealthScore?: number }) {
           가벼운 운세 한 줄이 아니야. 사주 원국을 그대로 계산한 뒤,{" "}
           <span className="font-medium text-text-secondary">재물 관점만 따로 깊이</span> 풀어줘.
         </p>
-        {typeof wealthScore === "number" && wealthScore > 0 && (
+        {hasWealthScore && (
           <p className="text-[13px] leading-relaxed text-text-tertiary break-keep">
-            지난 분석에서 재물운{" "}
-            <span className="font-medium text-text-secondary">{wealthScore}점</span>이 나왔지. 그
-            점수 뒤에 있는 이유를 파볼게.
+            지난 분석에서 재물운은 이미 나와 있지. 그{" "}
+            <span className="font-medium text-text-secondary">결과 뒤에 있는 이유</span>를 파볼게.
           </p>
         )}
       </div>
@@ -111,7 +111,7 @@ export default function WealthEntryClient() {
           setPrimaryError(data?.error || "재물운 정보를 못 불러왔어.");
         } else {
           setPrimary({
-            wealthScore: typeof data?.wealthScore === "number" ? data.wealthScore : 0,
+            hasWealthScore: data?.hasWealthScore === true,
             sourceResultId: data?.sourceResultId || "",
           });
         }
@@ -163,7 +163,7 @@ export default function WealthEntryClient() {
           ) : primary ? (
             // 대표사주 있음 — 지름길(primary) + 다른 사주로 보기(self)
             <>
-              <AboutCard wealthScore={primary.wealthScore} />
+              <AboutCard hasWealthScore={primary.hasWealthScore} />
               <div className="px-1 space-y-3">
                 <button
                   onClick={() => router.push("/wealth/input")}
