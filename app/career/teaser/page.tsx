@@ -20,30 +20,17 @@ import { useCareerStore, hasCareerHydrated } from "@/store/useCareerStore";
 import { useCoinStore } from "@/store/useCoinStore";
 import { FullScreenLoading, SkeletonBar } from "@/components/loading";
 import ChargeBottomSheet from "@/components/ChargeBottomSheet";
-import OverallGradeBadgeSlot, { GRADE_GLOWS, type OverallGradeLabel } from "@/components/result/OverallGradeBadgeSlot";
-import { getGradeColor } from "@/lib/utils/grade-colors";
 import { CAREER_COST } from "@/lib/constants/coins";
-import type { CareerGrade } from "@/lib/career-grade";
 import type { CareerSituation } from "@/lib/career-facts";
 import type { SelfSajuInput } from "@/lib/self-input";
 import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
 import { convertLunarToSolar } from "@/lib/utils/lunar";
 import { CaretDown, CaretUp } from "@phosphor-icons/react";
 
-// display 등급(SS/S/A/B/C) → 배지/글로우가 기대하는 내부 등급(S/A/B/C/D) 역매핑.
-// (CareerResultClient.CAREER_TO_INTERNAL_GRADE와 동일 — 컴포넌트 내부 상수라 여기 재현.)
-const CAREER_TO_INTERNAL_GRADE: Record<CareerGrade, OverallGradeLabel> = {
-  SS: "S",
-  S: "A",
-  A: "B",
-  B: "C",
-  C: "D",
-};
-
 type GwanseongType = "정관우세" | "편관우세" | "관살혼잡" | "무관";
 
+// 등급은 결제 전에 화면·상태 어디에도 두지 않는다(서버도 티저 응답에서 grade를 빼고 내려준다).
 type TeaserFacts = {
-  grade?: CareerGrade;
   gwanseongType?: GwanseongType;
   situation?: CareerSituation;
 };
@@ -127,7 +114,6 @@ export default function CareerTeaserPage() {
 
   const [teaserState, setTeaserState] = useState<"loading" | "ready" | "error">("loading");
   const [teaserFacts, setTeaserFacts] = useState<TeaserFacts | null>(null);
-  const [grade, setGrade] = useState<CareerGrade | null>(null);
   // 재시도는 유저 탭으로만 일어난다(자동 재시도 없음) — 자동 재시도를 두면 실패 응답이 다시
   // 루프의 연료가 된다. 가드가 막다른 화면을 만들지 않도록 에러 UI에 "다시 시도"를 붙였다.
   const [teaserRetry, setTeaserRetry] = useState(0);
@@ -211,7 +197,6 @@ export default function CareerTeaserPage() {
           setTeaserState("error");
           return;
         }
-        setGrade((data?.grade ?? data?.teaser?.grade ?? null) as CareerGrade | null);
         setTeaserFacts((data?.teaser ?? null) as TeaserFacts | null);
         setTeaserState("ready");
       } catch {
@@ -343,8 +328,6 @@ export default function CareerTeaserPage() {
     return null; // redirect 진행 중
   }
 
-  const internalGrade: OverallGradeLabel = grade ? CAREER_TO_INTERNAL_GRADE[grade] : "D";
-  const gc = getGradeColor(internalGrade);
   const gwanseongChip = teaserFacts?.gwanseongType ?? null;
 
   const displayBirthDate = `${inputs.birthYear}.${inputs.birthMonth}.${inputs.birthDay}`;
@@ -400,20 +383,17 @@ export default function CareerTeaserPage() {
             </div>
           )}
 
-          {/* 등급 공개 + 잠금 안내 */}
+          {/* 등급 잠금(물음표) + 결제 CTA — 등급은 유료 리포트의 결론이라 결제 전에는 공개하지 않는다.
+              개인사주 티저(app/teaser/page.tsx)와 동일한 rank-unknown 패턴. 배경 글로우도 등급별
+              색이라 색만으로 등급이 새므로 함께 제거했다. */}
           <div className="relative overflow-hidden rounded-3xl p-6 md:p-8" style={{ backgroundColor: "#141414" }}>
-            <div
-              className="pointer-events-none absolute left-1/2 top-[38%] h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px]"
-              style={{ background: GRADE_GLOWS[internalGrade] }}
-              aria-hidden="true"
-            />
             <div className="relative flex flex-col items-center text-center">
               {situation && (
                 <span className="mb-5 text-[13px] text-text-secondary">{situation} · 커리어운 심층 검사</span>
               )}
               {teaserState === "loading" ? (
                 <>
-                  <SkeletonBar className="w-[108px] h-[108px] rounded-full" />
+                  <SkeletonBar className="w-[120px] h-[120px] rounded-full" />
                   <SkeletonBar className="h-5 w-28 mt-4" />
                 </>
               ) : teaserState === "error" ? (
@@ -429,17 +409,20 @@ export default function CareerTeaserPage() {
                 </div>
               ) : (
                 <>
-                  <OverallGradeBadgeSlot grade={internalGrade} size={108} />
-                  {grade && (
-                    <div className="mt-4 text-[14px] font-bold tracking-wide" style={{ color: gc.text }}>
-                      커리어운 {grade}등급
-                    </div>
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/badges/rank-unknown.svg"
+                    alt="등급 미공개"
+                    className="object-contain"
+                    style={{ width: 120, height: 120 }}
+                    draggable={false}
+                  />
+                  <div className="mt-4 text-lg font-bold text-white/20">커리어운 ?등급</div>
                   <h2 className="mt-4 font-aggro text-[24px] leading-[1.3] tracking-tight text-text-primary break-keep max-w-[380px]">
-                    등급은 나왔어. 전체 리포트를 열어봐.
+                    네 커리어운 등급이 나왔어
                   </h2>
                   <p className="mt-4 max-w-[380px] text-[15px] leading-[1.7] text-text-secondary break-keep">
-                    관성 진단, 자리를 담는 그릇, 일의 흐름이 강해지는 시기까지 — 지금은 등급만 공개돼 있어.
+                    일을 담는 그릇이 어떤지, 흐름이 풀리는 시기가 언제인지까지 — 등급부터 확인해봐.
                   </p>
                   {(situation || gwanseongChip) && (
                     <div className="mt-6 flex flex-wrap justify-center gap-2">

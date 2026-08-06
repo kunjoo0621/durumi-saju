@@ -411,7 +411,9 @@ function MarriageCard({ item }: { item: MarriageItem }) {
       style={{ background: "#141414" }}
     >
       <div className="py-5 px-5 flex items-center gap-4">
-        <GradeMedal grade={internalGrade} />
+        {/* 결제 전(잠금) 카드는 등급 메달도 물음표로 — 서버(list API)가 이미 grade를 null로
+            내려주지만, 화면 쪽에서도 한 겹 막아 결제 전 등급 노출을 구조적으로 차단한다. */}
+        <GradeMedal grade={item.unlocked ? internalGrade : null} />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 mb-1.5">
             <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">결혼운·애정운</span>
@@ -447,7 +449,9 @@ function WealthCard({ item }: { item: WealthItem }) {
       style={{ background: "#141414" }}
     >
       <div className="py-5 px-5 flex items-center gap-4">
-        <GradeMedal grade={internalGrade} />
+        {/* 결제 전(잠금) 카드는 등급 메달도 물음표로 — 서버(list API)가 이미 grade를 null로
+            내려주지만, 화면 쪽에서도 한 겹 막아 결제 전 등급 노출을 구조적으로 차단한다. */}
+        <GradeMedal grade={item.unlocked ? internalGrade : null} />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 mb-1.5">
             <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">재물운</span>
@@ -482,7 +486,9 @@ function CareerCard({ item }: { item: CareerItem }) {
       style={{ background: "#141414" }}
     >
       <div className="py-5 px-5 flex items-center gap-4">
-        <GradeMedal grade={internalGrade} />
+        {/* 결제 전(잠금) 카드는 등급 메달도 물음표로 — 서버(list API)가 이미 grade를 null로
+            내려주지만, 화면 쪽에서도 한 겹 막아 결제 전 등급 노출을 구조적으로 차단한다. */}
+        <GradeMedal grade={item.unlocked ? internalGrade : null} />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 mb-1.5">
             <span className="text-[16px] font-bold text-[#F5F5F5] tracking-tight truncate">커리어운</span>
