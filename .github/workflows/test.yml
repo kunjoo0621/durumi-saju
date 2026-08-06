@@ -13,6 +13,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # ★사주 엔진은 프로세스 TZ가 Asia/Seoul 인 것을 전제로 한다.
+    #   출생 시각을 new Date(y, m-1, d, h, min) 로 만드는데(로컬 TZ 해석),
+    #   @gracefullight/saju 가 이 값을 대운수 계산에서 '절대 인스턴트'로 쓰기 때문이다
+    #   (core/luck.js:9-17). 러너 기본값 UTC로 돌리면 절입 경계 출생자의 대운수가
+    #   1살 어긋난 채로 테스트가 통과한다 — lib/saju-timezone-precondition.test.ts 참조.
+    env:
+      TZ: Asia/Seoul
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
