@@ -75,9 +75,9 @@ npx tsx scripts/...     # 테스트 스크립트 실행
 - 이 프로젝트는 Gemini API 사용 — Claude API로 착각하지 말 것
 - 응답 끝에 불필요한 요약 붙이지 말 것
 
-## 현재 설정값 (v18)
+## 현재 설정값 (v19)
 
-- **SCORING_VERSION**: 18
+- **SCORING_VERSION**: 19 — ★단일 출처는 `lib/utils/saju-scoring.ts`. 이 문서·스크립트에 숫자를 하드코딩하면 반드시 낡는다(2026-08-06, 대시보드가 v18에 고정돼 v18/v19를 합쳐 보여준 사고)
 - **등급 경계 (내부, `COMPOSITE_GRADE_CUTOFFS`)**: S≥85, A≥80, B≥70, C≥50, D<50
 - **화면 표기 라벨 격상**: 내부 S/A/B/C/D → 표시 SS/S/A/B/C (`displayGrade`). DB 저장값은 여전히 S/A/B/C/D
 - **분포 (2214명 전수 재시뮬, v18)**: 최하등급(표시 C) 약 10%. 라벨 격상 후 SS~C 완만 분포
@@ -87,6 +87,7 @@ npx tsx scripts/...     # 테스트 스크립트 실행
   - ① 비겁 개수 정상화: `calculateTenStarsFull`(중복포함) 추가 → "비겁 과다(≥3)" 감점 데드코드 복구 (기존 `calculateTenStars`는 Set 중복제거라 개수 소실). 표시/배틀/LLM은 유니크 `tenStars` 유지
   - ② axisAdj 단조성: `clamp(-15,15)` 대칭 제한(기존 `|diff|>15` 평균-반감이 순서역전 유발 → 제거)
   - ③ C컷 52→50 (①②로 인한 최하등급 증가 상쇄) + `PERCENTILE_PIECEWISE` 경계 동반 조정
+- **v18→v19 변경 (2026-07-28, 034a4f4)**: 홍염살 검출에 일지 포함(`saju-enrichment`). 홍염은 통설상 일주로 정의되는 신살인데 일지를 빼고 있어 교과서적 홍염 일주를 통째로 놓쳤다. 검출률 21.8%→28.8%. 등급 영향은 상한이 계산으로 막혀 있다 — 연애운 가중 0.20 × 홍염 +6 = **composite 최대 +1.2점**
 - **grandfather (결제자 보호)**: 이미 언락된 결과는 stale이어도 재계산 안 함(하향 방지). `payment/complete`·`intake/session`의 재계산 지점을 재사용으로 변경 (단 `_error`/null 결과는 재분석 유지). 수정 산식은 신규 분석에만 적용. 배틀/today/yearly는 즉석 재계산이라 grandfather 미적용(즉시 반영)
 - 상세 이력: memory/project_durumi_scoring_bugs.md, project_durumi_scoring.md
 
