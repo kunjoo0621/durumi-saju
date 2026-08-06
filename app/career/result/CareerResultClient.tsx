@@ -77,7 +77,6 @@ export interface CareerBlocks {
 type GwanseongType = "정관우세" | "편관우세" | "관살혼잡" | "무관";
 
 interface TeaserFacts {
-  grade?: CareerGrade;
   gwanseongType?: GwanseongType;
   situation?: CareerSituation;
 }
@@ -86,7 +85,8 @@ export interface ApiResponse {
   status: "teaser" | "completed";
   resultId: string;
   situation: CareerSituation;
-  careerGrade: CareerGrade;
+  /** 결제 완료(completed)에만 존재한다. teaser 분기는 서버가 등급을 내려주지 않는다. */
+  careerGrade?: CareerGrade;
   gwanseongType?: GwanseongType;
   gwandaSinyak?: boolean;
   gwaninSangsaeng?: boolean;
@@ -231,9 +231,6 @@ export default function CareerResultClient() {
 // ────────────────────────────────────────────────────────
 
 function TeaserLockedView({ data, router }: { data: ApiResponse; router: ReturnType<typeof useRouter> }) {
-  const grade = data.careerGrade ?? data.teaser?.grade;
-  const internalGrade = grade ? CAREER_TO_INTERNAL_GRADE[grade] : "D";
-  const gc = getGradeColor(internalGrade);
   const teaser = data.teaser ?? {};
   const situation = data.situation ?? teaser.situation;
   const gwanseongType = data.gwanseongType ?? teaser.gwanseongType;
@@ -243,24 +240,22 @@ function TeaserLockedView({ data, router }: { data: ApiResponse; router: ReturnT
       <Header showBack sticky onBack={() => router.push("/career")} />
       <main className="max-w-[640px] mx-auto animate-fadeIn">
         <section className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-6 text-center">
-          <div
-            className="pointer-events-none absolute left-1/2 top-[42%] h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px]"
-            style={{ background: GRADE_GLOWS[internalGrade] }}
-            aria-hidden="true"
-          />
           <div className="relative flex flex-col items-center">
             {situation && <span className="mb-5 text-[13px] text-text-secondary">{situation} · 커리어운 심층 검사</span>}
-            <OverallGradeBadgeSlot grade={internalGrade} size={108} />
-            {grade && (
-              <div className="mt-4 text-[14px] font-bold tracking-wide" style={{ color: gc.text }}>
-                커리어운 {grade}등급
-              </div>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/badges/rank-unknown.svg"
+              alt="등급 미공개"
+              className="object-contain"
+              style={{ width: 120, height: 120 }}
+              draggable={false}
+            />
+            <div className="mt-4 text-lg font-bold text-white/20">커리어운 ?등급</div>
             <h1 className="mt-4 font-aggro text-[28px] leading-[1.3] tracking-tight text-text-primary break-keep max-w-[380px]">
-              등급은 나왔어. 전체 리포트를 열어봐.
+              네 커리어운 등급이 나왔어
             </h1>
             <p className="mt-4 max-w-[380px] text-[15.5px] leading-[1.7] text-text-secondary break-keep">
-              관성 진단, 자리를 담는 그릇, 일의 흐름이 강해지는 시기까지 — 지금은 등급만 공개돼 있어.
+              일을 담는 그릇이 어떤지, 흐름이 풀리는 시기가 언제인지까지 — 등급부터 확인해봐.
             </p>
             {(situation || gwanseongType) && (
               <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -344,7 +339,11 @@ export function CareerResultBody({
   /** 공개 share 페이지에서 렌더할 때 — 로그인 전용 동선과 공유 버튼을 감춘다 */
   shareMode?: boolean;
 }) {
-  const careerGrade = data.careerGrade;
+  // ApiResponse.careerGrade는 optional이다(결제 전 teaser 분기에서는 서버가 등급을 안 내려준다).
+  // 이 컴포넌트는 completed 분기에서만 렌더되고 그 분기는 서버가 등급을 항상 채우므로 단언한다.
+  // 기본값(예: "C")으로 메우지 않는다 — 데이터가 비었을 때 결제한 사람에게 남의 등급을
+  // 보여주느니 기존과 동일하게 비워두는 게 낫다(이 커밋은 결제 후 화면의 런타임을 바꾸지 않는다).
+  const careerGrade = data.careerGrade!;
   const internalGrade = CAREER_TO_INTERNAL_GRADE[careerGrade] ?? "D";
   const gwanseongType = data.gwanseongType ?? data.teaser?.gwanseongType ?? "무관";
   const careerGrip = data.careerGrip;

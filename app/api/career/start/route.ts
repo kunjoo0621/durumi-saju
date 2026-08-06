@@ -262,11 +262,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "커리어운 정보를 저장하는 중 오류가 발생했어요." }, { status: 500 });
     }
 
+    // ★등급은 결제 전에 클라이언트로 내려보내지 않는다. 등급은 유료 리포트의 결론이고,
+    // 개인사주(결제 후 공개)와 기준이 어긋나면 안 된다. 화면만 가리면 개발자도구로 보이므로
+    // 응답 경계에서 제거한다. DB(teaser_json.grade)에는 그대로 저장된다(서버 내부용).
+    const { grade: _hiddenGrade, ...teaserPublic } = teaserJson;
     return NextResponse.json({
       ok: true,
       resultId: upserted.data.id,
-      teaser: teaserJson,
-      grade,
+      teaser: teaserPublic,
       alreadyUnlocked: Boolean(upserted.data.full_json),
     });
   } catch (error: any) {

@@ -78,7 +78,6 @@ export interface WealthBlocks {
 type JaeseongType = "정재우세" | "편재우세" | "재성혼재" | "무재";
 
 interface TeaserFacts {
-  grade?: WealthGrade;
   jaeseongType?: JaeseongType;
   interest?: WealthInterest;
 }
@@ -87,7 +86,8 @@ export interface ApiResponse {
   status: "teaser" | "completed";
   resultId: string;
   interest: WealthInterest;
-  wealthGrade: WealthGrade;
+  /** 결제 완료(completed)에만 존재한다. teaser 분기는 서버가 등급을 내려주지 않는다. */
+  wealthGrade?: WealthGrade;
   jaeseongType?: JaeseongType;
   jaedaShinyak?: boolean;
   sikssangSaengjae?: boolean;
@@ -232,9 +232,6 @@ export default function WealthResultClient() {
 // ────────────────────────────────────────────────────────
 
 function TeaserLockedView({ data, router }: { data: ApiResponse; router: ReturnType<typeof useRouter> }) {
-  const grade = data.wealthGrade ?? data.teaser?.grade;
-  const internalGrade = grade ? WEALTH_TO_INTERNAL_GRADE[grade] : "D";
-  const gc = getGradeColor(internalGrade);
   const teaser = data.teaser ?? {};
   const interest = data.interest ?? teaser.interest;
   const jaeseongType = data.jaeseongType ?? teaser.jaeseongType;
@@ -244,24 +241,22 @@ function TeaserLockedView({ data, router }: { data: ApiResponse; router: ReturnT
       <Header showBack sticky onBack={() => router.push("/wealth")} />
       <main className="max-w-[640px] mx-auto animate-fadeIn">
         <section className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-6 text-center">
-          <div
-            className="pointer-events-none absolute left-1/2 top-[42%] h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px]"
-            style={{ background: GRADE_GLOWS[internalGrade] }}
-            aria-hidden="true"
-          />
           <div className="relative flex flex-col items-center">
             {interest && <span className="mb-5 text-[13px] text-text-secondary">{interest} · 재물운 심층 검사</span>}
-            <OverallGradeBadgeSlot grade={internalGrade} size={108} />
-            {grade && (
-              <div className="mt-4 text-[14px] font-bold tracking-wide" style={{ color: gc.text }}>
-                재물운 {grade}등급
-              </div>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/badges/rank-unknown.svg"
+              alt="등급 미공개"
+              className="object-contain"
+              style={{ width: 120, height: 120 }}
+              draggable={false}
+            />
+            <div className="mt-4 text-lg font-bold text-white/20">재물운 ?등급</div>
             <h1 className="mt-4 font-aggro text-[28px] leading-[1.3] tracking-tight text-text-primary break-keep max-w-[380px]">
-              등급은 나왔어요. 전체 리포트를 열어보세요.
+              네 재물운 등급이 나왔어
             </h1>
             <p className="mt-4 max-w-[380px] text-[15.5px] leading-[1.7] text-text-secondary break-keep">
-              재성 진단, 재를 담는 그릇, 재물 흐름이 강해지는 시기까지 — 지금은 등급만 공개돼 있어.
+              돈을 담는 그릇이 어떤지, 돈이 들어오는 시기가 언제인지까지 — 등급부터 확인해봐.
             </p>
             {(interest || jaeseongType) && (
               <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -345,7 +340,11 @@ export function WealthResultBody({
   /** 공개 share 페이지에서 렌더할 때 — 로그인 전용 동선과 공유 버튼을 감춘다 */
   shareMode?: boolean;
 }) {
-  const wealthGrade = data.wealthGrade;
+  // ApiResponse.wealthGrade는 optional이다(결제 전 teaser 분기에서는 서버가 등급을 안 내려준다).
+  // 이 컴포넌트는 completed 분기에서만 렌더되고 그 분기는 서버가 등급을 항상 채우므로 단언한다.
+  // 기본값(예: "C")으로 메우지 않는다 — 데이터가 비었을 때 결제한 사람에게 남의 등급을
+  // 보여주느니 기존과 동일하게 비워두는 게 낫다(이 커밋은 결제 후 화면의 런타임을 바꾸지 않는다).
+  const wealthGrade = data.wealthGrade!;
   const internalGrade = WEALTH_TO_INTERNAL_GRADE[wealthGrade] ?? "D";
   const jaeseongType = data.jaeseongType ?? data.teaser?.jaeseongType ?? "무재";
   const jaeGrip = data.jaeGrip;

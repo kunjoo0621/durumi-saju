@@ -32,7 +32,9 @@ export async function GET() {
     const enriched = (rows ?? []).map((r: any) => ({
       id: r.id,
       interest: r.interest,
-      grade: r.wealth_grade,
+      // 결제 전(teaser) row는 등급을 내려보내지 않는다 — /my/results 잠금 카드의
+      // GradeMedal이 null이면 물음표 폴백으로 그려진다.
+      grade: r.full_json !== null ? r.wealth_grade : null,
       jaeseongType: r.jaeseong_type,
       jaedaShinyak: r.jaeda_shinyak,
       jaeGrip: r.jae_grip,

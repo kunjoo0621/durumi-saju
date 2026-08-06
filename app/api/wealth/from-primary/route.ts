@@ -99,7 +99,10 @@ export async function GET() {
       facts,
       gender: primary.gender,
       employmentStatus: primary.employmentStatus,
-      wealthScore,
+      // ★점수 자체는 내려보내지 않는다: 등급이 이 점수의 결정론 함수라 숫자를 주면
+      // 결제 전에 등급을 역산할 수 있다(티저 등급 마스킹과 같은 이유). 진입 화면은
+      // "이전 분석이 있다"는 사실만 필요하므로 boolean으로 축약한다.
+      hasWealthScore: wealthScore > 0,
       sajuText: formatSajuText(saju, { isTimeUnknown: primary.unknownBirthTime }),
       sourceResultId: primary.sourceResultId,
     });

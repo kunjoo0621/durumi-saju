@@ -42,12 +42,13 @@ export async function GET(request: NextRequest) {
 
     if (row.full_json === null) {
       // wealth/start만 완료되고 결제(wealth/analyze) 전 — teaser만 공개
+      // ★등급은 결제 전에 내려보내지 않는다(개인사주와 동일 기준). teaser_json 안의 grade도 제거.
+      const { grade: _hiddenGrade, ...teaserPublic } = (row.teaser_json ?? {}) as Record<string, unknown>;
       return NextResponse.json({
         status: "teaser",
         resultId: row.id,
         interest: row.interest,
-        wealthGrade: row.wealth_grade,
-        teaser: row.teaser_json,
+        teaser: teaserPublic,
         createdAt: row.created_at,
       });
     }

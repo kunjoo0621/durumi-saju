@@ -3,7 +3,8 @@
 // 커리어운 심층 검사 진입 화면 — app/wealth/WealthEntryClient.tsx 2-경로 패턴 미러.
 //  · 로그인 강제 없음(app/career/page.tsx가 requireSession 미적용) — 비로그인도 진입해 설명을 보고
 //    자체입력 경로로 들어갈 수 있다. 로그인은 SajuInputFlow 제출 시점에만.
-//  · 대표사주 응답에서 읽는 값은 careerScore(개인사주 직장운 점수).
+//  · 대표사주 응답에서 읽는 값은 hasCareerScore(이전 분석 존재 여부)뿐이다. 점수 숫자는
+//    등급의 결정론 입력이라 결제 전에 내려받지 않는다.
 //  · 결제(10알)는 여기서 하지 않는다 — career/start는 무료 teaser, career/analyze에서만 차감.
 // 2-경로: 대표사주 있음 → 지름길(/career/input, primary) + 다른 사주(/career/self, self) /
 //         대표사주 없음(비로그인 포함) → 자체입력(/career/self)
@@ -16,7 +17,7 @@ import Header from "@/components/layout/Header";
 import { SkeletonBar } from "@/components/loading";
 
 type FromPrimaryData = {
-  careerScore: number;
+  hasCareerScore: boolean;
   sourceResultId: string;
 };
 
@@ -41,7 +42,7 @@ const CAREER_VALUES = [
 ] as const;
 
 // 커리어운으로 무엇을 봐주는지 — 모든 정상 상태에서 공통 노출(설명 열람은 비로그인도 가능).
-function AboutCard({ careerScore }: { careerScore?: number }) {
+function AboutCard({ hasCareerScore }: { hasCareerScore?: boolean }) {
   return (
     <div className="space-y-5">
       <div className="space-y-5">
@@ -66,11 +67,10 @@ function AboutCard({ careerScore }: { careerScore?: number }) {
           가벼운 운세 한 줄이 아니야. 사주 원국을 그대로 계산한 뒤,{" "}
           <span className="font-medium text-text-secondary">직업·자리 관점만 따로 깊이</span> 풀어줘.
         </p>
-        {typeof careerScore === "number" && careerScore > 0 && (
+        {hasCareerScore && (
           <p className="text-[13px] leading-relaxed text-text-tertiary break-keep">
-            지난 분석에서 직장운{" "}
-            <span className="font-medium text-text-secondary">{careerScore}점</span>이 나왔지. 그
-            점수 뒤에 있는 이유를 파볼게.
+            지난 분석에서 직장운은 이미 나와 있지. 그{" "}
+            <span className="font-medium text-text-secondary">결과 뒤에 있는 이유</span>를 파볼게.
           </p>
         )}
       </div>
@@ -105,7 +105,7 @@ export default function CareerEntryClient() {
           setPrimaryError(data?.error || "커리어운 정보를 못 불러왔어.");
         } else {
           setPrimary({
-            careerScore: typeof data?.careerScore === "number" ? data.careerScore : 0,
+            hasCareerScore: data?.hasCareerScore === true,
             sourceResultId: data?.sourceResultId || "",
           });
         }
@@ -156,7 +156,7 @@ export default function CareerEntryClient() {
             </div>
           ) : primary ? (
             <>
-              <AboutCard careerScore={primary.careerScore} />
+              <AboutCard hasCareerScore={primary.hasCareerScore} />
               <div className="px-1 space-y-3">
                 <button
                   onClick={() => router.push("/career/input")}
