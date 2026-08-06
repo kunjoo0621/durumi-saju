@@ -300,3 +300,29 @@ test("대운 데이터가 없어도 일반적 언급은 위반이 아니다(프�
   );
   assert.equal(violations.filter((v: string) => v.includes("대운 데이터가 비었")).length, 0);
 });
+
+// ★독립 검수(Fable, 2026-08-06)가 실제로 뚫어 보인 우회 문장들.
+// 좁힌 DAEUN_CLAIM_RE 가 '십성 특정' 또는 '\d{1,3}세' 만 봐서 아래가 전부 통과했다.
+// 가장 현실적인 건 연도형 — 리포트가 연도를 훨씬 자주 쓴다.
+test("대운 데이터가 없는데 연도·연령대형으로 구체 주장하면 위반", () => {
+  const empty = { maritalStatus: "미혼", daeunSpouseYears: [] } as any;
+  const hit = (text: string) =>
+    applyMarriageGuards({ timingFlow: text }, empty, "")
+      .violations.filter((v: string) => v.includes("대운 데이터가 비었")).length > 0;
+
+  assert.ok(hit("2029년부터 새로운 대운이 들어와서 흐름이 완전히 바뀌어."), "연도형");
+  assert.ok(hit("40대 중반 대운 교체기가 네 인연의 분기점이야."), "연령대형");
+  assert.ok(hit("47세부터 정관 대운이 들어와서 안정될 거야."), "십성+나이(기존)");
+});
+
+test("프롬프트가 지시한 일반적 언급은 여전히 통과한다(오탐 방지)", () => {
+  const empty = { maritalStatus: "미혼", daeunSpouseYears: [] } as any;
+  const hit = (text: string) =>
+    applyMarriageGuards({ spouseStar: text }, empty, "")
+      .violations.filter((v: string) => v.includes("대운 데이터가 비었")).length > 0;
+
+  // marriage-prompt.ts:201 이 배우자성 없는 사람에게 쓰라고 지시하는 문장
+  assert.equal(hit("원국에 배우자성이 뚜렷하지 않아 인연은 대운·세운의 흐름을 더 타는 편이야."), false);
+  // 연도가 있어도 대운 주장이 아니면 걸리면 안 된다
+  assert.equal(hit("2029년에는 네 매력이 도드라지는 흐름이 들어와."), false);
+});
