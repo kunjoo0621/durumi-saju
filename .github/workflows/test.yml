@@ -13,6 +13,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # ★사주 엔진은 프로세스 TZ가 **UTC** 인 것을 전제로 한다(직관과 반대다).
+    #   @gracefullight/saju 는 "한국 벽시계를 UTC 인 척 인코딩한" 공간에서 계산한다 —
+    #   어댑터가 timeZone 을 무시하고 로컬 필드를 읽고(adapters/date-fns.js:34-40)
+    #   절기 탐색이 그 필드를 UTC 로 간주해 태양황경을 푼다(core/four-pillars.js:56-88).
+    #   KST 러너에서 돌리면 절기가 9시간 밀려 절입 경계 케이스가 틀린 채로 통과한다.
+    #   검증: lib/saju-solar-terms.golden.test.ts (발행 만세력 대조)
+    env:
+      TZ: UTC
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

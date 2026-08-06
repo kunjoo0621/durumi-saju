@@ -64,6 +64,7 @@ npx tsx scripts/...     # 테스트 스크립트 실행
 ## 작업 규칙
 
 ### 반드시 지킬 것
+- ★**실행 환경 TZ는 반드시 `UTC`** (CI·로컬 스크립트 모두. 직관과 반대이니 주의). `@gracefullight/saju` 는 "한국 벽시계를 UTC 인 척 인코딩한" 공간에서 계산한다 — 어댑터가 `timeZone` 을 무시하고 **로컬 필드**를 읽고, 절기 탐색이 그 필드를 UTC 로 간주해 태양황경을 푼다. KST 로 돌리면 **절기가 9시간 밀려 절입 경계 출생자의 월주가 뒤집히고 대운수도 어긋난다**(실측: 1990-05-06 01:00 → UTC `庚辰`(정답, 입하 03:35 전) vs KST `辛巳`(오답)). 프로덕션(Vercel)은 이미 UTC이고 `instrumentation.ts` 가 명시 고정한다(★`TZ` 는 Vercel 예약 환경변수라 프로젝트 설정으론 못 넣는다). **감사 스크립트는 반드시 `TZ=UTC npx tsx scripts/...` 로 실행할 것** — 맥(KST)에서 그냥 돌리면 프로덕션과 다른 값이 나온다. 가드=`lib/saju-solar-terms.golden.test.ts`(발행 만세력 골든값 대조)
 - `SCORING_VERSION` 변경 시 숫자를 올려야 DB 캐시가 무효화됨
 - 배포 전 `npx next build` 성공 확인
 - 등급 경계 변경 시 `PERCENTILE_PIECEWISE`도 함께 수정

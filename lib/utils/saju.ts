@@ -24,7 +24,28 @@ export { formatEnrichedSajuText } from "./saju-enrichment";
 let cachedAdapter: Awaited<ReturnType<typeof createDateFnsAdapter>> | null = null;
 let adapterPromise: Promise<Awaited<ReturnType<typeof createDateFnsAdapter>>> | null = null;
 
+/**
+ * 이 엔진은 프로세스 TZ가 **UTC** 여야 절기가 맞는다(직관과 반대 — instrumentation.ts 참조).
+ * 서버는 instrumentation 이 보장하지만 **scripts/*.mts 는 그 훅을 안 거친다.**
+ * `lib/utils/saju` 를 import 하는 스크립트가 23개인데, KST 맥에서 `TZ=UTC` 를 빼먹고
+ * 돌리면 **조용히 틀린 값**이 나온다(월주 ~1.2%/인, 대운수 ~12.5%/인).
+ * 조용히 틀리는 게 최악이라 여기서 자가치유한다. 프로덕션(UTC)에선 no-op.
+ * throw 가 아니라 교정인 이유: 배포 환경이 어떤 이유로든 UTC가 아닐 때 서비스를
+ * 죽이는 것보다 맞는 값을 내는 게 낫다.
+ */
+function ensureUtcProcess() {
+  if (new Date().getTimezoneOffset() === 0) return;
+  const before = process.env.TZ ?? "(미설정)";
+  process.env.TZ = "UTC";
+  if (new Date().getTimezoneOffset() === 0) {
+    console.warn(`[saju] 프로세스 TZ를 UTC로 교정했다(이전: ${before}). 절기 계산은 UTC 전제다.`);
+  } else {
+    console.error(`[saju] ★TZ를 UTC로 못 바꿨다(현재 offset ${-new Date().getTimezoneOffset() / 60}h). 절기·월주가 틀릴 수 있다.`);
+  }
+}
+
 export async function getAdapter() {
+  ensureUtcProcess();
   if (cachedAdapter) return cachedAdapter;
   if (adapterPromise) return adapterPromise;
 
