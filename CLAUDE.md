@@ -64,6 +64,7 @@ npx tsx scripts/...     # 테스트 스크립트 실행
 ## 작업 규칙
 
 ### 반드시 지킬 것
+- ★**실행 환경 TZ는 반드시 `Asia/Seoul`** (CI·Vercel 모두). 엔진이 출생 시각을 `new Date(y, m-1, d, h, min)`(로컬 TZ 해석)로 만드는데, 라이브러리가 그 값을 대운수에서 **절대 인스턴트**로 쓴다. UTC로 돌면 절입 경계 출생자의 **대운수가 1살 어긋난다**(실측 39건 중 5건). 원국 4기둥은 로컬 필드로 뽑아 TZ 무관 — 대운수만 영향. 가드=`lib/saju-timezone-precondition.test.ts`
 - `SCORING_VERSION` 변경 시 숫자를 올려야 DB 캐시가 무효화됨
 - 배포 전 `npx next build` 성공 확인
 - 등급 경계 변경 시 `PERCENTILE_PIECEWISE`도 함께 수정
