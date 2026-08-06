@@ -218,3 +218,12 @@ test("중복 괄호 collapse: 편관(편관, 강한 자리)→편관(강한 자�
   const { blocks } = applyCareerGuards({ gwanseongDiagnosis: "편관(편관, 강한 자리)이 떠 있어 책임이 커." }, {}, "");
   assert.ok(blocks.gwanseongDiagnosis.includes("편관(강한 자리)") && !blocks.gwanseongDiagnosis.includes("편관(편관"));
 });
+
+// ★2026-08-06 회귀: 대운 근거 오탐(3상품 공통). 사유는 wealth-postprocess.test.ts 동일 테스트 참조.
+test("대운 근거가 facts 에 있으면 대운 언급을 위반으로 잡지 않는다", () => {
+  const { violations } = applyCareerGuards(
+    { timingFlow: "37세부터 들어오는 정관 대운이 네 자리를 굳혀줘." },
+    { daeunCareerYears: [{ startAge: 37, endAge: 46, star: "정관" }] } as any, "",
+  );
+  assert.equal(violations.filter((v: string) => v.includes("대운 데이터가 비었")).length, 0);
+});

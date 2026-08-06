@@ -344,3 +344,13 @@ test("성사단정 '기회가 쏟아질 거야' 컷 / '기회가 보이면 살�
   const keep = applyWealthGuards({ timingFlow: "2028년은 기회가 보이면 살펴볼 만한 시기야." }, facts, "");
   assert.ok(keep.blocks.timingFlow.includes("살펴볼"));
 });
+
+// ★2026-08-06 회귀: 대운 근거 오탐(3상품 공통). 가드가 blocks.serverTimeline?.daeun 을 봤는데
+// serverTimeline 은 가드 이후에 route 에서 붙어 항상 [] 이었다 → 대운 언급 전건 오탐.
+test("대운 근거가 facts 에 있으면 대운 언급을 위반으로 잡지 않는다", () => {
+  const { violations } = applyWealthGuards(
+    { timingFlow: "45세부터 시작되는 편재 대운이 네 돈 그릇을 키워." },
+    { ...facts, daeunWealthYears: [{ startAge: 45, endAge: 54, star: "편재" }] } as any, "",
+  );
+  assert.equal(violations.filter((v: string) => v.includes("대운 데이터가 비었")).length, 0);
+});
