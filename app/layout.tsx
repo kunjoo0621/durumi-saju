@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import { NaverAnalytics } from "@/components/NaverAnalytics";
 import "./globals.css";
 import Providers from "./providers";
 import { SAME_AS_URLS } from "@/lib/social-links";
@@ -133,6 +134,9 @@ export default function RootLayout({
         {/* 조회수·유입경로 계측. 자기 도메인(/_vercel/insights)으로 전송해
             광고차단에 막히지 않는다 — PostHog 이 조용히 0 이던 문제의 대체. */}
         <Analytics />
+        {/* 네이버 애널리틱스. Vercel 과 겹치지 않는 것 = 유입 **검색어**와 성별·연령.
+            네이버가 유입 40%대인데 네이버 쪽 데이터가 전무했다. */}
+        <NaverAnalytics />
       </body>
     </html>
   );
