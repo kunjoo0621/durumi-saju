@@ -99,7 +99,6 @@ export const waterDream: Story = {
             "본인이 물에 빠져 허우적대는 꿈 — 휴식 필요, 결정 미루기",
             "흙탕물에 발이 묶이는 꿈 — 감정·관계 정리 시점",
             "거센 파도가 끊임없이 밀려오는 꿈 — 통제 안 되는 흐름, 한 발 빠지기",
-            "비가 그치지 않고 내리는 꿈 — 우울·번뇌 점검 필요",
           ],
         },
         {
@@ -184,7 +183,7 @@ export const waterDream: Story = {
     href: "/menu",
     tone: "brand",
   },
-  related: ["dragon-dream", "pig-dream", "snake-dream"],
+  related: ["rain-dream", "dragon-dream", "pig-dream"],
   keywords: [
     "물 꿈 해몽",
     "물꿈",

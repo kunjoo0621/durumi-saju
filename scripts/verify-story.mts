@@ -225,7 +225,59 @@ function verify(slug: string): Row[] {
     }
   }
 
+  // ── M-SIB-01 형제 교차복제 (블로그 sibling_check.py 엔진 공유) ──
+  // 2026-08-10 사고: 신작 rain-dream이 기존 발행글 bird-dream과 4-gram 16.2%로
+  // 복제됐는데 여기 검사가 없어 그대로 통과했다. dup_check는 원본 .ts 1:1 대조라
+  // 소스 없는 신작에는 적용조차 안 된다. 형제 클론은 블로그만의 사고가 아니었다.
+  const sib = siblingCheck(slug);
+  if (sib === "SKIP") warn("M-SIB-01", "형제 교차복제 검사 스킵 — 덤프·파이썬 확인 필요");
+  else if (sib.fails.length) for (const f of sib.fails) fail("M-SIB-01", f);
+  else if (sib.warns.length) for (const w of sib.warns) warn("M-SIB-01", w);
+  else info("M-SIB-01", `형제 교차복제 히트 ${(sib.ratio * 100).toFixed(1)}%`);
+
   return rows;
+}
+
+/** 블로그 하네스의 sibling_check.py를 매거진 덤프로 돌린다. */
+function siblingCheck(slug: string): { fails: string[]; warns: string[]; ratio: number } | "SKIP" {
+  const py = "/Users/kunjoo/projects/durumi-blog/.venv/bin/python";
+  const script = path.join(BLOG_HARNESS, "sibling_check.py");
+  const dump = path.join(ROOT, ".cache", "story-blocks");
+  if (!existsSync(py) || !existsSync(script)) return "SKIP";
+  try {
+    // 덤프가 없거나 낡았으면 먼저 만든다 — 스킵하면 검사가 조용히 사라진다.
+    if (!existsSync(path.join(dump, `${slug}.json`))) {
+      const tsx = path.join(ROOT, "node_modules", ".bin", "tsx");
+      if (!existsSync(tsx)) return "SKIP";
+      execFileSync(tsx, [path.join(ROOT, "scripts", "dump-story-blocks.mts")], {
+        cwd: ROOT,
+        encoding: "utf-8",
+        stdio: "pipe",
+        env: { ...process.env, NODE_OPTIONS: "--conditions=import" },
+      });
+    }
+    const out = execFileSync(py, [script, "--target", slug, "--corpus-json", dump, "--json"], {
+      cwd: "/Users/kunjoo/projects/durumi-blog",
+      encoding: "utf-8",
+      stdio: "pipe",
+    });
+    const i = out.lastIndexOf("{");
+    if (i < 0) return "SKIP";
+    const j = JSON.parse(out.slice(i)) as { fails: string[]; warns: string[]; clone_ratio: number };
+    return { fails: j.fails ?? [], warns: j.warns ?? [], ratio: j.clone_ratio ?? 0 };
+  } catch (e) {
+    const err = e as { status?: number; stdout?: string };
+    // sibling_check는 실패 시 exit 1 — 그때도 JSON은 stdout에 있다.
+    const out = err.stdout ?? "";
+    const i = out.lastIndexOf("{");
+    if (i >= 0) {
+      try {
+        const j = JSON.parse(out.slice(i)) as { fails: string[]; warns: string[]; clone_ratio: number };
+        return { fails: j.fails ?? [], warns: j.warns ?? [], ratio: j.clone_ratio ?? 0 };
+      } catch { /* fallthrough */ }
+    }
+    return "SKIP";
+  }
 }
 
 // ── 미커밋 정본 문서 감지 (사고 #2 재발 방지) ──
