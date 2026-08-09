@@ -181,6 +181,9 @@ import { ringDream } from "./data/ring-dream";
 import { yeonaeVsGyeolhon } from "./data/yeonae-vs-gyeolhon";
 import { hakdangGwiin } from "./data/hakdang-gwiin";
 import { cheonuiSeong } from "./data/cheonui-seong";
+import { bigyeopSaju } from "./data/bigyeop-saju";
+import { singangSinyak } from "./data/singang-sinyak";
+import { rainDream } from "./data/rain-dream";
 
 const RAW_STORIES: Story[] = [
   daeunSaju,
@@ -268,6 +271,9 @@ const RAW_STORIES: Story[] = [
   yeonaeVsGyeolhon,
   hakdangGwiin,
   cheonuiSeong,
+  bigyeopSaju,
+  singangSinyak,
+  rainDream,
   yeonaeunJoeun,
   jaeneungSaju,
   seonggongSaju,
