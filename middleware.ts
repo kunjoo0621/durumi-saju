@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { parseNaverAdParams } from "@/lib/naver-ad-params";
 import { getToken } from "next-auth/jwt";
 
 const PROTECTED_PAGES = ["/coins", "/edit-profile", "/my/results"];
@@ -47,11 +48,16 @@ function captureReferrerCookie(request: NextRequest, response: NextResponse) {
     externalReferrer = detectAppFromUserAgent(ua);
   }
 
+  // ★네이버 검색광고는 랜딩 URL 의 쿼리스트링을 자기네 NaPm 으로 **바꿔치기**한다.
+  //   우리가 건 utm 이 통째로 사라져 광고 유입이 "직접 유입"으로 오분류됐다.
+  //   상세 경위·형식은 lib/naver-ad-params.ts 주석 참조(2026-08-10 실측).
+  const naverAd = parseNaverAdParams(url.searchParams.get("NaPm"));
+
   const refData = {
     referrer: externalReferrer,
-    utm_source: url.searchParams.get("utm_source"),
-    utm_medium: url.searchParams.get("utm_medium"),
-    utm_campaign: url.searchParams.get("utm_campaign"),
+    utm_source: url.searchParams.get("utm_source") ?? naverAd?.utm_source ?? null,
+    utm_medium: url.searchParams.get("utm_medium") ?? naverAd?.utm_medium ?? null,
+    utm_campaign: url.searchParams.get("utm_campaign") ?? naverAd?.utm_campaign ?? null,
     landing_path: url.pathname,
   };
 
