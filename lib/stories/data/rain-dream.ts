@@ -189,7 +189,7 @@ export const rainDream: Story = {
         {
           kind: "checklist",
           tone: "good",
-          title: "몇 개나 걸리시나요",
+          title: "손이 가는 항목을 짚어 보세요",
           items: [
             "가늘게 내리는 비였고 보고 있으니 마음이 놓였다",
             "마른 땅이나 논밭에 비가 스미는 장면이었다",
@@ -266,7 +266,7 @@ export const rainDream: Story = {
   ],
   ctaAfter: 6,
   cta: {
-    label: "내 사주에 물 기운이 어떻게 놓였는지 보기",
+    label: "지금 내 흐름이 어느 쪽인지 보기",
     href: "/menu",
     tone: "brand",
   },

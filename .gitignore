@@ -50,3 +50,6 @@ gsc-key.json
 *-key.json
 *.credentials.json
 scripts/enrich-quality-output.json
+
+# 형제 교차복제 검사용 Story 블록 덤프 (scripts/dump-story-blocks.mts)
+.cache/
