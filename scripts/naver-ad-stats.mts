@@ -88,8 +88,19 @@ async function main() {
       const imp = gr.reduce((a, r) => a + r.impCnt, 0);
       const clk = gr.reduce((a, r) => a + r.clkCnt, 0);
       const amt = gr.reduce((a, r) => a + r.salesAmt, 0);
-      const flag = imp === 0 ? "  ★노출 0 — 예산만 묶여 있다(입찰가·키워드 점검)" : "";
-      console.log(`   - ${g.name.padEnd(16)} 일예산 ${pad(won(g.dailyBudget ?? 0), 9)}  노출 ${pad(imp.toLocaleString(), 8)}  클릭 ${pad(clk, 5)}  비용 ${pad(won(amt), 9)}${flag}`);
+      console.log(`   - ${g.name.padEnd(16)} 일예산 ${pad(won(g.dailyBudget ?? 0), 9)}  노출 ${pad(imp.toLocaleString(), 8)}  클릭 ${pad(clk, 5)}  비용 ${pad(won(amt), 9)}`);
+      // ★노출 0 이면 원인을 추측하지 말고 실제로 조회해서 짚는다.
+      //   (2026-08-10: "입찰가·키워드 점검"이라 추측했는데 실제 원인은 소재·키워드가 0개였다)
+      if (imp === 0) {
+        const ads = await api("/ncc/ads", `?nccAdgroupId=${g.nccAdgroupId}`).catch(() => []);
+        const kws = await api("/ncc/keywords", `?nccAdgroupId=${g.nccAdgroupId}`).catch(() => []);
+        const causes: string[] = [];
+        if (!ads.length) causes.push("소재 0개");
+        if (!kws.length) causes.push("키워드 0개");
+        if (g.userLock) causes.push("그룹 중지됨");
+        if (!causes.length) causes.push(`소재 ${ads.length}·키워드 ${kws.length} 있음 → 입찰가(${g.bidAmt}원) 또는 검수 상태 확인`);
+        console.log(`     ★노출 0 — ${causes.join(" / ")}  (비용은 0원이라 손실은 아니다)`);
+      }
     }
 
     // 소재별 랜딩 URL — utm 누락 소재를 잡는다(유입 분석이 통째로 깨진다)
