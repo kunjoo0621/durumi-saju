@@ -61,7 +61,17 @@ async function main() {
   const since = process.argv[2] ?? new Date(Date.now() + 9 * 3600 * 1000 - 7 * 86400_000).toISOString().slice(0, 10);
   const until = process.argv[3] ?? today;
 
-  console.log(`\n네이버 검색광고 실적  ${since} ~ ${until}\n${"─".repeat(64)}`);
+  console.log(`\n네이버 검색광고 실적  ${since} ~ ${until}`);
+  const nowKst = new Date(Date.now() + 9 * 3600_000).toISOString().slice(11, 16);
+  if (until >= today) {
+    // ★2026-08-10 실측: 01:41 KST 와 13:04 KST 에 조회한 당일 수치가 **완전히 동일**했다
+    //   (노출 6,905 · 클릭 6). 캠페인 ELIGIBLE·비즈머니 6만원·예산 480/10,000원으로
+    //   멈출 이유가 없었으니 API 반영 지연이다. 당일 숫자로 판단하면 오진한다.
+    console.log(`${"─".repeat(64)}`);
+    console.log(`⚠ 오늘(${today}) 수치는 네이버 API 반영 지연으로 실제보다 적게 나온다.`);
+    console.log(`  현재 ${nowKst} KST. 판단은 **어제까지의 확정 수치**로 할 것.`);
+  }
+  console.log(`${"─".repeat(64)}`);
 
   const campaigns = await api("/ncc/campaigns");
   for (const c of campaigns) {
@@ -74,7 +84,8 @@ async function main() {
       for (const r of rows) {
         ti += r.impCnt; tc += r.clkCnt; ts2 += r.salesAmt;
         const ctr = r.impCnt ? ((r.clkCnt / r.impCnt) * 100).toFixed(2) + "%" : "—";
-        console.log(`  ${pad(r.dateStart, 10)} ${pad(r.impCnt.toLocaleString(), 8)} ${pad(r.clkCnt, 6)} ${pad(ctr, 7)} ${pad(won(r.salesAmt), 10)} ${pad(r.ccnt ?? 0, 5)}`);
+        const lag = r.dateStart >= today ? "  ⚠집계중" : "";
+        console.log(`  ${pad(r.dateStart, 10)} ${pad(r.impCnt.toLocaleString(), 8)} ${pad(r.clkCnt, 6)} ${pad(ctr, 7)} ${pad(won(r.salesAmt), 10)} ${pad(r.ccnt ?? 0, 5)}${lag}`);
       }
       console.log(`  ${pad("합계", 10)} ${pad(ti.toLocaleString(), 8)} ${pad(tc, 6)} ${pad(ti ? ((tc / ti) * 100).toFixed(2) + "%" : "—", 7)} ${pad(won(ts2), 10)}`);
       if (tc > 0) console.log(`  → 클릭당 ${won(ts2 / tc)}`);
