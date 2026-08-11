@@ -103,6 +103,12 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, account, profile }) {
+      // ★신규가입 플래그는 **로그인 직후 1회만** 살아 있어야 한다(네이버 sign_up 전환용).
+      // jwt 콜백은 매 요청마다 도는데 account 는 최초 로그인에만 들어온다. 여기서 먼저
+      // 지워두면, 아래에서 created 일 때만 다시 켜지므로 다음 요청부터 자동으로 꺼진다.
+      // (이걸 안 하면 플래그가 토큰에 30일간 남아 전환이 반복 발동한다.)
+      if (!account) delete (token as { isNewSignup?: boolean }).isNewSignup;
+
       if (account && profile) {
         const kakaoProfile = profile as {
           id?: string | number;
@@ -131,6 +137,7 @@ export const authOptions: NextAuthOptions = {
           const { id: userId, created } = await upsertUserWithRetry(kakaoId, nickname, email, referrer);
           token.supabaseUserId = userId;
           if (created) {
+            (token as { isNewSignup?: boolean }).isNewSignup = true;
             await grantSignupBonusIfNeeded(userId, kakaoId);
             if (referrer) {
               console.info(`[auth] referrer captured for new user ${userId}:`, referrer);
@@ -162,6 +169,9 @@ export const authOptions: NextAuthOptions = {
         const supabaseUserId = typeof token.supabaseUserId === "string" ? token.supabaseUserId : undefined;
         (session.user as { id?: string; supabaseId?: string }).id = kakaoId || token.sub;
         (session.user as { supabaseId?: string }).supabaseId = supabaseUserId;
+        // 네이버 sign_up 전환 발동용. 로그인 직후 1회만 true (jwt 콜백에서 다음 요청에 지워진다).
+        (session.user as { isNewSignup?: boolean }).isNewSignup =
+          (token as { isNewSignup?: boolean }).isNewSignup === true;
       }
       return session;
     },
