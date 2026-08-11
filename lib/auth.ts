@@ -5,6 +5,13 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * 가입 후 이 시간 안에는 세션이 `isNewSignup: true` 를 내려보낸다(네이버 sign_up 전환용).
+ * 넉넉히 잡아도 안전한 이유: 실제 발동은 클라이언트 localStorage 가드가 유저당 1회로 묶는다.
+ * 짧게 잡으면 OAuth 왕복이 느린 기기(카톡 인앱 등)에서 창을 놓쳐 전환이 새는 쪽이 더 위험하다.
+ */
+const SIGNUP_CONVERSION_WINDOW_MS = 10 * 60 * 1000;
+
 type ReferrerData = {
   referrer: string | null;
   utm_source: string | null;
@@ -131,6 +138,14 @@ export const authOptions: NextAuthOptions = {
           const { id: userId, created } = await upsertUserWithRetry(kakaoId, nickname, email, referrer);
           token.supabaseUserId = userId;
           if (created) {
+            // ★네이버 sign_up 전환용 — **불리언 플래그가 아니라 타임스탬프**를 쓴다.
+            // 처음엔 `isNewSignup=true` 를 켜고 account 없는 다음 요청에서 지우려 했는데,
+            // next-auth 는 `/api/auth/session` 한 요청 안에서 jwt 콜백의 **반환 토큰을 그대로**
+            // session 콜백에 넘긴다(core/routes/session.js:53-70). 즉 지운 그 요청에서 바로
+            // 읽히므로 클라이언트는 **영원히 false 만** 받는다(전환 전량 0, 무음 손실).
+            // 유예 창 방식도 위험하다 — 서버컴포넌트/미들웨어의 getServerSession 한 번이
+            // 그 1회를 먹어버린다. 시간 기반이면 누가 몇 번 읽든 결과가 같다.
+            (token as { signupAt?: number }).signupAt = Date.now();
             await grantSignupBonusIfNeeded(userId, kakaoId);
             if (referrer) {
               console.info(`[auth] referrer captured for new user ${userId}:`, referrer);
@@ -162,6 +177,12 @@ export const authOptions: NextAuthOptions = {
         const supabaseUserId = typeof token.supabaseUserId === "string" ? token.supabaseUserId : undefined;
         (session.user as { id?: string; supabaseId?: string }).id = kakaoId || token.sub;
         (session.user as { supabaseId?: string }).supabaseId = supabaseUserId;
+        // 네이버 sign_up 전환 발동용. 가입 시각에서 SIGNUP_CONVERSION_WINDOW_MS 안이면 true.
+        // 반복 발동은 클라이언트 localStorage 가드가 막는다(NaverSignupConversion.tsx).
+        const signupAt = (token as { signupAt?: number }).signupAt;
+        (session.user as { isNewSignup?: boolean }).isNewSignup =
+          typeof signupAt === "number" &&
+          Date.now() - signupAt < SIGNUP_CONVERSION_WINDOW_MS;
       }
       return session;
     },

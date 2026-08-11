@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Egg, CheckCircle } from "@phosphor-icons/react";
 import { FullScreenLoading } from "@/components/loading";
+import { fireNaverConversionWhenReady } from "@/components/NaverAnalytics";
 
 // 결제 완료 페이지 (전체 사용자).
 //
@@ -41,6 +42,16 @@ const RETURN_LABEL: Record<string, string> = {
 
 function fireConversion(orderId: string, value: number) {
   if (typeof window === "undefined") return;
+
+  // ── 네이버 검색광고 전환(wcs.trans) ──────────────────────────────────────
+  // gtag 유무와 무관하게 먼저 쏜다 — 한쪽 실패가 다른 쪽을 막으면 안 된다.
+  // purchase 는 value 가 필수다(가이드: "item별 결제금액(payAmount)의 합").
+  fireNaverConversionWhenReady({
+    type: "purchase",
+    id: orderId,
+    value: String(value),
+  });
+
   const gtag = (window as { gtag?: (...args: unknown[]) => void }).gtag;
   if (typeof gtag !== "function") return;
   try {
