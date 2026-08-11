@@ -83,10 +83,18 @@ export function fireNaverConversion(payload: WcsTransPayload): boolean {
  * wcslog.js 로드가 늦을 수 있어(afterInteractive) 잠깐 재시도한다.
  * 결제완료·가입완료는 페이지가 금방 넘어갈 수 있으므로 창을 짧게(6s) 잡는다.
  */
-export function fireNaverConversionWhenReady(payload: WcsTransPayload) {
-  if (fireNaverConversion(payload)) return;
+export function fireNaverConversionWhenReady(
+  payload: WcsTransPayload,
+  onFired?: () => void
+) {
+  const attempt = () => {
+    if (!fireNaverConversion(payload)) return false;
+    onFired?.();
+    return true;
+  };
+  if (attempt()) return;
   const timer = setInterval(() => {
-    if (fireNaverConversion(payload)) clearInterval(timer);
+    if (attempt()) clearInterval(timer);
   }, 200);
   setTimeout(() => clearInterval(timer), 6000);
 }
@@ -106,10 +114,12 @@ function useNaverPageview(pathname: string) {
       if (!wcsReady() || typeof window.wcs_do !== "function") return false;
       window.wcs_add = window.wcs_add ?? {};
 
-      // 광고 유입 쿠키는 전환추적 몫이라 공통키 문맥에서 한 번만 심는다.
+      // 광고 유입 쿠키 심기. 이펙트가 `[pathname]` 마다 재실행되므로 이 플래그는
+      // "앱 전체 1회"가 아니라 **라우트당 1회**를 뜻한다 — 가이드가 공통 스크립트를
+      // 모든 페이지에 넣으라 하고, inflow 는 쿼리·referrer 를 읽어 쿠키만 심는
+      // 함수라(비콘 없음, wcs_add 안 읽음) 매 라우트 호출이 무해하다.
       if (!inflowDone && typeof window.wcs?.inflow === "function") {
         try {
-          window.wcs_add["wa"] = NAVER_CONV_KEY;
           window.wcs.inflow(INFLOW_DOMAIN);
         } catch (err) {
           console.warn("[naver] inflow 실패", err);
