@@ -173,6 +173,9 @@ import { joSeungwoo } from "./data/joseungwoo";
 import { jiminBts } from "./data/jimin-bts";
 import { noYunseo } from "./data/noyunseo";
 import { wonheeIllit } from "./data/wonhee-illit";
+import { parkeunbin } from "./data/parkeunbin";
+import { gonghyojin } from "./data/gonghyojin";
+import { leedongwook } from "./data/leedongwook";
 import { turtleDream } from "./data/turtle-dream";
 import { birdDream } from "./data/bird-dream";
 import { earthquakeDream } from "./data/earthquake-dream";
@@ -260,6 +263,9 @@ const RAW_STORIES: Story[] = [
   jiminBts,
   noYunseo,
   wonheeIllit,
+  parkeunbin,
+  gonghyojin,
+  leedongwook,
   yoonKyungho,
   taeyeon,
   seoinguk,
