@@ -59,11 +59,12 @@ export default function BusinessFooter({
           </a>
         </div>
 
-        <details className="mt-4 group">
-          <summary className="cursor-pointer list-none flex items-center gap-1 text-[12px] text-[rgb(var(--c-text-muted))] hover:text-[rgb(var(--c-text-sub))] transition-colors">
-            사업자 정보
-            <svg className="w-3 h-3 transition-transform group-open:rotate-180" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </summary>
+        {/* 사업자 정보는 항상 노출한다. 전자상거래법 제10조가 초기화면 표시를 요구하고,
+            PG 입점 심사의 홈페이지 자동 점검이 '렌더링된 화면에서 보이는 텍스트'를 긁는다.
+            이전엔 <details> 접힘 블록이라 스크래퍼가 못 읽고 사업자번호를 000-00-00000 으로
+            잡아 보류 사유가 됐다 (2026-06 네이버페이 사전점검). 접지 말 것. */}
+        <div className="mt-4">
+          <p className="text-[12px] text-[rgb(var(--c-text-muted))]">사업자 정보</p>
           <div className="mt-2 text-[11px] leading-[180%] text-[rgb(var(--c-text-muted))]/60">
             <p>상호: 두루미 원정대 | 대표: 신건주</p>
             <p>사업자등록번호: 801-02-03874</p>
@@ -81,7 +82,7 @@ export default function BusinessFooter({
               사업자정보확인
             </a>
           </div>
-        </details>
+        </div>
 
         <p className="mt-4 text-[12px] text-[rgb(var(--c-text-muted))]">
           © 2026 두루미 원정대. All rights reserved.
