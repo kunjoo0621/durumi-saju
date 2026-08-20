@@ -3,7 +3,7 @@ import type { Story } from "../types";
 export const leedongwook: Story = {
   slug: "leedongwook",
   category: "celebrity",
-  title: "이동욱 무자일주, 눌러 주는 것도 받쳐 주는 것도 없는 원국",
+  title: "이동욱 무자일주, 누르는 별도 받쳐 주는 별도 없어요",
   excerpt:
     "1981년 11월 6일 무자(戊子)일주. 세 기둥 여섯 글자에 나를 누르는 별도, 나를 받쳐 주는 별도 안 보여요. 남은 건 나 자신과 내보내는 것, 그리고 손에 쥐는 것뿐입니다.",
   heroImage: {
@@ -66,6 +66,12 @@ export const leedongwook: Story = {
           tone: "warn",
           text: "없다는 게 흠이라는 뜻은 아닙니다. 그 자리를 맡을 글자가 표면에 안 섰다는 얘기예요. 더구나 시주가 빠져 있어 이 배치 자체가 아직 잠정입니다.",
         },
+        {
+          kind: "image",
+          src: "/stories/figures/leedongwook-1.png",
+          alt: "이동욱 원국의 십성을 좌우로 비교한 카드 — 왼쪽에 비견 2·상관 2·정재 1, 오른쪽에 관성 0과 인성 0",
+          caption: "누르는 별과 받쳐 주는 별이 동시에 빕니다. 남는 것은 나 자신과 내보내는 것, 그리고 그 결과로 쥐는 것이에요.",
+        },
       ],
     },
     {
@@ -117,6 +123,12 @@ export const leedongwook: Story = {
         {
           kind: "p",
           text: "글자끼리 얽히는 관계는 세 기둥 표면에서 **한 건도 안 나옵니다.** 다만 앞에서 본 대로 위 글자와 아래 칸 사이에 합이 도는 구조라, 밖으로 안 드러날 뿐 안쪽에는 묶임이 있는 셈이에요.",
+        },
+        {
+          kind: "image",
+          src: "/stories/figures/leedongwook-2.png",
+          alt: "같은 원국을 일반 신살 체계와 12신살 체계로 각각 뽑아 비교한 카드 — 왼쪽 0건, 오른쪽 장성살·반안살·육해살 3종",
+          caption: "같은 원국인데 한쪽은 0건, 다른 쪽은 3종입니다. 두 목록이 틀린 게 아니라 산출 기준이 다른 체계예요.",
         },
       ],
     },

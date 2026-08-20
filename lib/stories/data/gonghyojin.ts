@@ -55,6 +55,12 @@ export const gonghyojin: Story = {
           tone: "warn",
           text: "물이 없다고 결핍으로 읽지는 않습니다. 그 몫을 맡을 글자가 겉에 안 섰다는 뜻이에요. 게다가 시주가 빠져 있어 숫자도 아직 잠정입니다.",
         },
+        {
+          kind: "image",
+          src: "/stories/figures/gonghyojin-1.png",
+          alt: "공효진의 세 기둥 여섯 글자 오행 분포를 막대로 보여주는 카드 — 목 1, 화 1, 토 2, 금 2, 수 0",
+          caption: "여섯 글자에 수(水)가 0입니다. 사전이 정미를 '마른 들판을 비추는 달빛'으로 적는데, 그 들판에 물이 없는 구성이에요.",
+        },
       ],
     },
     {
@@ -103,6 +109,12 @@ export const gonghyojin: Story = {
         {
           kind: "p",
           text: "반대로 밖에서 눌러 오는 별은 표면에 없습니다. 앞에서 본 물 없음과 같은 얘기예요.",
+        },
+        {
+          kind: "image",
+          src: "/stories/figures/gonghyojin-2.png",
+          alt: "공효진 원국의 십성 구성을 좌우로 비교한 카드 — 왼쪽에 식신 2·정재 2·편인 1, 오른쪽에 관성 0",
+          caption: "누르는 별이 빈 자리를 식신과 정재가 '내보내고 쥔다'는 한 방향으로 채웁니다.",
         },
       ],
     },
