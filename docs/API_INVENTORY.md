@@ -40,6 +40,7 @@ scripts/vercel-analytics.mts   방문자·PV·유입처·페이지·시간대
 scripts/live-dashboard.mts     Supabase 종합 대시보드
 scripts/channel-roi.mts        채널별 가입→결제 손익 (2026-08-20 신설)
 scripts/gsc-queries.mts        GSC 검색어·페이지 실적 + CTR/순위 기회 발굴 (2026-08-21 신설)
+scripts/naver-demand.mts       지식iN·블로그·카페 수요 조사 + 브랜드 후기 현황 (2026-08-21 신설)
 components/NaverAnalytics.tsx  네이버 PV + 전환(wcs.trans)
 hooks/useCharge.ts             Google Ads 전환 firing
 middleware.ts                  네이버 광고 NaPm → utm 변환 (자체 유입추적)
@@ -72,12 +73,40 @@ middleware.ts                  네이버 광고 NaPm → utm 변환 (자체 유�
 
 ## 3. 미보유 — 발급 방법
 
-### 네이버 오픈API (데이터랩 + 검색) — 무료
+### ~~네이버 오픈API~~ → **NAVER API HUB** — 2026-08-21 연결 완료 (검색 5종)
 
-`NAVER_SEARCHAD_*`(검색광고)와 **완전히 별개**다. Client ID/Secret을 새로 받아야 한다.
+⚠️ **2026년에 발급 경로가 바뀌었다.** 네이버가 오픈API를 네이버클라우드플랫폼(NCP)의
+**NAVER API HUB** 로 이관했다. **2026-07-31 부로 developers.naver.com 신규 신청은 종료**됐다.
+(2027-06-30 에 기존 방식 지원도 완전 종료)
 
-**발급:** [developers.naver.com](https://developers.naver.com) → Application → 애플리케이션 등록 →
-사용 API 선택(검색 / 데이터랩) → `NAVER_CLIENT_ID` · `NAVER_CLIENT_SECRET` 발급
+| | |
+|---|---|
+| 콘솔 | [ncloud.com → NAVER API HUB](https://www.ncloud.com/product/applicationService/naverApiHub) |
+| Application | `durumii` (2026-08-21 10:38 등록) |
+| 자격증명 | `NCP_APIGW_KEY_ID` · `NCP_APIGW_KEY` |
+| 사용 중 | 검색 — **지식iN · 블로그 · 웹문서 · 뉴스 · 카페** ✅ |
+| 미해결 | **검색어트렌드(Data Lab)** — 콘솔엔 등록됐으나 401 |
+| 스크립트 | `scripts/naver-demand.mts` |
+
+**★엔드포인트·헤더가 구 방식과 완전히 다르다:**
+```
+구:  https://openapi.naver.com/v1/search/kin.json
+     X-Naver-Client-Id / X-Naver-Client-Secret
+
+HUB: https://naverapihub.apigw.ntruss.com/search/v1/kin
+     X-NCP-APIGW-API-KEY-ID / X-NCP-APIGW-API-KEY
+```
+
+**★Data Lab 은 게이트웨이가 다르다 (2026-08-21 미해결):**
+```
+naveropenapi.apigw.ntruss.com/datalab/v1/search  → 401 "A subscription to the API is required"  (경로는 맞음)
+naverapihub.apigw.ntruss.com/datalab/v1/search   → 404 (경로 없음)
+```
+검색 5종은 `naverapihub` 에서 200 이 나오는데 Data Lab 만 막힌다. 콘솔에서 API HUB
+**개발 가이드**를 열어 Data Lab 의 정확한 호스트/경로를 확인하거나, NCP 에서 Data Lab
+상품 구독이 따로 필요한지 확인할 것.
+
+**완전 종료된 API (대체 없음):** 쇼핑 검색 · 책 검색 · 전문자료 검색
 
 | 세부 API | 용도 | 한도 |
 |---|---|---|
@@ -151,7 +180,8 @@ API가 없더라도 웹 UI로는 주기 점검이 필요하다.
 | 순위 | 항목 | 왜 |
 |---|---|---|
 | ~~1~~ | ~~GSC 연결~~ | ✅ **2026-08-21 완료** |
-| 1 | **네이버 오픈API** (`NAVER_CLIENT_ID`) | 하나 받으면 데이터랩+검색 둘 다 열림. 발급 5분 |
+| ~~1~~ | ~~네이버 오픈API~~ | ✅ **2026-08-21 검색 5종 완료** · 검색어트렌드만 미해결 |
+| 1 | **검색어트렌드(Data Lab) 401 해결** | 시즌성·성별/연령대 분해. 콘솔 개발가이드 확인 필요 |
 | 2 | **카카오 알림톡** | 리텐션 0. 약관 제7조 알림 의무이기도 함 |
 | 3 | 네이버 서치어드바이저 | 유입 1위 채널 점검 |
 | 4 | Threads / Instagram Graph | 콘텐츠 재활용 자동화 |
