@@ -33,21 +33,62 @@ const H = {
 };
 if (!H["X-NCP-APIGW-API-KEY-ID"]) { console.error(".env.local 에 NCP_APIGW_KEY_ID / NCP_APIGW_KEY 필요"); process.exit(1); }
 
-const c = { reset:"\x1b[0m", dim:"\x1b[2m", bold:"\x1b[1m", cyan:"\x1b[36m", green:"\x1b[32m", yellow:"\x1b[33m" };
+const c = { reset:"\x1b[0m", dim:"\x1b[2m", bold:"\x1b[1m", cyan:"\x1b[36m", green:"\x1b[32m", yellow:"\x1b[33m", red:"\x1b[31m" };
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const L = (s: any, n: number) => { const t = String(s); return t.length > n ? t.slice(0, n-1)+"…" : t.padEnd(n); };
 const R = (s: any, n: number) => String(s).padStart(n);
 
-/** total = 해당 검색어의 전체 문서 수 = 수요/공급의 크기 */
-async function total(kind: "kin" | "blog" | "cafearticle", query: string): Promise<number> {
-  const url = `https://naverapihub.apigw.ntruss.com/search/v1/${kind}?query=${encodeURIComponent(query)}&display=1`;
+/**
+ * ★★ total 은 "그 검색어에 대한 문서 수"가 **아니다**. 절대 그대로 보고하지 말 것.
+ *
+ * 2026-08-21 실제 사고: `두루미사주` total = 1,919 를 "후기가 1,919건 있다"로 보고했는데,
+ * 결과를 열어보니 전부 무관한 글이었다 — "꽃의 말 제라늄"(두루미=새), "전포 두루미"(오겹살
+ * 맛집), "여우와 두루미"(우화), "한덕수 총리 두루미상"(관상)…
+ * 네이버는 **토큰을 쪼개 OR 로 긁고, 쿼리에 따옴표를 넣어도 total 은 그대로**다.
+ * 실제 두루미 후기는 **0건**이었다.
+ *
+ * 그래서 이 스크립트는 total 을 **상한(upper bound)** 으로만 쓰고,
+ * 브랜드처럼 오탐이 치명적인 항목은 반드시 sampleRate() 로 실측 비율을 곱한다.
+ */
+async function upperBound(kind: Kind, query: string): Promise<number> {
+  const j = await call(kind, query, 1, 1);
+  return j?.total ?? 0;
+}
+
+type Kind = "kin" | "blog" | "cafearticle";
+
+async function call(kind: Kind, query: string, display: number, start: number): Promise<any> {
+  const url = `https://naverapihub.apigw.ntruss.com/search/v1/${kind}` +
+    `?query=${encodeURIComponent(query)}&display=${display}&start=${start}`;
   for (let a = 0; a < 3; a++) {
     const r = await fetch(url, { headers: H });
-    if (r.ok) return (await r.json()).total ?? 0;
+    if (r.ok) return r.json();
     if (r.status === 429) { await sleep(3000); continue; }   // 키당 50 RPS
     throw new Error(`${kind}/${query} → ${r.status} ${(await r.text()).slice(0, 120)}`);
   }
-  return 0;
+  return null;
+}
+
+const strip = (s: string) => s.replace(/<[^>]+>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+
+/**
+ * 상위 N건을 실제로 열어 "정말 그 대상을 다룬 글"의 비율을 잰다.
+ * total × 이 비율 = 믿을 수 있는 추정치. 비율이 낮으면 total 은 쓰레기라는 뜻이다.
+ */
+async function sampleRate(kind: Kind, query: string, must: RegExp, n = 100)
+  : Promise<{ rate: number; checked: number; hits: string[] }> {
+  let checked = 0, hit = 0; const hits: string[] = [];
+  for (let start = 1; start <= n - 49; start += 50) {
+    const j = await call(kind, query, 50, start);
+    for (const it of (j?.items ?? [])) {
+      checked++;
+      const text = `${strip(it.title)} ${strip(it.description)} ${it.link ?? ""}`;
+      if (must.test(text)) { hit++; if (hits.length < 5) hits.push(strip(it.title).slice(0, 46)); }
+    }
+    if (!j?.items?.length) break;
+    await sleep(200);
+  }
+  return { rate: checked ? hit / checked : 0, checked, hits };
 }
 
 /**
@@ -87,7 +128,18 @@ const GROUPS: Record<string, string[]> = {
   꿈: ["이빨빠지는꿈","돌아가신분꿈","똥꿈","뱀꿈","물꿈","불꿈","임신꿈","돈줍는꿈","도둑꿈","결혼식꿈"],
 };
 
-const BRANDS = ["두루미사주","사주보는두루미","사주아이","점신","포스텔러"];
+/**
+ * 브랜드는 오탐이 치명적이라 **반드시 표본 검증**을 건다.
+ * must = "이 글이 정말 그 브랜드를 다뤘는가"를 가르는 정규식.
+ * ownLink = 자사 채널이면 외부 후기가 아니다(두루미는 상위 100건 중 6건이 전부 자사였다).
+ */
+const BRANDS: { name: string; must: RegExp; own?: RegExp }[] = [
+  { name: "두루미사주",  must: /두루미\s*사주|사주보는\s*두루미|durumisaju/i, own: /durumi_log|durumisaju/i },
+  { name: "사주아이",    must: /사주\s*아이|saju-kid|990\s*원?\s*사주/i },
+  { name: "점신",       must: /점신/ },
+  { name: "포스텔러",    must: /포스텔러|forceteller/i },
+  { name: "헬로우봇",    must: /헬로우\s*봇|hellobot/i },
+];
 
 async function main() {
   const only = process.argv.slice(2);
@@ -99,7 +151,7 @@ async function main() {
   for (const [cat, terms] of Object.entries(groups)) {
     const rows: { t: string; kin: number; blog: number; dict: boolean }[] = [];
     for (const t of terms) {
-      rows.push({ t, kin: await total("kin", t), blog: await total("blog", t), dict: hasDict(t) });
+      rows.push({ t, kin: await upperBound("kin", t), blog: await upperBound("blog", t), dict: hasDict(t) });
       await sleep(120);
     }
     rows.sort((a, b) => b.kin - a.kin);
@@ -112,18 +164,28 @@ async function main() {
     }
   }
 
-  console.log(`\n${c.bold}━━ 브랜드 — 후기 자산 현황 ━━${c.reset}`);
-  console.log(`  ${c.dim}${L("브랜드",16)}${R("블로그 글",11)}${R("카페 글",10)}${R("지식iN",9)}${c.reset}`);
-  console.log(`  ${c.dim}${"─".repeat(48)}${c.reset}`);
+  console.log(`\n${c.bold}━━ 브랜드 — 후기 자산 현황 ${c.dim}(표본 100건 검증)${c.reset}${c.bold} ━━${c.reset}`);
+  console.log(`  ${c.dim}${L("브랜드",14)}${R("total",9)}${R("적중률",8)}${R("실질추정",10)}${R("자사글",7)}${c.reset}`);
+  console.log(`  ${c.dim}${"─".repeat(50)}${c.reset}`);
   for (const b of BRANDS) {
-    const [blog, cafe, kin] = [await total("blog", b), await total("cafearticle", b), await total("kin", b)];
-    const me = b.includes("두루미");
-    console.log(`  ${me?c.green:""}${L(b,16)}${c.reset}${R(blog.toLocaleString(),11)}${R(cafe.toLocaleString(),10)}${R(kin.toLocaleString(),9)}`);
-    await sleep(120);
+    const tot = await upperBound("blog", b.name);
+    const s = await sampleRate("blog", b.name, b.must);
+    const own = b.own ? (await sampleRate("blog", b.name, b.own)).rate : 0;
+    const real = Math.round(tot * s.rate);
+    const bad = s.rate < 0.3;
+    console.log(
+      `  ${b.own?c.green:""}${L(b.name,14)}${c.reset}${R(tot.toLocaleString(),9)}` +
+      `${bad?c.red:""}${R((s.rate*100).toFixed(0)+"%",8)}${c.reset}` +
+      `${R(real.toLocaleString(),10)}${R(own?(own*100).toFixed(0)+"%":"—",7)}` +
+      (bad ? `${c.red}  ← total 신뢰불가${c.reset}` : "")
+    );
+    if (s.hits.length) console.log(`  ${c.dim}   예) ${s.hits.slice(0,2).join(" / ")}${c.reset}`);
   }
 
   console.log(`\n${c.dim}※ 지식iN 질문이 많은데 사전 페이지가 없으면 = 수요는 있고 공급이 없는 자리.${c.reset}`);
-  console.log(`${c.dim}※ total 은 네이버가 보유한 문서 수 추정치라 절대값보다 상대 비교로 볼 것.${c.reset}\n`);
+  console.log(`${c.red}※ total 은 상한일 뿐이다. 네이버는 토큰을 쪼개 OR 로 긁고 따옴표도 무시한다.${c.reset}`);
+  console.log(`${c.red}  '두루미사주' total 1,919 의 실제 내용은 오겹살집·우화·관상이었다(진짜 후기 0건).${c.reset}`);
+  console.log(`${c.red}  적중률 30% 미만이면 total 을 인용하지 말 것. 자사글 비율이 높으면 외부 후기가 아니다.${c.reset}\n`);
 }
 
 main().catch(e => { console.error(e.message ?? e); process.exit(1); });
