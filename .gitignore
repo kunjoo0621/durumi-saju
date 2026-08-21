@@ -53,3 +53,6 @@ scripts/enrich-quality-output.json
 
 # 형제 교차복제 검사용 Story 블록 덤프 (scripts/dump-story-blocks.mts)
 .cache/
+
+# 하네스 스냅샷(시계열 축적용, 로컬)
+data/harness/
