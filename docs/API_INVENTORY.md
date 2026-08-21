@@ -28,6 +28,7 @@ GSC 키가 6월부터 있는 걸 모르고 "새로 붙이자"고 제안했다).
 | **Google Ads (gtag)** | 결제 전환 추적 | 전환 ID `AW-18186268670` (클라이언트 공개) | [ads.google.com](https://ads.google.com) → 도구 → 전환 |
 | **네이버 애널리틱스** | PV 계측 | `wa` = `2557da4fbf17080` (클라이언트 공개) | [analytics.naver.com](https://analytics.naver.com) |
 | **네이버 검색광고 전환** | 결제·가입 전환(`wcs.trans`) | 공통키 `s_3318034d348d` (클라이언트 공개) | ads.naver.com → 도구 → 전환추적 |
+| **Google Search Console** | 자연검색 검색어·순위·CTR | `gsc-key.json` (서비스계정) | [console.cloud.google.com](https://console.cloud.google.com) → 서비스 계정 → 키 · 상세는 §2 |
 
 ### 쓰는 곳
 
@@ -38,6 +39,7 @@ scripts/naver-kw-research.mts  /dict 용어 검색량 리서치
 scripts/vercel-analytics.mts   방문자·PV·유입처·페이지·시간대
 scripts/live-dashboard.mts     Supabase 종합 대시보드
 scripts/channel-roi.mts        채널별 가입→결제 손익 (2026-08-20 신설)
+scripts/gsc-queries.mts        GSC 검색어·페이지 실적 + CTR/순위 기회 발굴 (2026-08-21 신설)
 components/NaverAnalytics.tsx  네이버 PV + 전환(wcs.trans)
 hooks/useCharge.ts             Google Ads 전환 firing
 middleware.ts                  네이버 광고 NaPm → utm 변환 (자체 유입추적)
@@ -46,29 +48,25 @@ middleware.ts                  네이버 광고 NaPm → utm 변환 (자체 유�
 
 ---
 
-## 2. 하다 만 것 — 키는 있는데 코드가 없음
-
-### Google Search Console
+## 2. Google Search Console — 2026-08-21 연결 완료
 
 | | |
 |---|---|
-| 파일 | `gsc-key.json` (프로젝트 루트, `.gitignore` 등록됨) |
+| 파일 | `gsc-key.json` (프로젝트 루트, `.gitignore` 49행) |
 | 종류 | service_account |
 | 계정 | `gsc-reader@gen-lang-client-0372874613.iam.gserviceaccount.com` |
-| 발급일 | 2026-06-05 |
-| **상태** | **이 키를 쓰는 코드가 프로젝트 전체에 0건** |
+| 키 발급일 | 2026-06-05 |
+| **권한 부여일** | **2026-08-21** (Search Console → 설정 → 사용자 및 권한 → 전체) |
+| 속성 | `sc-domain:durumisaju.com` (**도메인형** — API 호출 시 `sc-domain:` 접두어 필수) |
+| 스크립트 | `scripts/gsc-queries.mts` |
 
-**남은 일:**
-1. [search.google.com/search-console](https://search.google.com/search-console) → 설정 → 사용자 및 권한 →
-   위 `gsc-reader@...` 이메일을 **사용자로 추가** (권한 부여 안 했으면 API가 403)
-2. Search Console API 호출 스크립트 작성 (`searchanalytics.query`)
+**첫 조회 결과 (28일, 2026-07-21~08-18):** 노출 84,303 · 클릭 2,691 · CTR 3.19% · 평균순위 7.3
 
-**왜 급한가:** 매출의 68%가 자연검색인데 **어떤 검색어로 오는지 한 번도 안 봤다.**
-GSC는 노출수·클릭수·CTR·평균게재순위를 검색어/페이지 단위로 준다. 여기서 바로 나오는 것:
-- 노출 많은데 CTR 낮은 검색어 → **제목·메타만 고치면 즉시 개선**
-- 게재순위 8~20위 → 콘텐츠 보강하면 상위권 진입 가능
-
-⚠️ GSC는 **90일치만 보관**한다. API로 주기적으로 받아 쌓아야 장기 추이가 남는다.
+⚠️ **주의 사항 (재삽질 방지)**
+- 키만 있고 **Search Console에 사용자로 추가돼 있지 않으면 403이 아니라 `sites.list`가 빈 배열**을 준다. 헷갈리기 쉽다.
+- **데이터가 2~3일 지연**된다. 어제 데이터는 없다. 스크립트는 끝날짜를 3일 전으로 잡는다.
+- **90일치만 보관**한다. 장기 추이가 필요하면 주기적으로 받아 저장해야 한다.
+- 의존성 없이 서비스계정 JWT를 직접 만들어 토큰을 받는다(`googleapis` 패키지 불필요).
 
 ---
 
@@ -152,11 +150,11 @@ API가 없더라도 웹 UI로는 주기 점검이 필요하다.
 
 | 순위 | 항목 | 왜 |
 |---|---|---|
-| 1 | **GSC 연결 마무리** | 매출 68% 채널이 깜깜이. 키는 이미 있음 |
+| ~~1~~ | ~~GSC 연결~~ | ✅ **2026-08-21 완료** |
+| 1 | **네이버 오픈API** (`NAVER_CLIENT_ID`) | 하나 받으면 데이터랩+검색 둘 다 열림. 발급 5분 |
 | 2 | **카카오 알림톡** | 리텐션 0. 약관 제7조 알림 의무이기도 함 |
-| 3 | **네이버 오픈API** (`NAVER_CLIENT_ID`) | 하나 받으면 데이터랩+검색 둘 다 열림 |
-| 4 | 네이버 서치어드바이저 | 유입 1위 채널 점검 |
-| 5 | Threads / Instagram Graph | 콘텐츠 재활용 자동화 |
+| 3 | 네이버 서치어드바이저 | 유입 1위 채널 점검 |
+| 4 | Threads / Instagram Graph | 콘텐츠 재활용 자동화 |
 
 ---
 
