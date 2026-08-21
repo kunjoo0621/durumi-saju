@@ -25,6 +25,7 @@
     "dotenv": "^17.4.2",
     "json5": "^2.2.3",
     "korean-lunar-calendar": "^0.3.6",
+    "lunar-javascript": "1.7.7",
     "next": "^15.1.6",
     "next-auth": "^4.24.13",
     "posthog-js": "^1.363.1",

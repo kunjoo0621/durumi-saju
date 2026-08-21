@@ -26,6 +26,8 @@ export type SelfSajuInput = {
   birthMonth?: string;
   birthDay?: string;
   calendarType?: "solar" | "lunar";
+  /** 음력 윤달 여부. 미지정이면 평달(기존 동작). */
+  isLeapMonth?: boolean;
   birthHour?: string;
   birthMinute?: string;
   birthLocation?: string;
@@ -46,6 +48,7 @@ export function normalizeSelfInput(raw: SelfSajuInput): InputPayload {
     birthMonth: s(raw.birthMonth),
     birthDay: s(raw.birthDay),
     calendarType: raw.calendarType === "lunar" ? "lunar" : "solar",
+    isLeapMonth: raw.isLeapMonth === true,
     birthHour: unknownBirthTime ? "" : s(raw.birthHour),
     birthMinute: unknownBirthTime ? "" : s(raw.birthMinute),
     birthLocation: s(raw.birthLocation),
@@ -78,7 +81,7 @@ export async function computeSelfSaju(input: InputPayload): Promise<SelfSajuResu
   let calcDay = Number(input.birthDay);
 
   if (input.calendarType === "lunar") {
-    const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+    const converted = convertLunarToSolar(calcYear, calcMonth, calcDay, input.isLeapMonth ?? false);
     if (!converted) throw new Error("SELF_LUNAR_CONVERT_FAILED");
     calcYear = converted.year;
     calcMonth = converted.month;

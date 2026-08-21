@@ -57,6 +57,8 @@ export type InputState = {
   birthMonth: string;
   birthDay: string;
   calendarType: "solar" | "lunar";
+  /** 음력 입력일 때만 의미가 있다. 그 해 그 월에 윤달이 실재할 때만 UI 에 노출된다. */
+  isLeapMonth: boolean;
   birthHour: string;
   birthMinute: string;
   birthLocation: string;
@@ -80,6 +82,7 @@ const initialState = {
   birthMonth: "",
   birthDay: "",
   calendarType: "solar" as const,
+  isLeapMonth: false,
   birthHour: "",
   birthMinute: "",
   birthLocation: "",
@@ -155,6 +158,7 @@ export const useBirthInputs = () =>
       birthMonth: state.birthMonth,
       birthDay: state.birthDay,
       calendarType: state.calendarType,
+      isLeapMonth: state.isLeapMonth,
       birthHour: state.birthHour,
       birthMinute: state.birthMinute,
       unknownBirthTime: state.unknownBirthTime,
@@ -169,6 +173,7 @@ export const useAllInputs = () =>
       birthMonth: state.birthMonth,
       birthDay: state.birthDay,
       calendarType: state.calendarType,
+      isLeapMonth: state.isLeapMonth,
       birthHour: state.birthHour,
       birthMinute: state.birthMinute,
       birthLocation: state.birthLocation,
