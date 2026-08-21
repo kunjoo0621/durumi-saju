@@ -103,13 +103,33 @@ async function main() {
       }
     }
 
-    // 소재별 랜딩 URL — utm 누락 소재를 잡는다(유입 분석이 통째로 깨진다)
+    // ── 소재 목록 ────────────────────────────────────────────
+    // ★2026-08-21 두 가지를 고쳤다.
+    //  ① a.ad.headline 만 읽어 반응형 소재(RSA_AD)를 "빈 소재"로 오독했다.
+    //     RSA 는 문구가 a.assets[] 에 linkType=HEADLINE/DESCRIPTION 으로 들어간다.
+    //     그걸 "정리하자"고 제안할 뻔했는데 실제로는 제목 13개짜리 주력 소재였다.
+    //  ② "utm 없음" 경고가 오탐이었다. 4개 중 3개엔 utm 이 붙어 있었는데
+    //     경고 문구만 보고 "utm 을 붙이자"고 판단했다.
+    //     ★애초에 네이버 검색광고는 랜딩 쿼리스트링을 NaPm 으로 통째로 바꿔치기해서
+    //       utm 은 도착 시점에 사라진다(lib/naver-ad-params.ts 참조). 경고 자체가 무의미하다.
+    //       유입 추적은 middleware 의 NaPm 파싱이 담당한다.
     for (const g of groups) {
       const ads = await api("/ncc/ads", `?nccAdgroupId=${g.nccAdgroupId}`).catch(() => []);
+      if (!ads.length) continue;
+      console.log(`\n   ▸ [${g.name}] 소재 ${ads.length}개`);
       for (const a of ads) {
-        const land = a.ad?.mobile?.final ?? a.ad?.pc?.final ?? "";
-        if (land && !land.includes("utm_source")) {
-          console.log(`   ⚠ [${g.name}] 소재 랜딩에 utm 없음 → 유입 추적 불가: ${land}`);
+        const land = (a.ad?.mobile?.final ?? a.ad?.pc?.final ?? "").split("?")[0];
+        const on = a.userLock === true ? "정지" : (a.status ?? "-");
+        if (a.type === "RSA_AD") {
+          const g2: Record<string, string[]> = {};
+          for (const s of (a.assets ?? [])) (g2[s.linkType] ??= []).push(s.assetData?.text ?? "");
+          const heads = g2.HEADLINE ?? [], descs = g2.DESCRIPTION ?? [];
+          console.log(`     [반응형·${on}] 제목 ${heads.length}개 · 설명 ${descs.length}개 → ${land}`);
+          heads.slice(0, 3).forEach(t => console.log(`        · ${t}`));
+          if (heads.length > 3) console.log(`        · … 외 ${heads.length - 3}개`);
+        } else {
+          console.log(`     [단일·${on}] ${a.ad?.headline ?? "(제목없음)"} → ${land}`);
+          console.log(`        ${a.ad?.description ?? "(설명없음)"}`);
         }
       }
     }
