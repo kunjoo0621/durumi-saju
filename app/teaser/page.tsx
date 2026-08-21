@@ -167,7 +167,7 @@ function TeaserContent() {
         let calcDay = Number(inputs.birthDay);
 
         if (inputs.calendarType === "lunar") {
-          const solar = convertLunarToSolar(calcYear, calcMonth, calcDay);
+          const solar = convertLunarToSolar(calcYear, calcMonth, calcDay, inputs.isLeapMonth ?? false);
           if (solar) {
             calcYear = solar.year;
             calcMonth = solar.month;

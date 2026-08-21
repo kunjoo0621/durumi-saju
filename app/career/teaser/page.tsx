@@ -151,7 +151,7 @@ export default function CareerTeaserPage() {
         let calcMonth = Number(inputs.birthMonth);
         let calcDay = Number(inputs.birthDay);
         if (inputs.calendarType === "lunar") {
-          const solar = convertLunarToSolar(calcYear, calcMonth, calcDay);
+          const solar = convertLunarToSolar(calcYear, calcMonth, calcDay, inputs.isLeapMonth ?? false);
           if (solar) { calcYear = solar.year; calcMonth = solar.month; calcDay = solar.day; }
         }
         const hour = inputs.unknownBirthTime ? undefined : Number(inputs.birthHour);

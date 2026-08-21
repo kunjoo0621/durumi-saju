@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAllInputs, useStoreActions, type CoreFearAxis } from "@/store/useInputStore";
@@ -8,6 +8,7 @@ import { trackFormStep, trackFormComplete, type FormName } from "@/lib/analytics
 import Modal from "@/components/Modal";
 import LoginForm from "@/components/LoginForm";
 import OptionCardGroup from "@/components/saju-input/OptionCardGroup";
+import { hasLeapMonth } from "@/lib/utils/lunar";
 import QuestionStepScaffold from "@/components/saju-input/QuestionStepScaffold";
 
 /* 공통 사주 입력 흐름 컴포넌트
@@ -118,6 +119,17 @@ export default function SajuInputFlow({
     coreFearAxis,
     unknownBirthTime,
   } = formData;
+
+  /**
+   * 그 해 그 음력 월에 윤달이 실재하는지 — 체크박스 노출 조건.
+   * 윤달은 19년에 7번뿐이라, 없는 달에 띄우면 대부분의 사용자에게 혼란만 준다.
+   */
+  const leapAvailable = useMemo(() => {
+    if (calendarType !== "lunar") return false;
+    const y = Number(birthYear), m = Number(birthMonth);
+    if (!y || !m || m < 1 || m > 12) return false;
+    return hasLeapMonth(y, m);
+  }, [calendarType, birthYear, birthMonth]);
 
   // 생년월일 포맷팅용 상태
   const [birthDateDisplay, setBirthDateDisplay] = useState("");
@@ -328,7 +340,11 @@ export default function SajuInputFlow({
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setField("calendarType", option.value)}
+                    onClick={() => {
+                      setField("calendarType", option.value);
+                      // 양력으로 돌아가면 윤달 선택은 의미가 없다 — 남겨두면 오염된다.
+                      if (option.value === "solar") setField("isLeapMonth", false);
+                    }}
                     className={`h-11 rounded-xl text-[15px] font-semibold transition-colors ${
                       selected
                         ? "bg-primary text-white"
@@ -340,6 +356,39 @@ export default function SajuInputFlow({
                 );
               })}
             </div>
+            {/*
+              윤달 선택 — 음력이면서 **그 해 그 월에 윤달이 실재할 때만** 보여준다.
+              윤달은 19년에 7번뿐이라 항상 띄우면 대부분의 사용자에게 혼란만 준다.
+              (기본값 false 이므로 이 체크박스를 안 건드리면 기존과 동일하게 평달로 간다)
+            */}
+            {formData.calendarType === "lunar" && leapAvailable && (
+              <button
+                type="button"
+                onClick={() => setField("isLeapMonth", !formData.isLeapMonth)}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3.5 h-11 text-[14px] transition-colors ${
+                  formData.isLeapMonth
+                    ? "bg-primary/15 text-primary"
+                    : "bg-background-tertiary text-text-secondary hover:bg-background-tertiary/80"
+                }`}
+                aria-pressed={formData.isLeapMonth}
+              >
+                <span
+                  className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border transition-colors ${
+                    formData.isLeapMonth ? "border-primary bg-primary" : "border-text-tertiary"
+                  }`}
+                >
+                  {formData.isLeapMonth && (
+                    <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none">
+                      <path d="M2.5 6.2L4.8 8.5L9.5 3.8" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                윤달이에요
+                <span className="ml-auto text-[12px] text-text-tertiary">
+                  {formData.birthMonth}월에 윤달이 있어요
+                </span>
+              </button>
+            )}
             {/* 생년월일 입력 */}
             <div>
               <label htmlFor="birthDate" className="block text-[12px] text-text-secondary mb-2">생년월일</label>

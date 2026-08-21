@@ -119,6 +119,8 @@ export type InputPayload = {
   birthMonth: string;
   birthDay: string;
   calendarType: "solar" | "lunar";
+  /** 음력 윤달 여부. 미지정이면 평달(기존 동작). */
+  isLeapMonth?: boolean;
   birthHour: string;
   birthMinute: string;
   birthLocation: string;
@@ -2210,6 +2212,7 @@ export function buildInputHash(input: InputPayload) {
     birthMonth: normalizeNumber(input.birthMonth, 2),
     birthDay: normalizeNumber(input.birthDay, 2),
     calendarType: input.calendarType || "solar",
+    isLeapMonth: input.isLeapMonth === true,
     birthHour: input.unknownBirthTime ? "unknown" : normalizeNumber(input.birthHour, 2),
     birthMinute: input.unknownBirthTime ? "unknown" : normalizeNumber(input.birthMinute, 2),
     birthLocation: normalizeText(input.birthLocation),
@@ -2240,7 +2243,7 @@ export async function resolveSajuText(input: InputPayload) {
 
   if (input.calendarType === "lunar") {
     const { convertLunarToSolar } = await import("@/lib/utils/lunar");
-    const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+    const converted = convertLunarToSolar(calcYear, calcMonth, calcDay, input.isLeapMonth ?? false);
     if (!converted) return existing;
     calcYear = converted.year;
     calcMonth = converted.month;
@@ -2318,7 +2321,7 @@ export async function resolveSajuEnrichedData(input: InputPayload): Promise<{
   if (input.calendarType === "lunar") {
     try {
       const { convertLunarToSolar } = await import("@/lib/utils/lunar");
-      const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
+      const converted = convertLunarToSolar(calcYear, calcMonth, calcDay, input.isLeapMonth ?? false);
       if (!converted) return { sajuText: existing, enriched: null, fortune: null };
       calcYear = converted.year;
       calcMonth = converted.month;
