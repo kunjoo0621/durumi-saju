@@ -13,6 +13,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 
+// ★화면이 실제로 쓰는 경로(공용 빌더)를 그대로 검사한다 — 별도 재구현이면 검사 의미가 없다.
+const { buildChartSnapshot } = await import("../lib/result-chart");
 const { calculateSaju } = await import("../lib/utils/saju");
 const { convertLunarToSolar } = await import("../lib/utils/lunar");
 
@@ -59,17 +61,21 @@ for (const r of rows) {
   const stored = storedHourPillar(r.saju_text);
   if (!stored || !r.birth_time || !r.birth_date) continue; // 시간 미상·구버전 텍스트는 대조 불가
 
-  let [y, mo, d] = String(r.birth_date).split("-").map(Number);
-  if (r.calendar_type === "lunar") {
-    const c = convertLunarToSolar(y, mo, d, false);
-    if (!c) continue;
-    y = c.year; mo = c.month; d = c.day;
+  let saju: any = null;
+  if (NO_REGION) {
+    // 역검증 전용: 수정 전 화면 동작(지역 미적용)을 에뮬레이션한다.
+    let [y, mo, d] = String(r.birth_date).split("-").map(Number);
+    if (r.calendar_type === "lunar") {
+      const c = convertLunarToSolar(y, mo, d, false);
+      if (!c) continue;
+      y = c.year; mo = c.month; d = c.day;
+    }
+    const [hh, mi] = String(r.birth_time).split(":").map(Number);
+    saju = await calculateSaju(y, mo, d, hh, mi);
+  } else {
+    const chart = await buildChartSnapshot(r);
+    saju = chart?.sajuData ?? null;
   }
-  const [hh, mi] = String(r.birth_time).split(":").map(Number);
-
-  const saju = NO_REGION
-    ? await calculateSaju(y, mo, d, hh, mi)
-    : await calculateSaju(y, mo, d, hh, mi, { birthLocation: r.region ?? undefined });
   if (!saju) continue;
 
   checked++;
