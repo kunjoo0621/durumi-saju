@@ -202,7 +202,11 @@ export default function ResultClient() {
           const [hourValue, minuteValue] = timeValue
             ? timeValue.split(":").map((value: string) => Number(value))
             : [undefined, undefined];
-          const saju = await calculateSaju(calcYear, calcMonth, calcDay, hourValue, minuteValue);
+          // ★출생지역을 반드시 넘긴다 — 지역 경도(진태양시) 보정이 빠지면 기본 서울 경도로
+          //   계산돼 시주가 서버 분석값(saju_text)과 어긋난다. 동남권에서 특히 크다.
+          const saju = await calculateSaju(calcYear, calcMonth, calcDay, hourValue, minuteValue, {
+            birthLocation: data.input?.region ?? undefined,
+          });
           setSajuData(saju);
           return;
         }
@@ -224,7 +228,10 @@ export default function ResultClient() {
           }
           const hour = unknownBirthTime ? undefined : Number(birthHour || "0");
           const minute = unknownBirthTime ? undefined : Number(birthMinute || "0");
-          const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute);
+          // API 분기와 같은 이유로 출생지역 보정을 넘긴다(스토어 값 = 분석 요청에 보낸 값).
+          const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute, {
+            birthLocation,
+          });
           setSajuData(saju);
         } else {
           setError("입력 정보가 없어서 결과를 보여줄 수 없어.");

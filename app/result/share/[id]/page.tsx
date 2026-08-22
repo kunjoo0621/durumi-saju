@@ -119,7 +119,11 @@ export default async function ShareResultPage({
     const timeParts = data.birth_time?.split(":").map(Number);
     const hour = timeParts?.[0];
     const minute = timeParts?.[1];
-    sajuData = await calculateSaju(calcY, calcM, calcD, hour, minute);
+    // ★결과 화면과 동일하게 출생지역 보정을 넘긴다 — 빠지면 기본 서울 경도로 계산돼
+    //   공유 화면 시주가 서버 분석값과 어긋난다.
+    sajuData = await calculateSaju(calcY, calcM, calcD, hour, minute, {
+      birthLocation: data.region ?? undefined,
+    });
   }
 
   return (
