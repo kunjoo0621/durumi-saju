@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildChartForAnalysis } from "@/lib/result-chart";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -75,6 +76,16 @@ export async function POST(request: NextRequest) {
       const sajuText = await resolveSajuText(input);
       const full = await runFullAnalysis({ ...input, saju: sajuText || input.saju });
       const teaser = buildTeaserFromFull(full);
+
+      // ★원국 스냅샷을 분석 시점에 박아둔다 — 나중에 엔진이 바뀌어도 이 결과의 화면은
+      //   본문과 같은 사주를 가리킨다(D-14 재발 방지). teaser 를 만든 뒤에 붙여 티저는 안 부풀린다.
+      const chart = await buildChartForAnalysis({
+        birthDate: row.birth_date,
+        birthTime: row.birth_time,
+        calendarType: row.calendar_type,
+        birthLocation: row.region,
+      });
+      if (chart) (full as any).chart = chart;
 
       // Quality Gate (로깅)
       const qualityIssues = validatePersonalResult(full);

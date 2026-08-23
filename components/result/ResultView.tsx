@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import SajuChart, { StrengthPanel } from "@/components/saju/SajuChart";
 import ResultTable from "@/components/result/ResultTable";
 import ShinsalBadges from "@/components/saju/ShinsalBadges";
 import FortuneTimeline from "@/components/saju/FortuneTimeline";
-import { enrichSajuData, type SajuData } from "@/lib/utils/saju";
+import type { SajuData } from "@/lib/utils/saju";
 import type { EnrichedSajuData } from "@/lib/utils/saju-enrichment";
 import type { AnalysisResult } from "@/store/useInputStore";
 import type { CalendarType } from "@/lib/utils/lunar";
@@ -18,8 +18,7 @@ type ResultViewProps = {
   sajuData: SajuData | null;
   /**
    * ★서버가 계산해 내려준 enrichment(십성·신살·강약·용신…).
-   * 주어지면 그대로 그린다. 화면에서 다시 계산하면 서버가 분석에 쓴 값과 갈라진다(D-14).
-   * 미지정이면 기존처럼 클라이언트에서 계산한다 — 스냅샷을 못 받는 경로용 폴백이며 1-b 에서 제거한다.
+   * **화면은 이걸 그리기만 한다.** 여기서 다시 계산하면 서버가 분석에 쓴 값과 갈라진다(D-14).
    */
   enriched?: EnrichedSajuData | null;
   displayBirthDate?: string;
@@ -53,12 +52,8 @@ export default function ResultView({
   const [wonguExpanded, setWonguExpanded] = useState(false);
   const wonguRef = useRef<HTMLDivElement>(null);
 
-  // 서버가 내려준 값이 있으면 그것만 쓴다. 없을 때만(구 경로) 계산한다.
-  const enriched = useMemo(() => {
-    if (enrichedFromServer) return enrichedFromServer;
-    if (!sajuData) return null;
-    return enrichSajuData(sajuData, { isTimeUnknown: unknownBirthTime });
-  }, [enrichedFromServer, sajuData, unknownBirthTime]);
+  // 서버가 준 값만 쓴다 — 화면에는 계산이 없다.
+  const enriched = enrichedFromServer;
 
   return (
     <div className="min-h-screen bg-background-primary animate-fadeIn">

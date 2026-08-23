@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildChartForAnalysis } from "@/lib/result-chart";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -282,6 +283,19 @@ export async function POST(request: NextRequest) {
           ? `${input.birthHour.padStart(2, "0")}:${input.birthMinute.padStart(2, "0")}`
           : null;
 
+      // ★원국 스냅샷을 분석 시점에 저장한다 — 엔진이 바뀌어도 이 결과의 화면은 본문과
+      //   같은 사주를 가리킨다(D-14 재발 방지). 음력 윤달은 여기서만 정확히 알 수 있다.
+      if (birthDate) {
+        const chart = await buildChartForAnalysis({
+          birthDate,
+          birthTime,
+          calendarType: input.calendarType,
+          birthLocation: input.birthLocation,
+          isLeapMonth: input.isLeapMonth === true,
+        });
+        if (chart) (full as any).chart = chart;
+      }
+
       if (forceUnlock) {
         const upserted = await supabaseAdmin
           .from("saju_results")
@@ -418,6 +432,19 @@ export async function POST(request: NextRequest) {
       !input.unknownBirthTime && input.birthHour && input.birthMinute
         ? `${input.birthHour.padStart(2, "0")}:${input.birthMinute.padStart(2, "0")}`
         : null;
+
+    // ★원국 스냅샷을 분석 시점에 저장한다 — 엔진이 바뀌어도 이 결과의 화면은 본문과
+    //   같은 사주를 가리킨다(D-14 재발 방지). 음력 윤달은 여기서만 정확히 알 수 있다.
+    if (birthDate) {
+      const chart = await buildChartForAnalysis({
+        birthDate,
+        birthTime,
+        calendarType: input.calendarType,
+        birthLocation: input.birthLocation,
+        isLeapMonth: input.isLeapMonth === true,
+      });
+      if (chart) (full as any).chart = chart;
+    }
 
     // saju_results INSERT (UPSERT 아님 — NULL user_id는 unique constraint 미동작)
     const { data: resultData, error: resultError } = await supabaseAdmin

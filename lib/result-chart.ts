@@ -21,6 +21,12 @@ export type ChartSource = {
   calendar_type?: string | null;
   /** 출생지역. ★빠지면 서울 경도가 기본값이라 시주가 틀어진다(D-14의 원인). */
   region?: string | null;
+  /**
+   * 음력 윤달 여부. **DB 행에는 이 값이 없다**(입력 시점에만 존재) —
+   * 그래서 과거 행을 읽기 시점에 계산하면 평달로 처리된다(기존 동작과 동일).
+   * 분석 시점 저장에서는 반드시 넘겨서 분석에 쓴 값과 일치시킨다.
+   */
+  is_leap_month?: boolean | null;
 };
 
 export type ChartSnapshot = {
@@ -45,8 +51,7 @@ export async function buildChartSnapshot(row: ChartSource): Promise<ChartSnapsho
   let calcD = d;
   const calendar = (row.calendar_type as CalendarType) || "solar";
   if (calendar === "lunar") {
-    // 저장된 행에는 윤달 여부가 없다(입력 경로에만 있다) — 평달로 변환한다. 기존 동작과 동일.
-    const converted = convertLunarToSolar(calcY, calcM, calcD);
+    const converted = convertLunarToSolar(calcY, calcM, calcD, row.is_leap_month === true);
     if (converted) {
       calcY = converted.year;
       calcM = converted.month;
@@ -70,4 +75,39 @@ export async function buildChartSnapshot(row: ChartSource): Promise<ChartSnapsho
     birthYear: y,
     unknownBirthTime,
   };
+}
+
+/**
+ * 분석 시점에 저장할 원국 스냅샷. `full_json.chart` 에 넣는다.
+ *
+ * ★왜 저장하나: 읽기 시점 계산은 "화면 == **지금** 엔진"만 보장한다. 결제한 결과의 본문·점수는
+ * 얼려두는 정책이라(하향 방지), 엔진이 바뀌면 **옛 본문 vs 새로 계산한 차트**가 또 갈라진다.
+ * 분석 시점 값을 박아두면 그 사람 결과는 산 시점 그대로 고정된다.
+ *
+ * ★음력 윤달은 DB 행에 없으므로 **여기서만** 정확히 넘길 수 있다.
+ */
+export async function buildChartForAnalysis(args: {
+  birthDate: string;
+  birthTime: string | null;
+  calendarType?: string | null;
+  birthLocation?: string | null;
+  isLeapMonth?: boolean;
+}): Promise<ChartSnapshot | null> {
+  return buildChartSnapshot({
+    birth_date: args.birthDate,
+    birth_time: args.birthTime,
+    calendar_type: args.calendarType ?? "solar",
+    region: args.birthLocation ?? null,
+    is_leap_month: args.isLeapMonth === true,
+  });
+}
+
+/**
+ * 저장된 스냅샷을 꺼낸다. 없으면(과거 행) `null` — 호출부가 읽기 시점 계산으로 폴백한다.
+ * 스냅샷은 `full_json.chart` 에 산다(별도 컬럼이 아니라 — DDL 없이 넣기 위해서다).
+ */
+export function readStoredChart(fullJson: unknown): ChartSnapshot | null {
+  const chart = (fullJson as any)?.chart;
+  if (!chart?.sajuData?.day?.heavenlyStem || !chart?.enriched) return null;
+  return chart as ChartSnapshot;
 }

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getSharedResult } from "@/lib/share-result";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { normalizeScores } from "@/lib/resultSchema";
-import { buildChartSnapshot } from "@/lib/result-chart";
+import { buildChartSnapshot, readStoredChart } from "@/lib/result-chart";
 import type { AnalysisResult } from "@/store/useInputStore";
 import { safeDisplayGrade } from "@/lib/gradeSystem";
 import ShareResultClient from "./ShareResultClient";
@@ -96,8 +96,8 @@ export default async function ShareResultPage({
   const result = parseResult(data);
   if (!result) notFound();
 
-  // 원국은 결과 화면과 **같은 빌더**로 계산한다 — 한쪽만 고치는 실수를 막기 위해서다(D-14).
-  const chart = await buildChartSnapshot(data);
+  // 원국은 결과 화면과 **같은 규칙**을 쓴다 — 저장 스냅샷 우선, 없으면 계산(D-14).
+  const chart = readStoredChart(result) ?? (await buildChartSnapshot(data));
 
   return (
     <ShareResultClient
