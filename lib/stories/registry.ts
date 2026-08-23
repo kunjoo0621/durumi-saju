@@ -136,6 +136,7 @@ import { hwagae } from "./data/hwagae";
 import { cheoneulGwiin } from "./data/cheoneul-gwiin";
 import { yanginSal } from "./data/yangin-sal";
 import { sinsalGuide } from "./data/sinsal-guide";
+import { gilsinGuide } from "./data/gilsin-guide";
 import { wonjinSal } from "./data/wonjin-sal";
 import { munchangGwiin } from "./data/munchang-gwiin";
 import { taegeukGwiin } from "./data/taegeuk-gwiin";
@@ -356,6 +357,7 @@ const RAW_STORIES: Story[] = [
   cheoneulGwiin,
   yanginSal,
   sinsalGuide,
+  gilsinGuide,
   wonjinSal,
   munchangGwiin,
   taegeukGwiin,

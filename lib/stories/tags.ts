@@ -185,6 +185,7 @@ export const STORY_TAGS: Record<string, string[]> = {
   "san-ateez": ["연예인", "아이돌", "계수"],
   "yangin-sal": ["신살", "직업운"],
   "sinsal-guide": ["신살"],
+  "gilsin-guide": ["신살", "사주기초"],
   "wonjin-sal": ["신살", "궁합"],
   "munchang-gwiin": ["신살", "직업운"],
   "taegeuk-gwiin": ["신살", "직업운"],
