@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ★lint 대상에 hooks/store/types 를 포함시킨다 — Next 기본값은 app/pages/components/lib/src 뿐이라
+  //   그 밖 폴더에서 "표시 계층 계산 금지" 규칙이 조용히 빠진다(D-14 재발 방지 게이트).
+  eslint: {
+    dirs: ["app", "components", "lib", "hooks", "store", "types"],
+  },
   // 서버리스 함수 번들에서 정적 스토리 이미지(hero·figure)를 제외한다.
   // hero-image-size.ts가 빌드 시 hero PNG를 fs로 읽어 Next 트레이서가
   // public/stories 전체(200MB+)를 함수에 포함시켜 250MB 한도를 넘겼음.
