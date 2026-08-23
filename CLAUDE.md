@@ -68,6 +68,7 @@ npx tsx scripts/...     # 테스트 스크립트 실행
 - `SCORING_VERSION` 변경 시 숫자를 올려야 DB 캐시가 무효화됨
 - 배포 전 `npx next build` 성공 확인
 - 등급 경계 변경 시 `PERCENTILE_PIECEWISE`도 함께 수정
+- ★**표시 계층(화면)에서 사주 계산 금지** — 화면이 원국을 다시 계산하다 서버 분석값과 6개월간 갈라진 사고가 있었다(D-14, 유료 클레임). 원국·enrichment 는 **서버가 계산해 내려준 값**(`full_json.chart` 스냅샷 또는 `lib/actions/chart.ts` 서버 액션)만 그린다. `.eslintrc.json` 의 `no-restricted-imports` 가 이를 강제하고 위반 시 **빌드가 실패**한다. 표시 전용 헬퍼를 새로 만들어 화면에서 써야 하면 `.eslintrc.json` 의 `importNamePattern` 허용 목록에 이름을 추가할 것(계산 함수는 절대 추가 금지). 회귀 감시: `TZ=UTC npx tsx scripts/audit-hour-pillar-display.mts`(0건이어야 정상), `lib/result-chart.test.ts`
 - API 에러 응답에 `error.message` 노출 금지 → 일반 한국어 메시지만 반환, 상세는 `console.error`
 - 외부 SDK(PortOne 등) 연동 시 로드 실패 에러 핸들링 필수 — 한국어 메시지 + preload 적용
 

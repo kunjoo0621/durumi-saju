@@ -32,3 +32,23 @@ jobs:
         run: npx tsc --noEmit
       - name: 테스트 (사실 정합성 대조 포함)
         run: npm test
+
+      # ★표시 계층 계산 금지 게이트 (D-14 재발 방지)
+      #   화면이 원국을 다시 계산하던 구조 때문에 서버 분석값과 6개월간 갈라진 사고가 있었다.
+      #   Next 15 는 `next build` 가 lint 를 돌려 배포를 막지만 **Next 16 에서 그 동작이 사라진다** —
+      #   버전과 무관하게 잠금을 유지하려면 여기가 본진이다.
+      - name: 린트 (표시 계층 계산 import 차단)
+        run: npm run lint
+
+      # 자물쇠를 끄는 주석이 새로 생기면 잡는다. 기존 42건은 전부 exhaustive-deps·no-img-element 라
+      # 이 검사의 baseline 은 0 이다(규칙명 없는 bare disable 도 함께 막는다).
+      - name: 차단 규칙 우회 감시
+        run: |
+          NAMED=$(grep -rn "eslint-disable[^\"']*no-restricted-imports" app components lib hooks store types || true)
+          BARE=$(grep -rnE "eslint-disable(-next-line|-line)?( *\*/| *$)" app components lib hooks store types || true)
+          if [ -n "$NAMED" ] || [ -n "$BARE" ]; then
+            echo "$NAMED"; echo "$BARE"
+            echo "::error::차단 규칙 우회(eslint-disable) 발견 — 서버 스냅샷·서버 액션 경로를 쓸 것"
+            exit 1
+          fi
+          echo "우회 주석 0건"

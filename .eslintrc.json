@@ -1,3 +1,66 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "**/*.ts",
+        "**/*.tsx"
+      ],
+      "excludedFiles": [
+        "lib/**",
+        "app/api/**",
+        "app/**/actions.ts",
+        "app/dev/**",
+        "app/result/share/\\[id\\]/page.tsx",
+        "scripts/**",
+        "tests/**",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "@typescript-eslint/no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/lib/utils/saju"
+                ],
+                "importNamePattern": "^(?!(ELEMENT_TEXT_CLASSES|ELEMENT_BG_CLASSES|ELEMENT_BORDER_CLASSES|getElementTextClass|getElementBgClass|getElementBorderClass|getHeavenlyStemElement|getEarthlyBranchElement|getHiddenStems|getMainHiddenStem|getStemLabel|getBranchLabel|getElementLabel|getElementName|getStemPolarity|getBranchPolarity|getTenGod|computePillarDisplayData|SajuData|SajuPillar|ElementType|YinYang|PillarDisplayData)$)",
+                "allowTypeImports": true,
+                "message": "표시 계층에서 원국 계산 금지(D-14 시주 불일치 사고). full_json.chart 스냅샷이나 lib/actions/chart.ts 서버 액션을 쓸 것. 새 '표시 전용' 헬퍼라면 .eslintrc.json 허용 목록에 추가. 타입은 별도 `import type` 선언으로 분리."
+              },
+              {
+                "group": [
+                  "**/lib/utils/saju-enrichment"
+                ],
+                "importNamePattern": "^(?!(ELEMENT_TO_HANJA|GENERATES|CONTROLS|STRENGTH_DESCRIPTIONS|SHINSAL_DESCRIPTIONS|getStrengthFeedback|getYongshinFeedback|getOhaengFeedback|getShinsalFeedback)$)",
+                "allowTypeImports": true,
+                "message": "표시 계층에서 enrichment 재계산 금지 — judgeStrength·findShinsal·determineYongshin 등 내부 함수 직접 import 도 포함한다. 서버 스냅샷을 쓸 것. 표시 전용 상수/피드백 함수만 허용 목록에 추가 가능."
+              },
+              {
+                "group": [
+                  "**/lib/utils/saju-fortune",
+                  "**/lib/utils/saju-scoring",
+                  "**/lib/result-chart"
+                ],
+                "allowTypeImports": true,
+                "message": "표시 계층에서 운세 계산·스코어링·차트 빌더 import 금지. 값은 서버가 내려주고, 타입은 `import type` 으로만."
+              }
+            ]
+          }
+        ],
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "ImportExpression > Literal[value=/lib.(utils.saju|utils.saju-enrichment|result-chart)$/]",
+            "message": "표시 계층에서 사주 계산 모듈 동적 import 금지(정적 import 차단 우회 방지)."
+          }
+        ]
+      }
+    }
+  ]
 }

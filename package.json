@@ -7,7 +7,7 @@
     "prebuild": "node scripts/verify-layout.js",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint app components lib hooks store types --ext .ts,.tsx",
     "test": "tsx --test lib/*.test.ts",
     "postinstall": "node scripts/patch-saju-exports.mjs"
   },
@@ -40,6 +40,8 @@
     "@types/node": "^20.17.10",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.1.6",
