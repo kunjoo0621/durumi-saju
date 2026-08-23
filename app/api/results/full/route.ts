@@ -7,7 +7,7 @@ import { getSupabaseUserId } from "@/lib/server/user";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { hashToken, getTokensFromCookie } from "@/lib/guest-token";
-import { buildChartSnapshot } from "@/lib/result-chart";
+import { buildChartSnapshot, readStoredChart } from "@/lib/result-chart";
 
 async function buildResponse(data: any, access: "user" | "guest") {
   let parsedResult: unknown = data.full_json;
@@ -31,9 +31,10 @@ async function buildResponse(data: any, access: "user" | "guest") {
     unlockedAt: data.unlocked_at,
     access,
     is_guest: access === "guest",
-    // ★원국은 서버가 계산해 내려준다 — 화면이 다시 계산하면 또 갈라진다(D-14).
-    //   실패해도 null 로만 내려가고, 화면은 기존 재계산 경로로 폴백한다(1-b 에서 제거 예정).
-    chart: await buildChartSnapshot(data),
+    // ★원국은 서버가 준다 — 화면이 다시 계산하면 또 갈라진다(D-14).
+    //   ①분석 시점에 저장된 스냅샷이 있으면 그것(= 본문과 같은 시점의 값).
+    //   ②없으면(스냅샷 도입 전 행) 읽기 시점에 계산한다.
+    chart: readStoredChart(parsedResult) ?? (await buildChartSnapshot(data)),
     input: {
       name: data.name,
       birthDate: data.birth_date,

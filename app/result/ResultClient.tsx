@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import ResultView from "@/components/result/ResultView";
+import { computeChartFromInput } from "./actions";
 import { useAllInputs, useInputStore, type AnalysisResult } from "@/store/useInputStore";
-import { calculateSaju, type SajuData } from "@/lib/utils/saju";
+import type { SajuData } from "@/lib/utils/saju";
 import type { EnrichedSajuData } from "@/lib/utils/saju-enrichment";
-import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
+import { formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { Warning } from "@phosphor-icons/react";
@@ -49,6 +50,7 @@ export default function ResultClient() {
     birthMonth,
     birthDay,
     calendarType,
+    isLeapMonth,
     birthHour,
     birthMinute,
     birthLocation,
@@ -190,35 +192,9 @@ export default function ResultClient() {
           setDisplayBirthDate(formatDisplayDate(year, month, day));
           setResultBirthYear(year);
 
-          let calcYear = year;
-          let calcMonth = month;
-          let calcDay = day;
-          if (inputCalendarType === "lunar") {
-            const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
-            if (converted) {
-              calcYear = converted.year;
-              calcMonth = converted.month;
-              calcDay = converted.day;
-            }
-          }
-          // ★서버가 계산해 내려준 원국을 그대로 쓴다(D-14 — 화면 재계산이 서버와 갈라졌던 사고).
-          if (data.chart?.sajuData) {
-            setSajuData(data.chart.sajuData);
-            setServerEnriched(data.chart.enriched ?? null);
-            return;
-          }
-
-          // 폴백: chart 를 못 받은 경우에만 예전처럼 계산한다(1-b 에서 제거).
-          const timeValue = data.input?.birthTime;
-          const [hourValue, minuteValue] = timeValue
-            ? timeValue.split(":").map((value: string) => Number(value))
-            : [undefined, undefined];
-          // 이 경로에서도 출생지역 보정을 반드시 넘긴다 — 빠지면 서울 경도로 계산된다.
-          const saju = await calculateSaju(calcYear, calcMonth, calcDay, hourValue, minuteValue, {
-            birthLocation: data.input?.region ?? undefined,
-          });
-          setSajuData(saju);
-          setServerEnriched(null);
+          // ★원국은 서버가 준 것만 쓴다. 화면은 계산하지 않는다(D-14의 구조적 원인 제거).
+          setSajuData(data.chart?.sajuData ?? null);
+          setServerEnriched(data.chart?.enriched ?? null);
           return;
         }
 
@@ -226,24 +202,15 @@ export default function ResultClient() {
           setDisplayCalendarType(calendarType);
           setDisplayBirthDate(formatDisplayDate(Number(birthYear), Number(birthMonth), Number(birthDay)));
 
-          let calcYear = Number(birthYear);
-          let calcMonth = Number(birthMonth);
-          let calcDay = Number(birthDay);
-          if (calendarType === "lunar") {
-            const converted = convertLunarToSolar(calcYear, calcMonth, calcDay);
-            if (converted) {
-              calcYear = converted.year;
-              calcMonth = converted.month;
-              calcDay = converted.day;
-            }
-          }
-          const hour = unknownBirthTime ? undefined : Number(birthHour || "0");
-          const minute = unknownBirthTime ? undefined : Number(birthMinute || "0");
-          // API 분기와 같은 이유로 출생지역 보정을 넘긴다(스토어 값 = 분석 요청에 보낸 값).
-          const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute, {
-            birthLocation,
+          // 저장된 결과가 없는 경로 — 계산은 **서버 액션**에 맡긴다(화면은 계산하지 않는다).
+          const storeChart = await computeChartFromInput({
+            birthYear, birthMonth, birthDay,
+            calendarType, isLeapMonth,
+            birthHour, birthMinute, birthLocation,
+            unknownBirthTime,
           });
-          setSajuData(saju);
+          setSajuData(storeChart?.sajuData ?? null);
+          setServerEnriched(storeChart?.enriched ?? null);
         } else {
           setError("입력 정보가 없어서 결과를 보여줄 수 없어.");
         }
