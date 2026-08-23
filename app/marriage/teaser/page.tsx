@@ -22,8 +22,9 @@ import ChargeBottomSheet from "@/components/ChargeBottomSheet";
 import { MARRIAGE_COST } from "@/lib/constants/coins";
 import type { MaritalStatus } from "@/lib/marriage-facts";
 import type { SelfSajuInput } from "@/lib/self-input";
-import { calculateSaju, enrichSajuData, type SajuData } from "@/lib/utils/saju";
-import { convertLunarToSolar } from "@/lib/utils/lunar";
+import type { SajuData } from "@/lib/utils/saju";
+import type { EnrichedSajuData } from "@/lib/utils/saju-enrichment";
+import { computeChartFromInput } from "@/lib/actions/chart";
 import { CaretDown, CaretUp } from "@phosphor-icons/react";
 
 // 등급은 결제 전에 화면·상태 어디에도 두지 않는다(서버도 티저 응답에서 grade를 빼고 내려준다).
@@ -107,6 +108,7 @@ export default function MarriageTeaserPage() {
 
   // 화면 상태
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
+  const [enriched, setEnriched] = useState<EnrichedSajuData | null>(null);
   const [calculating, setCalculating] = useState(true);
   const [wonguExpanded, setWonguExpanded] = useState(true);
   const wonguRef = useRef<HTMLDivElement>(null);
@@ -146,21 +148,21 @@ export default function MarriageTeaserPage() {
     (async () => {
       setCalculating(true);
       try {
-        let calcYear = Number(inputs.birthYear);
-        let calcMonth = Number(inputs.birthMonth);
-        let calcDay = Number(inputs.birthDay);
-        if (inputs.calendarType === "lunar") {
-          const solar = convertLunarToSolar(calcYear, calcMonth, calcDay, inputs.isLeapMonth ?? false);
-          if (solar) { calcYear = solar.year; calcMonth = solar.month; calcDay = solar.day; }
-        }
-        const hour = inputs.unknownBirthTime ? undefined : Number(inputs.birthHour);
-        const minute = inputs.unknownBirthTime ? undefined : Number(inputs.birthMinute);
-        const saju = await calculateSaju(calcYear, calcMonth, calcDay, hour, minute, {
+        // ★계산은 서버 액션이 한다 — 화면에서 계산하면 서버 분석값과 갈라진다(D-14).
+        const chart = await computeChartFromInput({
+          birthYear: inputs.birthYear,
+          birthMonth: inputs.birthMonth,
+          birthDay: inputs.birthDay,
+          calendarType: inputs.calendarType,
+          isLeapMonth: inputs.isLeapMonth ?? false,
+          birthHour: inputs.birthHour,
+          birthMinute: inputs.birthMinute,
           birthLocation: inputs.birthLocation,
+          unknownBirthTime: inputs.unknownBirthTime,
         });
-        if (!cancelled) setSajuData(saju);
+        if (!cancelled) { setSajuData(chart?.sajuData ?? null); setEnriched(chart?.enriched ?? null); }
       } catch {
-        if (!cancelled) setSajuData(null);
+        if (!cancelled) { setSajuData(null); setEnriched(null); }
       } finally {
         if (!cancelled) setCalculating(false);
       }
@@ -168,10 +170,7 @@ export default function MarriageTeaserPage() {
     return () => { cancelled = true; };
   }, [hydrated, hasRequiredInput, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const enriched = useMemo(() => {
-    if (!sajuData) return null;
-    return enrichSajuData(sajuData, { isTimeUnknown: inputs.unknownBirthTime });
-  }, [sajuData, inputs.unknownBirthTime]);
+
 
   // teaser(무료) 생성 — 등급/배우자성 구조값 로드. 생명선 selfInput 사용.
   useEffect(() => {

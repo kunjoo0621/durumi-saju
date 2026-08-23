@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import ResultView from "@/components/result/ResultView";
-import { computeChartFromInput } from "./actions";
+import { computeChartFromInput } from "@/lib/actions/chart";
 import { useAllInputs, useInputStore, type AnalysisResult } from "@/store/useInputStore";
 import type { SajuData } from "@/lib/utils/saju";
 import type { EnrichedSajuData } from "@/lib/utils/saju-enrichment";
