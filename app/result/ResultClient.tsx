@@ -6,6 +6,7 @@ import { useSession, signIn } from "next-auth/react";
 import ResultView from "@/components/result/ResultView";
 import { useAllInputs, useInputStore, type AnalysisResult } from "@/store/useInputStore";
 import { calculateSaju, type SajuData } from "@/lib/utils/saju";
+import type { EnrichedSajuData } from "@/lib/utils/saju-enrichment";
 import { convertLunarToSolar, formatDisplayDate, type CalendarType } from "@/lib/utils/lunar";
 import { normalizeScores } from "@/lib/resultSchema";
 import { parseJson5Loose } from "@/lib/json5Utils";
@@ -66,6 +67,8 @@ export default function ResultClient() {
   const [resultId, setResultId] = useState<string | null>(null);
 
   const [sajuData, setSajuData] = useState<SajuData | null>(null);
+  // 서버가 내려준 enrichment. 화면에서 다시 계산하지 않는다(D-14).
+  const [serverEnriched, setServerEnriched] = useState<EnrichedSajuData | null>(null);
   const [displayCalendarType, setDisplayCalendarType] = useState<CalendarType>("solar");
   const [displayBirthDate, setDisplayBirthDate] = useState<string>("");
   const [resultBirthYear, setResultBirthYear] = useState<number>(0);
@@ -198,16 +201,24 @@ export default function ResultClient() {
               calcDay = converted.day;
             }
           }
+          // ★서버가 계산해 내려준 원국을 그대로 쓴다(D-14 — 화면 재계산이 서버와 갈라졌던 사고).
+          if (data.chart?.sajuData) {
+            setSajuData(data.chart.sajuData);
+            setServerEnriched(data.chart.enriched ?? null);
+            return;
+          }
+
+          // 폴백: chart 를 못 받은 경우에만 예전처럼 계산한다(1-b 에서 제거).
           const timeValue = data.input?.birthTime;
           const [hourValue, minuteValue] = timeValue
             ? timeValue.split(":").map((value: string) => Number(value))
             : [undefined, undefined];
-          // ★출생지역을 반드시 넘긴다 — 지역 경도(진태양시) 보정이 빠지면 기본 서울 경도로
-          //   계산돼 시주가 서버 분석값(saju_text)과 어긋난다. 동남권에서 특히 크다.
+          // 이 경로에서도 출생지역 보정을 반드시 넘긴다 — 빠지면 서울 경도로 계산된다.
           const saju = await calculateSaju(calcYear, calcMonth, calcDay, hourValue, minuteValue, {
             birthLocation: data.input?.region ?? undefined,
           });
           setSajuData(saju);
+          setServerEnriched(null);
           return;
         }
 
@@ -472,6 +483,7 @@ export default function ResultClient() {
     <ResultView
       result={result}
       sajuData={sajuData}
+      enriched={serverEnriched}
       displayBirthDate={displayBirthDate}
       displayCalendarType={displayCalendarType}
       unknownBirthTime={unknownBirthTime}

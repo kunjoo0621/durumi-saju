@@ -3,10 +3,8 @@ import type { Metadata } from "next";
 import { getSharedResult } from "@/lib/share-result";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { normalizeScores } from "@/lib/resultSchema";
-import { calculateSaju } from "@/lib/utils/saju";
-import { convertLunarToSolar } from "@/lib/utils/lunar";
+import { buildChartSnapshot } from "@/lib/result-chart";
 import type { AnalysisResult } from "@/store/useInputStore";
-import type { CalendarType } from "@/lib/utils/lunar";
 import { safeDisplayGrade } from "@/lib/gradeSystem";
 import ShareResultClient from "./ShareResultClient";
 
@@ -98,40 +96,16 @@ export default async function ShareResultPage({
   const result = parseResult(data);
   if (!result) notFound();
 
-  // 사주 데이터 계산 (원국 차트용)
-  let sajuData = null;
-  let birthYear = 0;
-  if (data.birth_date) {
-    const [y, m, d] = data.birth_date.split("-").map(Number);
-    birthYear = y;
-    let calcY = y,
-      calcM = m,
-      calcD = d;
-    const cal = (data.calendar_type as CalendarType) || "solar";
-    if (cal === "lunar") {
-      const converted = convertLunarToSolar(calcY, calcM, calcD);
-      if (converted) {
-        calcY = converted.year;
-        calcM = converted.month;
-        calcD = converted.day;
-      }
-    }
-    const timeParts = data.birth_time?.split(":").map(Number);
-    const hour = timeParts?.[0];
-    const minute = timeParts?.[1];
-    // ★결과 화면과 동일하게 출생지역 보정을 넘긴다 — 빠지면 기본 서울 경도로 계산돼
-    //   공유 화면 시주가 서버 분석값과 어긋난다.
-    sajuData = await calculateSaju(calcY, calcM, calcD, hour, minute, {
-      birthLocation: data.region ?? undefined,
-    });
-  }
+  // 원국은 결과 화면과 **같은 빌더**로 계산한다 — 한쪽만 고치는 실수를 막기 위해서다(D-14).
+  const chart = await buildChartSnapshot(data);
 
   return (
     <ShareResultClient
       result={result}
-      sajuData={sajuData}
+      sajuData={chart?.sajuData ?? null}
+      enriched={chart?.enriched ?? null}
       unknownBirthTime={!data.birth_time}
-      resultBirthYear={birthYear}
+      resultBirthYear={chart?.birthYear ?? 0}
       userName={data.name || undefined}
     />
   );

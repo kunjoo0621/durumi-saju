@@ -7,8 +7,9 @@ import { getSupabaseUserId } from "@/lib/server/user";
 import { checkRateLimit, getClientIp } from "@/lib/server/rateLimit";
 import { parseJson5Loose } from "@/lib/json5Utils";
 import { hashToken, getTokensFromCookie } from "@/lib/guest-token";
+import { buildChartSnapshot } from "@/lib/result-chart";
 
-function buildResponse(data: any, access: "user" | "guest") {
+async function buildResponse(data: any, access: "user" | "guest") {
   let parsedResult: unknown = data.full_json;
   if (typeof parsedResult === "string") {
     try {
@@ -30,6 +31,9 @@ function buildResponse(data: any, access: "user" | "guest") {
     unlockedAt: data.unlocked_at,
     access,
     is_guest: access === "guest",
+    // ★원국은 서버가 계산해 내려준다 — 화면이 다시 계산하면 또 갈라진다(D-14).
+    //   실패해도 null 로만 내려가고, 화면은 기존 재계산 경로로 폴백한다(1-b 에서 제거 예정).
+    chart: await buildChartSnapshot(data),
     input: {
       name: data.name,
       birthDate: data.birth_date,
@@ -167,7 +171,7 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
 
-      const resp = buildResponse(data, "user");
+      const resp = await buildResponse(data, "user");
       if (resp instanceof NextResponse) return resp; // parse error
 
       await rescoreIfStale(resp.result, data);
@@ -202,7 +206,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (data?.full_json) {
-        const resp = buildResponse(data, "guest");
+        const resp = await buildResponse(data, "guest");
         if (resp instanceof NextResponse) return resp;
 
         await rescoreIfStale(resp.result, data);
