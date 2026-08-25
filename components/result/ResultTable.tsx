@@ -153,7 +153,11 @@ export default function ResultTable({
                 · 상위 {safeTier.topPercent}%
               </span>
             </div>
-            <div className="mt-10 text-2xl font-bold font-aggro text-white line-clamp-2">
+            {/* ★line-clamp-2 → 4: 폰(360px)에서 타이틀이 3줄인 결과가 57.4%, 4줄이 0.7% 였다.
+                2줄로 자르면 "A인데 B" 구조의 **B(반전)** 가 통째로 사라진다 — 유료 결과의
+                헤드라인 절반이 `...` 로 먹혔다(1,990건 실측, 데스크톱은 최대 2줄이라 무영향).
+                4줄이면 현재 데이터 100% 가 보이고, 더 길어져도 레이아웃이 무너지지 않는다. */}
+            <div className="mt-10 text-2xl font-bold font-aggro text-white line-clamp-4">
               {transformGradeText(safeTier.title)}
             </div>
             <p className="mt-3 max-w-lg text-[16px] text-gray-400 text-center leading-7">
