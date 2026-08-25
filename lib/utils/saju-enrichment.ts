@@ -382,7 +382,6 @@ const YANG_STEMS_SET = new Set(["甲","丙","戊","庚","壬"]);
 const YANG_BIRTH_BRANCH: Record<string, string> = { "甲": "亥", "丙": "寅", "戊": "寅", "庚": "巳", "壬": "申" };
 const YIN_BIRTH_BRANCH: Record<string, string> = { "乙": "午", "丁": "酉", "己": "酉", "辛": "子", "癸": "卯" };
 
-const LIFE_PROSPERITY_STAGES = new Set(["장생", "관대", "건록", "제왕"]);
 
 /** 일간 기준 특정 지지의 12운성 한글명을 반환 */
 function getTwelveStageForBranch(dayStem: string, branch: string): string {
@@ -398,13 +397,23 @@ function getTwelveStageForBranch(dayStem: string, branch: string): string {
   return TWELVE_STAGE_NAMES[stageIdx];
 }
 
-/** 일간 기준 해당 지지가 일간을 돕는지 (하이브리드: 12운성 생왕지 OR 지장간 본기 비화/인성) */
-function isHelpfulBranch(dayStem: string, branch: string): boolean {
-  // 1) 12운성 생왕지 체크
-  if (LIFE_PROSPERITY_STAGES.has(getTwelveStageForBranch(dayStem, branch))) {
-    return true;
-  }
-  // 2) 지장간 본기(가장 높은 weight) 오행이 일간과 비화/인성 관계인지
+/**
+ * 월령을 얻었는가 — 왕상휴수(旺相休囚) 기준.
+ * 지지의 본기(정기) 오행이 일간과 비화(旺)이거나 일간을 생하면(相) 득.
+ *
+ * ★2026-08-25: 여기서 12운성 생왕지 경로를 제거했다.
+ *   기존 하이브리드는 "12운성이 장생·관대·건록·제왕이면 오행과 무관하게 득"으로 쳤는데,
+ *   그렇게 추가되는 조합이 정확히 13개이고 **전부 일간을 돕지 않는 십성**이었다
+ *   (칠살 4: 戊寅·庚巳·壬戌·癸丑 / 식상 6 / 재성 3). 칠살월 — 일간이 가장 극을 받는 달 —
+ *   을 득령으로 세는 셈이라 왕상휴수와 방향이 정반대다.
+ *   고전이 이 방식을 직접 반박한다:
+ *     적천수 주석 "甲木死於午…而乙木死於亥, 亥中有壬水, 乃其嫡母, 何為死哉?"
+ *     임철초 "不專以順逆為憑, 須觀日主之衰旺 … 至於長生沐浴等名, 乃假借形容之辭也"
+ *     서락오 "陰長生…皆因誤於陰陽各有長生, 而不能自圓其說也"
+ *   양간은 12운성 생왕지와 통근처가 대체로 겹쳐 문제가 안 보이지만, 음간은 역행이라
+ *   그 일치가 깨지고 깨지는 지점이 전부 '가짜 득'이 된다.
+ */
+function isWangSangBranch(dayStem: string, branch: string): boolean {
   const branchInfo = BRANCH_INFO[branch];
   const stemInfo = STEM_ELEMENT[dayStem];
   if (!branchInfo || !stemInfo) return false;
@@ -413,11 +422,40 @@ function isHelpfulBranch(dayStem: string, branch: string): boolean {
   const hiddenElement = STEM_ELEMENT[mainHidden.stem]?.element;
   if (!hiddenElement) return false;
   const dayElement = stemInfo.element;
-  // 비화: 같은 오행
-  if (hiddenElement === dayElement) return true;
-  // 인성: 지장간 오행이 일간을 생하는 관계 (GENERATES[hidden] === day)
-  if (GENERATES[hiddenElement] === dayElement) return true;
+  if (hiddenElement === dayElement) return true;             // 비화(旺)
+  if (GENERATES[hiddenElement] === dayElement) return true;  // 인성(相)
   return false;
+}
+
+/**
+ * 일지·시지가 일간을 받쳐 주는가 — 통근(通根) 기준.
+ *
+ * ★통근은 본기만이 아니라 지장간 **전층**(여기·중기·정기)에서 인정한다.
+ *   자평진전 「논음양생사」 "就使逢庫, 亦為有根"
+ *   서락오 평주 "天干通根, 不僅祿旺為美, 長生·餘氣·墓庫皆其根也.
+ *              如甲乙木見寅卯, 固為身旺, 而見亥辰未, 亦為有根也"
+ *   → 甲木이 辰을 봐도 유근이다(辰 중기 乙木). 본기만 보면 이걸 놓친다.
+ *
+ * ★음양은 가리지 않는다 — 서락오 "墓本從五行論, 不分陰陽也".
+ * ★개고(형충해야 창고를 쓴다)는 넣지 않는다 — 자평진전 "投庫而必沖者, 俗書之謬也",
+ *   임철초 "刑沖傷吾本根之氣. 此種謬論, 必宜一切掃除也", 서락오 "逢庫必沖之說, 謬誤可嗤".
+ *
+ * 통근(비겁)이 없으면 본기 인성만 생조로 인정한다. 미약한 여기·중기 인성까지
+ * '득'으로 치는 학설은 없어서, 통근과 생조를 구분한다.
+ */
+function hasRootOrInseong(dayStem: string, branch: string): boolean {
+  const branchInfo = BRANCH_INFO[branch];
+  const stemInfo = STEM_ELEMENT[dayStem];
+  if (!branchInfo || !stemInfo) return false;
+  const dayElement = stemInfo.element;
+  // 1) 통근 — 지장간 전층에 일간과 같은 오행이 있으면 뿌리
+  for (const hidden of branchInfo.jijanggan) {
+    if (STEM_ELEMENT[hidden.stem]?.element === dayElement) return true;
+  }
+  // 2) 생조 — 본기 오행이 일간을 생하는 경우만
+  const mainHidden = branchInfo.jijanggan[0];
+  const hiddenElement = mainHidden ? STEM_ELEMENT[mainHidden.stem]?.element : undefined;
+  return !!hiddenElement && GENERATES[hiddenElement] === dayElement;
 }
 
 export type StrengthLevel = "극왕" | "태강" | "신강" | "중화신강" | "중화신약" | "신약" | "태약" | "극약";
@@ -475,17 +513,21 @@ export function judgeStrength(
     };
   }
 
-  // ── 4가지 세부 판정 (12운성 기반) ──
+  // ── 4가지 세부 판정 ──
+  // ★득령과 통근은 다른 축이다. 득령은 월령(왕상휴수)을 얻었는가이고,
+  //   득지·득시는 그 자리에 뿌리가 있는가다. 임철초가 둘을 분리해 말한다 —
+  //   "日干不論月令休囚, 只要四柱有根, 便能受財官食神而當傷官七殺".
+  //   甲木 辰월의 정답은 '득령'이 아니라 '부득령이지만 유근'이다.
 
-  // 득령: 월지가 일간을 돕는지 (12운성 생왕지 OR 지장간 본기 비화/인성)
-  const deukryeong = isHelpfulBranch(context.dayStem, context.monthBranch);
+  // 득령: 월지 본기가 비겁(旺)·인성(相)인가
+  const deukryeong = isWangSangBranch(context.dayStem, context.monthBranch);
 
-  // 득지: 일지가 일간을 돕는지
-  const deukji = isHelpfulBranch(context.dayStem, context.dayBranch);
+  // 득지: 일지에 뿌리(지장간 전층) 또는 본기 생조가 있는가
+  const deukji = hasRootOrInseong(context.dayStem, context.dayBranch);
 
-  // 득시: 시지가 일간을 돕는지 (시주 미상 시 false)
+  // 득시: 시지 동일 기준 (시주 미상 시 false)
   const deuksi = context.hourBranch
-    ? isHelpfulBranch(context.dayStem, context.hourBranch)
+    ? hasRootOrInseong(context.dayStem, context.hourBranch)
     : false;
 
   // 득세: 천간(일간 제외) 중 비겁(같은 오행) 또는 인성(일간을 생하는 오행)이 2개 이상
@@ -1168,14 +1210,20 @@ const SHINSAL_DEFS: ShinsalDef[] = [
     detect(ctx) {
       const target = CHEONDEOK_TABLE[ctx.monthBranch];
       if (!target) return null;
+      // ★2026-08-25: 일주(일간·일지) 제외를 걷어냈다. 천덕·월덕은 기준점이 월지라
+      //   일주를 뺄 이유가 없고, 삼명통회 「論天月德」은 오히려 그 자리를 으뜸으로 친다 —
+      //   "凡命中帶凶煞, 得此二德扶化, 凶不為甚; 須要日上見, 時上不犯克沖刑破, 方吉".
+      //   기존 코드는 otherBranchSet/otherStemSet(일간 기반 신살용 제외 집합)을 빌려 써서
+      //   고전이 가장 좋다고 하는 자리만 골라 못 보고 있었다. 근거 주석·커밋도 없었다.
       const isBranch = BRANCHES_SEQ_SHINSAL.includes(target);
+      const allStemsArr = ctx.allStems ?? [];
       const found = isBranch
-        ? ctx.otherBranchSet.has(target)
-        : ctx.otherStemSet.has(target);
+        ? ctx.allBranches.includes(target)
+        : allStemsArr.includes(target);
       if (!found) {
         const foundOther = isBranch
-          ? ctx.otherStemSet.has(target)
-          : ctx.otherBranchSet.has(target);
+          ? allStemsArr.includes(target)
+          : ctx.allBranches.includes(target);
         if (!foundOther) return null;
       }
       // 천덕은 천간/지지 모두 가능하므로 지지에서 감지된 위치만 기록
@@ -1183,7 +1231,6 @@ const SHINSAL_DEFS: ShinsalDef[] = [
       // 천간에서 발견된 경우 해당 천간의 주 위치
       if (!isBranch && ctx.allStems) {
         for (let i = 0; i < ctx.allStems.length; i++) {
-          if (i === 2) continue;
           if (ctx.allStems[i] === target && !detectedAt.includes(PILLAR_POSITIONS[i])) {
             detectedAt.push(PILLAR_POSITIONS[i]);
           }
@@ -1200,12 +1247,14 @@ const SHINSAL_DEFS: ShinsalDef[] = [
   {
     key: "woldeok", label: "월덕귀인(月德貴人)", type: "good", requiredPillars: 3,
     detect(ctx) {
+      // ★2026-08-25: 일간 제외 해제(위 천덕과 같은 사유).
+      //   사전 woldeok-gwiin.ts 도 "일간이 직접 월덕에 해당하면 본인 자체가 덕망을 갖춘
+      //   사람으로 봅니다"라고 적어, 기존 엔진만 사전·고전과 어긋나 있었다.
       const target = WOLDEOK_TABLE[ctx.monthBranch];
-      if (!target || !ctx.otherStemSet.has(target)) return null;
+      if (!target || !(ctx.allStems ?? []).includes(target)) return null;
       const detectedAt: PillarPosition[] = [];
       if (ctx.allStems) {
         for (let i = 0; i < ctx.allStems.length; i++) {
-          if (i === 2) continue;
           if (ctx.allStems[i] === target) detectedAt.push(PILLAR_POSITIONS[i]);
         }
       }
