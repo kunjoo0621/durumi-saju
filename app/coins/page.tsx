@@ -53,7 +53,13 @@ export default function CoinsPage() {
   const [processingSpend, setProcessingSpend] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("pendingSpend")) setProcessingSpend(true);
+    // ★pendingSpend 만 보고 켜면 안 된다 — 결제를 취소해 **파라미터 없이** /coins 로 들어온
+    //   사용자가 영구 전체화면에 갇힌다(아래 처리 effect 는 파라미터가 없으면 조기 return 하며
+    //   아무도 스피너를 끄지 않는다). 실제 복귀 파라미터가 있을 때만 켠다 —
+    //   조건을 처리 effect 의 게이트와 정확히 일치시킨다.
+    const params = new URLSearchParams(window.location.search);
+    const isChargeReturn = !!(params.get("chargeOrderId") && params.get("packageId") && params.get("amount"));
+    if (isChargeReturn && sessionStorage.getItem("pendingSpend")) setProcessingSpend(true);
   }, []);
 
   const { charge, charging, error } = useCharge({
