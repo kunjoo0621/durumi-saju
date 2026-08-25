@@ -363,6 +363,56 @@ function TeaserContent() {
     await executeSpend();
   };
 
+  /**
+   * charge-success 복귀 처리 — 충전 후 자동 재개 (career/wealth/marriage teaser 패턴 미러).
+   *
+   * ★왜 URL 신호인가: 기존엔 sessionStorage(pendingSpend)로만 재개했는데, 인앱브라우저에서
+   *   결제앱을 다녀오면 그게 날아가 **알만 충전되고 분석은 멈춘다**(2026-08-23 실측 1건).
+   *   URL 파라미터는 그 소실에 영향받지 않는다.
+   *
+   * ★sessionId 를 기다린다: executeSpend 는 세션이 없으면 "아직 준비 중"에서 멈춘다.
+   *   복귀 직후엔 /api/intake/session 응답 전이라 sessionId 가 거의 항상 null 이므로,
+   *   준비되기 전에는 ranRef 를 세우지 않고 effect 재실행으로 대기한다.
+   *   (여기서 성급히 실행하면 지금 고치려는 버그와 똑같이 조용히 아무 일도 안 일어난다.)
+   */
+  const afterChargeRanRef = useRef(false);
+  useEffect(() => {
+    if (afterChargeRanRef.current) return;
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("afterCharge") !== "1") return;
+    if (!hydrated || !isAuthenticated) return; // 준비 전 — 로드되면 재실행
+
+    // 배틀은 이 경로로 오지 않는다(redirectPath 분기). 혹시 와도 개인 분석으로
+    // 잘못 차감되지 않도록 여기서 끊는다.
+    if (isBattle) {
+      afterChargeRanRef.current = true;
+      window.history.replaceState({}, "", "/teaser?type=battle");
+      return;
+    }
+    if (!hasRequiredInput) {
+      afterChargeRanRef.current = true;
+      window.history.replaceState({}, "", "/teaser");
+      return;
+    }
+    if (!sessionId) {
+      setPaying(true); // 대기 중 CTA 이중 클릭 방지
+      return;          // 세션 준비되면 effect 재실행
+    }
+
+    afterChargeRanRef.current = true;
+    // 옛 경로의 잔여 신호를 지운다 — 남겨두면 나중에 단순 충전할 때 오작동한다.
+    try { sessionStorage.removeItem("pendingSpend"); } catch {}
+    window.history.replaceState({}, "", "/teaser");
+    (async () => {
+      const bal = await fetch("/api/coins/balance")
+        .then((r) => r.json())
+        .then((r) => (typeof r?.balance === "number" ? r.balance : undefined))
+        .catch(() => undefined);
+      if (typeof bal === "number") setBalance(bal);
+      await executeSpend();
+    })();
+  }, [hydrated, isAuthenticated, isBattle, hasRequiredInput, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const displayBirthDate = `${inputs.birthYear}.${inputs.birthMonth}.${inputs.birthDay}`;
 
   const confirmSteps = useMemo(() => isBattle
@@ -612,19 +662,30 @@ function TeaserContent() {
         requiredCoins={eggCost}
         currentBalance={balance ?? 0}
         onChargeComplete={handleChargeComplete}
-        redirectPath="/coins"
+        /**
+         * ★개인사주는 `/teaser` 로 복귀해 URL 신호(?afterCharge=1)로 재개한다.
+         *   기존엔 sessionStorage 의 pendingSpend 로만 재개했는데, 인앱브라우저에서
+         *   결제앱을 다녀오면 sessionStorage 가 날아가 **알만 충전되고 분석은 멈췄다**
+         *   (2026-08-23 실측: charge-success 까지 도달했는데 재개 신호가 없어 /coins 로 착지).
+         *   다른 상품(career·wealth·marriage·today·yearly)은 이미 URL 신호 방식이다.
+         *
+         * ★배틀은 현행 유지(/coins) — playerA/B 페이로드를 URL 로 못 넘기고,
+         *   `/teaser?type=battle` 은 SUCCESS_PAGE_RETURNS 정확일치에 실패해 URL 이 깨진다.
+         *   배틀 의도가 개인 분석으로 뒤바뀌는 사고를 막으려면 경로를 나눠야 한다.
+         */
+        redirectPath={isBattle ? "/coins" : "/teaser"}
         onBeforeCharge={() => {
-          if (sessionId) {
-            const pending: Record<string, unknown> = {
+          // 배틀만 sessionStorage 경로를 쓴다. 개인사주까지 저장하면 아무도 소비하지 않는
+          // 묵은 신호가 남아, 나중에 단순 충전할 때 charge-success 가 그걸 보고
+          // 엉뚱하게 옛 세션으로 spend 를 태운다.
+          if (sessionId && isBattle) {
+            sessionStorage.setItem("pendingSpend", JSON.stringify({
               sessionId,
-              type: isBattle ? "battle" : "analysis",
-            };
-            if (isBattle) {
-              pending.playerA = playerA;
-              pending.playerB = playerB;
-              pending.relationshipType = relationshipType;
-            }
-            sessionStorage.setItem("pendingSpend", JSON.stringify(pending));
+              type: "battle",
+              playerA,
+              playerB,
+              relationshipType,
+            }));
           }
         }}
       />
