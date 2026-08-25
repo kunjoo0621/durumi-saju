@@ -53,7 +53,13 @@ export default function CoinsPage() {
   const [processingSpend, setProcessingSpend] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem("pendingSpend")) setProcessingSpend(true);
+    // ★pendingSpend 만 보고 켜면 안 된다 — 결제를 취소해 **파라미터 없이** /coins 로 들어온
+    //   사용자가 영구 전체화면에 갇힌다(아래 처리 effect 는 파라미터가 없으면 조기 return 하며
+    //   아무도 스피너를 끄지 않는다). 실제 복귀 파라미터가 있을 때만 켠다 —
+    //   조건을 처리 effect 의 게이트와 정확히 일치시킨다.
+    const params = new URLSearchParams(window.location.search);
+    const isChargeReturn = !!(params.get("chargeOrderId") && params.get("packageId") && params.get("amount"));
+    if (isChargeReturn && sessionStorage.getItem("pendingSpend")) setProcessingSpend(true);
   }, []);
 
   const { charge, charging, error } = useCharge({
@@ -137,6 +143,10 @@ export default function CoinsPage() {
             const spendData = await spendRes.json().catch(() => ({}));
 
             if (spendData.insufficient) {
+              // ★스피너를 반드시 끈다 — 안 끄면 "충전을 처리하고 있어" 전체화면에 영구히 갇힌다.
+              //   (부족분보다 작은 패키지를 산 경우 이 분기로 온다. 에러 분기는 해제하는데
+              //    여기만 빠져 있었다.) 토스트도 스피너가 덮여 있으면 안 보인다.
+              setProcessingSpend(false);
               setToast("알이 아직 부족해. 더 충전해줘.");
               return;
             }
