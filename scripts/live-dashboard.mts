@@ -851,6 +851,109 @@ async function main() {
     }
   }
 
+  // ── 1-1b. 결제창 도달 → 완료 ────────────────────────
+  // 왜 신설: 2026-08-26 조사에서 3개월간 아무도 못 본 구멍이 여기였다.
+  //   기존 퍼널은 '가입 → 결제'만 본다. 결제 버튼을 눌러 결제창까지 갔다가 못 끝낸 사람은
+  //   그냥 '미결제 가입자'에 섞여, "안 사기로 한 사람"과 "못 산 사람"이 구분되지 않았다.
+  //   실측: 결제창 도달 1,185명 중 211명(17.8%)이 끝내 한 번도 완료 못 함.
+  //   그리고 8/18 이후 완료율이 71% → 58% 로 떨어졌는데 지표가 없어 못 봤다.
+  //
+  // ★용어 — charge_orders.pending 은 '실패'가 아니다.
+  //   /api/coins/charge/intent 가 **결제 버튼 클릭 시점에** pending row 를 만들고
+  //   그 다음에 PortOne.requestPayment() 를 부른다. 즉 pending = "결제창을 띄웠다"까지만 의미.
+  //   PortOne 원천 대조(2026-08-26, pending 659건 전수) 결과 실제 내역은:
+  //     READY 83.6%(창만 열고 시도 안 함) · FAILED 16.1%(그중 80%가 사용자 CANCEL)
+  //     PAID인데 우리 pending = 0건 (돈 받고 미충전 사고는 없음)
+  //   → pending 을 손실로 보고하면 틀린다. '완료 안 됨'으로만 읽을 것.
+  //
+  // ★사람 기준을 병기하는 이유: 한 사람이 결제창을 7번 열면 건 기준이 통째로 흔들린다
+  //   (8/18~26 CANCEL 29건 중 7건이 1명). 추세 판단은 사람 기준으로 한다.
+  {
+    const PREV7 = new Date(now - 14 * 24 * 3600_000).toISOString();
+    // ★Supabase 기본 1000행 잘림 — 집계는 반드시 페이지네이션.
+    const orders: { user_id: string; created_at: string; status: string }[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb
+        .from("charge_orders")
+        .select("user_id, created_at, status")
+        .gte("created_at", PREV7)
+        .not("user_id", "in", INTERNAL_ID_LIST)
+        .order("created_at")
+        .range(from, from + 999);
+      if (error) { console.log(`  ${c.red}charge_orders 조회 실패: ${error.message}${c.reset}`); break; }
+      orders.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+
+    const isDone = (s: string) => s === "charged" || s === "paid";
+    type Win = { label: string; from: string; to: string; partial?: boolean };
+    const wins: Win[] = [
+      { label: "오늘", from: TODAY_START, to: TOMORROW_START, partial: true },
+      { label: "어제", from: YESTERDAY_START, to: YESTERDAY_END },
+      { label: "7일", from: D7, to: new Date(now).toISOString() },
+      { label: "이전 7일", from: PREV7, to: D7 },
+    ];
+    const rowsOf = (w: Win) => orders.filter((o) => o.created_at >= w.from && o.created_at < w.to);
+
+    section("🧾  결제창 도달 → 완료  " + c.dim + "(charge_orders · pending = 실패 아님, '완료 안 됨')" + c.reset);
+    const gHead = `${padR("구간", 8)} ${padL("시도", 5)} ${padL("완료", 5)} ${padL("완료율", 6)} ${padL("시도자", 6)} ${padL("완료자", 6)} ${padL("사람기준", 8)} ${padL("미완", 5)}`;
+    console.log("  " + c.dim + gHead + c.reset);
+    console.log("  " + c.dim + "─".repeat(visualWidth(gHead)) + c.reset);
+
+    let alert: string | null = null;
+    for (const w of wins) {
+      const rs = rowsOf(w);
+      const done = rs.filter((o) => isDone(o.status));
+      const users = new Set(rs.map((o) => o.user_id));
+      const doneUsers = new Set(done.map((o) => o.user_id));
+      const byOrder = pct(done.length, rs.length);
+      const byUser = pct(doneUsers.size, users.size);
+      // 기준선 = 6~7월 71~73%. 사람 기준 65% 미만이면 빨강.
+      const col = users.size === 0 ? c.dim : byUser < 65 ? c.red : byUser < 75 ? c.yellow : c.green;
+      console.log(
+        `  ${padR(w.label + (w.partial ? "*" : ""), 8)} ${padL(String(rs.length), 5)} ${padL(String(done.length), 5)} ${padL(`${byOrder}%`, 6)} ${padL(String(users.size), 6)} ${padL(String(doneUsers.size), 6)} ${col}${padL(`${byUser}%`, 8)}${c.reset} ${padL(String(rs.length - done.length), 5)}`,
+      );
+      if (w.label === "7일" && users.size >= 20 && byUser < 65) {
+        alert = `7일 사람기준 완료율 ${byUser}% — 기준선(71~73%, 2026-06~07) 대비 이탈`;
+      }
+    }
+    console.log(`  ${c.dim}*오늘은 진행 중 — 미완 중 일부는 아직 결제창에 머무는 중일 수 있다.${c.reset}`);
+    console.log(`  ${c.dim}기준선: 2026-06 73% · 07 71% · 08-01~17 71% · 08-18~26 58%(사람기준 아님, 건 기준)${c.reset}`);
+    if (alert) console.log(`  ${c.red}주의${c.reset} ${alert}`);
+
+    // 채널별(7일) — 어느 유입이 결제창에서 무너지는지. 8/18 하락은 네이버 검색 단독이었다.
+    const week = rowsOf(wins[2]);
+    const weekUserIds = [...new Set(week.map((o) => o.user_id))];
+    if (weekUserIds.length > 0) {
+      const uMap = new Map<string, { referrer: string | null; utm_source: string | null }>();
+      for (let i = 0; i < weekUserIds.length; i += 200) {
+        const { data } = await sb
+          .from("users")
+          .select("id, referrer, utm_source")
+          .in("id", weekUserIds.slice(i, i + 200));
+        for (const u of data ?? []) uMap.set(u.id, { referrer: u.referrer, utm_source: u.utm_source });
+      }
+      const g = new Map<string, { users: Set<string>; done: Set<string>; color: string }>();
+      for (const o of week) {
+        const u = uMap.get(o.user_id);
+        const ch = classifyChannel(u?.referrer ?? null, u?.utm_source ?? null);
+        const v = g.get(ch.short) ?? { users: new Set<string>(), done: new Set<string>(), color: ch.color };
+        v.users.add(o.user_id);
+        if (isDone(o.status)) v.done.add(o.user_id);
+        g.set(ch.short, v);
+      }
+      const ranked = [...g].filter(([, v]) => v.users.size >= 4).sort((a, b) => b[1].users.size - a[1].users.size);
+      if (ranked.length > 0) {
+        console.log(`  ${c.dim}채널별 (7일, 시도자 4명 이상) — 사람 기준 완료율${c.reset}`);
+        for (const [name, v] of ranked) {
+          const r = pct(v.done.size, v.users.size);
+          const col = r < 65 ? c.red : r < 75 ? c.yellow : c.green;
+          console.log(`    ${v.color}${padR(name, 12)}${c.reset} 시도자 ${padL(String(v.users.size), 3)} · 완료 ${padL(String(v.done.size), 3)} · ${col}${padL(`${r}%`, 4)}${c.reset}  ${col}${"█".repeat(Math.round(r / 4))}${c.reset}`);
+        }
+      }
+    }
+  }
+
   // ── 1-2. 오늘 분석 로그를 상단에 노출 ─────────────
   const [recentPersonalRes, recentYearlyRes, recentTodayRes, recentBattleRes, recentReportRows] = await Promise.all([
     sb
