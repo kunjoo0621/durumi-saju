@@ -277,7 +277,7 @@ export interface YongshinResult {
   eokbuReason: string;         // "중화신강 → 관성(금) 보강"
   johu: KoreanElement | null;  // 조후용신 (계절 기반, null=해당 없음)
   johuReason: string | null;   // "하절(여름) → 수(水)로 열기 조절"
-  gisin: KoreanElement;        // 기신 (용신을 극하는 오행)
+  gisin: KoreanElement;        // 기신 (병 진영에서 용신을 해치는 오행 — 억부 매핑)
   heesin: KoreanElement;       // 희신 (용신을 생하는 오행)
 }
 
@@ -362,8 +362,6 @@ export function determineYongshin(
   //   신강 + 재성 → 식상 (식상생재)
   //   신약 + 인성 → 관성 (관인상생)
   //   신약 + 비겁 → 인성 (인성생비겁)
-  const gisin = findElementThatControls(eokbu)!;
-
   let heesin: KoreanElement;
   if (isStrong) {
     if (eokbu === gwansung) heesin = jaesung;
@@ -372,6 +370,44 @@ export function determineYongshin(
   } else {
     if (eokbu === insung) heesin = gwansung;
     else heesin = insung;
+  }
+
+  // 기신: 희신과 같은 형식의 억부 매핑.
+  //
+  // ★2026-08-26: 기존은 `findElementThatControls(eokbu)` — "용신을 극하는 오행"이었다.
+  //   그 공식은 자평 명리가 아니라 **육효(六爻)**의 정의다("忌神: 克用神之爻就叫做忌神").
+  //   육효는 용신이 점치는 대상 그 자체라 성립하지만, 자평 억부에서 용신은 균형 수단이라
+  //   그대로 옮기면 모순이 난다. 실제로 신강 분기의 용신 후보는 {관성·식상·재성}인데,
+  //   관성이 뽑히는 순간 방금까지 동급 후보였던 식상이 기신이 됐다 — 약을 병이라 부른 셈.
+  //
+  //   자평의 기신은 "용신을 극하는 것"이 아니라 **체와 용을 손상하는 것**이다.
+  //     적천수 하지장 "忌神者, 損害體用之神也 … 以忌神為病, 以喜神為藥"
+  //     신봉통고 병약설 "何以為之病？原八字中原所害之神也"
+  //   즉 원국의 병(病)이 먼저고 용신(藥)이 거기서 도출된다. 기존 구현은 인과가 거꾸로였다.
+  //
+  //   매핑 원리(도출): 기신 = 억부상 병 진영(신강이면 비겁·인성 / 신약이면 식상·재성·관성)에
+  //   속하면서 용신과 직접 극 관계인 오행.
+  //     신강 + 관성 → 비겁   (병=왕한 비겁을 관살로 제압하는 명식. 실측 62.5%가 비겁주도)
+  //     신강 + 식상 → 인성   (효신탈식 — 자평진전 "食神逢梟")
+  //     신강 + 재성 → 비겁   (군겁쟁재 — 자평진전 "財輕比重")
+  //     신약 + 인성 → 재성   (탐재괴인 — 연해자평 "貪財壞印")
+  //     신약 + 비겁 → 관성   (관살이 약한 일간을 직접 극)
+  //
+  //   ★한계(공시): 신강의 원인이 인성 과다인 명식은 이상적 기신이 인성이다(적천수 반국
+  //     "母慈滅子"). 지금 매핑은 원인을 보지 않는다. 종격·화격도 억부가 뒤집히나 우리는
+  //     격국을 산출하지 않는다. 둘 다 기존 규칙도 똑같이 놓치던 것이라 이번 교체의 블로커는
+  //     아니고, 용신 규칙 v2 과제로 남긴다.
+  const bigyeop = dayMasterElement; // 비겁 = 일간과 같은 오행
+  const gisin: KoreanElement = isStrong
+    ? (eokbu === siksang ? insung : bigyeop)
+    : (eokbu === insung ? jaesung : gwansung);
+
+  // 불변식 — 이 버그는 assert 하나만 있었어도 잡혔다.
+  if (process.env.NODE_ENV !== "production") {
+    const badCamp = isStrong ? [bigyeop, insung] : [siksang, jaesung, gwansung];
+    console.assert(badCamp.includes(gisin), `[기신] 진영 위반: ${isStrong ? "신강" : "신약"} → ${gisin}`);
+    console.assert(gisin !== eokbu, `[기신] 용신과 동일: ${gisin}`);
+    console.assert(gisin !== heesin, `[기신] 희신과 동일: ${gisin}`);
   }
 
   return { eokbu, eokbuReason, johu, johuReason, gisin, heesin };

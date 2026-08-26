@@ -180,7 +180,11 @@ async function verifyOperatorSaju() {
 
   // 2-4. 용신·기신·희신
   check("운영자사주", "용신 (억부)", enriched.yongshin?.eokbu, "토");
-  check("운영자사주", "기신", enriched.yongshin?.gisin, "목");
+  // ★2026-08-26: 기신 산출을 육효식("용신을 극하는 오행")에서 억부 매핑으로 교체하며
+  //   목 → 수로 바뀌었다. 이 원국은 중화신강 + 관성(토) 용신이라 병이 왕한 비겁(수)이다.
+  //   수3금2로 수가 왕한 원국이므로 억부상 타당하고, 옛 값(목=식신)은 오히려 왕한 수를
+  //   설기하는 통로라 기신일 수 없었다.
+  check("운영자사주", "기신", enriched.yongshin?.gisin, "수");
   check("운영자사주", "희신", enriched.yongshin?.heesin, "화");
 
   // 2-5. 12운성 (癸일간 기준: 음간 卯 장생 역행)
@@ -349,8 +353,8 @@ async function verifyNumberAndStemTables() {
       check("후천수", "운영자 행운 숫자 (선천수 5 + 후천수 5,0)", luckMeta.numbers, [5, 0]);
       check("후천수", "용신 토 → 색 노랑·황금", luckMeta.color.korean, "노랑·황금");
       check("후천수", "용신 토 → 방위 中央", luckMeta.direction.hanja, "中");
-      check("후천수", "기신 목 → 회피 색 초록", luckMeta.avoidColor?.korean, "초록·청록");
-      check("후천수", "기신 목 → 회피 방위 동", luckMeta.avoidDirection?.hanja, "東");
+      check("후천수", "기신 수 → 회피 색 검정·파랑", luckMeta.avoidColor?.korean, "검정·파랑");
+      check("후천수", "기신 수 → 회피 방위 북", luckMeta.avoidDirection?.hanja, "北");
     }
   }
 }

@@ -178,3 +178,83 @@ test("골든 — 전유진(2006-10-10, 시 미상) = 신약", () => {
   assert.equal(r.details.deukji, true, "일지 신금 본기 庚金은 임수의 인성");
   assert.equal(r.details.deukse, false, "천간 병·무는 재성·관성");
 });
+
+// ──────────────────────────────────────────────────────────────
+// 5. 기신(忌神) — 억부 매핑 (2026-08-26)
+//
+// 기존은 `findElementThatControls(용신)` = "용신을 극하는 오행"이었는데,
+// 그건 자평이 아니라 육효(六爻)의 정의다("忌神: 克用神之爻就叫做忌神").
+// 자평의 기신은 체·용을 손상하는 것이다 — 적천수 "忌神者, 損害體用之神也".
+//
+// 실제 폐해: 신강 분기의 용신 후보는 {관성·식상·재성}인데, 관성이 뽑히는 순간
+// 방금까지 동급 후보였던 식상이 기신이 됐다(약을 병이라 부른 셈).
+// 실사용자 3,272명 중 815명(24.9%)이 이 경우였고 변화는 전부 "식상 → 비겁" 단일.
+// ──────────────────────────────────────────────────────────────
+import { determineYongshin } from "./utils/saju-enrichment";
+
+const GEN_EL: Record<string, string> = { 목:"화", 화:"토", 토:"금", 금:"수", 수:"목" };
+const CTRL_EL: Record<string, string> = { 목:"토", 토:"수", 수:"화", 화:"금", 금:"목" };
+const sipseong = (day: string, t: string) =>
+  t === day ? "비겁"
+  : GEN_EL[day] === t ? "식상"
+  : CTRL_EL[day] === t ? "재성"
+  : CTRL_EL[t] === day ? "관성" : "인성";
+
+function yongshinOf(day: string, camp: "신강" | "신약") {
+  const dist: Record<string, number> = { 목:1, 화:1, 토:1, 금:1, 수:1 };
+  dist[day] = camp === "신강" ? 4 : 1;
+  const st = { result: camp, helpCount: 0, resistCount: 0,
+    details: { deukryeong:false, deukji:false, deuksi:false, deukse:false }, legacy: camp };
+  return determineYongshin(day as never, st as never, dist as never, "午");
+}
+
+test("기신 — 진영 규칙: 신강이면 비겁·인성, 신약이면 식상·재성·관성", () => {
+  for (const day of ["목","화","토","금","수"]) {
+    for (const camp of ["신강","신약"] as const) {
+      const y = yongshinOf(day, camp);
+      const gi = sipseong(day, y.gisin);
+      const allowed = camp === "신강" ? ["비겁","인성"] : ["식상","재성","관성"];
+      assert.ok(allowed.includes(gi), `${day} ${camp}: 기신이 ${gi} — 진영 위반`);
+    }
+  }
+});
+
+test("기신 — 용신·희신과 겹치지 않는다", () => {
+  for (const day of ["목","화","토","금","수"]) {
+    for (const camp of ["신강","신약"] as const) {
+      const y = yongshinOf(day, camp);
+      assert.notEqual(y.gisin, y.eokbu, `${day} ${camp}: 기신 = 용신`);
+      assert.notEqual(y.gisin, y.heesin, `${day} ${camp}: 기신 = 희신`);
+    }
+  }
+});
+
+test("기신 — 신강+관성 용신이면 비겁이다 (육효식 '식상'이 아니다)", () => {
+  // 이 칸이 실사용자 815명(24.9%)이 걸리는 자리다. 옛 규칙은 식상을 냈다.
+  for (const day of ["목","화","토","금","수"]) {
+    const y = yongshinOf(day, "신강");
+    assert.equal(sipseong(day, y.eokbu), "관성", `${day} 신강: 용신이 관성이어야 이 케이스`);
+    assert.equal(sipseong(day, y.gisin), "비겁", `${day} 신강+관성: 기신은 비겁`);
+  }
+});
+
+test("기신 — 신약+인성 용신이면 재성이다 (탐재괴인, 연해자평 '貪財壞印')", () => {
+  for (const day of ["목","화","토","금","수"]) {
+    const y = yongshinOf(day, "신약");
+    assert.equal(sipseong(day, y.eokbu), "인성");
+    assert.equal(sipseong(day, y.gisin), "재성");
+  }
+});
+
+test("골든 — 운영자 사주(1995-06-21 16:30) 기신 = 수", () => {
+  // 乙亥·壬午·癸未·庚申, 중화신강, 용신 토(관성).
+  // 수3금2로 수가 왕한 원국이라 병은 비겁(수)이다.
+  // 옛 값 목(식신)은 오히려 왕한 수를 설기하는 통로라 기신일 수 없었다.
+  const dist = { 목:1, 화:1, 토:1, 금:2, 수:3 } as never;
+  const st = { result: "중화신강", helpCount: 5, resistCount: 3,
+    details: { deukryeong:false, deukji:false, deuksi:true, deukse:true }, legacy: "신강" } as never;
+  const y = determineYongshin("수" as never, st, dist, "午");
+  assert.equal(y.eokbu, "토", "억부 용신은 관성(토)");
+  assert.equal(y.gisin, "수", "기신은 비겁(수) — 옛 규칙은 목을 냈다");
+  assert.equal(y.heesin, "화", "희신은 재성(화)");
+});
