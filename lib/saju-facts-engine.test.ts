@@ -43,17 +43,12 @@ import {
 // 도입 시점에 이미 어긋나 있던 항목만 여기에 명시한다. 목록에 없는 드리프트는 실패한다.
 // ★목록에 있는데 실제로는 일치하는 항목도 실패한다(= 해소됐으면 목록에서 지워라).
 //   유예 목록이 방치돼 썩는 걸 막는 장치다.
-const KNOWN_DRIFT: Record<string, string> = {
-  // 寅 지장간 weight 합이 13(甲7+丙3+戊3) — 다른 11지지는 전부 10.
-  // 왜 유예: 정본(enrichment)과 사본(dict gabja 5편: 丙寅·戊寅·庚寅·壬寅·甲寅)이 "같은 오류를
-  //   공유"하는 형태라 어느 한쪽을 베껴서 고칠 수가 없다. 교정값 자체가 명리 판단
-  //   (repo 관행상 3원소 지지는 5/3/2이므로 甲5·丙3·戊2가 유력)이고, 계획서 §9 W1-6이
-  //   "교정값 확정"을 운영자 결정 항목으로 남겨 뒀다.
-  // 산출 영향: 없음. weight의 수치를 읽는 소비처가 0이다(career/wealth/marriage-facts 전부
-  //   jijanggan 배열의 *인덱스*만 쓰고, dict hero 렌더러는 weight를 표시하지 않는다).
-  // 언제 없앨지: 운영자가 교정값을 확정하면 enrichment + gabja 5편을 동시에 고치고 이 줄을 삭제.
-  "weight-sum:寅": "합 13 (교정값 미확정, 산출 무영향)",
-};
+// ★2026-08-26: "weight-sum:寅" 해소. 교정값을 甲5·丙3·戊2 로 확정하고
+//   enrichment 정본과 dict gabja 5편(甲寅·丙寅·戊寅·庚寅·壬寅)을 동시에 고쳤다.
+//   근거는 이 목록이 스스로 적어 둔 그대로다 — repo 관행상 3원소 지지는 5/3/2이고
+//   (巳 丙5·庚3·戊2 / 申 庚5·壬3·戊2), 寅만 2원소 지지의 앞자리 7(亥 壬7·甲3 /
+//   午 丁7·己3)을 3원소에 쓰고 있었다. 사령일수 순서(정기 甲 > 중기 丙 > 여기 戊)도 유지된다.
+const KNOWN_DRIFT: Record<string, string> = {};
 
 function driftAwareEqual(key: string, actual: unknown, expected: unknown, message: string) {
   let same = true;

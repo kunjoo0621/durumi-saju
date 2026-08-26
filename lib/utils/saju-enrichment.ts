@@ -41,9 +41,13 @@ export const BRANCH_INFO: Record<string, BranchInfo> = {
     yin_yang: "양",
     korean: "인",
     jijanggan: [
-      { stem: "甲", weight: 7 },
+      // ★2026-08-26: 7/3/3(합 13)이었다. 12지지 중 寅만 합이 10이 아니었고,
+      //   같은 생지인 巳(丙5·庚3·戊2)·申(庚5·壬3·戊2)의 3층 패턴과도 어긋났다.
+      //   2층 지지(亥 壬7·甲3 / 午 丁7·己3)의 앞자리 7을 3층에 그대로 쓴 것으로 보인다.
+      //   사령일수(정기 甲 > 중기 丙 > 여기 戊)와 정렬 순서는 그대로 유지된다.
+      { stem: "甲", weight: 5 },
       { stem: "丙", weight: 3 },
-      { stem: "戊", weight: 3 },
+      { stem: "戊", weight: 2 },
     ],
   },
   卯: { element: "목", yin_yang: "음", korean: "묘", jijanggan: [{ stem: "乙", weight: 10 }] },
