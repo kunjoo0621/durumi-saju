@@ -132,7 +132,46 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
         redirectUrl,
       });
 
-      if (!response) return;
+      // ★조용한 무반응 경로 (2026-08-26 조사에서 드러난 구멍).
+      //
+      // PortOne SDK 의 requestPayment 는 Promise<PaymentResponse | undefined> 다.
+      // redirect 흐름에서는 페이지가 떠나므로 여기 아래 코드가 아예 실행되지 않는다.
+      // 즉 **여기까지 왔다는 건 페이지가 그대로 살아 있다는 뜻**이고, 그러면 사용자는
+      // 아무 메시지도 못 본 채 버튼만 다시 눌리는 상태가 된다. 그런데 charge_orders 의
+      // pending row 는 이미 만들어진 뒤다(intent 가 requestPayment 보다 먼저 실행).
+      //
+      // 실측: PortOne 원천 대조 결과 pending 659건 중 551건이 READY(=세션만 생성)였고,
+      // 그중에는 3분에 7번·7분에 4번 세션만 만들고 결제 시도가 0회인 사용자가 있다.
+      // 반복 재시도는 "아무 반응이 없어서 다시 눌렀다"로 읽힌다.
+      //
+      // 그래서 (1) 서버에 계측을 남기고 (2) 2초 뒤에도 페이지가 살아 있으면 안내한다.
+      // 지연을 두는 이유: SDK 가 undefined 를 돌려준 직후 비동기로 이동하는 경우가 있다면
+      // 즉시 에러를 띄우면 정상 결제자에게 오류가 번쩍인다. 페이지가 떠나면 타이머는
+      // 실행되지 않으므로 정상 흐름에는 영향이 0이다.
+      if (!response) {
+        try {
+          const payload = JSON.stringify({ orderId, event: "requestPayment_no_response" });
+          // sendBeacon 은 페이지가 떠나는 중에도 전송을 보장한다. 없으면 fetch 로 폴백.
+          if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+            navigator.sendBeacon("/api/coins/charge/client-event", new Blob([payload], { type: "application/json" }));
+          } else {
+            void fetch("/api/coins/charge/client-event", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: payload,
+              keepalive: true,
+            }).catch(() => {});
+          }
+        } catch {
+          // 계측 실패가 결제 흐름을 막으면 안 된다.
+        }
+        window.setTimeout(() => {
+          const msg = "결제창이 열리지 않았어요. 다시 시도해보고, 계속 안 되면 다른 브라우저에서 열어주세요.";
+          setError(msg);
+          onError?.(msg);
+        }, 2000);
+        return;
+      }
       if (response.code != null) {
         throw new Error(response.message || "결제가 취소되었습니다.");
       }
