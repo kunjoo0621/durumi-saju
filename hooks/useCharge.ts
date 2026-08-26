@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as PortOne from "@portone/browser-sdk/v2";
 import { getPaymentConfig, type CoinPackage } from "@/lib/constants/coins";
@@ -57,11 +57,18 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
   const [charging, setCharging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  // 아래 '반환값 없음' 안내 타이머. 사용자가 그 사이 다시 눌러 새 결제를 시작하면
+  // 묵은 타이머가 뒤늦게 터져 진행 중인 시도 위에 에러를 덮어쓴다 — 새 시도 시작 시 취소한다.
+  const noResponseTimerRef = useRef<number | null>(null);
 
   const { storeId, channelKey, isMockPayment } = getPaymentConfig();
 
   const charge = async (pkg: CoinPackage) => {
     if (charging) return;
+    if (noResponseTimerRef.current != null) {
+      window.clearTimeout(noResponseTimerRef.current);
+      noResponseTimerRef.current = null;
+    }
     setCharging(true);
     setError(null);
 
@@ -132,22 +139,24 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
         redirectUrl,
       });
 
-      // ★조용한 무반응 경로 (2026-08-26 조사에서 드러난 구멍).
+      // ★반환값 없음 — 방어적 카나리아. "자주 일어나는 일"이 아니다.
       //
-      // PortOne SDK 의 requestPayment 는 Promise<PaymentResponse | undefined> 다.
-      // redirect 흐름에서는 페이지가 떠나므로 여기 아래 코드가 아예 실행되지 않는다.
-      // 즉 **여기까지 왔다는 건 페이지가 그대로 살아 있다는 뜻**이고, 그러면 사용자는
-      // 아무 메시지도 못 본 채 버튼만 다시 눌리는 상태가 된다. 그런데 charge_orders 의
-      // pending row 는 이미 만들어진 뒤다(intent 가 requestPayment 보다 먼저 실행).
+      // 2026-08-26 에 cdn.portone.io/v2/browser-sdk.js 원본을 읽어 확인한 사실:
+      //   requestPayment → prepare 내부의 paymentResult 프라미스는 모든 해소 경로에서
+      //   **객체로 resolve** 한다(onTransactionOver·onTransactionFail·onForceClose 전부).
+      //   undefined 로 resolve 하는 경로는 없다. 대신 `forceRedirect === true` 일 때만
+      //   결과를 URL 로 실어 window.location.href 로 보내고 프라미스를 영영 안 끝낸다.
+      //   우리는 forceRedirect 를 쓰지 않는다. 모바일은 loadPageDriver 가
+      //   onAfterPrepare 에서 곧장 window.location.href 로 떠나므로 이 아래가 실행되지 않는다.
+      //   → 타입의 `| undefined` 는 "이동해서 resolve 되지 않음"을 TS 로 표현 못 해 붙은 것.
       //
-      // 실측: PortOne 원천 대조 결과 pending 659건 중 551건이 READY(=세션만 생성)였고,
-      // 그중에는 3분에 7번·7분에 4번 세션만 만들고 결제 시도가 0회인 사용자가 있다.
-      // 반복 재시도는 "아무 반응이 없어서 다시 눌렀다"로 읽힌다.
+      // 그래도 남겨두는 이유: 여기 도달하면 SDK 동작이 우리가 아는 것과 달라졌다는 뜻이다.
+      // 기존 코드는 그 상황에서 아무 메시지도 로그도 없이 조용히 끝났고(코인 시스템 최초
+      // 커밋부터), 사용자는 버튼만 다시 눌리는 화면을 봤다. pending row 는 이미 생성된 뒤다.
+      // 그래서 계측을 남기고, 2초 뒤에도 페이지가 살아 있을 때만 안내한다.
+      // 페이지가 떠나면 타이머는 실행되지 않으므로 정상 흐름 영향은 0이다.
       //
-      // 그래서 (1) 서버에 계측을 남기고 (2) 2초 뒤에도 페이지가 살아 있으면 안내한다.
-      // 지연을 두는 이유: SDK 가 undefined 를 돌려준 직후 비동기로 이동하는 경우가 있다면
-      // 즉시 에러를 띄우면 정상 결제자에게 오류가 번쩍인다. 페이지가 떠나면 타이머는
-      // 실행되지 않으므로 정상 흐름에는 영향이 0이다.
+      // ⚠️이 경로가 READY 반복(3분에 7번)의 원인이라는 근거는 없다. 그건 별건이다.
       if (!response) {
         try {
           const payload = JSON.stringify({ orderId, event: "requestPayment_no_response" });
@@ -165,7 +174,8 @@ export function useCharge({ customerName, redirectPath, onSuccess, onError }: Us
         } catch {
           // 계측 실패가 결제 흐름을 막으면 안 된다.
         }
-        window.setTimeout(() => {
+        noResponseTimerRef.current = window.setTimeout(() => {
+          noResponseTimerRef.current = null;
           const msg = "결제창이 열리지 않았어요. 다시 시도해보고, 계속 안 되면 다른 브라우저에서 열어주세요.";
           setError(msg);
           onError?.(msg);
