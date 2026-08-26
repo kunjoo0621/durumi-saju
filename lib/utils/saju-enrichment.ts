@@ -413,7 +413,7 @@ function getTwelveStageForBranch(dayStem: string, branch: string): string {
  *   양간은 12운성 생왕지와 통근처가 대체로 겹쳐 문제가 안 보이지만, 음간은 역행이라
  *   그 일치가 깨지고 깨지는 지점이 전부 '가짜 득'이 된다.
  */
-function isWangSangBranch(dayStem: string, branch: string): boolean {
+export function isWangSangBranch(dayStem: string, branch: string): boolean {
   const branchInfo = BRANCH_INFO[branch];
   const stemInfo = STEM_ELEMENT[dayStem];
   if (!branchInfo || !stemInfo) return false;
@@ -443,7 +443,7 @@ function isWangSangBranch(dayStem: string, branch: string): boolean {
  * 통근(비겁)이 없으면 본기 인성만 생조로 인정한다. 미약한 여기·중기 인성까지
  * '득'으로 치는 학설은 없어서, 통근과 생조를 구분한다.
  */
-function hasRootOrInseong(dayStem: string, branch: string): boolean {
+export function hasRootOrInseong(dayStem: string, branch: string): boolean {
   const branchInfo = BRANCH_INFO[branch];
   const stemInfo = STEM_ELEMENT[dayStem];
   if (!branchInfo || !stemInfo) return false;
