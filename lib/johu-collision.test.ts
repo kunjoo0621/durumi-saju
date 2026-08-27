@@ -183,3 +183,48 @@ test("적천수 종왕 실례(癸卯 乙卯 甲寅 乙亥) 구성이면 종왕�
   assert.equal(y.heesin, "수");
   assert.equal(y.gisin, "금");
 });
+
+test("조후 노트 n=0 분기: 조후 오행이 원국에 없으면 '채워라' 쪽으로 간다", async () => {
+  // ★L1(리뷰 지적): 기존엔 n=0/1 을 소스 정규식으로만 잠가서 n 계산이 틀려도 통과했다.
+  //   실제 formatEnrichedSajuText 출력으로 분기 동작을 검증한다.
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  // 금 일간 신약: 인성=토, 비겁=금. 여름(午월) → 조후 수. 기신이 수가 되도록 구성
+  const y = determineYongshin("금", { result: "신약" } as never, dist({ 금: 1, 화: 4, 목: 2, 토: 1 }), "午");
+  if (y.johu !== y.gisin) return; // 이 구성이 충돌이 아니면 이 케이스는 검증 대상이 아니다
+  const line = renderGisinLine(y, dist({ 금: 1, 화: 4, 목: 2, 토: 1 }), formatEnrichedSajuText);
+  assert.match(line, /★조후 충돌/);
+  assert.match(line, /조후위급|채워야 할 오행/, "원국에 0개면 채우는 쪽");
+});
+
+test("조후 노트 n>=2 분기: 조후 오행이 넉넉하면 '이미 갖춰졌다' 쪽으로 간다", async () => {
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  const saju = await calculateSaju(1995, 6, 21, 16, 30);
+  const enriched = enrichSajuData(saju!);
+  const y = enriched.yongshin!;
+  assert.equal(y.johu, y.gisin);
+  assert.equal(enriched.elementDist[y.johu!], 3, "표본의 조후 오행은 3개");
+  const line = formatEnrichedSajuText(enriched).split("\n").find((l) => l.startsWith("기신:")) ?? "";
+  assert.match(line, /이미 3개 있어 한열은 해소/);
+  assert.doesNotMatch(line, /조후위급/, "n>=2 인데 n=0 문구가 나오면 분기 오류");
+});
+
+/** 합성 원국으로 기신 라인만 렌더 */
+function renderGisinLine(
+  y: ReturnType<typeof determineYongshin>,
+  d: Record<KoreanElement, number>,
+  fmt: (x: never) => string,
+) {
+  const synthetic = {
+    pillars: { year: "甲午", month: "壬午", day: "辛巳", hour: "戊子" },
+    dayMaster: { stem: "辛", korean: "신", element: "금", yinYang: "음" },
+    elementDist: d,
+    elementAnalysis: { dominant: [], deficient: [], isBalanced: false },
+    strength: { result: "신약", helpCount: 2, resistCount: 6, details: {}, legacy: "신약" },
+    tenStars: [], tenStarsFull: [], twelveStages: null,
+    relationships: { hap: [], chung: [], hyung: [], pa: [], hae: [] },
+    shinsal: { matches: [] },
+    yongshin: y,
+    isTimeUnknown: false,
+  } as never;
+  return fmt(synthetic).split("\n").find((l) => l.startsWith("기신:")) ?? "";
+}

@@ -350,7 +350,8 @@ export function determineYongshin(
     (elementDist[jaesung] || 0) === 0 &&
     (elementDist[siksang] || 0) === 0 &&   // ★四柱皆比劫 — 식상도 없어야 한다
     (elementDist[insung] || 0) >= 1;
-  const strongNoGwan = isStrong && strength.result === "극왕" && (elementDist[gwansung] || 0) === 0;
+  // 극왕은 STRONG_LEVELS 에 속하므로 isStrong 검사는 불필요하다(항상 참).
+  const strongNoGwan = strength.result === "극왕" && (elementDist[gwansung] || 0) === 0;
 
   if (jongwangEligible) {
     eokbu = bigeop;
