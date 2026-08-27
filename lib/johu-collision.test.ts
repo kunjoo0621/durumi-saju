@@ -130,3 +130,23 @@ test("SCORING_VERSION 이 21로 올라가 있다 (용신이 점수에 물림)", 
   const src = await import("node:fs").then((fs) => fs.readFileSync("lib/utils/saju-scoring.ts", "utf-8"));
   assert.match(src, /export const SCORING_VERSION = 21;/);
 });
+
+test("종왕 ∩ 조후충돌: 犯旺 오행을 '채우라'고 하지 않고 종왕 전용 문구가 붙는다", async () => {
+  // 종왕 기신은 관성이고 게이트가 관살 0을 요구하므로, 조후==기신이면 조후 오행 개수가
+  // 항상 0 → 옛 로직이면 전원 n=0("조후위급, 채워라") 분기에 떨어진다.
+  // 임철초는 종왕에 관살을 두고 "官殺運, 謂之犯旺, 凶禍立至"라 한다. 실측 종왕 28명 중 6명.
+  // ★실사용자 표본(1997-05-24 12:30 광주) — 화 일간 종왕, 조후 수 == 기신 수
+  const saju = await calculateSaju(1997, 5, 24, 12, 30, { birthLocation: "광주" });
+  assert.ok(saju);
+  const enriched = enrichSajuData(saju!);
+  const y = enriched.yongshin!;
+  assert.equal(enriched.strength?.result, "극왕");
+  assert.match(y.eokbuReason, /종왕/, "종왕으로 판정돼야 하는 표본");
+  assert.equal(y.johu, y.gisin, "조후==기신 교집합이 성립하는 표본");
+
+  const line = formatEnrichedSajuText(enriched).split("\n").find((l) => l.startsWith("기신:")) ?? "";
+  assert.match(line, /★종왕 우선/, "종왕 전용 문구가 붙어야 한다");
+  assert.doesNotMatch(line, /★조후 충돌/, "일반 조후 충돌 문구가 붙으면 안 된다");
+  assert.doesNotMatch(line, /채워야 할 오행/, "犯旺 오행을 채우라고 하면 안 된다");
+  assert.match(line, /犯旺/);
+});
