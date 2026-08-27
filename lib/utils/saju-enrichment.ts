@@ -1604,7 +1604,39 @@ export function formatEnrichedSajuText(data: EnrichedSajuData): string {
     lines.push(yongLine);
     const gisinHanja = ELEMENT_TO_HANJA[y.gisin];
     const heesinHanja = ELEMENT_TO_HANJA[y.heesin];
-    lines.push(`기신: ${y.gisin}(${gisinHanja}) / 희신: ${y.heesin}(${heesinHanja})`);
+    let gisinLine = `기신: ${y.gisin}(${gisinHanja}) / 희신: ${y.heesin}(${heesinHanja})`;
+
+    // ★2026-08-27: 조후용신과 기신이 같은 오행일 때 우선순위를 결정론적으로 명시한다.
+    //
+    //   조후는 계절(월지)만 보고 선언되고 기신은 억부에서 도출되므로, 둘이 같은 오행을
+    //   가리키는 경우가 생긴다(전 사용자 3,285명 중 282명 실측). 그동안은 한 프롬프트에
+    //   "조후용신-수(水) … / 기신: 수(水)"가 나란히 나가 LLM에게 모순 지시가 됐다.
+    //
+    //   ★조후를 숨기는 방식(johu=null)은 쓰지 않는다. 세 가지 이유다.
+    //     ① 자사 사전 dict/data/yongshin/johu.ts "억부와 갈릴 때"가 이미
+    //        "갈리는 경우엔 어느 쪽 결핍이 더 시급한지를 따집니다"라고 가르친다.
+    //        엔진이 갈리는 순간 숨기면 사전과 어긋나는 4층 드리프트를 새로 만든다.
+    //     ② 원전과 방향이 반대다. 궁통보감·서락오 평주의 원칙은 "調候為急" —
+    //        한열이 치우친 사주일수록 조후가 억부보다 급하다. 그런데 충돌이 나는 집단이
+    //        바로 하절·동절생, 즉 조후가 가장 필요한 사람들이다. 거기서만 조후를 지우면
+    //        우선순위를 거꾸로 적용하는 셈이다.
+    //     ③ 출력이 빈약해진다. battle-prompt 는 건강운을 "조후용신 중심"으로 풀라 하고,
+    //        analysis 의 조후 지침도 개인화 레버다. 계절 축이 통째로 사라진다.
+    //
+    //   대신 시급성을 원국 보유량으로 판정한다 — 사전이 말한 "어느 쪽 결핍이 더 시급한가"를
+    //   그대로 수치화한 것이다. 임계는 0 / 1 / 2+ 세 갈래로 고정한다.
+    if (y.johu && y.johu === y.gisin) {
+      const n = data.elementDist?.[y.johu] ?? 0;
+      const johuHanja2 = ELEMENT_TO_HANJA[y.johu];
+      if (n === 0) {
+        gisinLine += ` [★조후 충돌 — 억부상 기신이지만 ${y.johu}(${johuHanja2})가 원국에 하나도 없어 한열 보정이 급하다(조후위급). 조후를 우선해 "부족해서 조심스럽게 채워야 할 오행"으로 다루고, 대량 보강 처방은 하지 마라]`;
+      } else if (n === 1) {
+        gisinLine += ` [★조후 충돌 — ${y.johu}(${johuHanja2})가 원국에 하나뿐이라 한열 보정은 최소한만 갖췄다. 억부를 우선하되 이 오행을 제거·회피 대상으로 단정하지 말고 "더 늘리지는 않는" 수준으로 다뤄라]`;
+      } else {
+        gisinLine += ` [★조후 충돌 — 계절상 필요한 ${y.johu}(${johuHanja2})가 원국에 이미 ${n}개 있어 한열은 해소됐다. 억부를 우선해 기신으로 다루고, 조후는 "이미 갖춰져 있다"는 확인으로만 언급하라]`;
+      }
+    }
+    lines.push(gisinLine);
   }
 
   return lines.join("\n");
