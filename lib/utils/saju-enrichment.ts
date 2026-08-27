@@ -309,7 +309,56 @@ export function determineYongshin(
   let eokbu: KoreanElement;
   let eokbuReason: string;
 
-  if (isStrong) {
+  // ★2026-08-27: 극왕에 관살이 없을 때의 두 갈래 처리.
+  //
+  //   기존 신강 분기는 후보를 분포 오름차순으로 정렬하므로, 원국에 관살이 0개면
+  //   관성이 항상 최저값이 되어 **반드시** 용신으로 뽑혔다. 실사용자 실측에서
+  //   극왕 146명 중 관살 0인 54명 전원이 관성 용신을 받고 있었다.
+  //
+  //   그런데 적천수천미 從象은 바로 그 명식을 종왕(從旺)으로 보고, 관살운을
+  //   "犯旺, 凶禍立至"라 한다. 없는 관살을 약으로 처방하는 게 아니라 가장 꺼려야 할
+  //   글자였다. 자사 사전 dict/data/gangyak/geukwang.ts 도 이미
+  //   "종격이면 용신은 일반 극왕 논리와 정반대로 비겁·인성"이라 적고 있어,
+  //   엔진만 사전과 고전을 못 따라가던 상태다.
+  //
+  //   ★단 "관살 0"만으로 종왕을 선언하지 않는다. 적천수 요건은 세 개다 —
+  //     "四柱皆比劫, 無官殺之制, 有印綬之生, 旺之極者, 從其旺神也"
+  //   재성이 원국에 있으면 四柱皆比劫이 아니고, 오히려 임철초가 종왕에 재성을 두고
+  //   "遇財星, 群劫相爭, 九死一生"이라 한 최악의 배치다. 관살(犯旺)보다도 무겁게 적는다.
+  //   실측: 관살0 54명 중 재성 보유가 25명 — 그 25명에게 비겁 용신을 주면 군겁쟁재를 키운다.
+  //
+  //   그래서 갈래를 둘로 나눈다.
+  //     (1) 종왕 = 극왕 + 관살0 + 재성0 + 인수>=1  … 29명. 왕신에 순응(비겁 용신)
+  //     (2) 그 외 극왕 + 관살0                      … 25명. 종왕은 아니지만 관성도 아니다.
+  //         관성을 후보에서 빼고 남은 {식상, 재성} 중 최저를 쓴다. 군겁쟁재의 정석 해법이
+  //         식상생재로 왕한 비겁을 흘려보내는 것이라는 점과도 맞는다.
+  //
+  //   ★스코프 한계: 태강(4득 3개)은 다루지 않는다. 적천수 요건이 "旺之極"이라 4득 4개인
+  //     극왕이 최선의 근사이고, 태강까지 넓히면 같은 조건 29명이 추가로 뒤집힌다(실측).
+  //     종격 오탐은 용신이 정반대로 나가므로 좁게 잡는 편이 안전하다.
+  const jongwangEligible =
+    strength.result === "극왕" &&
+    (elementDist[gwansung] || 0) === 0 &&
+    (elementDist[jaesung] || 0) === 0 &&
+    (elementDist[insung] || 0) >= 1;
+  const strongNoGwan = isStrong && strength.result === "극왕" && (elementDist[gwansung] || 0) === 0;
+
+  if (jongwangEligible) {
+    eokbu = bigeop;
+    eokbuReason = `극왕·관살 없음 → 종왕(從旺): 왕한 기세를 거스르지 않고 비겁(${bigeop}) 순응`;
+  } else if (strongNoGwan) {
+    // 관살이 원국에 없으므로 후보에서 제외. 남은 둘 중 분포 최저(동률 시 식상>재성).
+    const candidates: { element: KoreanElement; label: string }[] = [
+      { element: siksang, label: "식상" },
+      { element: jaesung, label: "재성" },
+    ];
+    candidates.sort((a, b) => (elementDist[a.element] || 0) - (elementDist[b.element] || 0));
+    const lowest = elementDist[candidates[0].element] || 0;
+    const tied = candidates.filter(c => (elementDist[c.element] || 0) === lowest);
+    tied.sort((a, b) => ["식상", "재성"].indexOf(a.label) - ["식상", "재성"].indexOf(b.label));
+    eokbu = tied[0].element;
+    eokbuReason = `${strength.result} → ${tied[0].label}(${eokbu}) 보강 (관살 부재로 관성 제외 — 犯旺 회피)`;
+  } else if (isStrong) {
     // 신강: 관성/식상/재성 중 분포 최저. 동률 시 관성>식상>재성
     const candidates: { element: KoreanElement; label: string }[] = [
       { element: gwansung, label: "관성" },
@@ -363,7 +412,15 @@ export function determineYongshin(
   //   신약 + 인성 → 관성 (관인상생)
   //   신약 + 비겁 → 인성 (인성생비겁)
   let heesin: KoreanElement;
-  if (isStrong) {
+  if (jongwangEligible) {
+    // 종왕은 왕신에 순응하므로 그 왕신을 생하는 인수가 희신이다.
+    //   임철초 "運行比劫印綬則吉" — 비겁·인수 운이 길.
+    // ★식상을 희신으로 두는 대안도 있다. 같은 주석이 "局中印輕, 行傷食亦佳"라 하여
+    //   인수가 가벼우면 식상운도 좋다고 하기 때문이다. 다만 (a) 이 게이트는 인수>=1 을
+    //   요구하므로 印輕 케이스가 드물고(실측 29명 중 2명), (b) 원문이 인수를 먼저 들며,
+    //   (c) 신약 매핑(인성생비겁)과 대칭이라 인수를 택했다. 식상 보유자는 아래 주석 참조.
+    heesin = insung;
+  } else if (isStrong) {
     if (eokbu === gwansung) heesin = jaesung;
     else if (eokbu === siksang) heesin = jaesung;
     else heesin = siksang;
@@ -394,20 +451,38 @@ export function determineYongshin(
   //     신약 + 비겁 → 관성   (관살이 약한 일간을 직접 극)
   //
   //   ★한계(공시): 신강의 원인이 인성 과다인 명식은 이상적 기신이 인성이다(적천수 반국
-  //     "母慈滅子"). 지금 매핑은 원인을 보지 않는다. 종격·화격도 억부가 뒤집히나 우리는
-  //     격국을 산출하지 않는다. 둘 다 기존 규칙도 똑같이 놓치던 것이라 이번 교체의 블로커는
-  //     아니고, 용신 규칙 v2 과제로 남긴다.
+  //     "母慈滅子"). 지금 매핑은 원인을 보지 않는다. 용신 규칙 v2 과제.
+  //     종격 중 ★종왕만 2026-08-27 에 처리했다(아래 분기). 종강·종아·종재·종살과 화격은
+  //     여전히 미산출이며, 태강 이하의 종왕 후보도 스코프에서 뺐다.
   const bigyeop = dayMasterElement; // 비겁 = 일간과 같은 오행
-  const gisin: KoreanElement = isStrong
-    ? (eokbu === siksang ? insung : bigyeop)
-    : (eokbu === insung ? jaesung : gwansung);
+
+  // ★종왕(2026-08-27): 억부 진영 매핑이 그대로 적용되지 않는다. 왕신에 순응하는 격이라
+  //   "병"은 원국 안이 아니라 그 순응을 깨는 운에 있다. 임철초가 둘을 명시한다 —
+  //     관살 "官殺運, 謂之犯旺, 凶禍立至"
+  //     재성 "遇財星, 群劫相爭, 九死一生"
+  //   재성이 더 무겁게 적히지만 이 게이트는 재성 0을 요구하므로 원국에 재성이 없다.
+  //   그래서 기신은 관성으로 둔다(원국에 없더라도 운에서 가장 꺼리는 글자).
+  //   ※우리 엔진에는 구신(仇神) 필드가 없어 재성 경고는 여기 주석으로만 남긴다.
+  const gisin: KoreanElement = jongwangEligible
+    ? gwansung
+    : isStrong
+      ? (eokbu === siksang ? insung : bigyeop)
+      : (eokbu === insung ? jaesung : gwansung);
 
   // 불변식 — 이 버그는 assert 하나만 있었어도 잡혔다.
   if (process.env.NODE_ENV !== "production") {
-    const badCamp = isStrong ? [bigyeop, insung] : [siksang, jaesung, gwansung];
-    console.assert(badCamp.includes(gisin), `[기신] 진영 위반: ${isStrong ? "신강" : "신약"} → ${gisin}`);
-    console.assert(gisin !== eokbu, `[기신] 용신과 동일: ${gisin}`);
-    console.assert(gisin !== heesin, `[기신] 희신과 동일: ${gisin}`);
+    if (jongwangEligible) {
+      // 종왕은 신강 진영 규칙(badCamp=[비겁,인성])에 안 맞는다. 전용 불변식으로 검사한다.
+      console.assert(eokbu === bigyeop, `[종왕] 용신이 비겁이 아님: ${eokbu}`);
+      console.assert(heesin === insung, `[종왕] 희신이 인성이 아님: ${heesin}`);
+      console.assert(gisin === gwansung, `[종왕] 기신이 관성이 아님: ${gisin}`);
+      console.assert(gisin !== eokbu && gisin !== heesin, `[종왕] 기신 중복: ${gisin}`);
+    } else {
+      const badCamp = isStrong ? [bigyeop, insung] : [siksang, jaesung, gwansung];
+      console.assert(badCamp.includes(gisin), `[기신] 진영 위반: ${isStrong ? "신강" : "신약"} → ${gisin}`);
+      console.assert(gisin !== eokbu, `[기신] 용신과 동일: ${gisin}`);
+      console.assert(gisin !== heesin, `[기신] 희신과 동일: ${gisin}`);
+    }
   }
 
   return { eokbu, eokbuReason, johu, johuReason, gisin, heesin };

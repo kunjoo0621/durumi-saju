@@ -78,3 +78,55 @@ test("checkout 눈에 띄는 신살 태그는 key 로 매칭하고 한자를 뗀
   assert.equal(hit!.label.replace(/\s*\(.*?\)/, ""), "도화살");
   assert.equal(hit!.type, "neutral", "도화는 neutral — type==='good' 필터가 실패하던 이유");
 });
+
+/* ─────────────────────────────────────────────────────────────
+ * v21 종왕(從旺) 분기 (2026-08-27)
+ *
+ * 극왕에 관살이 없으면 신강 분기가 관성(=분포 0, 항상 최저)을 반드시 용신으로 뽑았다.
+ * 적천수천미 從象은 그 명식을 종왕으로 보고 관살운을 "犯旺, 凶禍立至"라 한다.
+ * 자사 사전 gangyak/geukwang.ts 도 이미 "종격이면 용신은 정반대로 비겁·인성"이라 적어,
+ * 엔진만 사전·고전을 못 따라가던 상태였다.
+ * ───────────────────────────────────────────────────────────── */
+import { determineYongshin } from "./utils/saju-enrichment";
+import type { KoreanElement } from "./utils/saju-enrichment";
+
+const dist = (o: Partial<Record<KoreanElement, number>>) =>
+  ({ 목: 0, 화: 0, 토: 0, 금: 0, 수: 0, ...o }) as Record<KoreanElement, number>;
+
+test("종왕: 극왕 + 관살0 + 재성0 + 인수>=1 → 용신 비겁 / 희신 인성 / 기신 관성", () => {
+  // 일간 목: 관성=금, 재성=토, 인성=수, 식상=화
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 5, 수: 3 }), "寅");
+  assert.equal(y.eokbu, "목", "용신은 비겁(왕신 순응)");
+  assert.equal(y.heesin, "수", "희신은 인성 — 임철초 '運行比劫印綬則吉'");
+  assert.equal(y.gisin, "금", "기신은 관성 — '官殺運, 謂之犯旺'");
+  assert.match(y.eokbuReason, /종왕/);
+});
+
+test("종왕 아님: 재성이 있으면 종왕으로 선언하지 않는다 (군겁쟁재 회피)", () => {
+  // 재성(토)이 원국에 있으면 四柱皆比劫이 아니고, 임철초는 "遇財星, 群劫相爭, 九死一生"이라 한다
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 4, 수: 2, 토: 2 }), "寅");
+  assert.notEqual(y.eokbu, "목", "비겁을 용신으로 주면 군겁쟁재를 키운다");
+  assert.notEqual(y.eokbu, "금", "관살이 0인데 관성을 뽑으면 犯旺");
+  assert.ok(y.eokbu === "화" || y.eokbu === "토", "식상 또는 재성 중에서 나와야 한다");
+  assert.match(y.eokbuReason, /관살 부재로 관성 제외/);
+});
+
+test("관살이 있으면 극왕이어도 기존 억부가 그대로 작동한다", () => {
+  // 관성(금)·식상(화)·재성(토)이 모두 1로 동률 → 기존 우선순위(관성>식상>재성)대로 관성
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 4, 수: 1, 금: 1, 화: 1, 토: 1 }), "寅");
+  assert.equal(y.eokbu, "금", "관살이 있으면 종왕·관성제외 분기를 타지 않는다");
+  assert.match(y.eokbuReason, /보강/);
+  assert.doesNotMatch(y.eokbuReason, /종왕/);
+  assert.doesNotMatch(y.eokbuReason, /관성 제외/);
+});
+
+test("태강은 종왕 스코프 밖이다 (旺之極 = 4득 4개인 극왕만)", () => {
+  const y = determineYongshin("목", { result: "태강" } as never, dist({ 목: 5, 수: 3 }), "寅");
+  assert.notEqual(y.eokbu, "목", "태강은 종왕 분기를 타면 안 된다");
+  assert.doesNotMatch(y.eokbuReason, /종왕/);
+});
+
+test("SCORING_VERSION 이 21로 올라가 있다 (용신이 점수에 물림)", async () => {
+  const src = await import("node:fs").then((fs) => fs.readFileSync("lib/utils/saju-scoring.ts", "utf-8"));
+  assert.match(src, /export const SCORING_VERSION = 21;/);
+});
