@@ -89,8 +89,10 @@ for (const r of rows) {
   n++;
   const dist = e.elementDist ?? {};
   const gwanN = dist[CTRLBY[dayEl]] ?? 0, jaeN = dist[CTRL[dayEl]] ?? 0, insN = dist[GENBY[dayEl]] ?? 0;
-  const isJW = lvl === "극왕" && gwanN === 0 && jaeN === 0 && insN >= 1;
-  const isNG = lvl === "극왕" && gwanN === 0 && !isJW;
+  // ★게이트를 여기서 재구현하지 않는다. 엔진이 내린 판정을 그대로 읽는다 —
+  //   초안은 조건을 복제했다가 엔진에 식상 조건이 추가됐을 때 조용히 낡았다(감사 드리프트).
+  const isJW = yg.eokbuReason.includes("종왕");
+  const isNG = yg.eokbuReason.includes("관살 부재로 관성 제외");
   if (isJW) jongwang++;
   if (isNG) noGwanOther++;
 
@@ -120,7 +122,7 @@ for (const r of rows) {
 }
 const avg = deltas.length ? (deltas.reduce((a,b)=>a+b,0)/deltas.length).toFixed(2) : "-";
 console.log(`대상 ${n}명 (음력 표기 ${lunar}건 · region 보유 ${regioned}건 — 경도 보정 반영)`);
-console.log(`  ① 종왕(극왕+관살0+재성0+인수>=1)   : ${jongwang}명`);
+console.log(`  ① 종왕(극왕+관살0+재성0+식상0+인수>=1): ${jongwang}명`);
 console.log(`  ② 관성 제외(극왕+관살0, 종왕 아님) : ${noGwanOther}명`);
 console.log(`  용신·기신·희신이 바뀐 총 인원      : ${changed}명`);
 console.log(`  ★①+② 밖에서 바뀐 인원             : ${unexpected}명 ${unexpected === 0 ? "✓ 변경 국소성" : "★위반"}`);

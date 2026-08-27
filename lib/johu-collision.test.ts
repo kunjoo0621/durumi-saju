@@ -95,7 +95,7 @@ const dist = (o: Partial<Record<KoreanElement, number>>) =>
 
 test("종왕: 극왕 + 관살0 + 재성0 + 인수>=1 → 용신 비겁 / 희신 인성 / 기신 관성", () => {
   // 일간 목: 관성=금, 재성=토, 인성=수, 식상=화
-  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 5, 수: 3 }), "寅");
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 5, 수: 3 }), "寅"); // 화(식상)·토(재성)·금(관성) 모두 0
   assert.equal(y.eokbu, "목", "용신은 비겁(왕신 순응)");
   assert.equal(y.heesin, "수", "희신은 인성 — 임철초 '運行比劫印綬則吉'");
   assert.equal(y.gisin, "금", "기신은 관성 — '官殺運, 謂之犯旺'");
@@ -133,20 +133,53 @@ test("SCORING_VERSION 이 21로 올라가 있다 (용신이 점수에 물림)", 
 
 test("종왕 ∩ 조후충돌: 犯旺 오행을 '채우라'고 하지 않고 종왕 전용 문구가 붙는다", async () => {
   // 종왕 기신은 관성이고 게이트가 관살 0을 요구하므로, 조후==기신이면 조후 오행 개수가
-  // 항상 0 → 옛 로직이면 전원 n=0("조후위급, 채워라") 분기에 떨어진다.
-  // 임철초는 종왕에 관살을 두고 "官殺運, 謂之犯旺, 凶禍立至"라 한다. 실측 종왕 28명 중 6명.
-  // ★실사용자 표본(1997-05-24 12:30 광주) — 화 일간 종왕, 조후 수 == 기신 수
-  const saju = await calculateSaju(1997, 5, 24, 12, 30, { birthLocation: "광주" });
-  assert.ok(saju);
-  const enriched = enrichSajuData(saju!);
-  const y = enriched.yongshin!;
-  assert.equal(enriched.strength?.result, "극왕");
-  assert.match(y.eokbuReason, /종왕/, "종왕으로 판정돼야 하는 표본");
-  assert.equal(y.johu, y.gisin, "조후==기신 교집합이 성립하는 표본");
+  // 항상 0 → 옛 로직이면 n=0("조후위급, 채워라") 분기에 떨어진다. 임철초는 종왕에 관살을
+  // 두고 "官殺運, 謂之犯旺, 凶禍立至"라 하므로 가장 꺼릴 오행을 채우라는 지시가 된다.
+  //
+  // ★식상 0 조건이 들어간 뒤 실사용자 중에는 이 교집합이 0명이다(전수 감사 확인).
+  //   그래도 이론상 도달 가능하므로(화 일간 종왕 + 여름생 → 조후 수 = 관성 수)
+  //   방어 코드를 유지하고 합성 원국으로 잠근다.
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  // 화 일간: 관성=수, 재성=금, 식상=토, 인성=목. 화6·목2 로 나머지 전부 0
+  const y = determineYongshin("화", { result: "극왕" } as never, dist({ 화: 6, 목: 2 }), "午");
+  assert.match(y.eokbuReason, /종왕/, "이 구성은 종왕이어야 한다");
+  assert.equal(y.gisin, "수", "종왕 기신은 관성");
+  assert.equal(y.johu, "수", "午월(여름) 조후 = 수 — 교집합 성립");
 
-  const line = formatEnrichedSajuText(enriched).split("\n").find((l) => l.startsWith("기신:")) ?? "";
+  const synthetic = {
+    pillars: { year: "丙午", month: "甲午", day: "丙寅", hour: "甲午" },
+    dayMaster: { stem: "丙", korean: "병", element: "화", yinYang: "양" },
+    elementDist: dist({ 화: 6, 목: 2 }),
+    elementAnalysis: { dominant: [], deficient: [], isBalanced: false },
+    strength: { result: "극왕", helpCount: 8, resistCount: 0, details: {}, legacy: "신강" },
+    tenStars: [], tenStarsFull: [], twelveStages: null,
+    relationships: { hap: [], chung: [], hyung: [], pa: [], hae: [] },
+    shinsal: { matches: [] },
+    yongshin: y,
+    isTimeUnknown: false,
+  } as never;
+  const line = formatEnrichedSajuText(synthetic).split("\n").find((l) => l.startsWith("기신:")) ?? "";
   assert.match(line, /★종왕 우선/, "종왕 전용 문구가 붙어야 한다");
   assert.doesNotMatch(line, /★조후 충돌/, "일반 조후 충돌 문구가 붙으면 안 된다");
   assert.doesNotMatch(line, /채워야 할 오행/, "犯旺 오행을 채우라고 하면 안 된다");
   assert.match(line, /犯旺/);
+});
+
+test("종왕 아님: 식상이 있으면 종왕으로 선언하지 않는다 (四柱皆比劫)", () => {
+  // 적천수가 든 종왕 실례 癸卯 乙卯 甲寅 乙亥 는 목6·수2 로 식상·재성·관성이 전부 0이다.
+  // "局中印輕, 行傷食亦佳"는 **운에서** 식상이 올 때 좋다는 말이지 원국 조건이 아니다.
+  // 초안이 이 대목을 원국 조건으로 잘못 읽어 식상 검사를 뺐다가 리뷰에서 잡혔다.
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 5, 수: 2, 화: 1 }), "寅");
+  assert.doesNotMatch(y.eokbuReason, /종왕/, "식상 1개라도 있으면 종왕이 아니다");
+  assert.match(y.eokbuReason, /관살 부재로 관성 제외/);
+  assert.equal(y.eokbu, "토", "관성 제외 후 {식상 화1, 재성 토0} 중 최저 = 재성");
+});
+
+test("적천수 종왕 실례(癸卯 乙卯 甲寅 乙亥) 구성이면 종왕으로 판정된다", () => {
+  // 목 6 · 수 2 — 식상(화)·재성(토)·관성(금) 전부 0
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 6, 수: 2 }), "卯");
+  assert.match(y.eokbuReason, /종왕/);
+  assert.equal(y.eokbu, "목");
+  assert.equal(y.heesin, "수");
+  assert.equal(y.gisin, "금");
 });
