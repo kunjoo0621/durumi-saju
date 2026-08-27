@@ -188,6 +188,10 @@ export const yukhaeSal: Story = {
     "육해살 건강",
     "12신살 보는 법",
   ],
+  heroImage: {
+    src: "/stories/heroes/yukhae-sal.png",
+    alt: "두루미가 돌 하나를 뒤집자 붉은 면 아래에서 초록 면이 드러나는 장면 — 같은 글자가 띠에 따라 이름을 바꾸는 육해살",
+  },
   publishedAt: "2026-08-27",
   updatedAt: "2026-08-27",
   related: ["jangseong-sal", "sinsal-guide", "yeokma"],

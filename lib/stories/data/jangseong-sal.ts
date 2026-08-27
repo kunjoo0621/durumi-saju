@@ -218,6 +218,10 @@ export const jangseongSal: Story = {
     "장성살 일지",
     "띠별 12신살",
   ],
+  heroImage: {
+    src: "/stories/heroes/jangseong-sal.png",
+    alt: "네 개의 등불 기둥 앞에 선 두루미, 그중 하나만 환하게 켜져 있는 장면 — 장성살이 네 칸 중 어디에 앉았는지",
+  },
   publishedAt: "2026-08-27",
   updatedAt: "2026-08-27",
   related: ["yukhae-sal", "sinsal-guide", "hwagae"],
