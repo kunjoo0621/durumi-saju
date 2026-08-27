@@ -50,12 +50,21 @@ export async function getQuickSajuTags(input: TagInput): Promise<SajuTag[]> {
       tags.push({ label: enriched.strength.legacy, element: null });
     }
 
-    // 3. First notable good shinsal (도화, 역마, etc.)
-    const notable = enriched.shinsal.matches.find(
-      (s) => s.type === "good" && ["도화", "역마살", "천을귀인", "문창귀인"].includes(s.label),
-    );
+    // 3. 눈에 띄는 신살 1개
+    //
+    // ★2026-08-27: 이 태그는 여태 한 번도 표시된 적이 없었다. 필터가 이중으로 죽어 있었다.
+    //   ① 도화·역마는 엔진에서 type:"neutral" 인데 조건이 type==="good" 이었다.
+    //   ② 실제 label 은 "천을귀인(天乙貴人)" 처럼 한자가 병기된 형태라
+    //      ["도화","역마살","천을귀인","문창귀인"].includes(label) 이 완전일치로 전부 실패했다.
+    //
+    //   label 은 한자 병기·공망처럼 위치 접미(공망-시지)가 붙는 동적 변형이 있어 매칭 키로 취약하다.
+    //   검출기 고유 식별자인 key 로 맞춘다. 우선순위는 SHINSAL_DEFS 정의 순서를 그대로 따르며
+    //   (도화 > 역마 > 천을 > 문창) 대중 인지도가 높은 쪽이 먼저 잡혀 티저 훅 목적에 맞는다.
+    //   ★칩이 11px 소형이라 한자 병기는 넘친다 — 괄호를 떼고 한글만 남긴다.
+    const NOTABLE_SHINSAL_KEYS = new Set(["dohwa", "yeokma", "chuneul", "munchang"]);
+    const notable = enriched.shinsal.matches.find((s) => NOTABLE_SHINSAL_KEYS.has(s.key));
     if (notable) {
-      tags.push({ label: notable.label, element: null });
+      tags.push({ label: notable.label.replace(/\s*\(.*?\)/, ""), element: null });
     }
 
     return tags;
