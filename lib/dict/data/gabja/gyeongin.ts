@@ -23,9 +23,9 @@ export const gyeongin: DictEntry = {
       element: "목",
       yinYang: "양",
       jijanggan: [
-        { stem: "甲", korean: "갑", weight: 7 },
+        { stem: "甲", korean: "갑", weight: 5 },
         { stem: "丙", korean: "병", weight: 3 },
-        { stem: "戊", korean: "무", weight: 3 },
+        { stem: "戊", korean: "무", weight: 2 },
       ],
     },
   },
