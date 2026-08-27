@@ -16,7 +16,7 @@ import { STEM_ELEMENT, BRANCH_INFO, type EnrichedSajuData } from "./saju-enrichm
 // 놓쳤다. 검출률 21.8%→28.8%(600명 격자). 연애운 +6 이 걸려 있어 채점 입력이 바뀌므로 버전 상향.
 // ★등급 영향은 무시 수준(S 7.7→7.8 · C 43.5→43.2 · composite 중앙 67 불변) — 연애운이 5개
 //   카테고리 중 하나라 합산에서 희석된다. 기존 결제자는 grandfather 로 재계산되지 않는다.
-export const SCORING_VERSION = 20;
+export const SCORING_VERSION = 21;
 
 /** 카테고리 스코어링 중립 기준점 (등급 경계와 무관) */
 const SCORING_NEUTRAL = 58;

@@ -78,3 +78,178 @@ test("checkout 눈에 띄는 신살 태그는 key 로 매칭하고 한자를 뗀
   assert.equal(hit!.label.replace(/\s*\(.*?\)/, ""), "도화살");
   assert.equal(hit!.type, "neutral", "도화는 neutral — type==='good' 필터가 실패하던 이유");
 });
+
+/* ─────────────────────────────────────────────────────────────
+ * v21 종왕(從旺) 분기 (2026-08-27)
+ *
+ * 극왕에 관살이 없으면 신강 분기가 관성(=분포 0, 항상 최저)을 반드시 용신으로 뽑았다.
+ * 적천수천미 從象은 그 명식을 종왕으로 보고 관살운을 "犯旺, 凶禍立至"라 한다.
+ * 자사 사전 gangyak/geukwang.ts 도 이미 "종격이면 용신은 정반대로 비겁·인성"이라 적어,
+ * 엔진만 사전·고전을 못 따라가던 상태였다.
+ * ───────────────────────────────────────────────────────────── */
+import { determineYongshin } from "./utils/saju-enrichment";
+import type { KoreanElement } from "./utils/saju-enrichment";
+
+const dist = (o: Partial<Record<KoreanElement, number>>) =>
+  ({ 목: 0, 화: 0, 토: 0, 금: 0, 수: 0, ...o }) as Record<KoreanElement, number>;
+
+test("종왕: 극왕 + 관살0 + 재성0 + 인수>=1 → 용신 비겁 / 희신 인성 / 기신 관성", () => {
+  // 일간 목: 관성=금, 재성=토, 인성=수, 식상=화
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 5, 수: 3 }), "寅"); // 화(식상)·토(재성)·금(관성) 모두 0
+  assert.equal(y.eokbu, "목", "용신은 비겁(왕신 순응)");
+  assert.equal(y.heesin, "수", "희신은 인성 — 임철초 '運行比劫印綬則吉'");
+  assert.equal(y.gisin, "금", "기신은 관성 — '官殺運, 謂之犯旺'");
+  assert.match(y.eokbuReason, /종왕/);
+});
+
+test("종왕 아님: 재성이 있으면 종왕으로 선언하지 않는다 (군겁쟁재 회피)", () => {
+  // 재성(토)이 원국에 있으면 四柱皆比劫이 아니고, 임철초는 "遇財星, 群劫相爭, 九死一生"이라 한다
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 4, 수: 2, 토: 2 }), "寅");
+  assert.notEqual(y.eokbu, "목", "비겁을 용신으로 주면 군겁쟁재를 키운다");
+  assert.notEqual(y.eokbu, "금", "관살이 0인데 관성을 뽑으면 犯旺");
+  assert.ok(y.eokbu === "화" || y.eokbu === "토", "식상 또는 재성 중에서 나와야 한다");
+  assert.match(y.eokbuReason, /관살 부재로 관성 제외/);
+});
+
+test("관살이 있으면 극왕이어도 기존 억부가 그대로 작동한다", () => {
+  // 관성(금)·식상(화)·재성(토)이 모두 1로 동률 → 기존 우선순위(관성>식상>재성)대로 관성
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 4, 수: 1, 금: 1, 화: 1, 토: 1 }), "寅");
+  assert.equal(y.eokbu, "금", "관살이 있으면 종왕·관성제외 분기를 타지 않는다");
+  assert.match(y.eokbuReason, /보강/);
+  assert.doesNotMatch(y.eokbuReason, /종왕/);
+  assert.doesNotMatch(y.eokbuReason, /관성 제외/);
+});
+
+test("태강은 종왕 스코프 밖이다 (旺之極 = 4득 4개인 극왕만)", () => {
+  const y = determineYongshin("목", { result: "태강" } as never, dist({ 목: 5, 수: 3 }), "寅");
+  assert.notEqual(y.eokbu, "목", "태강은 종왕 분기를 타면 안 된다");
+  assert.doesNotMatch(y.eokbuReason, /종왕/);
+});
+
+test("SCORING_VERSION 이 21로 올라가 있다 (용신이 점수에 물림)", async () => {
+  const src = await import("node:fs").then((fs) => fs.readFileSync("lib/utils/saju-scoring.ts", "utf-8"));
+  assert.match(src, /export const SCORING_VERSION = 21;/);
+});
+
+test("종왕 ∩ 조후충돌: 犯旺 오행을 '채우라'고 하지 않고 종왕 전용 문구가 붙는다", async () => {
+  // 종왕 기신은 관성이고 게이트가 관살 0을 요구하므로, 조후==기신이면 조후 오행 개수가
+  // 항상 0 → 옛 로직이면 n=0("조후위급, 채워라") 분기에 떨어진다. 임철초는 종왕에 관살을
+  // 두고 "官殺運, 謂之犯旺, 凶禍立至"라 하므로 가장 꺼릴 오행을 채우라는 지시가 된다.
+  //
+  // ★식상 0 조건이 들어간 뒤 실사용자 중에는 이 교집합이 0명이다(전수 감사 확인).
+  //   그래도 이론상 도달 가능하므로(화 일간 종왕 + 여름생 → 조후 수 = 관성 수)
+  //   방어 코드를 유지하고 합성 원국으로 잠근다.
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  // 화 일간: 관성=수, 재성=금, 식상=토, 인성=목. 화6·목2 로 나머지 전부 0
+  const y = determineYongshin("화", { result: "극왕" } as never, dist({ 화: 6, 목: 2 }), "午");
+  assert.match(y.eokbuReason, /종왕/, "이 구성은 종왕이어야 한다");
+  assert.equal(y.gisin, "수", "종왕 기신은 관성");
+  assert.equal(y.johu, "수", "午월(여름) 조후 = 수 — 교집합 성립");
+
+  const synthetic = {
+    pillars: { year: "丙午", month: "甲午", day: "丙寅", hour: "甲午" },
+    dayMaster: { stem: "丙", korean: "병", element: "화", yinYang: "양" },
+    elementDist: dist({ 화: 6, 목: 2 }),
+    elementAnalysis: { dominant: [], deficient: [], isBalanced: false },
+    strength: { result: "극왕", helpCount: 8, resistCount: 0, details: {}, legacy: "신강" },
+    tenStars: [], tenStarsFull: [], twelveStages: null,
+    relationships: { hap: [], chung: [], hyung: [], pa: [], hae: [] },
+    shinsal: { matches: [] },
+    yongshin: y,
+    isTimeUnknown: false,
+  } as never;
+  const line = formatEnrichedSajuText(synthetic).split("\n").find((l) => l.startsWith("기신:")) ?? "";
+  assert.match(line, /★종왕 우선/, "종왕 전용 문구가 붙어야 한다");
+  assert.doesNotMatch(line, /★조후 충돌/, "일반 조후 충돌 문구가 붙으면 안 된다");
+  assert.doesNotMatch(line, /채워야 할 오행/, "犯旺 오행을 채우라고 하면 안 된다");
+  assert.match(line, /犯旺/);
+});
+
+test("종왕 아님: 식상이 있으면 종왕으로 선언하지 않는다 (四柱皆比劫)", () => {
+  // 적천수가 든 종왕 실례 癸卯 乙卯 甲寅 乙亥 는 목6·수2 로 식상·재성·관성이 전부 0이다.
+  // "局中印輕, 行傷食亦佳"는 **운에서** 식상이 올 때 좋다는 말이지 원국 조건이 아니다.
+  // 초안이 이 대목을 원국 조건으로 잘못 읽어 식상 검사를 뺐다가 리뷰에서 잡혔다.
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 5, 수: 2, 화: 1 }), "寅");
+  assert.doesNotMatch(y.eokbuReason, /종왕/, "식상 1개라도 있으면 종왕이 아니다");
+  assert.match(y.eokbuReason, /관살 부재로 관성 제외/);
+  assert.equal(y.eokbu, "토", "관성 제외 후 {식상 화1, 재성 토0} 중 최저 = 재성");
+});
+
+test("적천수 종왕 실례(癸卯 乙卯 甲寅 乙亥) 구성이면 종왕으로 판정된다", () => {
+  // 목 6 · 수 2 — 식상(화)·재성(토)·관성(금) 전부 0
+  const y = determineYongshin("목", { result: "극왕" } as never, dist({ 목: 6, 수: 2 }), "卯");
+  assert.match(y.eokbuReason, /종왕/);
+  assert.equal(y.eokbu, "목");
+  assert.equal(y.heesin, "수");
+  assert.equal(y.gisin, "금");
+});
+
+test("조후 노트 n=0 분기: 조후 오행이 원국에 없으면 '채워라' 쪽으로 간다", async () => {
+  // ★L1(리뷰): 기존엔 n=0/1 을 소스 정규식으로만 잠가 n 계산이 틀려도 통과했다.
+  // ★★재검(리뷰): 첫 교체본은 구성이 충돌이 아니어서 조기 return 으로 아무것도 검증하지
+  //   않는 "공허한 테스트"였다. 실제로 충돌이 성립하는 구성으로 다시 잡는다.
+  //   토 일간 신약: 인성=화, 비겁=토, 식상=금, 재성=수, 관성=목.
+  //   화(0) < 토(1) → eokbu=인성(화) → 신약+인성 기신=재성(수). 午월 조후=수. 수는 0개 → n=0
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  const d = dist({ 토: 1, 금: 3, 목: 4 });
+  const y = determineYongshin("토", { result: "신약" } as never, d, "午");
+  assert.equal(y.eokbu, "화", "인성이 최저라 용신은 인성");
+  assert.equal(y.gisin, "수", "신약+인성 → 기신은 재성");
+  assert.equal(y.johu, "수", "午월 조후는 수");
+  assert.equal(y.johu, y.gisin, "충돌이 실제로 성립해야 이 테스트가 의미를 갖는다");
+  assert.equal(d["수"], 0, "조후 오행이 원국에 0개 → n=0 분기");
+
+  const line = renderGisinLine(y, d, formatEnrichedSajuText);
+  assert.match(line, /★조후 충돌/);
+  assert.match(line, /조후위급/, "n=0 이면 조후위급 문구");
+  assert.match(line, /채워야 할 오행/, "n=0 이면 채우는 쪽 처방");
+  assert.doesNotMatch(line, /이미.*있어 한열은 해소/, "n>=2 문구가 나오면 분기 오류");
+});
+
+test("조후 노트 n=1 분기: 하나뿐이면 '더 늘리지 않는' 쪽으로 간다", async () => {
+  // 같은 구성에서 수를 1개로 올리면 n=1 분기여야 한다 (용신·기신 배치는 유지)
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  const d = dist({ 토: 1, 금: 3, 목: 3, 수: 1 });
+  const y = determineYongshin("토", { result: "신약" } as never, d, "午");
+  assert.equal(y.johu, y.gisin, "충돌이 성립해야 한다");
+  assert.equal(d["수"], 1, "n=1 분기");
+
+  const line = renderGisinLine(y, d, formatEnrichedSajuText);
+  assert.match(line, /★조후 충돌/);
+  assert.match(line, /더 늘리지는 않는/, "n=1 이면 중립 처방");
+  assert.doesNotMatch(line, /조후위급/, "n=0 문구가 나오면 분기 오류");
+  assert.doesNotMatch(line, /한열은 해소/, "n>=2 문구가 나오면 분기 오류");
+});
+
+test("조후 노트 n>=2 분기: 조후 오행이 넉넉하면 '이미 갖춰졌다' 쪽으로 간다", async () => {
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  const saju = await calculateSaju(1995, 6, 21, 16, 30);
+  const enriched = enrichSajuData(saju!);
+  const y = enriched.yongshin!;
+  assert.equal(y.johu, y.gisin);
+  assert.equal(enriched.elementDist[y.johu!], 3, "표본의 조후 오행은 3개");
+  const line = formatEnrichedSajuText(enriched).split("\n").find((l) => l.startsWith("기신:")) ?? "";
+  assert.match(line, /이미 3개 있어 한열은 해소/);
+  assert.doesNotMatch(line, /조후위급/, "n>=2 인데 n=0 문구가 나오면 분기 오류");
+});
+
+/** 합성 원국으로 기신 라인만 렌더 */
+function renderGisinLine(
+  y: ReturnType<typeof determineYongshin>,
+  d: Record<KoreanElement, number>,
+  fmt: (x: never) => string,
+) {
+  const synthetic = {
+    pillars: { year: "甲午", month: "庚午", day: "己巳", hour: "乙丑" },
+    dayMaster: { stem: "己", korean: "기", element: "토", yinYang: "음" },
+    elementDist: d,
+    elementAnalysis: { dominant: [], deficient: [], isBalanced: false },
+    strength: { result: "신약", helpCount: 2, resistCount: 6, details: {}, legacy: "신약" },
+    tenStars: [], tenStarsFull: [], twelveStages: null,
+    relationships: { hap: [], chung: [], hyung: [], pa: [], hae: [] },
+    shinsal: { matches: [] },
+    yongshin: y,
+    isTimeUnknown: false,
+  } as never;
+  return fmt(synthetic).split("\n").find((l) => l.startsWith("기신:")) ?? "";
+}

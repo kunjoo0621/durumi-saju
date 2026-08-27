@@ -7,10 +7,15 @@
  *   ③ 비충돌자에게는 안 붙는가 (오염 0)
  *   ④ n=0/1/2+ 분기별 분포 (문구 튜닝 재료)
  *
- * ★TZ=UTC 필수 (절기 경계). ★Supabase 1000행 잘림 → 페이지네이션 필수.
+ * ★TZ=UTC 필수 (절기 경계) — 가드 있음. ★Supabase 1000행 잘림 → 페이지네이션 필수.
+ * ★region(경도 보정) 반영 — 안 하면 프로덕션과 다른 차트를 센다.
+ * ★한계: 음력 입력분은 birth_date 에 원본 그대로 저장되고 윤달 플래그가 없어 재구성 불가.
+ *   양력으로 간주해 계산되므로 인원수는 근사다.
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
+
+if (new Date().getTimezoneOffset() !== 0) { console.error("TZ=UTC 로 실행하세요"); process.exit(1); }
 const { calculateSaju, enrichSajuData } = await import("../lib/utils/saju");
 const { formatEnrichedSajuText } = await import("../lib/utils/saju-enrichment");
 
@@ -24,7 +29,7 @@ const sb = createClient(envVars.NEXT_PUBLIC_SUPABASE_URL, envVars.SUPABASE_SERVI
 
 const rows: any[] = [];
 for (let from = 0; ; from += 1000) {
-  const { data, error } = await sb.from("saju_results").select("id, birth_date, birth_time").range(from, from + 999);
+  const { data, error } = await sb.from("saju_results").select("id, birth_date, birth_time, region, calendar_type").range(from, from + 999);
   if (error) throw new Error(error.message);
   if (!data?.length) break;
   rows.push(...data);
@@ -33,22 +38,25 @@ for (let from = 0; ; from += 1000) {
 
 let n = 0, johuDeclared = 0, collision = 0, noteAttached = 0, falsePositive = 0;
 const byBucket: Record<string, number> = { "0": 0, "1": 0, "2+": 0 };
+let lunar = 0;
 for (const r of rows) {
-  if (!r.birth_date) continue;
-  const d = new Date(r.birth_date);
-  const [hh, mm] = String(r.birth_time ?? "12:00").split(":").map(Number);
+  const ds = String(r.birth_date ?? ""); if (ds.length < 10) continue;
+  const yy = +ds.slice(0, 4), mo = +ds.slice(5, 7), dd = +ds.slice(8, 10);
+  if (!yy || yy < 1901 || yy > 2030) continue;
+  if (r.calendar_type && String(r.calendar_type).includes("lunar")) lunar++;
+  const tm = String(r.birth_time ?? ""); const tu = tm.length < 5;
+  const [hh, mm] = tu ? [12, 0] : [+tm.slice(0, 2), +tm.slice(3, 5)];
   let e: any;
   try {
-    const s: any = await calculateSaju(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(),
-      Number.isFinite(hh) ? hh : 12, Number.isFinite(mm) ? mm : 0);
+    const s: any = await calculateSaju(yy, mo, dd, hh, mm, { birthLocation: r.region ?? undefined });
     if (!s) continue;
-    e = enrichSajuData(s, { isTimeUnknown: !r.birth_time });
+    e = enrichSajuData(s, { isTimeUnknown: tu });
   } catch { continue; }
   const y = e?.yongshin; if (!y) continue;
   n++;
   const text = formatEnrichedSajuText(e);
   const line = text.split("\n").find((l: string) => l.startsWith("기신:")) ?? "";
-  const hasNote = line.includes("★조후 충돌");
+  const hasNote = line.includes("★조후 충돌") || line.includes("★종왕 우선");
   if (!y.johu) { if (hasNote) falsePositive++; continue; }
   johuDeclared++;
   if (y.johu === y.gisin) {
@@ -58,7 +66,7 @@ for (const r of rows) {
     byBucket[c === 0 ? "0" : c === 1 ? "1" : "2+"]++;
   } else if (hasNote) falsePositive++;
 }
-console.log(`대상 ${n}명 · 조후 선언 ${johuDeclared}명`);
+console.log(`대상 ${n}명 · 조후 선언 ${johuDeclared}명 (★음력 원본 ${lunar}건 양력 간주 — 근사)`);
 console.log(`  충돌(조후==기신): ${collision}명`);
 console.log(`  └ 노트 부착: ${noteAttached}명  ${collision === noteAttached ? "✓ 100%" : "★누락 " + (collision - noteAttached)}`);
 console.log(`  비충돌 오염(노트 잘못 붙음): ${falsePositive}명 ${falsePositive === 0 ? "✓" : "★"}`);

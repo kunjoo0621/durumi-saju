@@ -56,3 +56,8 @@ scripts/enrich-quality-output.json
 
 # 하네스 스냅샷(시계열 축적용, 로컬)
 data/harness/
+
+# 일회성 조회 스크립트 (콘텐츠 제작용, 프로덕션 무관) — 커밋 대상 아님
+scripts/channel-roi.mts
+scripts/naver-kw-stats.mts
+scripts/vercel-analytics.mts
