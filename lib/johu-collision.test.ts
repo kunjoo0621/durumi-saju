@@ -185,15 +185,40 @@ test("적천수 종왕 실례(癸卯 乙卯 甲寅 乙亥) 구성이면 종왕�
 });
 
 test("조후 노트 n=0 분기: 조후 오행이 원국에 없으면 '채워라' 쪽으로 간다", async () => {
-  // ★L1(리뷰 지적): 기존엔 n=0/1 을 소스 정규식으로만 잠가서 n 계산이 틀려도 통과했다.
-  //   실제 formatEnrichedSajuText 출력으로 분기 동작을 검증한다.
+  // ★L1(리뷰): 기존엔 n=0/1 을 소스 정규식으로만 잠가 n 계산이 틀려도 통과했다.
+  // ★★재검(리뷰): 첫 교체본은 구성이 충돌이 아니어서 조기 return 으로 아무것도 검증하지
+  //   않는 "공허한 테스트"였다. 실제로 충돌이 성립하는 구성으로 다시 잡는다.
+  //   토 일간 신약: 인성=화, 비겁=토, 식상=금, 재성=수, 관성=목.
+  //   화(0) < 토(1) → eokbu=인성(화) → 신약+인성 기신=재성(수). 午월 조후=수. 수는 0개 → n=0
   const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
-  // 금 일간 신약: 인성=토, 비겁=금. 여름(午월) → 조후 수. 기신이 수가 되도록 구성
-  const y = determineYongshin("금", { result: "신약" } as never, dist({ 금: 1, 화: 4, 목: 2, 토: 1 }), "午");
-  if (y.johu !== y.gisin) return; // 이 구성이 충돌이 아니면 이 케이스는 검증 대상이 아니다
-  const line = renderGisinLine(y, dist({ 금: 1, 화: 4, 목: 2, 토: 1 }), formatEnrichedSajuText);
+  const d = dist({ 토: 1, 금: 3, 목: 4 });
+  const y = determineYongshin("토", { result: "신약" } as never, d, "午");
+  assert.equal(y.eokbu, "화", "인성이 최저라 용신은 인성");
+  assert.equal(y.gisin, "수", "신약+인성 → 기신은 재성");
+  assert.equal(y.johu, "수", "午월 조후는 수");
+  assert.equal(y.johu, y.gisin, "충돌이 실제로 성립해야 이 테스트가 의미를 갖는다");
+  assert.equal(d["수"], 0, "조후 오행이 원국에 0개 → n=0 분기");
+
+  const line = renderGisinLine(y, d, formatEnrichedSajuText);
   assert.match(line, /★조후 충돌/);
-  assert.match(line, /조후위급|채워야 할 오행/, "원국에 0개면 채우는 쪽");
+  assert.match(line, /조후위급/, "n=0 이면 조후위급 문구");
+  assert.match(line, /채워야 할 오행/, "n=0 이면 채우는 쪽 처방");
+  assert.doesNotMatch(line, /이미.*있어 한열은 해소/, "n>=2 문구가 나오면 분기 오류");
+});
+
+test("조후 노트 n=1 분기: 하나뿐이면 '더 늘리지 않는' 쪽으로 간다", async () => {
+  // 같은 구성에서 수를 1개로 올리면 n=1 분기여야 한다 (용신·기신 배치는 유지)
+  const { formatEnrichedSajuText } = await import("./utils/saju-enrichment");
+  const d = dist({ 토: 1, 금: 3, 목: 3, 수: 1 });
+  const y = determineYongshin("토", { result: "신약" } as never, d, "午");
+  assert.equal(y.johu, y.gisin, "충돌이 성립해야 한다");
+  assert.equal(d["수"], 1, "n=1 분기");
+
+  const line = renderGisinLine(y, d, formatEnrichedSajuText);
+  assert.match(line, /★조후 충돌/);
+  assert.match(line, /더 늘리지는 않는/, "n=1 이면 중립 처방");
+  assert.doesNotMatch(line, /조후위급/, "n=0 문구가 나오면 분기 오류");
+  assert.doesNotMatch(line, /한열은 해소/, "n>=2 문구가 나오면 분기 오류");
 });
 
 test("조후 노트 n>=2 분기: 조후 오행이 넉넉하면 '이미 갖춰졌다' 쪽으로 간다", async () => {
@@ -215,8 +240,8 @@ function renderGisinLine(
   fmt: (x: never) => string,
 ) {
   const synthetic = {
-    pillars: { year: "甲午", month: "壬午", day: "辛巳", hour: "戊子" },
-    dayMaster: { stem: "辛", korean: "신", element: "금", yinYang: "음" },
+    pillars: { year: "甲午", month: "庚午", day: "己巳", hour: "乙丑" },
+    dayMaster: { stem: "己", korean: "기", element: "토", yinYang: "음" },
     elementDist: d,
     elementAnalysis: { dominant: [], deficient: [], isBalanced: false },
     strength: { result: "신약", helpCount: 2, resistCount: 6, details: {}, legacy: "신약" },

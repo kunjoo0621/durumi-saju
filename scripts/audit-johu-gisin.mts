@@ -9,6 +9,8 @@
  *
  * ★TZ=UTC 필수 (절기 경계) — 가드 있음. ★Supabase 1000행 잘림 → 페이지네이션 필수.
  * ★region(경도 보정) 반영 — 안 하면 프로덕션과 다른 차트를 센다.
+ * ★한계: 음력 입력분은 birth_date 에 원본 그대로 저장되고 윤달 플래그가 없어 재구성 불가.
+ *   양력으로 간주해 계산되므로 인원수는 근사다.
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
@@ -64,7 +66,7 @@ for (const r of rows) {
     byBucket[c === 0 ? "0" : c === 1 ? "1" : "2+"]++;
   } else if (hasNote) falsePositive++;
 }
-console.log(`대상 ${n}명 · 조후 선언 ${johuDeclared}명 (음력 표기 ${lunar}건)`);
+console.log(`대상 ${n}명 · 조후 선언 ${johuDeclared}명 (★음력 원본 ${lunar}건 양력 간주 — 근사)`);
 console.log(`  충돌(조후==기신): ${collision}명`);
 console.log(`  └ 노트 부착: ${noteAttached}명  ${collision === noteAttached ? "✓ 100%" : "★누락 " + (collision - noteAttached)}`);
 console.log(`  비충돌 오염(노트 잘못 붙음): ${falsePositive}명 ${falsePositive === 0 ? "✓" : "★"}`);

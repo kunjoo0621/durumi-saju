@@ -9,7 +9,11 @@
  *      "犯旺이라 꺼려야 할 오행"과 "조후위급이라 채워야 할 오행"이 같은 프롬프트에 나가는가
  *
  * ★TZ=UTC 필수(절기 경계) — 가드 있음. ★Supabase 1000행 잘림 → 페이지네이션 필수.
- * ★region(경도 보정)·calendar_type(음력) 반영 — 안 하면 프로덕션과 다른 차트를 센다.
+ * ★region(경도 보정) 반영 — 안 하면 프로덕션과 다른 차트를 센다.
+ * ★한계: 음력 입력분(249건, 7.6%)은 birth_date 에 **원본 음력 그대로** 저장돼 있고
+ *   (payment/complete:277·career/start:222 — 양력 변환은 계산 시점에만 한다),
+ *   saju_results 에 윤달 플래그가 없어 재구성할 수 없다. 그 건들은 양력으로 간주해
+ *   계산되므로 아래 인원수는 근사다. 국소성 논증(같은 차트로 구/신 규칙 비교)은 무영향.
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
@@ -73,7 +77,7 @@ for (const r of rows) {
   const ds = String(r.birth_date ?? ""); if (ds.length < 10) continue;
   const y = +ds.slice(0,4), mo = +ds.slice(5,7), dd = +ds.slice(8,10);
   if (!y || y < 1901 || y > 2030) continue;
-  // ★음력은 프로덕션 입력 경로에서 이미 양력으로 변환돼 저장된다고 보고 그대로 쓰되, 건수를 공시한다
+  // ★음력 원본 저장분은 양력으로 간주된다(위 헤더 한계 참조). 건수만 공시한다.
   if (r.calendar_type && String(r.calendar_type).includes("lunar")) lunar++;
   if (r.region) regioned++;
   const tm = String(r.birth_time ?? ""); const tu = tm.length < 5;
@@ -121,7 +125,7 @@ for (const r of rows) {
   }
 }
 const avg = deltas.length ? (deltas.reduce((a,b)=>a+b,0)/deltas.length).toFixed(2) : "-";
-console.log(`대상 ${n}명 (음력 표기 ${lunar}건 · region 보유 ${regioned}건 — 경도 보정 반영)`);
+console.log(`대상 ${n}명 (region 보정 ${regioned}건 / ★음력 원본 ${lunar}건은 양력 간주 — 인원수 근사)`);
 console.log(`  ① 종왕(극왕+관살0+재성0+식상0+인수>=1): ${jongwang}명`);
 console.log(`  ② 관성 제외(극왕+관살0, 종왕 아님) : ${noGwanOther}명`);
 console.log(`  용신·기신·희신이 바뀐 총 인원      : ${changed}명`);
