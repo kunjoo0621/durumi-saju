@@ -68,15 +68,29 @@ async function main() {
   // 세션 쿠키로 발급되면 브라우저를 닫는 순간 사라져서, 성공 메시지만 뜨고 다음 실행은 실패한다.
   let persisted = false;
   if (ok) {
-    const cookies = await ctx.cookies();
-    const auth = cookies.filter((c) => c.name === "NID_AUT" || c.name === "NID_SES");
+    const isAuth = (n: string) => n === "NID_AUT" || n === "NID_SES";
+    let auth = (await ctx.cookies()).filter((c) => isAuth(c.name));
     // Playwright 는 세션 쿠키의 expires 를 -1 로 준다.
+    const sessionScoped = auth.some((c) => !(typeof c.expires === "number" && c.expires > 0));
+
+    if (sessionScoped && auth.length >= 2) {
+      // ── 폴백: 만료시각을 직접 붙여 디스크에 남긴다 ──────────────────────
+      // '로그인 상태 유지'를 안 켜면 네이버가 이 둘을 세션 쿠키로 주고, 크롬은 창을 닫을 때
+      // 버린다(영구 프로필이어도 마찬가지). 값 자체는 그대로 유효하므로 같은 값에
+      // 만료시각만 붙여 다시 심으면 디스크에 저장된다.
+      // ★단, 이건 **클라이언트 보관 기간**만 늘린다. 네이버 서버가 세션을 먼저 끊으면
+      //   그때는 조회 스크립트가 로그인 폼을 감지해 재로그인을 안내한다(조용히 실패 안 함).
+      const until = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
+      console.log("\n  '로그인 상태 유지'가 꺼져 있어 인증 쿠키에 만료시각을 붙여 저장합니다(30일).");
+      await ctx.addCookies(auth.map((c) => ({ ...c, expires: until })));
+      auth = (await ctx.cookies()).filter((c) => isAuth(c.name));
+    }
+
     persisted = auth.length >= 2 && auth.every((c) => typeof c.expires === "number" && c.expires > 0);
     if (!persisted) {
-      console.error("\n\x1b[31m❌ 로그인은 됐지만 '로그인 상태 유지'가 꺼져 있습니다.\x1b[0m");
-      console.error(`   인증 쿠키(NID_AUT/NID_SES)가 세션 쿠키라 브라우저를 닫으면 사라집니다.`);
+      console.error("\n\x1b[31m❌ 인증 쿠키를 영구 저장하지 못했습니다.\x1b[0m");
       console.error(`   찾은 인증 쿠키: ${auth.map((c) => `${c.name}(expires=${c.expires})`).join(", ") || "없음"}`);
-      console.error("\n   \x1b[1m'로그인 상태 유지'를 켜고 다시 실행해주세요.\x1b[0m\n");
+      console.error("\n   \x1b[1m로그인 화면에서 '로그인 상태 유지'를 켜고 다시 실행해주세요.\x1b[0m\n");
     }
   } else {
     console.error("\n❌ 시간 내 로그인이 확인되지 않았습니다. 다시 실행해주세요.\n");
