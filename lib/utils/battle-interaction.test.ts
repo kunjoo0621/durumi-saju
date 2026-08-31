@@ -211,3 +211,21 @@ test("[battle] 두 대운이 같은 오행이면 synced=true", () => {
   assert.equal(r.fortuneSync?.synced, true);
   assert.equal(r.fortuneSync?.summary, "현재 대운이 둘 다 목 기운 — 같은 흐름");
 });
+
+// ★역검증으로 찾은 구멍을 메운다.
+// 위 두 테스트의 픽스처는 A쪽 오행이 전부 0 아니면 2 이상이라 경계값 1이 한 번도
+// 안 나왔다. 그래서 결핍 임계를 va===0 → va<=1 로 바꿔도 아무 테스트가 안 깨졌다.
+// 실제 원국은 오행이 1개인 경우가 흔하고, 이 임계는 "상대가 채워준다"는 신호를
+// 좌우하므로(couple 판정의 상보 축) 경계를 명시적으로 못 박는다.
+test("[battle] 오행 경계값 — 1개 있으면 결핍이 아니다(0 만 결핍)", () => {
+  const a = mk({ stem: "甲", dist: { 목: 3, 화: 2, 토: 1, 금: 1, 수: 0 } });
+  const b = mk({ stem: "庚", dist: { 목: 0, 화: 1, 토: 2, 금: 3, 수: 2 } });
+  const { elementCoverage: c } = calculateBattleInteraction(a, b);
+
+  // A는 수만 0 → 수만 결핍. 토·금은 1개씩 있으므로 결핍이 아니다.
+  assert.deepEqual(c.deficientAlone.a, ["수"], "1개는 결핍이 아니어야 한다");
+  assert.deepEqual(c.deficientAlone.b, ["목"]);
+  assert.deepEqual(c.coveredByOther.a, ["수"], "A의 수 결핍을 B가 채운다");
+  assert.deepEqual(c.coveredByOther.b, ["목"], "B의 목 결핍을 A가 채운다");
+  assert.equal(c.percent, 100);
+});
