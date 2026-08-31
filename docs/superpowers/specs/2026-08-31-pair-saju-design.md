@@ -124,7 +124,8 @@
 ```
 lib/pair/
   relation-tables.ts        # 해(害)·귀문·(파) 신설 테이블 + 천간충 정본화. 지지 66쌍 전수 관계 산출
-  pair-facts.ts             # derivePairFacts(a, b, opts) → PairFacts (결정론 코어)
+  pair-facts.ts             # derivePairFacts(a, b, { currentYear }) → PairFacts (결정론 코어)
+                            # ★currentYear 는 반드시 인자로 받는다(new Date() 금지) — 아래 Phase 1 참조
   pair-input.ts             # PairPersonInput 정규화 + 두 원국 계산 번들 (battle의 playerToInputPayload 미러)
   couple-decision.ts        # 상품 1 판정 레이어
   child-path.ts             # 상품 2 판정 레이어 (Phase 6)
@@ -158,12 +159,12 @@ interface PairFacts {
   // 십성 교차
   tenStarExchange: { aSeesB: string; bSeesA: string };   // 내 일간 기준 상대 일간의 십성 (bare)
   spouseStarCross: {                                      // couple 전용 소비, 엔진이 산출
-    applicable: boolean;                                  // 동성 커플 false
+    // ★분기 플래그 없음(§1-1 운영자 확정). 성별 무관하게 무조건 양방향 산출한다.
     aHitByB: boolean; bHitByA: boolean;                   // 상대 일간·상대 일지 정기가 내 배우자성인가
   };
   // 신살 교차
   shinsalCross: { dohwaBoth: boolean; hongyeomBoth: boolean; cheoneulExchange: boolean };
-  // 용신·오행 (battle-interaction 이관)
+  // 용신·오행 (battle-interaction 을 import 해서 채운다 — 복사 아님, §Phase 1-2)
   yongshinCompat: {...}; elementCoverage: {...};
   // 타이밍 교차
   fortuneCross: {
@@ -195,9 +196,11 @@ interface PairFacts {
 ### 3-1. `couple-decision.ts` [제안]
 
 - 입력: `PairFacts` + 양쪽 `MarriageFacts`(기존 `deriveMarriageFacts` 재사용 — 내 쪽 값은 기존 결혼운 리포트와 **함수 단위로 동일**).
-- 4축 점수(각 −2~+2 정수): 일간 축(합 +2, 생 +1, 비화 0, 극 −1, 충 −2) / 일지 축(합·삼합반합 양수, 충·형·원진·귀문 음수, 매트릭스 교차 개수 보정) / 상보 축(용신 상호 +2 ~ 기신 상호 −2, 오행 커버리지 보정) / 타이밍 축(교집합 연도 유무·근접도).
+- **★궁위 가중은 이 판정 레이어에서 준다 — 사실 레이어(PairFacts)는 raw 로 둔다.** 년·월·일·시는 자리마다 뜻이 다르고(년=뿌리·집안, 월=사회, 일=배우자궁, 시=말년·자식) 특히 일지↔일지가 가장 무겁다. 그런데 가중을 PairFacts 에 넣으면 "사실"이 판정 파라미터에 오염된다. `branchMatrix` 가 `posA`/`posB` 를 들고 있으므로 판정 레이어가 위치를 보고 재계산한다. 평탄 카운트(`wonjinCount` 등)는 판정 입력에서 빼거나 참고치로 격하한다.
+  - 배율 [제안, Phase 2 경계 캘리브레이션에서 확정]: 동일 궁위 쌍(년↔년·월↔월) 기본 가중, **월지 관여 셀 ×1.5**(`career-facts.ts:84` `MONTH_BRANCH_MULTIPLIER` 미러), 원거리 교차(년↔시) 할인(`marriage-facts.ts:59` `ADJACENT_PILLARS` 의 원거리 절삭 철학의 2인 버전). 고전은 겉궁합(년지)↔속궁합(일지)의 경중 차등 자체는 지지하지만 **구체 배율은 고전에 없다** — 자사 선례 배율을 초기값으로 쓰고 분포로 조정하는 것이 정직하다.
+- 4축 점수(각 −2~+2 정수): 일간 축(합 +2, 생 +1, 비화 0, 극 −1, 충 −2) / 일지 축(합·삼합반합 양수, 충·형·원진·귀문 음수, 궁위 가중 매트릭스 보정) / 상보 축(용신 상호 +2 ~ 기신 상호 −2, 오행 커버리지 보정) / 타이밍 축(교집합 연도 유무·근접도).
 - 종합 판정 5단계: 가중합의 고정 경계 매핑. 경계값은 MC 실측(§6 Phase 1) 후 확정하되 **경계 확정 절차 자체를 완료 판정에 포함**(빈칸 아님 — 확정 전 출시 불가 게이트).
-- consistency 규칙(`couple-consistency.ts`): ①내 배우자궁 안정도가 기존 결혼운 결과(있다면)와 동일한 함수 산출인지, ②spouseStarCross.applicable=false면 배우자성 문구 부재, ③판정 단계와 축 합계의 단조성. `marriage-consistency.ts`(17줄) 패턴 미러.
+- consistency 규칙(`couple-consistency.ts`): ①내 배우자궁 안정도가 기존 결혼운 결과(있다면)와 동일한 함수 산출인지, ②배우자성 서술에 혼인 신분어(남편·아내·시댁·처가)가 없을 것(§1-1 중립 표현 확정), ③판정 단계와 축 합계의 단조성. `marriage-consistency.ts`(17줄) 패턴 미러.
 
 ### 3-2. `child-path.ts` [제안]
 
@@ -307,10 +310,35 @@ interface PairFacts {
 - 완료 판정: 지지 66쌍 전수 관계 스냅샷 테스트 통과, 사전 정합 테스트(육해·귀문 ↔ `lib/dict/data/relation/*-hae.ts`·`sinsal/gwimun.ts`) 통과, facts-core 계약 테스트(골든 입력에서 레거시 3파일 산출과 일치) 통과.
 - 검증: `TZ=UTC npm test` (lib/pair/relation-tables.test.ts, lib/facts-core.test.ts), `npx next build`.
 
-**Phase 1 — pair-facts 엔진 (couple 필요 범위)**
-- 작업: `pair-input.ts` + `derivePairFacts`(§2-3 전 필드), battle-interaction 4계산 이관, 시주 미상 중화, 동성 커플 applicable 플래그.
-- 완료 판정: ①결정론(동일 입력 → 동일 출력 스냅샷), ②대칭 프로퍼티 테스트(A/B 스왑 → 방향 필드 미러 외 동일), ③battle-interaction 이관분 골든 동등성(기존 함수 산출 = 이관 산출, N=50 랜덤 원국쌍), ④MC 발화율 실측 — 랜덤 원국쌍 10,000건에서 각 관계 사실의 기저 발생률이 이론값(육합 6/66≈9% 등)과 일치.
-- 검증: `TZ=UTC npm test` (lib/pair/pair-facts.test.ts), `TZ=UTC npx tsx scripts/pair-mc.mts`(신설 — `scripts/career-mc.ts`·`scripts/battle-weighted-simulation.mts` 선례 미러).
+**Phase 1 — pair-facts 엔진 (couple 필요 범위)** — ★2026-08-31 재설계. 초안(이관+골든+MC)은 폐기.
+
+> **왜 초안을 버렸나 (전부 코드로 확인)**
+> - **[확인] 이관은 우리가 없애려던 클론 그 자체였다.** 계산 4종 중 3종(`calcYongshinCompat:60`·`calcDayStemRelation:90`·`calcElementCoverage:126`)은 `EnrichedSajuData` 둘만 받는 순수 함수다. 밖에서 못 부르는 이유는 배틀 전용 의미론이 아니라 **`export` 키워드가 없어서**일 뿐이다. 복사하지 말고 export 를 붙여 그대로 쓰면 정본이 한 벌로 유지되고, "대량 스냅샷 → 골든 100% → 롤백" 의식 전체가 불필요해진다(그 의식은 복사했기 때문에 생기는 비용이었다). Phase 0의 "정본 import, 복사 금지"와도 이제 일관된다.
+> - **[확인] 이관 대상이 비결정론이다.** `battle-interaction.ts:161` 이 `new Date().getFullYear()` 를 읽고, `saju-fortune.ts:177` 의 세운 윈도우도 wall-clock 기준이다. 그대로 쓰면 초안의 완료 판정 ①"결정론"이 **정의상 성립할 수 없다**. 더 심각한 건 결제다 — couple 은 marriage analyze 의 "결제 전 판정 게이트"를 미러하므로, 12/31 teaser → 1/1 analyze 면 해가 바뀌며 판정이 밀려 **정당한 결제가 409로 튕긴다**. 배틀은 즉석 재계산이라 이 문제가 없었을 뿐이다. → `currentYear` 를 인자로 주입하고 `pair_facts_json` 에 저장, 게이트 재계산도 저장된 연도로 한다. 선례: `deriveTiming(…, currentYear)` (`marriage-facts.ts:283`).
+> - **[확인] MC 발화율은 정보량이 0이고 이론값도 틀렸다.** 잡으려던 것(테이블 정확성)은 Phase 0 의 78쌍 전수 카운트가 **이미 완전히** 잠갔다. 게다가 초안의 "육합 ≈ 6/66"은 한 원국 안에서 두 글자를 뽑는 모델이라 두 사람에는 안 맞는다 — 서로 독립이므로 순서쌍 12×12=144, 육합은 **12/144 ≈ 8.33%**이고 66-모델은 동일 지지 쌍을 아예 배제한다. 만세력 랜덤 원국은 년지가 출생연도에 종속돼 어떤 균일 이론값과도 어긋난다. → **삭제.** 배관 검증은 **144 순서쌍 전수**(만세력 불필요)와 절입 경계 골든이 정확히 잡는다. 현실 생년 분포 MC 는 Phase 2 판정 경계 확정의 도구이지 여기가 아니다.
+> - **[확인] `summary` 는 배틀 전용 프로즈다.** `battle-interaction.ts:73·77·118` 이 "A가 B의 용신(금)을 채워주지만…", "기신을 자극하는 조합" 처럼 **용신·기신 라벨과 A/B 표기**를 문자열에 박는다. §1-0 확정(용신·기신 용어 미노출)과 충돌하므로 PairFacts 는 **구조 필드만** 소비하고 summary 는 배틀 표현 계층에 남긴다.
+> - **[확인] `battle-interaction` 에는 동작 테스트가 0개다**(`battle-interaction.test.ts` 부재. 존재하는 건 천간표 상수를 소스 파싱으로 비교하는 계약 테스트뿐 — `saju-facts-engine.test.ts`). export 한 단어를 붙이는 diff 라도 **회귀 테스트를 먼저 깔고** 만진다.
+> - **[확인] 천간표는 이미 두 벌이다** — `battle-interaction.ts:6` 과 `yearly-interaction.ts:15` 의 `CHEONGAN_HAP`. 소스 파싱 계약 테스트가 이 둘만 감시한다. §2-1 이 약속한 "천간충 정본화"를 Phase 0 이 하지 않았으므로(지지만 했다) 여기서 회수한다 — 세 번째 사본을 만들지 않는 것이 최소 조건이다.
+> - **[확인] 시주 미상 degradation 이 절반만 정의돼 있었다.** 초안은 "4×4 → 3×3"만 말했는데, `calcElementCoverage:126` 은 `va === 0` 으로 결핍을 판정하므로 6글자 원국은 결핍이 구조적으로 더 뜨고 → 상대가 "채워준다"는 **가짜 양(+) 신호**가 커진다. 못 본 축이 "관계 없음"이 아니라 "상보 있음"으로 조작되는 방향이라, 지키려던 원칙을 정확히 배반한다. elementCoverage·용신 축의 중화 정의를 함께 넣는다.
+
+**1-1. PairFacts 인터페이스 + 입력 정규화** (degradation·결정론을 처음부터)
+- 작업: `pair-input.ts` + PairFacts 타입 확정. `currentYear` 명시 인자, `reliability.neutralizedAxes` 에 지지 매트릭스 + elementCoverage + 용신 축의 시주 미상 의미론 포함, 요약 카운트를 궁위 보존형으로(평탄 카운트가 판정 입력이 되면 년↔시 원진과 월↔월 원진이 같은 1이 된다).
+- 완료 판정: 시주 미상 A/B/양쪽 3케이스의 축별 산출·중화가 테스트로 명세됨.
+- 검증: `TZ=UTC npm test` (lib/pair/pair-facts.test.ts).
+
+**1-2. battle-interaction 연결 (import — 이관 아님)**
+- 작업: ①먼저 `battle-interaction` 최초의 동작 테스트를 깐다. ②순수 3계산에 `export` 추가(동작 무변경). ③`calcFortuneSync` 만은 주입 연도를 받는 소형 재작성(골든 동등성이 성립할 수 없는 함수다). ④천간표 정본 위치를 정하고 파싱 계약 테스트를 확장해 3벌 드리프트 차단. ⑤summary 는 소비하지 않고 구조 필드만 매핑.
+- 완료 판정: 순수 3계산 diff = `export` 키워드뿐. fortuneSync 는 "동일 연도 주입 시 기존과 동일" 단위 테스트 통과. **기존 배틀 관련 테스트 전량 통과.**
+- 검증: `TZ=UTC npm test`, `npx next build`.
+
+**1-3. 신설 축 TDD** — 지지 4×4 매트릭스 / 십성 교차(양방향) / 배우자성 교차(분기 없이 무조건 양방향) / 신살 교차 / 타이밍 교차
+- 타이밍 교차는 **`isPast` 필터 필수** — `timingWindows` 는 `currentYear − 1` 부터 담기므로(`marriage-facts.ts:300`) 단순 교집합이면 작년이 "둘 다 열리는 해"로 나간다.
+- 신살 교차 재료는 enrichment 에 존재(도화·천을·홍염).
+- 완료 판정: 축별 골든 + 절입 경계 원국쌍 골든 통과. 검증: `TZ=UTC npm test`.
+
+**1-4. 전수 검증 잠금**
+- ①결정론: 연도 고정 스냅샷(주입 후에야 성립한다), ②**144 순서쌍 전수** 대칭 프로퍼티(방향 필드 미러 외 동일), ③MC 발화율 삭제 — Phase 2 경계 캘리브레이션으로 이동.
+- 완료 판정 + 검증: `TZ=UTC npm test` 전량, `npx next build`, `grep -rn "displayGrade\|COMPOSITE_GRADE_CUTOFFS" lib/pair` 0건.
 
 **Phase 2 — 상품 1 couple 전체 파이프라인**
 - 작업: `couple-decision.ts`(+판정 경계 확정), `couple-{prompt,consistency,postprocess,grade}.ts`, 마이그레이션, `/api/couple/{start,analyze,results}`, `app/couple/*`, `usePairStore`, coins·services·menu 반영, share-couple.
