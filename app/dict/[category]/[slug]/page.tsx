@@ -8,6 +8,7 @@ import SingleCharHero from "@/components/dict/SingleCharHero";
 import ConceptHero from "@/components/dict/ConceptHero";
 import QuickFacts from "@/components/dict/QuickFacts";
 import DictBodyView from "@/components/dict/DictBody";
+import CopyWithSource from "@/components/CopyWithSource";
 import FAQList from "@/components/dict/FAQList";
 import RelatedChips from "@/components/dict/RelatedChips";
 import CTABlock from "@/components/dict/CTABlock";
@@ -211,7 +212,9 @@ export default async function DictDetailPage({ params }: Props) {
           )}
 
           <div className="mt-12">
-            <DictBodyView body={entry.body} />
+            <CopyWithSource>
+              <DictBodyView body={entry.body} />
+            </CopyWithSource>
           </div>
 
           {entry.faq.length > 0 && (

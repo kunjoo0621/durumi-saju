@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Header from "@/components/layout/Header";
 import BusinessFooter from "@/components/BusinessFooter";
 import StoryBody from "@/components/stories/StoryBody";
+import CopyWithSource from "@/components/CopyWithSource";
 import StoryCTA from "@/components/stories/StoryCTA";
 import StoryCard from "@/components/stories/StoryCard";
 import StoryViewCounter from "@/components/stories/StoryViewCounter";
@@ -278,7 +279,9 @@ export default async function StoryDetailPage({ params }: Props) {
           />
         ) : null}
 
-        <StoryBody story={story} />
+        <CopyWithSource>
+          <StoryBody story={story} />
+        </CopyWithSource>
 
         <div className="mt-12">
           <StoryCTA
