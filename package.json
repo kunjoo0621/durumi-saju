@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components lib hooks store types --ext .ts,.tsx",
-    "test": "tsx --test lib/*.test.ts",
+    "test": "tsx --test lib/*.test.ts lib/**/*.test.ts",
     "postinstall": "node scripts/patch-saju-exports.mjs"
   },
   "dependencies": {
