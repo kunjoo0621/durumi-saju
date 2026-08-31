@@ -5,9 +5,18 @@
 // 두 사람 원국을 대조할 때는 겹치는 관계가 사라지면 안 된다. 사전 정본상
 // 丑午는 해(害)·원진·귀문 셋 다이고, 셋의 해석이 서로 다르다.
 
-import { HYUNG, WONJIN } from "@/lib/utils/saju-enrichment";
+import { BANGHAP, HYUNG, SAMHAP, WONJIN, YUKAP, YUKCHUNG } from "@/lib/utils/saju-enrichment";
 
-export type BranchRelationKind = "해" | "원진" | "귀문" | "형";
+export type BranchRelationKind =
+  | "육합"
+  | "삼합"
+  | "방합"
+  | "동일"
+  | "충"
+  | "형"
+  | "해"
+  | "원진"
+  | "귀문";
 
 // 지지 쌍 엔트리. dictSlug 를 들고 다니는 이유는 사전(lib/dict)과의 대조를
 // 테스트가 기계적으로 강제하기 위해서다 — 사람이 눈으로 맞추면 반드시 갈라진다.
@@ -55,6 +64,22 @@ function tupleIn(pairs: [string, string][], a: string, b: string): boolean {
 // 형(刑) — saju-enrichment 의 HYUNG 정본을 그대로 쓴다(테이블 복사 금지).
 // 삼형·상형은 두 글자가 같은 그룹에 있으면 성립하고, 자형은 같은 글자가 두 번
 // 나오는 그룹(["辰","辰"] 등)이라 그룹 안 중복 개수로 가른다.
+// 삼합·방합은 세 글자 그룹이라 두 글자만 놓으면 반합(半合)이 된다.
+// ★학파차 주의: 삼합 반합을 "왕지(子午卯酉)를 포함해야 성립"으로 보는 견해가 있으나,
+//   우리 엔진은 이미 그룹 안 두 글자면 성립으로 판정해 왔다(getPairRelation). 여기서
+//   정의를 바꾸면 같은 사실이 두 모듈에서 갈린다. 바꾸려면 사전·기존 상품과 함께 바꿔야 한다.
+function triadHasBoth(
+  triads: readonly (readonly string[])[],
+  a: string,
+  b: string,
+): boolean {
+  if (a === b) return false;
+  return triads.some((t) => {
+    const g = t.slice(0, 3);
+    return g.includes(a) && g.includes(b);
+  });
+}
+
 function isHyungPair(a: string, b: string): boolean {
   return HYUNG.some(([group]) => {
     if (!group.includes(a) || !group.includes(b)) return false;
@@ -65,7 +90,17 @@ function isHyungPair(a: string, b: string): boolean {
 
 export function getBranchRelations(a: string, b: string): BranchRelationKind[] {
   const out: BranchRelationKind[] = [];
+  // 순서는 "붙는 관계 → 부딪히는 관계"로 읽히게 두되, 우선순위가 아니다.
+  // 이 함수는 성립하는 관계를 전부 돌려주므로 어느 것도 다른 것을 가리지 않는다.
+  if (YUKAP.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) out.push("육합");
+  // 방합 반방합 — 같은 계절 세 글자 중 둘. 기존 getPairRelation(saju-enrichment.ts:905)이
+  // "그룹 안 두 글자면 성립"으로 보고 있어 그 판정을 그대로 따른다(같은 사실이 두 모듈에서
+  // 갈리지 않게 하는 것이 이 엔진의 목적이다).
+  if (triadHasBoth(SAMHAP, a, b)) out.push("삼합");
+  if (triadHasBoth(BANGHAP, a, b)) out.push("방합");
+  if (a === b) out.push("동일");
   if (entryIn(YUKHAE, a, b)) out.push("해");
+  if (tupleIn(YUKCHUNG, a, b)) out.push("충");
   if (isHyungPair(a, b)) out.push("형");
   if (tupleIn(WONJIN, a, b)) out.push("원진");
   if (entryIn(GWIMUN, a, b)) out.push("귀문");
