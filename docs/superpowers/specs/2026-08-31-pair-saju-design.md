@@ -300,8 +300,8 @@ interface PairFacts {
 > - ★설계 근거로 드러난 것: 기존 `getPairRelation`은 우선순위(합>충>형>원진>삼합>방합>동일) 때문에 **巳申에서 형을 통째로 버린다**(육합+삼형이 겹치는 형합 자리). 丑未(충+형)·子丑(육합+방합)·寅巳(해+형)·丑午(해+원진+귀문)도 같은 손실을 겪는다. 다중 반환이 정확도와 직결되는 실증.
 > - ★삼합·방합 반합은 기존 `getPairRelation`의 "그룹 안 두 글자면 성립"을 그대로 따랐다. 왕지(子午卯酉) 포함을 요구하는 학파가 있으나 여기서 바꾸면 같은 사실이 두 모듈에서 갈린다 — **미결로 남긴 학파 선택**이며 바꾸려면 사전·기존 상품과 함께 바꿔야 한다.
 > - `lib/facts-core.ts` 신설. **couple이 실제로 쓰는 `bareStar`·`tenStarOf`·`PILLARS`만** 뽑았다. 가중 십성 모델은 child가 소비할 때 옮긴다(소비자 없는 코드 금지). 기존 marriage/wealth/career-facts는 한 줄도 안 바꿨다.
-> - 검증: 신규 15개 + 전체 **430개 통과**, lint 에러 0, `npx next build` 성공.
-> - 잠금 테스트: 78쌍 전수 종류별 개수(육합6·삼합12·방합12·동일12·충6·형11·해6·원진6·귀문6) / 인자 순서 대칭성 78쌍 / 사전 정합 2종(육해↔`relation` -hae 6엔트리 슬러그, 귀문↔`sinsal/gwimun` highlight "조합") / facts-core↔`calculateTenStarsFull` 천간 100조합 전수 대조.
+> - 검증: 신규 **19개**(relation-tables 13 + facts-core 6) + 전체 **431개 통과**, lint 에러 0, `npx next build` 성공.
+> - 잠금 테스트: 78쌍 전수 종류별 개수(육합6·삼합12·방합12·동일12·충6·형11·해6·원진6·귀문6) / 인자 순서 대칭성 78쌍 / 사전 정합 3종(육해↔`relation` -hae 6엔트리의 **슬러그 + name·hanja 값**, 귀문↔`sinsal/gwimun` highlight "조합"). ★슬러그만 대조하면 卯辰을 卯巳로 잘못 적어도 통과하므로 값까지 잠갔다 / facts-core↔`calculateTenStarsFull` 천간 100조합 전수 대조.
 > - ⚠️ 계약 테스트의 한계: 레거시 3파일의 헬퍼는 module-private라 **직접 대조가 불가능**하다. 대신 엔진 본체(`calculateTenStarsFull`)와 대조했다. 레거시가 엔진과 갈라지는 경우는 이 테스트가 못 잡는다.
 - 작업: `lib/pair/relation-tables.ts`(해 6조·귀문 테이블 신설, 천간충 정본화, 파 제외 결정 반영), `lib/facts-core.ts` 추출, `package.json` 테스트 글롭 확장.
 - 완료 판정: 지지 66쌍 전수 관계 스냅샷 테스트 통과, 사전 정합 테스트(육해·귀문 ↔ `lib/dict/data/relation/*-hae.ts`·`sinsal/gwimun.ts`) 통과, facts-core 계약 테스트(골든 입력에서 레거시 3파일 산출과 일치) 통과.

@@ -160,3 +160,25 @@ test("귀문 6쌍은 사전 gwimun 엔트리의 '조합' 필드와 일치한다"
     `엔진 테이블과 사전 '조합' 필드가 어긋났다.\n  엔진: ${fromTable}\n  사전: ${combo}`,
   );
 });
+
+// 위의 슬러그 대조는 "6개가 짝지어진다"까지만 보장한다. 卯辰을 卯巳로 잘못 적어도
+// 슬러그(myojin-hae)가 맞으면 통과한다 — 값 자체는 무방비다. 개별 쌍 테스트가
+// 걸어 둔 子未·丑午·寅巳를 빼면 卯辰·申亥·酉戌 셋이 그 구멍에 있다.
+// 사전 엔트리의 제목이 쌍을 한글·한자로 둘 다 적고 있으므로 그걸로 값을 잠근다.
+test("육해 6쌍은 사전 엔트리의 name·hanja 와 글자까지 일치한다", () => {
+  for (const { a, b, dictSlug } of YUKHAE) {
+    const entry = getAllDictEntries().find((e) => e.slug === dictSlug);
+    assert.ok(entry, `사전에 ${dictSlug} 엔트리가 없다`);
+
+    assert.equal(
+      entry!.name,
+      `${BRANCH_INFO[a].korean}${BRANCH_INFO[b].korean}해`,
+      `${dictSlug}: 엔진 쌍(${a}${b})이 사전 name 과 다르다`,
+    );
+    assert.equal(
+      entry!.hanja,
+      `${a}${b}害`,
+      `${dictSlug}: 엔진 쌍(${a}${b})이 사전 hanja 와 다르다`,
+    );
+  }
+});
