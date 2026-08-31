@@ -57,7 +57,11 @@ export function calculateBattleInteraction(
 }
 
 /* ── 1. 용신 상보성 ── */
-function calcYongshinCompat(a: EnrichedSajuData, b: EnrichedSajuData) {
+// ★export 인 이유: lib/pair 가 이 계산을 복사하지 않고 그대로 쓴다(정본 한 벌 유지).
+//   순수 함수라 배틀 전용 의미론이 없다 — EnrichedSajuData 둘만 받는다.
+//   단, 반환값의 summary 는 배틀 프롬프트용 프로즈(용신·기신 라벨이 박혀 있다)라
+//   pair 는 구조 필드만 소비한다. 회귀 감시: battle-interaction.test.ts
+export function calcYongshinCompat(a: EnrichedSajuData, b: EnrichedSajuData) {
   const aDom = a.elementAnalysis.dominant;
   const bDom = b.elementAnalysis.dominant;
 
@@ -87,7 +91,8 @@ function calcYongshinCompat(a: EnrichedSajuData, b: EnrichedSajuData) {
 }
 
 /* ── 2. 일간 관계 ── */
-function calcDayStemRelation(
+// ★export 인 이유: 위와 같다(lib/pair 가 복사 대신 호출).
+export function calcDayStemRelation(
   stemA: string,
   stemB: string,
 ): { type: DayStemRelation; detail: string } {
@@ -123,7 +128,11 @@ function calcDayStemRelation(
 }
 
 /* ── 3. 오행 상보율 ── */
-function calcElementCoverage(a: EnrichedSajuData, b: EnrichedSajuData) {
+// ★export 인 이유: 위와 같다.
+//   ★주의: va === 0 으로 결핍을 판정하므로 시주 미상(6글자) 원국은 결핍이 구조적으로
+//   더 뜨고, 상대가 "채워준다"는 가짜 양(+) 신호가 커진다. pair 는 시주 미상 시
+//   이 축을 중화 대상으로 기록해야 한다(neutralizedAxes).
+export function calcElementCoverage(a: EnrichedSajuData, b: EnrichedSajuData) {
   const ELEMENTS: KoreanElement[] = ["목", "화", "토", "금", "수"];
   const combined = {} as Record<KoreanElement, number>;
   const defA: KoreanElement[] = [];
@@ -149,6 +158,9 @@ function calcElementCoverage(a: EnrichedSajuData, b: EnrichedSajuData) {
 }
 
 /* ── 4. 대운 동기화 ── */
+// ★이 함수는 export 하지 않는다. new Date().getFullYear() 를 읽어 결정론이 아니라서
+//   pair 가 그대로 쓸 수 없다(teaser 저장 → 결제 시 재계산 게이트가 연말연시에 어긋난다).
+//   pair 는 currentYear 를 주입받는 별도 구현을 쓴다.
 function calcFortuneSync(
   fortuneA?: FortuneResult | null,
   fortuneB?: FortuneResult | null,
