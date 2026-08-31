@@ -9,6 +9,7 @@ import { derivePairFacts } from "./pair-facts";
 function mk(opts: {
   stem: string;
   timeUnknown?: boolean;
+  pillars?: { year: string; month: string; day: string; hour: string | null };
   dominant?: KoreanElement[];
   eokbu?: KoreanElement;
   gisin?: KoreanElement;
@@ -17,6 +18,10 @@ function mk(opts: {
   return {
     dayMaster: { stem: opts.stem },
     isTimeUnknown: opts.timeUnknown ?? false,
+    pillars: opts.pillars ?? {
+      year: "甲子", month: "丙寅", day: "戊辰",
+      hour: opts.timeUnknown ? null : "庚申",
+    },
     elementAnalysis: { dominant: opts.dominant ?? [], deficient: [] },
     yongshin: { eokbu: opts.eokbu ?? "목", gisin: opts.gisin ?? "금" },
     elementDist: {
@@ -119,4 +124,187 @@ test("같은 입력·같은 연도면 결과가 완전히 같다 (결정론)", (
     derivePairFacts(a, b, YEAR),
     derivePairFacts(a, b, YEAR),
   );
+});
+
+/* ── 지지 4×4 전수 대조 ── */
+
+// A: 甲子 丙寅 戊辰 庚申 (지지 子寅辰申)
+// B: 己丑 辛未 壬戌 甲午 (지지 丑未戌午)
+const A_PILLARS = { year: "甲子", month: "丙寅", day: "戊辰", hour: "庚申" };
+const B_PILLARS = { year: "己丑", month: "辛未", day: "壬戌", hour: "甲午" };
+
+function cell(f: ReturnType<typeof derivePairFacts>, posA: string, posB: string) {
+  return f.branchMatrix.find((c) => c.posA === posA && c.posB === posB);
+}
+
+// ★배우자궁끼리 맞부딪히는 자리. 판정 레이어가 여기에 가장 큰 가중을 준다.
+test("일지↔일지 칸이 궁위 정보와 함께 뽑힌다 (辰戌충)", () => {
+  const f = derivePairFacts(
+    mk({ stem: "戊", pillars: A_PILLARS }),
+    mk({ stem: "壬", pillars: B_PILLARS }),
+    YEAR,
+  );
+
+  const dayDay = cell(f, "day", "day");
+  assert.ok(dayDay, "일지↔일지 칸이 없다");
+  assert.equal(dayDay!.branchA, "辰");
+  assert.equal(dayDay!.branchB, "戌");
+  assert.deepEqual(dayDay!.relations, ["충"]);
+});
+
+// 궁위를 잃으면 년↔시 원진과 월↔월 원진이 같은 1로 뭉개진다.
+test("칸마다 어느 기둥끼리인지 남는다 — 평탄 카운트로 뭉개지 않는다", () => {
+  const f = derivePairFacts(
+    mk({ stem: "戊", pillars: A_PILLARS }),
+    mk({ stem: "壬", pillars: B_PILLARS }),
+    YEAR,
+  );
+
+  // 子(A년) ↔ 丑(B년): 육합이면서 방합(亥子丑)
+  const yearYear = cell(f, "year", "year");
+  assert.deepEqual([...(yearYear?.relations ?? [])].sort(), ["방합", "육합"]);
+
+  // 子(A년) ↔ 未(B월): 해이면서 원진
+  const yearMonth = cell(f, "year", "month");
+  assert.deepEqual([...(yearMonth?.relations ?? [])].sort(), ["원진", "해"]);
+
+  // 寅(A월) ↔ 未(B월): 귀문
+  assert.deepEqual(cell(f, "month", "month")?.relations, ["귀문"]);
+
+  // 관계 없는 칸은 담지 않는다 (辰↔丑)
+  assert.equal(cell(f, "day", "year"), undefined);
+});
+
+// ★시주 미상 — 못 본 칸을 "관계 없음"으로 남기면 실제로 관계가 없는 칸과 섞인다.
+test("시주를 모르면 그 기둥이 붙은 칸은 아예 생성되지 않는다", () => {
+  const f = derivePairFacts(
+    mk({ stem: "戊", timeUnknown: true, pillars: { ...A_PILLARS, hour: null } }),
+    mk({ stem: "壬", pillars: B_PILLARS }),
+    YEAR,
+  );
+
+  // A 시주가 없으므로 A쪽이 시주인 칸은 하나도 없어야 한다
+  assert.equal(
+    f.branchMatrix.filter((c) => c.posA === "hour").length,
+    0,
+    "A 시주를 모르는데 A쪽 시주 칸이 생성됐다",
+  );
+  // 申(A시) ↔ 戌(B시)는 방합이지만 A 시주를 모르므로 없다
+  assert.equal(cell(f, "hour", "hour"), undefined);
+
+  // ★반대로 B 시지(午)는 멀쩡히 있으므로 A의 다른 자리와 맞대보는 건 정당한 비교다.
+  //   한쪽이 모른다고 상대의 아는 정보까지 버리면 그건 과도한 절삭이다.
+  //   子(A년) ↔ 午(B시) = 충
+  const yearHour = cell(f, "year", "hour");
+  assert.ok(yearHour, "B 시지는 알고 있으므로 이 칸은 있어야 한다");
+  assert.deepEqual(yearHour!.relations, ["충"]);
+
+  // 다만 이 축 전체의 신뢰도가 떨어졌다는 사실은 기록된다.
+  assert.ok(f.reliability.neutralizedAxes.includes("지지매트릭스"));
+});
+
+/* ── 십성 교차 ── */
+
+// ★1인 상품이 구조적으로 못 내는 값. "상대 일간이 나에게 무슨 별인가"는
+// 상대 원국이 들어와야만 나온다. 그리고 방향에 따라 값이 다르다 —
+// 대칭으로 만들면 이 축이 죽는다.
+test("십성 교차는 양방향으로 각각 나오고 서로 다르다", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), YEAR);
+
+  assert.equal(f.tenStarExchange.aSeesB, "정관"); // 甲(목양)이 본 辛(금음) — 금극목, 음양 다름
+  assert.equal(f.tenStarExchange.bSeesA, "정재"); // 辛(금음)이 본 甲(목양) — 금극목, 음양 다름
+  assert.notEqual(f.tenStarExchange.aSeesB, f.tenStarExchange.bSeesA);
+});
+
+test("십성 교차는 시주를 몰라도 나온다 (일간은 확정이므로)", () => {
+  const f = derivePairFacts(
+    mk({ stem: "甲", timeUnknown: true }), mk({ stem: "辛", timeUnknown: true }), YEAR,
+  );
+  assert.equal(f.tenStarExchange.aSeesB, "정관");
+  assert.equal(f.tenStarExchange.bSeesA, "정재");
+});
+
+/* ── 배우자성 교차 ── */
+
+// ★운영자 확정(§1-1): 동성/이성 분기를 만들지 않는다.
+// 배우자성은 "각자 자기 성별로 자기 원국에서" 뽑는 값이고(여명=관성, 남명=재성),
+// "상대가 그 자리에 걸리는가"의 대조는 상대 성별과 무관하게 그대로 성립한다.
+// 아래 두 테스트가 그 사실을 증명한다 — 코드에 분기가 없어도 답이 달라진다.
+test("이성 커플: 각자 자기 배우자성에 상대가 걸리면 양쪽 다 참", () => {
+  const f = derivePairFacts(
+    mk({ stem: "甲" }), mk({ stem: "辛" }),
+    { ...YEAR, sexA: "female", sexB: "male" },
+  );
+
+  // 여명 甲의 배우자성은 관성. 상대 일간 辛 = 정관 → 걸린다.
+  assert.equal(f.spouseStarCross.aHitByB, true);
+  // 남명 辛의 배우자성은 재성. 상대 일간 甲 = 정재 → 걸린다.
+  assert.equal(f.spouseStarCross.bHitByA, true);
+});
+
+test("동성 커플: 분기 없이 각자 자기 성별 기준으로 계산돼 결과가 갈린다", () => {
+  const f = derivePairFacts(
+    mk({ stem: "甲" }), mk({ stem: "辛" }),
+    { ...YEAR, sexA: "female", sexB: "female" },
+  );
+
+  // A(여명)는 그대로 관성 → 상대 辛(정관)이 걸린다.
+  assert.equal(f.spouseStarCross.aHitByB, true);
+  // B도 여명이므로 배우자성이 관성인데, 상대 甲은 B에게 정재다 → 안 걸린다.
+  assert.equal(f.spouseStarCross.bHitByA, false);
+});
+
+// 일간뿐 아니라 상대 일지의 정기(본기)로도 걸린다 — 사람으로 온 배우자성.
+test("상대 일지의 정기가 내 배우자성이어도 걸린다", () => {
+  // A: 甲 일간 여명(배우자성=관성=금). B 일지 酉 → 정기 辛(금) → 甲에게 정관.
+  const f = derivePairFacts(
+    mk({ stem: "甲", pillars: { year: "甲子", month: "丙寅", day: "戊辰", hour: "庚申" } }),
+    mk({ stem: "丙", pillars: { year: "己丑", month: "辛未", day: "丙酉", hour: "甲午" } }),
+    { ...YEAR, sexA: "female", sexB: "male" },
+  );
+
+  // 상대 일간 丙은 甲에게 식신이라 안 걸리지만, 상대 일지 酉의 정기 辛이 정관이라 걸린다.
+  assert.equal(f.spouseStarCross.aHitByB, true);
+});
+
+/* ── 타이밍 교차 ── */
+
+const win = (year: number, isPast = false) => ({ year, age: 30, triggers: [], isPast });
+
+// ★"둘 다 열리는 해"는 1인 상품이 구조적으로 못 내는 값이다. 20알의 근거.
+test("양쪽 타이밍의 교집합만 남긴다", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), {
+    ...YEAR,
+    timingA: [win(2027), win(2029), win(2031)],
+    timingB: [win(2026), win(2029), win(2031)],
+  });
+
+  assert.deepEqual(f.fortuneCross.timingOverlapYears, [2029, 2031]);
+});
+
+// ★timingWindows 는 currentYear − 1 부터 담긴다(marriage-facts.ts:300).
+// 단순 교집합이면 작년이 "둘 다 열리는 해"로 나간다 — 지나간 해를 앞으로의 기회처럼 판다.
+test("이미 지나간 해(isPast)는 교집합에서 뺀다", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), {
+    ...YEAR,
+    timingA: [win(2025, true), win(2029)],
+    timingB: [win(2025, true), win(2029)],
+  });
+
+  assert.deepEqual(f.fortuneCross.timingOverlapYears, [2029]);
+});
+
+test("겹치는 해가 없으면 빈 배열 — 없는 걸 있다고 만들지 않는다", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), {
+    ...YEAR,
+    timingA: [win(2027)],
+    timingB: [win(2028)],
+  });
+
+  assert.deepEqual(f.fortuneCross.timingOverlapYears, []);
+});
+
+test("타이밍을 안 넘기면 빈 배열 (호출부가 아직 안 붙었을 때)", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), YEAR);
+  assert.deepEqual(f.fortuneCross.timingOverlapYears, []);
 });
