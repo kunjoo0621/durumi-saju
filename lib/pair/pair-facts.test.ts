@@ -435,3 +435,17 @@ test("천간 100 순서쌍 전수 — 십성 교차가 정확히 미러된다", 
   }
   assert.equal(checked, 100);
 });
+
+// ★"못 본 것"을 "없는 것"으로 만들지 않는다 — 이 파일이 시주 미상에서 지킨 원칙을
+// 성별에도 똑같이 적용한다. 성별을 안 받았으면 "안 걸림(false)"이 아니라 null 이다.
+// false 로 두면 호출부가 "짝 자리에 안 걸리는 사람"으로 오독한다.
+test("성별을 안 넘기면 배우자성 교차는 false 가 아니라 null", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), YEAR);
+  assert.equal(f.spouseStarCross.aHitByB, null);
+  assert.equal(f.spouseStarCross.bHitByA, null);
+
+  // 한쪽만 넘긴 경우도 각각 독립적으로 판정된다
+  const half = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), { ...YEAR, sexA: "female" });
+  assert.equal(half.spouseStarCross.aHitByB, true);
+  assert.equal(half.spouseStarCross.bHitByA, null);
+});

@@ -73,8 +73,12 @@ export interface PairFacts {
    * 분기 플래그 없이도 동성 커플에서 양쪽 결과가 자연스럽게 갈린다.
    *
    * 서술할 때 "남편·아내" 같은 혼인 신분어를 쓰지 않는 것은 프롬프트·postprocess 의 몫이다.
+   *
+   * ★성별을 못 받았으면 `false`(안 걸림)가 아니라 `null`(모름)이다. false 로 두면 호출부가
+   * "짝 자리에 안 걸리는 사람"으로 오독한다 — 시주 미상에서 지킨 "못 본 것 ≠ 없는 것"
+   * 원칙을 성별에도 똑같이 적용한다.
    */
-  spouseStarCross: { aHitByB: boolean; bHitByA: boolean };
+  spouseStarCross: { aHitByB: boolean | null; bHitByA: boolean | null };
   /**
    * 타이밍 교차 — **둘 다 열리는 해**. 1인 상품이 구조적으로 낼 수 없는 산출이라
    * 20알(2인)의 값어치를 가장 직접적으로 보여주는 축이다.
@@ -218,10 +222,10 @@ export function derivePairFacts(
     spouseStarCross: {
       aHitByB: opts.sexA
         ? spouseStarHit(opts.sexA, a.dayMaster.stem, b.dayMaster.stem, branchOf(b.pillars?.day))
-        : false,
+        : null,
       bHitByA: opts.sexB
         ? spouseStarHit(opts.sexB, b.dayMaster.stem, a.dayMaster.stem, branchOf(a.pillars?.day))
-        : false,
+        : null,
     },
     fortuneCross: { timingOverlapYears: intersectTiming(opts.timingA, opts.timingB) },
     shinsalCross: {

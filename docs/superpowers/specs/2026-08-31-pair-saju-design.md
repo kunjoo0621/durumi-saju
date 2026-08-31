@@ -145,7 +145,9 @@ lib/facts-core.ts           # bareStar·tenStarOf·PILLARS·ADJACENT_PILLARS·�
 | `lib/utils/battle-compare.ts` | 무관(점수 비교기) — 손대지 않음 | 배틀 전용 |
 | `marriage-facts.ts`의 `deriveMarriageFacts`·`deriveTiming` | couple이 **함수 그대로 호출**해 1인 축(배우자궁 안정도 등)을 재사용 | 기존 결혼운 리포트와 값 모순 원천 차단(§7) |
 
-### 2-3. `derivePairFacts` 산출 사실 [제안]
+### 2-3. `derivePairFacts` 산출 사실 — ⚠️ **아래 스케치는 초안이다. 코드가 정본이다** (`lib/pair/pair-facts.ts`)
+
+Phase 1 구현에서 달라진 것: `spouseStarCross` 에서 `applicable` 플래그 제거(§1-1 확정) + `boolean | null`(성별 미입력은 "안 걸림"이 아니라 "모름") / `shinsalCross` 는 `{ dohwaBoth, hongryeomBoth, chuneul: { a, b } }` (천을귀인은 한쪽만 있어도 의미가 있어 both 로 접지 않는다) / 평탄 카운트(`wonjinCount` 등)는 **넣지 않았다** — 궁위를 잃으면 년↔시와 월↔월이 같은 1이 되므로 `branchMatrix` 만 남기고 가중은 판정 레이어가 준다 / `yongshinCompat` 은 `summary` 를 뺀 구조 필드만.
 
 ```ts
 interface PairFacts {
@@ -319,6 +321,9 @@ interface PairFacts {
 > - **역검증(일부러 깨뜨려 이름까지 확인)**: summary 재탑재→프로즈 차단 테스트 실패 / `currentYear`→`new Date()` 변경→결정론 테스트 실패 / `isPast` 필터 제거→타이밍 테스트 실패 / 배우자성이 상대 성별을 쓰게→이성커플+144전수 실패 / 매트릭스 궁위 평탄화→궁위 3종+144전수 실패. 배틀 쪽도 천간표 변조→4개(자사 계약 테스트 2 포함), 결핍 임계 변조→경계 테스트.
 > - ⚠️ **역검증에서 내 안전망 구멍이 하나 나왔다**: 배틀 특성화 테스트의 픽스처에 오행 개수 1(경계값)이 없어서 결핍 임계를 `va===0`→`va<=1` 로 바꿔도 안 잡혔다. 경계 픽스처를 추가해 메웠다.
 > - ⚠️ 테스트 기대값이 틀린 경우가 하나 있었다: "A만 시주 미상이면 시주 칸이 하나도 없어야 한다"는 과도한 절삭이었다(B의 시지는 멀쩡히 알고 있으므로 정당한 비교다). 구현이 아니라 기대값을 고쳤다.
+> - **골든(실제 만세력 원국) 4종** — `lib/pair/pair-facts.golden.test.ts`. ★처음 "Phase 1 완료"라고 적었을 때 이게 빠져 있었다(내가 이 문서에 직접 써 둔 완료 조건인데 건너뛰고 완료로 보고했다). 뒤늦게 붙였고, 붙이자마자 **가짜 픽스처가 실제와 어긋난 지점 2개**가 드러났다:
+>   1. `pillars` 는 `"庚辰(경진)"` 처럼 **한글 병기가 붙은 문자열**이다. 손으로 만든 픽스처는 `"丙寅"` 로만 썼다(지지 추출 `slice(1,2)` 는 우연히 무사했다).
+>   2. 1990-05-06 01:00 의 TZ 차이는 CLAUDE.md 본문이 적은 **월주가 아니라 일주·시주**에서 갈린다(실측: UTC `辛未/戊子` vs KST `庚午/甲申`, 월주는 양쪽 다 `庚辰`). 지뢰로서의 효과는 동일하며, 골든이 `TZ=Asia/Seoul` 에서 실제로 실패하는 것을 확인했다.
 > - **남은 것**: `pair-input.ts`(두 사람 입력 → 두 원국 계산 번들)는 Phase 2 에서 API 라우트와 함께 붙인다 — 지금 만들면 소비자가 없다.
 
 <details>
@@ -356,6 +361,7 @@ interface PairFacts {
 
 **Phase 2 — 상품 1 couple 전체 파이프라인**
 - 작업: `couple-decision.ts`(+판정 경계 확정), `couple-{prompt,consistency,postprocess,grade}.ts`, 마이그레이션, `/api/couple/{start,analyze,results}`, `app/couple/*`, `usePairStore`, coins·services·menu 반영, share-couple.
+- ★**중화 축 처리 3종 (Phase 1 에서 플래그만 세워 뒀다 — 여기서 실제로 막는다)**: `neutralizedAxes` 는 지금 *표시*일 뿐이고 부풀려진 값은 그대로 흐른다. 프롬프트 규칙이 "facts 블록 외 근거 금지"이므로 **블록에 들어간 것은 곧 허가된 것**이다. 중화 축 필드가 블록에 실리면 LLM 이 가짜 상보 신호로 문장을 쓰고 postprocess 는 이의를 제기할 수 없다(블록 안에 있으니까). 따라서 ⓐ중화 축 필드를 프롬프트 facts 블록에서 **아예 제외**, ⓑ`couple-decision` 에서 해당 축을 0 처리하거나 가중 재정규화, ⓒ둘 다 consistency 테스트로 강제.
 - 완료 판정: ①판정 경계가 MC 분포 실측으로 확정·문서화(5단계 분포가 특정 단계 >50% 쏠림 없음), ②결제 멱등 시나리오 테스트(중복 요청 loser 환불·orphan 유예·환불 1회 불변식 — marriage 패턴 케이스 이식), ③내 쪽 축이 기존 결혼운과 동일 함수 산출임이 consistency 테스트로 강제, ④teaser 무료·analyze 20알 차감 e2e 확인, ⑤`npx next build` 성공.
 - 검증: `TZ=UTC npm test`(couple-* 5개 테스트 파일), `TZ=UTC npx tsx scripts/couple-report-probe.mts`(신설 — `scripts/career-report-probe.ts` 미러: 실 프롬프트→Gemini→가드 통과 리포트 N건 생성·수동 검수), 스테이징 결제 1건 실사.
 
