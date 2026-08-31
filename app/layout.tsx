@@ -111,6 +111,17 @@ export default function RootLayout({
   return (
     <html lang="ko" style={{ colorScheme: "dark" }}>
       <head>
+        {/*
+          PortOne 결제 SDK 는 npm 패키지지만 실제 구현은 클릭 시점에
+          https://cdn.portone.io/v2/browser-sdk.js 를 원격에서 받아온다.
+          즉 "결제 버튼을 누른 뒤에야" 새 도메인으로 DNS+TLS 왕복이 시작된다.
+          느린 모바일·인앱 브라우저에서 이 왕복이 결제창 노출을 지연시키거나 실패시킨다.
+          CLAUDE.md 규약("외부 SDK 연동 시 preload 적용")이 요구하는데 빠져 있었다.
+          preconnect 로 핸드셰이크를 미리 끝내둔다 — 결제 안 하는 사용자에게는
+          연결 하나 여는 비용뿐이라 부작용이 없다.
+        */}
+        <link rel="preconnect" href="https://cdn.portone.io" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn.portone.io" />
         <Script
           id="gtag-src"
           src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
