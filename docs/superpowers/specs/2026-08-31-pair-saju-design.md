@@ -310,7 +310,19 @@ interface PairFacts {
 - 완료 판정: 지지 66쌍 전수 관계 스냅샷 테스트 통과, 사전 정합 테스트(육해·귀문 ↔ `lib/dict/data/relation/*-hae.ts`·`sinsal/gwimun.ts`) 통과, facts-core 계약 테스트(골든 입력에서 레거시 3파일 산출과 일치) 통과.
 - 검증: `TZ=UTC npm test` (lib/pair/relation-tables.test.ts, lib/facts-core.test.ts), `npx next build`.
 
-**Phase 1 — pair-facts 엔진 (couple 필요 범위)** — ★2026-08-31 재설계. 초안(이관+골든+MC)은 폐기.
+**Phase 1 — pair-facts 엔진 (couple 필요 범위)** — ✅ **완료 (2026-08-31, 커밋 832ff5c·4c4f683·b75dd1c·02f2f92·f4aee8f)**
+
+> 완료 기록:
+> - `lib/pair/pair-facts.ts` — `derivePairFacts(a, b, { currentYear, sexA, sexB, timingA, timingB })`. 산출: `reliability`(시주 미상 중화) / `dayStemRelation` / `yongshinCompat`(summary 제외) / `elementCoverage` / `branchMatrix`(궁위 보존) / `tenStarExchange`(양방향) / `spouseStarCross`(분기 없음) / `fortuneCross.timingOverlapYears`(isPast 제외) / `shinsalCross`.
+> - `lib/utils/battle-interaction.ts` — 순수 3계산에 `export` 추가(로직 diff 0). `calcFortuneSync` 는 `new Date()` 의존이라 export 하지 않음. **최초의 동작 테스트 15개**를 붙이기 전에 먼저 깔았다.
+> - 검증: 전체 **470개 통과**, eslint 0, `npx next build` 성공, `grep displayGrade|COMPOSITE_GRADE_CUTOFFS lib/pair` **0건**(§1-0 준수).
+> - **역검증(일부러 깨뜨려 이름까지 확인)**: summary 재탑재→프로즈 차단 테스트 실패 / `currentYear`→`new Date()` 변경→결정론 테스트 실패 / `isPast` 필터 제거→타이밍 테스트 실패 / 배우자성이 상대 성별을 쓰게→이성커플+144전수 실패 / 매트릭스 궁위 평탄화→궁위 3종+144전수 실패. 배틀 쪽도 천간표 변조→4개(자사 계약 테스트 2 포함), 결핍 임계 변조→경계 테스트.
+> - ⚠️ **역검증에서 내 안전망 구멍이 하나 나왔다**: 배틀 특성화 테스트의 픽스처에 오행 개수 1(경계값)이 없어서 결핍 임계를 `va===0`→`va<=1` 로 바꿔도 안 잡혔다. 경계 픽스처를 추가해 메웠다.
+> - ⚠️ 테스트 기대값이 틀린 경우가 하나 있었다: "A만 시주 미상이면 시주 칸이 하나도 없어야 한다"는 과도한 절삭이었다(B의 시지는 멀쩡히 알고 있으므로 정당한 비교다). 구현이 아니라 기대값을 고쳤다.
+> - **남은 것**: `pair-input.ts`(두 사람 입력 → 두 원국 계산 번들)는 Phase 2 에서 API 라우트와 함께 붙인다 — 지금 만들면 소비자가 없다.
+
+<details>
+<summary>초안(이관+골든+MC)을 왜 버렸는지 — 코드 근거 6건</summary>
 
 > **왜 초안을 버렸나 (전부 코드로 확인)**
 > - **[확인] 이관은 우리가 없애려던 클론 그 자체였다.** 계산 4종 중 3종(`calcYongshinCompat:60`·`calcDayStemRelation:90`·`calcElementCoverage:126`)은 `EnrichedSajuData` 둘만 받는 순수 함수다. 밖에서 못 부르는 이유는 배틀 전용 의미론이 아니라 **`export` 키워드가 없어서**일 뿐이다. 복사하지 말고 export 를 붙여 그대로 쓰면 정본이 한 벌로 유지되고, "대량 스냅샷 → 골든 100% → 롤백" 의식 전체가 불필요해진다(그 의식은 복사했기 때문에 생기는 비용이었다). Phase 0의 "정본 import, 복사 금지"와도 이제 일관된다.
@@ -320,6 +332,8 @@ interface PairFacts {
 > - **[확인] `battle-interaction` 에는 동작 테스트가 0개다**(`battle-interaction.test.ts` 부재. 존재하는 건 천간표 상수를 소스 파싱으로 비교하는 계약 테스트뿐 — `saju-facts-engine.test.ts`). export 한 단어를 붙이는 diff 라도 **회귀 테스트를 먼저 깔고** 만진다.
 > - **[확인] 천간표는 이미 두 벌이다** — `battle-interaction.ts:6` 과 `yearly-interaction.ts:15` 의 `CHEONGAN_HAP`. 소스 파싱 계약 테스트가 이 둘만 감시한다. §2-1 이 약속한 "천간충 정본화"를 Phase 0 이 하지 않았으므로(지지만 했다) 여기서 회수한다 — 세 번째 사본을 만들지 않는 것이 최소 조건이다.
 > - **[확인] 시주 미상 degradation 이 절반만 정의돼 있었다.** 초안은 "4×4 → 3×3"만 말했는데, `calcElementCoverage:126` 은 `va === 0` 으로 결핍을 판정하므로 6글자 원국은 결핍이 구조적으로 더 뜨고 → 상대가 "채워준다"는 **가짜 양(+) 신호**가 커진다. 못 본 축이 "관계 없음"이 아니라 "상보 있음"으로 조작되는 방향이라, 지키려던 원칙을 정확히 배반한다. elementCoverage·용신 축의 중화 정의를 함께 넣는다.
+
+</details>
 
 **1-1. PairFacts 인터페이스 + 입력 정규화** (degradation·결정론을 처음부터)
 - 작업: `pair-input.ts` + PairFacts 타입 확정. `currentYear` 명시 인자, `reliability.neutralizedAxes` 에 지지 매트릭스 + elementCoverage + 용신 축의 시주 미상 의미론 포함, 요약 카운트를 궁위 보존형으로(평탄 카운트가 판정 입력이 되면 년↔시 원진과 월↔월 원진이 같은 1이 된다).
