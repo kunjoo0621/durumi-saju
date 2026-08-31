@@ -14,6 +14,7 @@ function mk(opts: {
   eokbu?: KoreanElement;
   gisin?: KoreanElement;
   dist?: Partial<Record<KoreanElement, number>>;
+  shinsal?: string[];
 }): EnrichedSajuData {
   return {
     dayMaster: { stem: opts.stem },
@@ -23,6 +24,10 @@ function mk(opts: {
       hour: opts.timeUnknown ? null : "庚申",
     },
     elementAnalysis: { dominant: opts.dominant ?? [], deficient: [] },
+    shinsal: {
+      matches: (opts.shinsal ?? []).map((key) => ({ key, label: key, type: "neutral", evidence: [], detectedAt: [] })),
+      labels: [], ruleset: {}, meta: {},
+    },
     yongshin: { eokbu: opts.eokbu ?? "목", gisin: opts.gisin ?? "금" },
     elementDist: {
       목: opts.dist?.목 ?? 0, 화: opts.dist?.화 ?? 0, 토: opts.dist?.토 ?? 0,
@@ -307,4 +312,126 @@ test("겹치는 해가 없으면 빈 배열 — 없는 걸 있다고 만들지 �
 test("타이밍을 안 넘기면 빈 배열 (호출부가 아직 안 붙었을 때)", () => {
   const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), YEAR);
   assert.deepEqual(f.fortuneCross.timingOverlapYears, []);
+});
+
+/* ── 신살 교차 ── */
+
+// 같은 신살이 양쪽에 다 있으면 그 결이 증폭되는 자리로 본다.
+// 한쪽만 있는 것과 둘 다 있는 것은 해석이 다르므로 따로 잡는다.
+test("도화·홍염이 양쪽에 다 있을 때만 참", () => {
+  const both = derivePairFacts(
+    mk({ stem: "甲", shinsal: ["dohwa", "hongryeom"] }),
+    mk({ stem: "辛", shinsal: ["dohwa", "hongryeom"] }),
+    YEAR,
+  );
+  assert.equal(both.shinsalCross.dohwaBoth, true);
+  assert.equal(both.shinsalCross.hongryeomBoth, true);
+
+  const onlyA = derivePairFacts(
+    mk({ stem: "甲", shinsal: ["dohwa", "hongryeom"] }),
+    mk({ stem: "辛", shinsal: [] }),
+    YEAR,
+  );
+  assert.equal(onlyA.shinsalCross.dohwaBoth, false);
+  assert.equal(onlyA.shinsalCross.hongryeomBoth, false);
+});
+
+// 천을귀인은 "한쪽만 있어도" 상대에게 작용하는 결로 본다 — 둘 다 조건이 아니다.
+// 그래서 both 가 아니라 양쪽 보유 여부를 각각 남긴다.
+test("천을귀인은 양쪽 보유 여부를 각각 남긴다 (한쪽만 있어도 의미가 있다)", () => {
+  const f = derivePairFacts(
+    mk({ stem: "甲", shinsal: ["chuneul"] }),
+    mk({ stem: "辛", shinsal: [] }),
+    YEAR,
+  );
+  assert.deepEqual(f.shinsalCross.chuneul, { a: true, b: false });
+});
+
+test("신살이 없으면 전부 거짓 — 없는 걸 있다고 만들지 않는다", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), YEAR);
+  assert.deepEqual(f.shinsalCross, {
+    dohwaBoth: false, hongryeomBoth: false, chuneul: { a: false, b: false },
+  });
+});
+
+/* ── 전수 대칭 잠금 ── */
+
+const STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+
+/** A/B 를 뒤집었을 때 방향 필드가 서로 미러인지 확인한다. */
+function assertMirrored(
+  fwd: ReturnType<typeof derivePairFacts>,
+  rev: ReturnType<typeof derivePairFacts>,
+  label: string,
+) {
+  // 십성 교차
+  assert.equal(fwd.tenStarExchange.aSeesB, rev.tenStarExchange.bSeesA, `${label} 십성 aSeesB`);
+  assert.equal(fwd.tenStarExchange.bSeesA, rev.tenStarExchange.aSeesB, `${label} 십성 bSeesA`);
+
+  // 배우자성 교차
+  assert.equal(fwd.spouseStarCross.aHitByB, rev.spouseStarCross.bHitByA, `${label} 배우자성 a`);
+  assert.equal(fwd.spouseStarCross.bHitByA, rev.spouseStarCross.aHitByB, `${label} 배우자성 b`);
+
+  // 용신 상보
+  assert.equal(fwd.yongshinCompat.aHelpsB, rev.yongshinCompat.bHelpsA, `${label} 용신 helps`);
+  assert.equal(fwd.yongshinCompat.aHurtsB, rev.yongshinCompat.bHurtsA, `${label} 용신 hurts`);
+
+  // 오행 상보
+  assert.deepEqual(fwd.elementCoverage.deficientAlone.a, rev.elementCoverage.deficientAlone.b, `${label} 결핍`);
+  assert.deepEqual(fwd.elementCoverage.coveredByOther.a, rev.elementCoverage.coveredByOther.b, `${label} 상보`);
+  assert.equal(fwd.elementCoverage.percent, rev.elementCoverage.percent, `${label} percent`);
+
+  // 신뢰도
+  assert.equal(fwd.reliability.aTimeUnknown, rev.reliability.bTimeUnknown, `${label} 시주플래그`);
+
+  // 지지 매트릭스 — 칸이 (posA,posB) → (posB,posA) 로 뒤집혀 같은 관계를 가져야 한다
+  assert.equal(fwd.branchMatrix.length, rev.branchMatrix.length, `${label} 매트릭스 칸수`);
+  for (const c of fwd.branchMatrix) {
+    const mirror = rev.branchMatrix.find((x) => x.posA === c.posB && x.posB === c.posA);
+    assert.ok(mirror, `${label} 미러 칸 없음 ${c.posA}/${c.posB}`);
+    assert.equal(mirror!.branchA, c.branchB, `${label} 미러 지지A`);
+    assert.equal(mirror!.branchB, c.branchA, `${label} 미러 지지B`);
+    assert.deepEqual(mirror!.relations, c.relations, `${label} 미러 관계`);
+  }
+}
+
+// ★잠금 테스트(TDD 드라이버 아님). 깨지면 "내가 A일 때와 상대가 A일 때 결과가
+// 다른" 상품이 된다 — 같은 두 사람이 누가 먼저 입력했느냐로 판정이 갈린다.
+test("지지 144 순서쌍 전수 — A/B 를 뒤집으면 방향 필드가 정확히 미러된다", () => {
+  const opts = { ...YEAR, sexA: "female" as const, sexB: "male" as const };
+  let checked = 0;
+
+  for (const ba of BRANCHES) {
+    for (const bb of BRANCHES) {
+      const a = mk({ stem: "甲", dominant: ["화"], eokbu: "수", gisin: "토",
+        dist: { 목: 2, 화: 3 },
+        pillars: { year: "甲子", month: "丙寅", day: `戊${ba}`, hour: "庚申" } });
+      const b = mk({ stem: "辛", dominant: ["수"], eokbu: "화", gisin: "목",
+        dist: { 토: 1, 금: 2, 수: 3 },
+        pillars: { year: "己丑", month: "辛未", day: `壬${bb}`, hour: "甲午" } });
+
+      assertMirrored(
+        derivePairFacts(a, b, opts),
+        derivePairFacts(b, a, { ...opts, sexA: "male", sexB: "female" }),
+        `${ba}${bb}`,
+      );
+      checked++;
+    }
+  }
+  assert.equal(checked, 144, "12×12 순서쌍 전수를 봐야 한다");
+});
+
+test("천간 100 순서쌍 전수 — 십성 교차가 정확히 미러된다", () => {
+  let checked = 0;
+  for (const sa of STEMS) {
+    for (const sb of STEMS) {
+      const fwd = derivePairFacts(mk({ stem: sa }), mk({ stem: sb }), YEAR);
+      const rev = derivePairFacts(mk({ stem: sb }), mk({ stem: sa }), YEAR);
+      assert.equal(fwd.tenStarExchange.aSeesB, rev.tenStarExchange.bSeesA, `${sa}${sb}`);
+      assert.equal(fwd.tenStarExchange.bSeesA, rev.tenStarExchange.aSeesB, `${sa}${sb}`);
+      checked++;
+    }
+  }
+  assert.equal(checked, 100);
 });

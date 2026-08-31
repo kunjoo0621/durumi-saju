@@ -83,6 +83,21 @@ export interface PairFacts {
    * (marriage-facts.ts:300) 단순 교집합이면 작년이 "앞으로 둘 다 열리는 해"로 나간다.
    */
   fortuneCross: { timingOverlapYears: number[] };
+  /**
+   * 신살 교차.
+   * - 도화·홍염은 **양쪽에 다 있을 때**를 따로 잡는다(한쪽만 있는 것과 결이 다르다).
+   * - 천을귀인은 한쪽만 있어도 상대에게 작용하는 결로 보므로 각자 보유 여부를 남긴다.
+   * ★신살 키는 saju-enrichment 의 SHINSAL_DEFS 정본을 그대로 쓴다(dohwa/hongryeom/chuneul).
+   */
+  shinsalCross: {
+    dohwaBoth: boolean;
+    hongryeomBoth: boolean;
+    chuneul: { a: boolean; b: boolean };
+  };
+}
+
+function hasShinsal(e: EnrichedSajuData, key: string): boolean {
+  return Boolean(e.shinsal?.matches?.some((m) => m.key === key));
 }
 
 export type Sex = "male" | "female";
@@ -209,5 +224,10 @@ export function derivePairFacts(
         : false,
     },
     fortuneCross: { timingOverlapYears: intersectTiming(opts.timingA, opts.timingB) },
+    shinsalCross: {
+      dohwaBoth: hasShinsal(a, "dohwa") && hasShinsal(b, "dohwa"),
+      hongryeomBoth: hasShinsal(a, "hongryeom") && hasShinsal(b, "hongryeom"),
+      chuneul: { a: hasShinsal(a, "chuneul"), b: hasShinsal(b, "chuneul") },
+    },
   };
 }
