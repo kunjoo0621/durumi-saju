@@ -94,3 +94,39 @@ test("두 사람 호칭이 블록에 반영된다", () => {
   const out = buildCoupleFactsBlock(facts(), decideCouple(facts()), { nameA: "민수", nameB: "지영" });
   assert.ok(out.includes("민수") && out.includes("지영"));
 });
+
+/* ── 3-layer 정합 (블록 ↔ 가드) ── */
+
+// ★검토에서 실제로 발견한 문제: 블록이 십성 이름(정관/정재)을 그대로 실었는데
+// couple-postprocess 는 그걸 "명리용어" 위반으로 잡는다. AI 에게 사실로 준 단어를
+// 쓰면 위반이라고 막는 셈이라, 그대로 받아쓰면 무한 재작성 루프에 빠진다.
+// 블록은 자기가 만든 가드를 스스로 통과해야 한다.
+// (사내 선례: "긍정 예시 문장이 가드 금지 패턴에 안 걸린다(3-layer 정합)")
+test("사실 블록 자신이 후처리 가드를 위반하지 않는다", async () => {
+  const { checkCoupleReport } = await import("./couple-postprocess");
+  const f = facts();
+  const out = block(f);
+
+  const { violations } = checkCoupleReport(out, {
+    allowedYears: f.fortuneCross.timingOverlapYears,
+  });
+  assert.deepEqual(
+    violations,
+    [],
+    `블록이 스스로 가드를 위반한다:\n${violations.map((v) => `${v.kind}: ${v.hit}`).join("\n")}`,
+  );
+});
+
+test("중화가 있어도 블록은 가드를 위반하지 않는다", async () => {
+  const { checkCoupleReport } = await import("./couple-postprocess");
+  const f = facts({
+    reliability: {
+      aTimeUnknown: true, bTimeUnknown: true,
+      neutralizedAxes: ["오행상보", "용신상보", "지지매트릭스"],
+    },
+  });
+  const { violations } = checkCoupleReport(block(f), {
+    allowedYears: f.fortuneCross.timingOverlapYears,
+  });
+  assert.deepEqual(violations, [], JSON.stringify(violations));
+});

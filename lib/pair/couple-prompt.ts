@@ -48,6 +48,25 @@ function cellLine(c: BranchCell, nameA: string, nameB: string): string {
   return `- ${nameA}의 ${PILLAR_LABEL[c.posA] ?? c.posA}(${c.branchA}) ↔ ${nameB}의 ${PILLAR_LABEL[c.posB] ?? c.posB}(${c.branchB}) : ${rels}`;
 }
 
+/**
+ * 십성을 뜻으로. ★블록에 "정관" 같은 이름을 그대로 실으면, AI 는 그것을 사실로 받고
+ * 그대로 받아쓰는데 couple-postprocess 는 그걸 위반으로 잡는다 — 사실로 준 단어를
+ * 쓰면 안 된다고 막는 셈이라 무한 재작성 루프가 된다(검토에서 실제로 발견).
+ * 블록은 자기가 만든 가드를 스스로 통과해야 한다.
+ */
+const TEN_STAR_LABEL: Record<string, string> = {
+  정관: "선을 그어주는 사람",
+  편관: "밀어붙이는 사람",
+  정재: "챙기게 되는 사람",
+  편재: "일을 벌이게 만드는 사람",
+  식신: "마음이 편해지는 사람",
+  상관: "말이 많아지게 하는 사람",
+  정인: "기대게 되는 사람",
+  편인: "생각이 많아지게 하는 사람",
+  비견: "나와 닮은 사람",
+  겁재: "겨루게 되는 사람",
+};
+
 const AXIS_SOURCE: Record<AxisKey, string> = {
   마음: "두 사람의 본바탕이 만났을 때",
   생활: "같이 살면서 부딪히는 자리",
@@ -71,16 +90,14 @@ export function buildCoupleFactsBlock(
 
   // ── 마음
   if (dead.has("마음")) {
-    lines.push(`## ${AXIS_SOURCE.마음} — 볼 수 없다(단정하지 마라)`);
+    lines.push(`## ${AXIS_SOURCE.마음} — 볼 수 없다. 단정하지 마라`);
   } else {
     lines.push(`## ${AXIS_SOURCE.마음}`);
     lines.push(`- ${STEM_RELATION_LABEL[f.dayStemRelation.type] ?? f.dayStemRelation.type}`);
-    if (f.tenStarExchange.aSeesB) {
-      lines.push(`- ${nameA}에게 ${nameB}는 '${f.tenStarExchange.aSeesB}'로 온다`);
-    }
-    if (f.tenStarExchange.bSeesA) {
-      lines.push(`- ${nameB}에게 ${nameA}는 '${f.tenStarExchange.bSeesA}'로 온다`);
-    }
+    const aSees = f.tenStarExchange.aSeesB ? TEN_STAR_LABEL[f.tenStarExchange.aSeesB] : null;
+    const bSees = f.tenStarExchange.bSeesA ? TEN_STAR_LABEL[f.tenStarExchange.bSeesA] : null;
+    if (aSees) lines.push(`- ${nameA}에게 ${nameB}는 "${aSees}"으로 온다`);
+    if (bSees) lines.push(`- ${nameB}에게 ${nameA}는 "${bSees}"으로 온다`);
     if (f.spouseStarCross.aHitByB === true) lines.push(`- ${nameB}가 ${nameA}의 짝 자리에 실제로 걸린다`);
     if (f.spouseStarCross.bHitByA === true) lines.push(`- ${nameA}가 ${nameB}의 짝 자리에 실제로 걸린다`);
   }
@@ -88,7 +105,7 @@ export function buildCoupleFactsBlock(
 
   // ── 생활 (지지 매트릭스)
   if (dead.has("생활")) {
-    lines.push(`## ${AXIS_SOURCE.생활} — 태어난 시간을 몰라 볼 수 없다(있다/없다 단정 금지)`);
+    lines.push(`## ${AXIS_SOURCE.생활} — 태어난 시간을 몰라 볼 수 없다. 걸리는 자리가 있다 없다 단정하지 마라`);
   } else {
     lines.push(`## ${AXIS_SOURCE.생활}`);
     if (f.branchMatrix.length === 0) {
@@ -101,7 +118,7 @@ export function buildCoupleFactsBlock(
 
   // ── 보완
   if (dead.has("보완")) {
-    lines.push(`## ${AXIS_SOURCE.보완} — 태어난 시간을 몰라 볼 수 없다(단정 금지)`);
+    lines.push(`## ${AXIS_SOURCE.보완} — 태어난 시간을 몰라 볼 수 없다. 단정하지 마라`);
   } else {
     lines.push(`## ${AXIS_SOURCE.보완}`);
     const y = f.yongshinCompat;
@@ -118,14 +135,14 @@ export function buildCoupleFactsBlock(
 
   // ── 시기
   if (dead.has("시기")) {
-    lines.push(`## ${AXIS_SOURCE.시기} — 볼 수 없다(단정 금지)`);
+    lines.push(`## ${AXIS_SOURCE.시기} — 볼 수 없다. 단정하지 마라`);
   } else {
     lines.push(`## ${AXIS_SOURCE.시기}`);
     const years = f.fortuneCross.timingOverlapYears;
     lines.push(
       years.length > 0
         ? `- 둘 다 열리는 해: ${years.join(", ")}`
-        : "- 둘 다 열리는 해는 보이지 않는다 (★없다고 나쁜 게 아니다. 나쁘게 쓰지 마라)",
+        : "- 둘 다 열리는 해는 보이지 않는다. ★없다고 나쁜 게 아니다 — 나쁘게 쓰지 마라",
     );
   }
   lines.push("");
