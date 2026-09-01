@@ -86,3 +86,49 @@ test("종합이 같아도 축이 바뀌면 stale", () => {
     true,
   );
 });
+
+/* ── 상대 입력 검증 ── */
+
+import { validatePartnerInput } from "./couple-input-hash";
+
+test("필수값이 빠지면 어느 필드가 문제인지 알려준다", () => {
+  assert.deepEqual(validatePartnerInput({}).missing.sort(), [
+    "birthDay", "birthMonth", "birthYear", "gender", "name",
+  ]);
+});
+
+test("다 채우면 통과한다", () => {
+  const r = validatePartnerInput(B);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.missing, []);
+});
+
+// ★시간은 필수가 아니다. 모르는 사람이 많고, 모른다는 사실 자체를 받아 중화 처리한다.
+test("태어난 시간은 없어도 통과하되 '모름'으로 표시된다", () => {
+  const r = validatePartnerInput({ ...B, birthHour: undefined, birthMinute: undefined, unknownBirthTime: true });
+  assert.equal(r.ok, true);
+  assert.equal(r.normalized.unknownBirthTime, true);
+});
+
+// 시를 안 넘겼는데 unknownBirthTime 도 없으면 "모름"으로 본다 — 빈 값을 0시로 오해하면
+// 있지도 않은 시주를 만들어낸다(못 본 것 ≠ 없는 것).
+test("시를 안 넘겼으면 0시가 아니라 '모름'으로 본다", () => {
+  const r = validatePartnerInput({ ...B, birthHour: undefined, birthMinute: undefined });
+  assert.equal(r.normalized.unknownBirthTime, true, "빈 시간을 0시로 오해했다");
+});
+
+test("미래 생년월일은 막는다", () => {
+  const r = validatePartnerInput({ ...B, birthYear: "2999" });
+  assert.equal(r.ok, false);
+  assert.ok(r.invalid.includes("birthYear"));
+});
+
+test("말이 안 되는 월·일은 막는다", () => {
+  assert.ok(validatePartnerInput({ ...B, birthMonth: "13" }).invalid.includes("birthMonth"));
+  assert.ok(validatePartnerInput({ ...B, birthDay: "32" }).invalid.includes("birthDay"));
+});
+
+// 이름은 화면에 그대로 나간다 — 길이를 안 막으면 레이아웃이 깨지고 프롬프트도 오염된다.
+test("이름 길이를 제한한다", () => {
+  assert.ok(validatePartnerInput({ ...B, name: "가".repeat(40) }).invalid.includes("name"));
+});

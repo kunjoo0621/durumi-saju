@@ -82,3 +82,66 @@ export function isVerdictStale(
   if (stored.axes.length !== fresh.axes.length) return true;
   return stored.axes.some((v, i) => v !== fresh.axes[i]);
 }
+
+/* ── 상대 입력 검증 ── */
+
+export interface PartnerValidation {
+  ok: boolean;
+  /** 아예 안 들어온 필수 필드 */
+  missing: string[];
+  /** 들어왔지만 말이 안 되는 필드 */
+  invalid: string[];
+  normalized: PartnerInput;
+}
+
+const MAX_NAME_LEN = 20;
+
+/**
+ * 상대 입력 검증.
+ *
+ * ★시간은 필수가 아니다. 모르는 사람이 많고, "모른다"는 사실 자체를 받아
+ *   중화 처리한다(pair-facts 의 neutralizedAxes).
+ * ★시를 안 넘겼는데 unknownBirthTime 도 없으면 **0시가 아니라 "모름"**으로 본다.
+ *   빈 값을 0시로 오해하면 있지도 않은 시주를 만들어낸다 — 이 작업 내내 지킨
+ *   "못 본 것 ≠ 없는 것" 원칙이 입력 단에도 그대로 적용된다.
+ * ★이름 길이를 막는 이유: 화면에 그대로 나가고 프롬프트에도 들어간다.
+ */
+export function validatePartnerInput(b: PartnerInput): PartnerValidation {
+  const missing: string[] = [];
+  const invalid: string[] = [];
+
+  const name = normText(b.name);
+  if (!name) missing.push("name");
+  else if (name.length > MAX_NAME_LEN) invalid.push("name");
+
+  for (const key of ["birthYear", "birthMonth", "birthDay"] as const) {
+    if (!normText(b[key])) missing.push(key);
+  }
+  if (!normText(b.gender)) missing.push("gender");
+
+  const year = parseInt(b.birthYear ?? "", 10);
+  const month = parseInt(b.birthMonth ?? "", 10);
+  const day = parseInt(b.birthDay ?? "", 10);
+  const thisYear = new Date().getFullYear();
+
+  if (b.birthYear && (!Number.isFinite(year) || year < 1900 || year > thisYear)) invalid.push("birthYear");
+  if (b.birthMonth && (!Number.isFinite(month) || month < 1 || month > 12)) invalid.push("birthMonth");
+  if (b.birthDay && (!Number.isFinite(day) || day < 1 || day > 31)) invalid.push("birthDay");
+
+  const hourGiven = normText(b.birthHour) !== "";
+  const unknownBirthTime = b.unknownBirthTime === true || !hourGiven;
+
+  return {
+    ok: missing.length === 0 && invalid.length === 0,
+    missing,
+    invalid,
+    normalized: {
+      ...b,
+      name,
+      calendarType: b.calendarType || "solar",
+      unknownBirthTime,
+      birthHour: unknownBirthTime ? undefined : b.birthHour,
+      birthMinute: unknownBirthTime ? undefined : b.birthMinute,
+    },
+  };
+}
