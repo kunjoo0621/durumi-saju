@@ -127,7 +127,9 @@ import { iljiChungGoonghap } from "./data/ilji-chung-goonghap";
 import { naichaGoonghap } from "./data/naicha-goonghap";
 import { goonghapJalsanun } from "./data/goonghap-jalsanun";
 import { cheotsarangSaju } from "./data/cheotsarang-saju";
+import { kimJunsu } from "./data/kimjunsu";
 import { samjae } from "./data/samjae";
+import { saeun2027 } from "./data/saeun-2027";
 import { yeokma } from "./data/yeokma";
 import { gongmang } from "./data/gongmang";
 import { baekho } from "./data/baekho";
@@ -353,6 +355,8 @@ const RAW_STORIES: Story[] = [
   naichaGoonghap,
   goonghapJalsanun,
   cheotsarangSaju,
+  kimJunsu,
+  saeun2027,
   samjae,
   yeokma,
   gongmang,
