@@ -8,7 +8,10 @@ import { readFileSync } from "node:fs";
 //
 // 판정 필드를 늘렸는데 마이그레이션을 안 고치면 여기서 먼저 깨진다.
 
-const SQL = readFileSync("supabase/migrations/20260901_couple_results.sql", "utf-8");
+const SQL =
+  readFileSync("supabase/migrations/20260901_couple_results.sql", "utf-8") +
+  "\n" +
+  readFileSync("supabase/migrations/20260903_couple_leap_month.sql", "utf-8");
 
 test("couple_results 에 두 사람 입력 스냅샷 컬럼이 다 있다", () => {
   for (const col of [
@@ -78,4 +81,11 @@ test("계정 삭제 시 cascade 되고, 소유자 없는 row 를 막는다", () 
   assert.match(SQL, /couple_result_unlocks[\s\S]*?on delete cascade/);
   assert.match(SQL, /couple_results_owner_check/);
   assert.match(SQL, /enable row level security/);
+});
+
+// ★코드리뷰에서 발견한 누락. 윤달 플래그가 없으면 teaser 와 결제 시 재계산이 갈라져
+// 윤달생의 정당한 결제가 영원히 튕기고, 윤달생 상대는 평달 원국으로 계산된 리포트를 받는다.
+test("윤달 플래그를 양쪽 다 저장한다", () => {
+  assert.match(SQL, /\bis_leap_month\b/, "본인 윤달 컬럼이 없다");
+  assert.match(SQL, /\bpartner_is_leap_month\b/, "상대 윤달 컬럼이 없다");
 });

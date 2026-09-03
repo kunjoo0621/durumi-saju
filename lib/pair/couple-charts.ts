@@ -36,7 +36,9 @@ export async function computePartnerChart(b: PartnerInput): Promise<PartnerChart
   }
 
   if (b.calendarType === "lunar") {
-    const converted = convertLunarToSolar(year, month, day);
+    // ★윤달 플래그를 반드시 넘긴다. 빼면 윤달생이 평달로 계산돼 완전히 다른 원국이 되고,
+    //   teaser(자체입력은 윤달 반영)와 결제 시 재계산이 갈라져 정당한 결제가 영원히 튕긴다.
+    const converted = convertLunarToSolar(year, month, day, b.isLeapMonth ?? false);
     if (!converted) return { ok: false, error: "상대 생년월일 변환에 실패했어요." };
     year = converted.year;
     month = converted.month;

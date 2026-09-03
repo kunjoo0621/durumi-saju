@@ -218,7 +218,21 @@ export async function POST(request: NextRequest) {
 
     if (unlockInsert.error) {
       if (unlockInsert.error.code === "23505") {
+        // 동시 요청의 loser. 내 차감만 되돌린다 — 승자의 unlock 은 건드리지 않는다.
+        // (여기서 refundReportUnlock 을 쓰면 삭제-승자 게이트에 걸려 내 환불이 스킵된다.)
         await refundCoins(userId, COUPLE_COST, orderId);
+
+        // ★승자가 이미 저장을 마쳤으면 결과를 그대로 돌려준다. 무조건 409 를 내면
+        //   더블클릭한 사용자가 결과가 있는데도 에러 화면을 본다(marriage:311 미러).
+        const { data: winner } = await supabaseAdmin
+          .from("couple_results")
+          .select("full_json")
+          .eq("id", body.resultId)
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (winner?.full_json) {
+          return NextResponse.json({ ok: true, resultId: body.resultId, fullJson: winner.full_json, reused: true });
+        }
         return NextResponse.json(
           { error: "이미 분석이 진행 중이에요. 잠시 후 다시 시도해 주세요.", analyzing: true },
           { status: 409 },
@@ -235,7 +249,12 @@ export async function POST(request: NextRequest) {
       if (!ok) console.error("[COUPLE_ANALYZE] 환불·정리 실패", orderId);
     };
 
-    /* ── 4) 생성 ── */
+    /* ── 4) 생성 ── ★이 아래는 반드시 try 안에 있어야 한다.
+       차감 이후 예외가 바깥 catch 로 튀면 환불도 unlock 삭제도 안 되고, 사용자는 20알을
+       잃은 채 리포트도 못 받는다. throw 소스는 실재한다 — qa-regen 이 callModel·applyGuards 를
+       try 밖에서 부르고, callGemini 의 SDK 초기화도 자체 try 바깥이다.
+       (원본 marriage/analyze:348 의 내부 try/catch 를 초안이 빠뜨렸다 — 코드리뷰에서 발견) */
+    try {
     const names = {
       nameA: (resultRow.name as string) || "너",
       nameB: (resultRow.partner_name as string) || "상대",
@@ -291,6 +310,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, resultId: body.resultId, fullJson: gen.blocks });
+    } catch (analysisError: unknown) {
+      console.error("[COUPLE_ANALYZE] 생성 중 예외", (analysisError as Error)?.message || analysisError);
+      await refundAndCleanup();
+      return NextResponse.json({ error: "분석에 실패했어. 알은 환불됐어.", refunded: true }, { status: 500 });
+    }
   } catch (error: unknown) {
     console.error("[COUPLE_ANALYZE] error", (error as Error)?.message || error);
     return NextResponse.json({ error: "처리 중 오류가 발생했습니다." }, { status: 500 });
@@ -320,6 +344,7 @@ async function recomputeDecision(
     birthLocation: (row.region as string) ?? undefined,
     gender: (row.gender as string) ?? "",
     calendarType: (row.calendar_type as string) ?? "solar",
+    isLeapMonth: Boolean(row.is_leap_month),
     unknownBirthTime: !aTime,
   });
   if (!selfChart.ok) return null;
@@ -334,6 +359,7 @@ async function recomputeDecision(
     birthLocation: (row.partner_region as string) ?? undefined,
     gender: (row.partner_gender as string) ?? "",
     calendarType: (row.partner_calendar_type as string) ?? "solar",
+    isLeapMonth: Boolean(row.partner_is_leap_month),
     unknownBirthTime: Boolean(row.partner_unknown_birth_time) || !bTime,
   });
   if (!partnerChart.ok) return null;

@@ -57,8 +57,18 @@ export async function POST(request: NextRequest) {
     // 무과금이지만 요청마다 만세력을 **두 번** 돌린다(1인 상품보다 비싸다).
     // 클라이언트 버그로 루프가 돌아도 비싼 계산에 천장을 씌운다. userId 기준인 이유는
     // 모바일 캐리어 NAT·가족 공유 IP 오탐이 유료 퍼널을 깨뜨리기 때문(marriage/start 근거 동일).
-    if (!checkRateLimit(`couple_start:${userId}:m`, 20, 60_000)) {
-      return NextResponse.json({ error: "요청이 너무 잦아요. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+    // ★checkRateLimit 은 boolean 이 아니라 객체를 돌려준다. `!객체` 는 항상 false 라
+    //   초안의 `if (!checkRateLimit(...))` 는 429 를 한 번도 못 냈다(코드리뷰에서 발견).
+    //   원본과 동일하게 .allowed 를 보고, 분당·시간당 두 창을 모두 건다.
+    const rlMinute = checkRateLimit(`couple_start:${userId}:m`, 20, 60_000);
+    const rlHour = checkRateLimit(`couple_start:${userId}:h`, 120, 60 * 60_000);
+    if (!rlMinute.allowed || !rlHour.allowed) {
+      console.warn("[RATE_LIMIT] /api/couple/start", { userId });
+      const retryAfter = Math.max(rlMinute.retryAfter, rlHour.retryAfter);
+      return NextResponse.json(
+        { error: "요청이 너무 많아. 잠시 후 다시 시도해줘." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
     }
 
     const body = (await request.json()) as StartBody;
@@ -124,6 +134,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: partnerChart.error }, { status: 400 });
     }
 
+    /* ── 3-1) ★이미 결제된 결과는 다시 계산하지도, 덮어쓰지도 않는다 (grandfather) ──
+       upsert 는 full_json 만 보호하고 verdict·축·current_year·pair_facts_json 은 덮어쓴다.
+       그러면 결제자가 산 본문과 화면에 그려지는 사실이 갈라진다 — 해가 바뀌면 실제로 갈라진다
+       (지나간 해는 타이밍에서 빠지므로). CLAUDE.md 의 grandfather 원칙과도 충돌한다. */
+    const existingHash = buildCoupleInputHash(input, partner);
+    const { data: paid } = await supabaseAdmin
+      .from("couple_results")
+      .select("id, full_json, teaser_json")
+      .eq("user_id", userId)
+      .eq("input_hash", existingHash)
+      .maybeSingle();
+    if (paid?.full_json) {
+      return NextResponse.json({
+        ok: true,
+        resultId: paid.id,
+        teaser: paid.teaser_json,
+        alreadyUnlocked: true,
+      });
+    }
+
     /* ── 4) 관계 사실 + 판정 ── */
     // ★연도는 여기서 한 번 정하고 저장한다. analyze 는 이 값으로 재계산한다.
     const currentYear = new Date().getFullYear();
@@ -151,7 +181,7 @@ export async function POST(request: NextRequest) {
     const decision = decideCouple(facts);
 
     /* ── 5) 저장 ── */
-    const inputHash = buildCoupleInputHash(input, partner);
+    const inputHash = existingHash;
     const birthDate = `${input.birthYear}-${String(input.birthMonth).padStart(2, "0")}-${String(input.birthDay).padStart(2, "0")}`;
     const birthTime = input.unknownBirthTime
       ? null
@@ -190,6 +220,8 @@ export async function POST(request: NextRequest) {
           partner_gender: partner.gender,
           partner_calendar_type: partner.calendarType,
           partner_unknown_birth_time: Boolean(partner.unknownBirthTime),
+          is_leap_month: Boolean(input.isLeapMonth),
+          partner_is_leap_month: Boolean(partner.isLeapMonth),
           current_year: currentYear,
           verdict: decision.verdict,
           axis_mind: decision.axes.마음.verdict,

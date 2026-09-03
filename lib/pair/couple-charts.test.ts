@@ -88,3 +88,26 @@ test("SajuData 원본도 돌려준다 (타이밍 교차에 필요)", async () =>
   assert.ok(r.saju, "saju 가 없다");
   assert.ok(r.saju.day.heavenlyStem, "일간이 비었다 — deriveMarriageFacts 가 여기서 터진다");
 });
+
+// ★코드리뷰에서 발견: 자체입력 경로는 윤달을 반영하는데(lib/self-input.ts:84)
+// computePartnerChart 는 무시하고 있었다. 그러면
+//   ① 윤달생 상대를 평달 원국으로 계산해 **조용히 틀린 리포트**를 팔고
+//   ② 본인이 윤달생이면 teaser(윤달 반영)와 결제 시 재계산(평달)이 갈라져
+//      판정 게이트가 정당한 결제를 영원히 튕긴다.
+test("윤달을 반영해 계산한다", async () => {
+  const base = {
+    name: "테스트", birthYear: "2020", birthMonth: "4", birthDay: "15",
+    gender: "여성", calendarType: "lunar", unknownBirthTime: true,
+  } as const;
+
+  const normal = await computePartnerChart({ ...base, isLeapMonth: false });
+  const leap = await computePartnerChart({ ...base, isLeapMonth: true });
+
+  assert.equal(normal.ok, true);
+  assert.equal(leap.ok, true);
+  if (!normal.ok || !leap.ok) return;
+  assert.notEqual(
+    normal.enriched.pillars.day, leap.enriched.pillars.day,
+    "윤달 플래그가 무시되고 있다 — 같은 원국이 나왔다",
+  );
+});
