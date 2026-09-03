@@ -274,7 +274,9 @@ export async function POST(request: NextRequest) {
       shouldFallback,
       parse: (text) => parseJson5Loose<unknown>(text),
       validateBlocks: (candidate) => validateCoupleBlocks(candidate),
-      applyGuards: (candidate) => applyCoupleGuards(candidate, { allowedYears }),
+      // ★기준 연도도 허용한다. 블록이 그 값을 싣는데 가드가 막으면 LLM 이 규칙을
+      //   지켜도 위반이 떠 무의미한 재생성이 돈다(전체 리뷰에서 재현).
+      applyGuards: (candidate) => applyCoupleGuards(candidate, { allowedYears, currentYear: storedYear }),
     });
 
     if (!gen.ok) {
@@ -373,6 +375,8 @@ async function recomputeDecision(
     currentYear: storedYear,
     sexA: normSex(row.gender as string),
     sexB: partnerChart.sex,
+    // 저장된 사실의 중화 상태를 그대로 이어받는다 — 게이트가 자기모순을 내면 안 된다.
+    timingAvailable: !(storedFacts?.reliability?.neutralizedAxes ?? []).includes("타이밍"),
   });
   // 저장된 타이밍을 되살린다(위 주석 참조).
   facts.fortuneCross.timingOverlapYears = timingOverlap;

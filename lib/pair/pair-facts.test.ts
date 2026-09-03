@@ -449,3 +449,28 @@ test("성별을 안 넘기면 배우자성 교차는 false 가 아니라 null", 
   assert.equal(half.spouseStarCross.aHitByB, true);
   assert.equal(half.spouseStarCross.bHitByA, null);
 });
+
+/* ── 전체 리뷰 지적: 타이밍도 "못 본 것 ≠ 없는 것" ── */
+
+// ★대운 계산이 실패하면 타이밍을 "볼 수 없는" 것이지 "겹치는 해가 없는" 게 아니다.
+// 초안은 실패를 빈 배열로 뭉개, 시기 축이 "평" + "둘 다 열리는 해는 보이지 않는다"로
+// **못 본 것을 사실로 단정해 출고**했다. 이 작업이 내내 지킨 원칙을 타이밍만 어겼다.
+test("타이밍을 볼 수 없으면 중화 축에 기록한다 (없다고 단정하지 않는다)", () => {
+  const unavailable = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), {
+    ...YEAR,
+    timingAvailable: false,
+  });
+  assert.ok(unavailable.reliability.neutralizedAxes.includes("타이밍"));
+
+  // 볼 수 있는데 겹치는 해가 없는 것은 중화가 아니다 — 그건 진짜 사실이다.
+  const reallyNone = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), {
+    ...YEAR,
+    timingA: [], timingB: [], timingAvailable: true,
+  });
+  assert.ok(!reallyNone.reliability.neutralizedAxes.includes("타이밍"));
+});
+
+test("타이밍 가용 여부를 안 넘기면 기본은 '볼 수 있음'이다 (기존 호출부 호환)", () => {
+  const f = derivePairFacts(mk({ stem: "甲" }), mk({ stem: "辛" }), YEAR);
+  assert.ok(!f.reliability.neutralizedAxes.includes("타이밍"));
+});

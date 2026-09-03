@@ -48,7 +48,7 @@ const WORN_SKELETONS: RegExp[] = [
  */
 const MYEONGRI_TERMS: RegExp[] = [
   /용신|기신|희신/,
-  /신약|신강|극왕|태강|태약|중화/,
+  /극왕|태강|신강|중화신강|중화신약|신약|태약|극약/, // 강약 8단계 전수 — "극약"이 빠져 있었다(전체 리뷰)
   /[SABCD]\s?등급|등급이|점수가/,
   /일지|월지|년지|시지|일간|일주|월주|년주|시주/,
   /원진|귀문|육합|삼합|방합|상충|형살|공망/,
@@ -79,13 +79,26 @@ const ASSERTIONS: RegExp[] = [
 
 /**
  * 용어 괄호 병기 — "정재(바른 인연과 결실)" 꼴.
- * 괄호 안이 한글 설명일 때만 잡는다(연도·수치 괄호는 건드리지 않는다).
+ *
+ * ★괄호 앞 단어가 **명리 용어일 때만** 잡는다. 초안은 한글+괄호를 전부 잡아
+ * "카페(단골집)" 같은 평범한 문장까지 위반으로 만들었고, 위반은 곧 재생성 트리거라
+ * 멀쩡한 문장마다 Gemini 호출을 태웠다(전체 리뷰에서 재현). 게다가 재생성 노트가
+ * "용어 위반"으로 전달돼 모델은 뭘 고칠지 알 수도 없었다.
  */
 const TERM_PAREN = /([가-힣]{2,5})\(([^)]*[가-힣][^)]*)\)/g;
 
+/** 괄호 앞 단어가 명리 용어인가 */
+function isMyeongriTerm(word: string): boolean {
+  return MYEONGRI_TERMS.some((re) => re.test(word));
+}
+
 export function checkCoupleReport(
   text: string,
-  ctx: { allowedYears: number[] },
+  ctx: {
+    allowedYears: number[];
+    /** 사실 블록이 "기준 연도"로 실은 값. 블록에 있는 걸 쓰면 위반이 아니다. */
+    currentYear?: number;
+  },
 ): { text: string; violations: CoupleViolation[] } {
   const violations: CoupleViolation[] = [];
   const add = (kind: ViolationKind, hit: string) => {
@@ -114,7 +127,10 @@ export function checkCoupleReport(
   }
 
   // 블록에 없는 연도 = 지어낸 것. 1900~2199 만 연도로 본다.
+  // ★기준 연도를 허용 목록에 넣는다. 블록이 그 값을 싣는데 가드가 막으면,
+  //   LLM 이 규칙을 성실히 지켜도 위반이 떠 무의미한 재생성이 돈다(전체 리뷰에서 재현).
   const allowed = new Set(ctx.allowedYears);
+  if (ctx.currentYear) allowed.add(ctx.currentYear);
   for (const m of text.matchAll(/\b(19\d{2}|20\d{2}|21\d{2})\s*년/g)) {
     const y = Number(m[1]);
     if (!allowed.has(y)) add("없는연도", m[0]);
@@ -125,6 +141,7 @@ export function checkCoupleReport(
   //   ★문체·수위는 건드리지 않는다 — 재미를 깎지 않기 위해서다.
   let out = text;
   for (const m of text.matchAll(TERM_PAREN)) {
+    if (!isMyeongriTerm(m[1])) continue; // 평범한 괄호는 건드리지 않는다
     add("용어병기", m[0]);
     out = out.replace(m[0], m[1]);
   }
@@ -161,7 +178,7 @@ export function validateCoupleBlocks(blocks: unknown): string[] {
  */
 export function applyCoupleGuards(
   blocks: unknown,
-  ctx: { allowedYears: number[] },
+  ctx: { allowedYears: number[]; currentYear?: number },
 ): { blocks: unknown; violations: string[] } {
   if (!blocks || typeof blocks !== "object") return { blocks, violations: ["루트가 객체가 아님"] };
   const b = { ...(blocks as Record<string, unknown>) };

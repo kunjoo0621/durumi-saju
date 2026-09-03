@@ -171,12 +171,17 @@ export async function POST(request: NextRequest) {
       ).timingWindows,
     );
 
+    // ★대운을 한쪽이라도 못 구했으면 시기 축은 "볼 수 없음"이다.
+    //   빈 배열로 뭉개면 "겹치는 해가 없다"는 사실 단정으로 둔갑한다(전체 리뷰 지적).
+    const timingAvailable = Boolean(selfChart.fortune) && Boolean(partnerChart.fortune);
+
     const facts = derivePairFacts(selfChart.enriched, partnerChart.enriched, {
       currentYear,
       sexA,
       sexB: partnerChart.sex,
       timingA,
       timingB,
+      timingAvailable,
     });
     const decision = decideCouple(facts);
 

@@ -5,6 +5,8 @@ import { checkCoupleReport } from "./couple-postprocess";
 
 const ctx = { allowedYears: [2029, 2031] };
 const kinds = (text: string) => checkCoupleReport(text, ctx).violations.map((v) => v.kind);
+const kinds2 = (text: string, c: Parameters<typeof checkCoupleReport>[1]) =>
+  checkCoupleReport(text, c).violations.map((v) => v.kind);
 
 /* ── 실측으로 확인한 닳은 표현 ── */
 
@@ -99,4 +101,34 @@ test("평범한 조언 어미(~해라)는 단정으로 잡지 않는다", () => 
 test("미래를 확정하는 절대 표현은 여전히 잡는다", () => {
   assert.ok(kinds("이 사람과는 반드시 결혼하게 된다").includes("단정"));
   assert.ok(kinds("무조건 헤어지게 돼 있어").includes("단정"));
+});
+
+/* ── 전체 리뷰에서 재현된 오탐·구멍 ── */
+
+// ★블록이 "기준 연도"를 싣는데 가드는 timingOverlapYears 만 허용해서, LLM 이 규칙을
+// 성실히 지켜 블록에 있는 연도를 써도 위반으로 잡혔다 → 무의미한 재생성 루프.
+test("사실 블록에 실린 기준 연도는 본문에 써도 위반이 아니다", () => {
+  assert.deepEqual(kinds2("2026년 지금 두 사람은", { allowedYears: [2029], currentYear: 2026 }), []);
+  // 그래도 아무 연도나 되는 건 아니다
+  assert.ok(kinds2("2033년에는", { allowedYears: [2029], currentYear: 2026 }).includes("없는연도"));
+});
+
+// ★평범한 괄호까지 용어병기로 잡아 재생성을 태우고 있었다.
+test("명리 용어가 아닌 일반 괄호는 잡지 않는다", () => {
+  const r = checkCoupleReport("둘이 카페(단골집)에서 만나면", { allowedYears: [] });
+  assert.deepEqual(r.violations, [], JSON.stringify(r.violations));
+  assert.equal(r.text, "둘이 카페(단골집)에서 만나면", "멀쩡한 괄호가 지워졌다");
+});
+
+test("명리 용어 괄호 병기는 여전히 잡고 지운다", () => {
+  const r = checkCoupleReport("정재(바른 인연과 결실)가 있어", { allowedYears: [] });
+  assert.ok(r.violations.some((v) => v.kind === "용어병기"));
+  assert.ok(!r.text.includes("("), r.text);
+});
+
+// ★강약 8단계 중 "극약"만 금지어에서 빠져 있었다(스펙 §1-0.4는 8단계 전부를 요구).
+test("강약 8단계 명칭을 하나도 빠짐없이 잡는다", () => {
+  for (const level of ["극왕", "태강", "신강", "중화신강", "중화신약", "신약", "태약", "극약"]) {
+    assert.ok(kinds(`너는 ${level} 체질이라`).includes("명리용어"), `못 잡았다: ${level}`);
+  }
 });

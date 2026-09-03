@@ -198,3 +198,24 @@ test("가드가 닳은 표현을 잡아낸다", () => {
   );
   assert.ok(r.violations.some((v) => v.includes("닳은표현")), JSON.stringify(r.violations));
 });
+
+/* ── 전체 리뷰 지적 ── */
+
+// ★생·극은 방향이 뼈대다. 블록이 "한쪽이 다른 쪽을 밀어준다"로만 실으면 누가 미는지
+// 알 수 없고, 이 상품의 핵심 지시("둘이 어떻게 다르게 반응하는지")를 쓰려면 LLM 이
+// 방향을 지어낼 수밖에 없다. 사실 블록에 없으니 후처리도 못 잡는다 = 지어낸 채로 출고.
+test("일간 생·극은 누가 누구인지 방향까지 실린다", () => {
+  const gen = block(facts({ dayStemRelation: { type: "생", detail: "목→화 상생 — A가 B를 돕는 구조" } as never }));
+  assert.match(gen, /너가 쟤를 밀어준다/, `방향이 없다:\n${gen}`);
+
+  const genRev = block(facts({ dayStemRelation: { type: "생", detail: "화→목 상생 — B가 A를 돕는 구조" } as never }));
+  assert.match(genRev, /쟤가 너를 밀어준다/, `역방향이 없다:\n${genRev}`);
+
+  const geuk = block(facts({ dayStemRelation: { type: "극", detail: "목→토 상극 — A가 B를 제압하는 구조" } as never }));
+  assert.match(geuk, /너가 쟤를 누른다/, `극 방향이 없다:\n${geuk}`);
+});
+
+test("합·충·비화는 방향이 없으므로 그대로 쓴다", () => {
+  assert.match(block(facts({ dayStemRelation: { type: "합", detail: "" } as never })), /서로 끌어당긴다/);
+  assert.match(block(facts({ dayStemRelation: { type: "충", detail: "" } as never })), /정면으로 부딪힌다/);
+});

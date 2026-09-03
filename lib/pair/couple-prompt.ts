@@ -24,11 +24,39 @@ const PILLAR_LABEL: Record<string, string> = {
 /** 일간 관계를 뜻으로. "합/충" 같은 글자를 그대로 주면 본문에 한자어가 뜬다. */
 const STEM_RELATION_LABEL: Record<string, string> = {
   합: "서로 끌어당긴다",
-  생: "한쪽이 다른 쪽을 밀어준다",
   비화: "결이 비슷하다",
-  극: "한쪽이 다른 쪽을 누른다",
   충: "정면으로 부딪힌다",
 };
+
+/**
+ * 생·극은 **방향이 뼈대다.** "한쪽이 다른 쪽을 밀어준다"로만 주면 누가 미는지 알 수 없고,
+ * 이 상품의 핵심 지시("둘이 어떻게 다르게 반응하는지")를 쓰려면 LLM 이 방향을 지어낼
+ * 수밖에 없다. 사실 블록에 없으니 후처리도 못 잡는다 = 지어낸 채로 유료 출고.
+ * (전체 리뷰에서 발견)
+ *
+ * `calcDayStemRelation` 의 detail 이 이미 방향을 담고 있다 —
+ * "A가 B를 돕는 구조" / "B가 A를 돕는 구조" / "A가 B를 제압하는 구조" / "B가 A를 제압하는 구조".
+ */
+function directedStemLine(
+  rel: { type: string; detail: string },
+  nameA: string,
+  nameB: string,
+): string {
+  const aFirst = /A가 B를/.test(rel.detail);
+  const bFirst = /B가 A를/.test(rel.detail);
+
+  if (rel.type === "생") {
+    if (aFirst) return `${nameA}가 ${nameB}를 밀어준다`;
+    if (bFirst) return `${nameB}가 ${nameA}를 밀어준다`;
+    return "한쪽이 다른 쪽을 밀어준다";
+  }
+  if (rel.type === "극") {
+    if (aFirst) return `${nameA}가 ${nameB}를 누른다`;
+    if (bFirst) return `${nameB}가 ${nameA}를 누른다`;
+    return "한쪽이 다른 쪽을 누른다";
+  }
+  return STEM_RELATION_LABEL[rel.type] ?? rel.type;
+}
 
 /** 지지 관계를 뜻으로. 원어(육합·원진…)는 넣지 않는다. */
 const RELATION_LABEL: Record<string, string> = {
@@ -93,7 +121,7 @@ export function buildCoupleFactsBlock(
     lines.push(`## ${AXIS_SOURCE.마음} — 볼 수 없다. 단정하지 마라`);
   } else {
     lines.push(`## ${AXIS_SOURCE.마음}`);
-    lines.push(`- ${STEM_RELATION_LABEL[f.dayStemRelation.type] ?? f.dayStemRelation.type}`);
+    lines.push(`- ${directedStemLine(f.dayStemRelation, nameA, nameB)}`);
     const aSees = f.tenStarExchange.aSeesB ? TEN_STAR_LABEL[f.tenStarExchange.aSeesB] : null;
     const bSees = f.tenStarExchange.bSeesA ? TEN_STAR_LABEL[f.tenStarExchange.bSeesA] : null;
     if (aSees) lines.push(`- ${nameA}에게 ${nameB}는 "${aSees}"으로 온다`);

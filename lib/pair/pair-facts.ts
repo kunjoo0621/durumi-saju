@@ -196,6 +196,13 @@ export function derivePairFacts(
     /** 각자의 deriveMarriageFacts(...).timingWindows. 호출부가 넣어 준다. */
     timingA?: TimingWindow[];
     timingB?: TimingWindow[];
+    /**
+     * 타이밍을 **볼 수 있었는지**. 대운 계산이 실패하면 false 를 넘긴다.
+     * ★빈 배열과 구분해야 한다 — 실패를 빈 배열로 뭉개면 "볼 수 없었다"가
+     *   "겹치는 해가 없다"는 사실 단정으로 둔갑해 그대로 출고된다.
+     *   기본값 true 는 기존 호출부 호환용이다.
+     */
+    timingAvailable?: boolean;
   },
 ): PairFacts {
   const aTimeUnknown = Boolean(a.isTimeUnknown);
@@ -204,6 +211,10 @@ export function derivePairFacts(
   // 한쪽만 몰라도 그 축의 대조는 이미 반쪽이다 — 둘 다 모를 때만 중화하면 늦다.
   const neutralizedAxes: PairAxis[] =
     aTimeUnknown || bTimeUnknown ? [...TIME_DEPENDENT_AXES] : [];
+
+  // 대운을 못 구했으면 시기 축은 "볼 수 없음"이다. 판정 레이어가 이 축을 빼고,
+  // 프롬프트도 "볼 수 없다"로만 싣는다(couple-decision·couple-prompt 의 dead 분기).
+  if (opts.timingAvailable === false) neutralizedAxes.push("타이밍");
 
   // ★배틀의 순수 계산을 복사하지 않고 그대로 호출한다(정본 한 벌).
   const { summary: _yongshinProse, ...yongshinCompat } = calcYongshinCompat(a, b);
