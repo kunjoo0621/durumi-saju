@@ -35,6 +35,27 @@ const AXIS_META: Record<AxisKey, { title: string; sub: string; left: string; rig
 // 3단계 고정 포지션. 연속 점수가 아니다 — 판정이 3단계라 그 이상 정밀하게 그리면 거짓 정밀도가 된다.
 const VERDICT_POS: Record<AxisVerdict, number> = { 역: 16, 평: 50, 순: 84, 모름: 50 };
 
+/**
+ * ★배경이 판정을 말한다 — 운영자 지시(2026-09-03).
+ * 판정 5단계를 배경 3장에 매핑한다. 글을 읽기 전에 화면의 온도로 먼저 전해진다.
+ *
+ *  · 반지  — 두루미 둘이 반지를 끼워주는 순간. 잘 맞는 쪽.
+ *  · 서먹  — 나란히 섰지만 손을 안 잡았고 빛줄기가 안 만난다. "아직"인 쪽.
+ *  · 뒤돌아 — 등을 지고 각자 다른 곳을 본다. 많이 다른 쪽.
+ *
+ * ★"뒤돌아"도 비참하게 그리지 않는다. 많이 다른 건 나쁜 게 아니라 다른 것이다
+ *   (공포·협박 금지는 이 브랜드의 규칙이다).
+ */
+const VERDICT_BG: Array<{ match: RegExp; src: string }> = [
+  { match: /편하게 하는 결|무리 없이/, src: "/images/couple/bg-couple-ring.webp" },
+  { match: /맞춰가며/, src: "/images/couple/bg-couple-hesitant.webp" },
+  { match: /손이 자주|많이 다른/, src: "/images/couple/bg-couple-apart.webp" },
+];
+
+function bgForVerdict(verdict: string): string {
+  return VERDICT_BG.find((v) => v.match.test(verdict))?.src ?? "/images/couple/bg-couple-hesitant.webp";
+}
+
 const VERDICT_LABEL: Record<AxisVerdict, string> = {
   순: "순하게 흐른다",
   평: "무난하다",
@@ -91,12 +112,13 @@ function OpeningScene({
   verdict: string;
   axes: Record<AxisKey, AxisVerdict>;
 }) {
+  const bg = bgForVerdict(verdict);
   return (
     <section className="relative flex min-h-[82vh] flex-col items-center justify-center overflow-hidden px-6 text-center">
       {/* couple 전용 배경 1장. 결혼운(bg-love)·재물운(bg-wealth)과 같은 자리·같은 처리. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/images/couple/bg-couple.webp"
+        src={bg}
         alt=""
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top opacity-[0.65]"
@@ -394,9 +416,10 @@ function TeaserView({ data }: { data: TeaserData }) {
 
       <main className="mx-auto max-w-[640px] animate-fadeIn">
         <section className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden px-6 text-center">
+          {/* ★티저는 항상 중립 배경. 판정에 따라 배경이 달라지면 결제 전에 결론이 새어 나간다. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/images/couple/bg-couple.webp"
+            src="/images/couple/bg-couple-hesitant.webp"
             alt=""
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top opacity-[0.5]"
