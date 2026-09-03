@@ -33,7 +33,7 @@ const cell = (posA: string, posB: string, relations: string[]) =>
 
 test("일간 축 — 합은 가장 높고 충은 가장 낮다", () => {
   const score = (type: string) =>
-    decideCouple(facts({ dayStemRelation: { type, detail: "" } })).axes.마음.score;
+    decideCouple(facts({ dayStemRelation: { type, detail: "" } as never })).axes.마음.score;
 
   assert.equal(score("합"), 2);
   assert.equal(score("생"), 1);

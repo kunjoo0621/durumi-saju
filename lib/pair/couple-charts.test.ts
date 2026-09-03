@@ -71,3 +71,20 @@ test("계산 불가 입력은 에러를 돌려준다 (기본값으로 때우지 
   });
   assert.equal(r.ok, false);
 });
+
+// ★타이밍 교차("둘 다 열리는 해")를 구하려면 상대의 SajuData 원본이 필요하다.
+// deriveMarriageFacts 가 sajuData.day.heavenlyStem 을 읽기 때문이다.
+// 안 돌려주면 호출부가 null 을 넘기게 되고, 예외가 조용히 삼켜져 타이밍 축이
+// **영원히 비어 있게** 된다 — 20알의 근거인 기능이 죽는다.
+test("SajuData 원본도 돌려준다 (타이밍 교차에 필요)", async () => {
+  const r = await computePartnerChart({
+    name: "지영", birthYear: "1995", birthMonth: "6", birthDay: "21",
+    birthHour: "12", birthMinute: "0", gender: "여성",
+    calendarType: "solar", unknownBirthTime: false,
+  });
+
+  assert.equal(r.ok, true);
+  if (!r.ok) return;
+  assert.ok(r.saju, "saju 가 없다");
+  assert.ok(r.saju.day.heavenlyStem, "일간이 비었다 — deriveMarriageFacts 가 여기서 터진다");
+});

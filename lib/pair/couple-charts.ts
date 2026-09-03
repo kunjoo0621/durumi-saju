@@ -12,6 +12,8 @@ import { convertLunarToSolar } from "@/lib/utils/lunar";
 export type PartnerChart =
   | {
       ok: true;
+      /** ★타이밍 교차(deriveMarriageFacts)가 원본 SajuData 를 요구한다. */
+      saju: NonNullable<Awaited<ReturnType<typeof calculateSaju>>>;
       enriched: ReturnType<typeof enrichSajuData>;
       fortune: Awaited<ReturnType<typeof calculateFortune>> | null;
       sex: Sex;
@@ -59,10 +61,23 @@ export async function computePartnerChart(b: PartnerInput): Promise<PartnerChart
   // pair-facts 가 "겹치는 해 없음"으로 처리한다. ★없다고 감점하지 않는다.
   let fortune: Awaited<ReturnType<typeof calculateFortune>> | null = null;
   try {
-    fortune = await calculateFortune(saju, sex === "male" ? "남성" : "여성", year);
+    fortune = await calculateFortune({
+      birthYear: year,
+      birthMonth: month,
+      birthDay: day,
+      birthHour: hour,
+      birthMinute: minute,
+      gender: sex,
+      birthLocation: b.birthLocation,
+      yearPillar: saju.year.heavenlyStem + saju.year.earthlyBranch,
+      monthPillar: saju.month.heavenlyStem + saju.month.earthlyBranch,
+      dayPillar: saju.day.heavenlyStem + saju.day.earthlyBranch,
+      hourPillar: saju.hour.heavenlyStem + saju.hour.earthlyBranch,
+      isTimeUnknown,
+    });
   } catch (e) {
     console.error("[COUPLE] 상대 대운 계산 실패", (e as Error)?.message);
   }
 
-  return { ok: true, enriched, fortune, sex, birthYear: year };
+  return { ok: true, saju, enriched, fortune, sex, birthYear: year };
 }
