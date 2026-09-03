@@ -131,3 +131,51 @@ export function checkCoupleReport(
 
   return { text: out, violations };
 }
+
+/* ── 블록 검증 · 가드 적용 (qa-regen 규약) ── */
+
+const REQUIRED_BLOCKS = ["headline", "mindScene", "lifeScene", "complement", "timing", "advice"];
+const MIN_LEN = 40;
+
+/** 필수 블록이 있고 최소 분량을 채웠는지. 비면 무료/빈 리포트가 나간다. */
+export function validateCoupleBlocks(blocks: unknown): string[] {
+  const issues: string[] = [];
+  if (!blocks || typeof blocks !== "object" || Array.isArray(blocks)) return ["루트가 객체가 아님"];
+  const b = blocks as Record<string, unknown>;
+
+  for (const key of REQUIRED_BLOCKS) {
+    const v = b[key];
+    if (key === "advice") {
+      if (!Array.isArray(v) || v.length === 0) issues.push(`${key} 없음`);
+      else if (v.some((x) => typeof x !== "string" || x.trim().length < 10)) issues.push(`${key} 너무 짧음`);
+      continue;
+    }
+    if (typeof v !== "string" || v.trim().length < MIN_LEN) issues.push(`${key} 없음/짧음`);
+  }
+  return issues;
+}
+
+/**
+ * 가드 적용. ★문체·수위는 건드리지 않는다 — 재미를 깎지 않기 위해서다.
+ * 스크럽은 용어 괄호 병기 하나뿐이고, 나머지는 위반 목록으로만 돌려 재생성에 맡긴다.
+ */
+export function applyCoupleGuards(
+  blocks: unknown,
+  ctx: { allowedYears: number[] },
+): { blocks: unknown; violations: string[] } {
+  if (!blocks || typeof blocks !== "object") return { blocks, violations: ["루트가 객체가 아님"] };
+  const b = { ...(blocks as Record<string, unknown>) };
+  const violations: string[] = [];
+
+  const run = (text: string): string => {
+    const r = checkCoupleReport(text, ctx);
+    for (const v of r.violations) violations.push(`${v.kind}: ${v.hit}`);
+    return r.text;
+  };
+
+  for (const [key, value] of Object.entries(b)) {
+    if (typeof value === "string") b[key] = run(value);
+    else if (Array.isArray(value)) b[key] = value.map((x) => (typeof x === "string" ? run(x) : x));
+  }
+  return { blocks: b, violations };
+}

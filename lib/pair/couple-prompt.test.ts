@@ -130,3 +130,71 @@ test("중화가 있어도 블록은 가드를 위반하지 않는다", async () 
   });
   assert.deepEqual(violations, [], JSON.stringify(violations));
 });
+
+/* ── 프롬프트 본체 ── */
+
+import { buildCouplePrompt, COUPLE_BLOCK_KEYS } from "./couple-prompt";
+
+const prompt = (f: PairFacts) => buildCouplePrompt(f, decideCouple(f), { nameA: "너", nameB: "쟤" });
+
+test("프롬프트에 사실 블록이 그대로 들어간다", () => {
+  const f = facts();
+  assert.ok(prompt(f).includes(block(f)), "사실 블록이 프롬프트에 없다");
+});
+
+// ★예시 문장을 넣지 않는다. 기존 결혼운은 프롬프트에 적은 예시가 177편 중 38편(21.5%)에
+// 그대로 복제됐다. 대신 "쓰지 마라" 목록으로만 관리한다.
+test("프롬프트에 따라 쓸 예시 문장이 없다", () => {
+  const out = prompt(facts());
+  for (const worn of ["웬만한 바람", "뿌리 깊은 나무", "겉으로는", "예를 들어"]) {
+    assert.ok(!out.includes(worn), `예시가 들어 있다: ${worn}`);
+  }
+});
+
+test("닳은 표현·반복 골격 금지가 명시된다", () => {
+  const out = prompt(facts());
+  assert.match(out, /같은 틀|골격|반복/, "골격 반복 금지 지시가 없다");
+});
+
+test("반말·존댓말 규칙이 기존 상품과 같다", () => {
+  assert.match(prompt(facts()), /반말/);
+});
+
+test("출력 블록 키가 프롬프트와 상수에서 일치한다", () => {
+  const out = prompt(facts());
+  for (const k of COUPLE_BLOCK_KEYS) {
+    assert.ok(out.includes(k), `프롬프트에 ${k} 가 없다`);
+  }
+});
+
+/* ── 블록 검증 ── */
+
+import { validateCoupleBlocks, applyCoupleGuards } from "./couple-postprocess";
+
+test("필수 블록이 없으면 잡는다", () => {
+  assert.ok(validateCoupleBlocks({}).length > 0);
+  assert.ok(validateCoupleBlocks({ headline: "짧" }).length > 0);
+});
+
+test("다 있으면 통과한다", () => {
+  const ok: Record<string, unknown> = {};
+  for (const k of COUPLE_BLOCK_KEYS) ok[k] = "가".repeat(80);
+  ok.advice = ["가".repeat(40)];
+  assert.deepEqual(validateCoupleBlocks(ok), []);
+});
+
+// ★가드는 문체를 건드리지 않는다 — 재미를 깎으면 안 된다.
+test("가드는 위반만 돌려주고 멀쩡한 문장은 그대로 둔다", () => {
+  const blocks = { headline: "돈 얘기가 나오면 너는 계산부터 하고, 쟤는 표정부터 봐." };
+  const r = applyCoupleGuards(blocks, { allowedYears: [2029] });
+  assert.deepEqual(r.violations, []);
+  assert.equal((r.blocks as typeof blocks).headline, blocks.headline);
+});
+
+test("가드가 닳은 표현을 잡아낸다", () => {
+  const r = applyCoupleGuards(
+    { headline: "웬만한 바람에는 흔들리지 않아" },
+    { allowedYears: [] },
+  );
+  assert.ok(r.violations.some((v) => v.includes("닳은표현")), JSON.stringify(r.violations));
+});
