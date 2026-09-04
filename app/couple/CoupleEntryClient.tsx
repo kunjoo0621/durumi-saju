@@ -68,8 +68,9 @@ export default function CoupleEntryClient() {
   }, [isAuthed]);
 
   const start = () => {
-    // 대표사주가 있으면 내 건 건너뛰고 상대만, 없으면 내 사주부터.
-    router.push(hasPrimary ? "/couple/partner" : "/couple/self");
+    // ★입력은 배틀의 2인 입력 화면을 그대로 쓴다. 그 화면이 "내 사주 재사용/새로 입력"을
+    //   이미 갈라 주므로 여기서 분기할 필요가 없다.
+    router.push("/battle/input?for=couple");
   };
 
   return (

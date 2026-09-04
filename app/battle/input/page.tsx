@@ -58,8 +58,23 @@ const STEPS_EXISTING: StepId[] = [
   "relationship", "oppName", "oppBirth", "oppLocation", "oppGender",
 ];
 
+// ★이 화면은 배틀 전용이 아니다. couple("우리 결혼해도 되는 사주일까")도 같은 2인 입력을 쓴다
+//   — 필드 집합이 동일하고(BattlePlayerInput ≒ InputPayload) "내 사주 재사용" 토글도 이미 있다.
+//   화면을 한 벌 더 만들면 2인 입력이 두 벌이 되므로, 목적지만 ?for= 로 갈라 준다.
+//   ★배틀 동작은 바뀌지 않는다: for 가 없으면 전부 기존 그대로다.
+const DESTINATIONS: Record<string, { next: string; form: "battle" | "couple" }> = {
+  couple: { next: "/couple/teaser", form: "couple" },
+};
+
 export default function BattleInputPage() {
   const router = useRouter();
+  // ★useSearchParams 를 쓰지 않는다 — 이 페이지의 정적 프리렌더가 깨진다(빌드 실패로 확인).
+  //   목적지는 제출 시점(하이드레이션 이후)에만 필요하므로 location 에서 한 번 읽어 둔다.
+  const [destKey, setDestKey] = useState("");
+  useEffect(() => {
+    setDestKey(new URLSearchParams(window.location.search).get("for") ?? "");
+  }, []);
+  const dest = DESTINATIONS[destKey] ?? { next: "/teaser?type=battle", form: "battle" as const };
   const step = useBattleStep();
   const playerA = useBattlePlayerA();
   const playerB = useBattlePlayerB();
@@ -296,8 +311,8 @@ export default function BattleInputPage() {
       setShowLoginModal(true);
       return;
     }
-    trackFormComplete("battle");
-    router.push("/teaser?type=battle");
+    trackFormComplete(dest.form);
+    router.push(dest.next);
   };
 
 
