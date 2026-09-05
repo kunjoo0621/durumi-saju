@@ -8,6 +8,8 @@ import { decideCouple } from "./couple-decision";
 function facts(over: Partial<PairFacts> = {}): PairFacts {
   return {
     currentYear: 2026,
+    dayStemA: "甲",
+    dayStemB: "辛",
     reliability: { aTimeUnknown: false, bTimeUnknown: false, neutralizedAxes: [] },
     dayStemRelation: { type: "비화", detail: "" },
     yongshinCompat: { aHelpsB: false, bHelpsA: false, aHurtsB: false, bHurtsA: false },

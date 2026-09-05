@@ -8,6 +8,8 @@ import type { PairFacts } from "./pair-facts";
 function facts(over: Partial<PairFacts> = {}): PairFacts {
   return {
     currentYear: 2026,
+    dayStemA: "甲",
+    dayStemB: "辛",
     reliability: { aTimeUnknown: false, bTimeUnknown: false, neutralizedAxes: [] },
     dayStemRelation: { type: "합", detail: "갑기합 — 서로 끌리는 관계" },
     yongshinCompat: { aHelpsB: true, bHelpsA: false, aHurtsB: false, bHurtsA: true },
@@ -280,4 +282,77 @@ test("총량이 얇으면 재생성 노트를 남긴다 (실패시키지는 않�
 
   const fat = { a: "가".repeat(1700) };
   assert.deepEqual(validateCoupleRichness(fat), []);
+});
+
+/* ── 계산해 놓고 안 팔던 값들 ── */
+
+// ★"같은 상황에서 둘이 다르게 반응하는지"가 이 상품의 핵심 지시인데, 사실 블록에
+// **개인별 기질이 한 줄도 없었다.** 관계 사실만 실리니 "각자의 반응"은 지어내야만
+// 쓸 수 있었다 — 지시와 금지가 모순이었다.
+test("두 사람 각자의 바탕이 뜻으로 실린다", () => {
+  const f = facts();
+  const out = buildCoupleFactsBlock(
+    f,
+    decideCouple(f),
+    { nameA: "너", nameB: "쟤" },
+  );
+  assert.match(out, /## 각자의 바탕/, `개인 기질 섹션이 없다:\n${out}`);
+  // 일간 물상이 뜻으로 실려야 한다(용어 아님)
+  assert.match(out, /나무|볕|산|쇠|물/, `바탕이 뜻으로 안 실렸다:\n${out}`);
+});
+
+// ★complement 블록 제목이 "한쪽이 비면 다른 쪽이 메우나"인데, 무엇이 비고 무엇을
+// 메우는지를 안 줬다. 퍼센트 한 줄로 400자를 쓰라는 셈이었다.
+test("어떤 기운이 비고 누가 채우는지 실린다", () => {
+  const f = facts({
+    elementCoverage: {
+      percent: 80,
+      combined: { 목: 2, 화: 1, 토: 1, 금: 1, 수: 0 },
+      deficientAlone: { a: ["수"], b: ["목"] },
+      coveredByOther: { a: [], b: ["목"] },
+    },
+  } as never);
+  const out = buildCoupleFactsBlock(f, decideCouple(f), { nameA: "너", nameB: "쟤" });
+  assert.match(out, /물기|나무/, `결핍 오행이 뜻으로 안 실렸다:\n${out}`);
+});
+
+// ★판정은 부부 자리끼리를 년↔시보다 6배 넘게 무겁게 치는데, 블록의 칸 나열은
+// 평탄했다. 모델이 년↔시 원진을 부부 자리 충만큼 크게 다뤄도 막을 수 없었다.
+test("걸리는 자리가 무거운 순으로 정렬되고 가장 무거운 자리가 표시된다", () => {
+  const f = facts({
+    branchMatrix: [
+      { posA: "year", posB: "hour", branchA: "子", branchB: "未", relations: ["원진"] },
+      { posA: "day", posB: "day", branchA: "辰", branchB: "戌", relations: ["충"] },
+    ],
+  } as never);
+  const out = buildCoupleFactsBlock(f, decideCouple(f), { nameA: "너", nameB: "쟤" });
+
+  const dayIdx = out.indexOf("부부 자리(辰)");
+  const yearIdx = out.indexOf("뿌리 자리(子)");
+  assert.ok(dayIdx > 0 && yearIdx > 0, out);
+  assert.ok(dayIdx < yearIdx, `부부 자리가 먼저 와야 한다:\n${out}`);
+  assert.match(out, /가장 무거운/, `무게 표시가 없다:\n${out}`);
+});
+
+// ★조사는 새 줄을 추가할 때마다 빠뜨리기 쉽다(실제로 "그중 서연가 채워주는" 이 나갔다).
+// 블록 전체에서 이름 뒤 조사가 틀린 곳이 없는지 한 번에 잡는다.
+test("사실 블록 어디에도 조사 오류가 없다", () => {
+  const f = facts({
+    elementCoverage: {
+      percent: 80, combined: {},
+      deficientAlone: { a: ["목"], b: ["화"] },
+      coveredByOther: { a: ["목"], b: ["화"] },
+    },
+  } as never);
+  // 받침 있는 이름 / 없는 이름을 섞어 둘 다 검사한다
+  const out = buildCoupleFactsBlock(f, decideCouple(f), { nameA: "서연", nameB: "민수" });
+
+  // 받침 있는 "서연" 뒤에 가/를/는 이 붙으면 틀린 것
+  for (const wrong of ["서연가", "서연를", "서연는", "서연와"]) {
+    assert.ok(!out.includes(wrong), `조사 오류 "${wrong}":\n${out}`);
+  }
+  // 받침 없는 "민수" 뒤에 이/을/은 이 붙으면 틀린 것
+  for (const wrong of ["민수이 ", "민수을", "민수은", "민수과"]) {
+    assert.ok(!out.includes(wrong), `조사 오류 "${wrong}":\n${out}`);
+  }
 });

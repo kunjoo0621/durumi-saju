@@ -51,6 +51,13 @@ export interface BranchCell {
 export interface PairFacts {
   /** 산출에 쓰인 연도. 저장해 두고 재계산 시 그대로 다시 넣는다. */
   currentYear: number;
+  /**
+   * 두 사람의 일간. ★프롬프트가 "각자의 바탕"을 물상으로 싣는 데 쓴다 —
+   * 개인 기질 재료가 없으면 "둘이 다르게 반응한다"를 지어내야만 쓸 수 있다.
+   * 화면에는 노출하지 않는다(§1-0 — 한자·명리 용어 금지).
+   */
+  dayStemA: string;
+  dayStemB: string;
   reliability: PairReliability;
   dayStemRelation: ReturnType<typeof calcDayStemRelation>;
   /** ★summary 는 배틀 프롬프트용 프로즈(용신·기신 라벨이 박혀 있다)라 싣지 않는다. */
@@ -221,6 +228,8 @@ export function derivePairFacts(
 
   return {
     currentYear: opts.currentYear,
+    dayStemA: a.dayMaster.stem,
+    dayStemB: b.dayMaster.stem,
     reliability: { aTimeUnknown, bTimeUnknown, neutralizedAxes },
     dayStemRelation: calcDayStemRelation(a.dayMaster.stem, b.dayMaster.stem),
     yongshinCompat,

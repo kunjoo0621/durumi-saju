@@ -62,7 +62,8 @@ function isFarPair(posA: string, posB: string): boolean {
   return (posA === "year" && posB === "hour") || (posA === "hour" && posB === "year");
 }
 
-function cellWeight(posA: string, posB: string): number {
+/** 궁위 가중. 프롬프트가 칸을 무거운 순으로 정렬할 때도 쓴다 — 같은 값이어야 판정과 안 어긋난다. */
+export function cellWeight(posA: string, posB: string): number {
   const base = (PILLAR_WEIGHT[posA] ?? 1) * (PILLAR_WEIGHT[posB] ?? 1);
   return isFarPair(posA, posB) ? base * 0.5 : base;
 }

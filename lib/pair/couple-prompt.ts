@@ -10,7 +10,7 @@
 //   안 나온다. 블록에 있으면 LLM 이 그대로 쓴다 — 나중에 지우는 술래잡기 대신 안 넣는다.
 //   명리 자리 이름(일지·월지)도 사람 말로 옮겨서 넣는다.
 
-import type { AxisKey, CoupleDecision } from "./couple-decision";
+import { cellWeight, type AxisKey, type CoupleDecision } from "./couple-decision";
 import type { BranchCell, PairFacts } from "./pair-facts";
 import { withJosa } from "./josa";
 
@@ -96,6 +96,37 @@ const TEN_STAR_LABEL: Record<string, string> = {
   겁재: "겨루게 되는 사람",
 };
 
+/**
+ * 일간 물상 — 그 사람의 바탕을 뜻으로.
+ *
+ * ★왜 필요한가: 이 상품의 핵심 지시가 "같은 상황에서 둘이 어떻게 다르게 반응하는지"인데,
+ *   사실 블록에 **개인별 기질이 한 줄도 없었다.** 관계 사실만 실리니 "각자의 반응"은
+ *   지어내야만 쓸 수 있었다 — 지시와 금지가 모순이었고, 사실 블록에 없으니 후처리도
+ *   못 잡는다(= 지어낸 채로 유료 출고).
+ * ★용어가 아니라 물상으로 쓴다(§1-0 — 명리 용어 노출 금지).
+ */
+const DAY_MASTER_TRAIT: Record<string, string> = {
+  甲: "곧게 뻗는 나무 — 밀고 나가고, 굽히기를 어려워한다",
+  乙: "감아 오르는 덩굴 — 부드럽게 파고들고, 버티는 힘이 길다",
+  丙: "한낮의 볕 — 드러내고 데우고, 숨기지 못한다",
+  丁: "등불 — 가까운 데를 오래 밝히고, 멀리는 못 간다",
+  戊: "큰 산 — 버티고 품고, 잘 안 움직인다",
+  己: "밭흙 — 받아 기르고, 티를 안 낸다",
+  庚: "도끼 — 단칼에 자르고, 에두르지 않는다",
+  辛: "잘 벼린 쇠 — 다듬고 가리고, 흠을 못 견딘다",
+  壬: "큰물 — 넓게 흐르고, 한자리에 안 머문다",
+  癸: "이슬 — 스며들고, 소리 없이 적신다",
+};
+
+/** 오행을 뜻으로. 결핍·상보를 사람 말로 싣는다. */
+const ELEMENT_WORD: Record<string, string> = {
+  목: "뻗어나가는 나무 기운",
+  화: "밝히고 데우는 볕 기운",
+  토: "버티고 품는 흙 기운",
+  금: "끊고 정리하는 쇠 기운",
+  수: "스며들고 채우는 물기",
+};
+
 const AXIS_SOURCE: Record<AxisKey, string> = {
   마음: "두 사람의 본바탕이 만났을 때",
   생활: "같이 살면서 부딪히는 자리",
@@ -116,6 +147,16 @@ export function buildCoupleFactsBlock(
   lines.push(`기준 연도: ${f.currentYear}`);
   lines.push(`두 사람: ${nameA} / ${nameB}`);
   lines.push("");
+
+  // ── 각자의 바탕 (개인 기질) — "둘이 다르게 반응한다"를 쓸 재료
+  const traitA = DAY_MASTER_TRAIT[f.dayStemA ?? ""];
+  const traitB = DAY_MASTER_TRAIT[f.dayStemB ?? ""];
+  if (traitA || traitB) {
+    lines.push("## 각자의 바탕");
+    if (traitA) lines.push(`- ${nameA}: ${traitA}`);
+    if (traitB) lines.push(`- ${nameB}: ${traitB}`);
+    lines.push("");
+  }
 
   // ── 마음
   if (dead.has("마음")) {
@@ -140,7 +181,15 @@ export function buildCoupleFactsBlock(
     if (f.branchMatrix.length === 0) {
       lines.push("- 특별히 걸리는 자리가 없다");
     } else {
-      for (const c of f.branchMatrix) lines.push(cellLine(c, nameA, nameB));
+      // ★무거운 순으로 정렬한다. 판정은 부부 자리끼리를 년↔시보다 6배 넘게 무겁게
+      //   치는데(couple-decision 의 cellWeight) 블록이 평탄하면 모델이 년↔시 원진을
+      //   부부 자리 충만큼 크게 다뤄도 막을 수 없다.
+      const sorted = [...f.branchMatrix].sort(
+        (x, y) => cellWeight(y.posA, y.posB) - cellWeight(x.posA, x.posB),
+      );
+      sorted.forEach((c, i) => {
+        lines.push(`${cellLine(c, nameA, nameB)}${i === 0 ? "   ← 가장 무거운 자리" : ""}`);
+      });
     }
   }
   lines.push("");
@@ -158,7 +207,15 @@ export function buildCoupleFactsBlock(
     if (!y.aHelpsB && !y.bHelpsA && !y.aHurtsB && !y.bHurtsA) {
       lines.push("- 서로 채우지도, 건드리지도 않는다");
     }
-    lines.push(`- 둘을 합치면 다섯 기운 중 ${f.elementCoverage.percent}%가 채워진다`);
+    // ★어떤 기운이 비고 무엇이 채워지는지를 준다. 퍼센트 한 줄로 400자를 쓰라는 건
+    //   지어내라는 말과 같다.
+    const ec = f.elementCoverage;
+    const words = (els: string[]) => els.map((e) => ELEMENT_WORD[e] ?? e).join(", ");
+    if (ec.deficientAlone?.a?.length) lines.push(`- ${nameA}에게 비어 있는 것: ${words(ec.deficientAlone.a)}`);
+    if (ec.deficientAlone?.b?.length) lines.push(`- ${nameB}에게 비어 있는 것: ${words(ec.deficientAlone.b)}`);
+    if (ec.coveredByOther?.a?.length) lines.push(`- 그중 ${withJosa(nameB, "이")} 채워주는 것: ${words(ec.coveredByOther.a)}`);
+    if (ec.coveredByOther?.b?.length) lines.push(`- 그중 ${withJosa(nameA, "이")} 채워주는 것: ${words(ec.coveredByOther.b)}`);
+    lines.push(`- 둘을 합치면 다섯 기운 중 ${ec.percent}%가 채워진다`);
   }
   lines.push("");
 
