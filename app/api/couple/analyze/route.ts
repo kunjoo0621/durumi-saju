@@ -175,12 +175,36 @@ export async function POST(request: NextRequest) {
       axes: AXIS_ORDER.map((k) => recomputed.decision.axes[k].verdict as string),
     };
 
+    // ★판정이 달라졌으면 **막지 않고 갱신한다**(운영자 결정 2026-09-05).
+    //
+    //   marriage 는 여기서 409 로 막는다. 그 상품은 등급을 미리보기에 보여주므로
+    //   "본 것과 다른 걸 판다"가 성립하기 때문이다. couple 은 다르다 —
+    //   판정을 결제 전에 "? ? ?" 로 가리고 응답 경계에서도 잘라낸다(start:247, results:47).
+    //   **사용자가 본 게 없는데 "본 것과 다르다"며 막을 이유가 없다.**
+    //
+    //   막았을 때 생기는 실제 피해가 더 크다: 우리가 판정 경계를 조정하면 기존 teaser 가
+    //   전부 409 로 떨어지고, 안내 문구는 "사주 정보가 바뀌었어요"라 **거짓말**이 된다
+    //   (사주는 그대로고 우리 기준이 바뀐 것이다).
     if (isVerdictStale(stored, fresh)) {
-      console.error("[COUPLE_ANALYZE] 판정 불일치 — 결제 차단", stored.verdict, "vs", fresh.verdict);
-      return NextResponse.json(
-        { error: "미리보기 이후 사주 정보가 바뀌었어요. 미리보기를 다시 만든 뒤 시도해 주세요.", mismatch: true },
-        { status: 409 },
-      );
+      console.warn("[COUPLE_ANALYZE] 판정 갱신", stored.verdict, "→", fresh.verdict);
+      const refreshed = await supabaseAdmin
+        .from("couple_results")
+        .update({
+          verdict: fresh.verdict,
+          axis_mind: fresh.axes[0],
+          axis_life: fresh.axes[1],
+          axis_complement: fresh.axes[2],
+          axis_timing: fresh.axes[3],
+          neutralized_axes: recomputed.decision.neutralized,
+          pair_facts_json: recomputed.facts,
+        })
+        .eq("id", body.resultId)
+        .eq("user_id", userId);
+      if (refreshed.error) {
+        // 갱신에 실패하면 옛 판정으로 리포트를 만들게 되므로 여기서 멈춘다(차감 전이다).
+        console.error("[COUPLE_ANALYZE] 판정 갱신 실패", refreshed.error.message);
+        return NextResponse.json({ error: "잠시 후 다시 시도해 주세요." }, { status: 500 });
+      }
     }
 
     /* ── 3) 차감 ── */
