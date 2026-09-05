@@ -132,3 +132,84 @@ test("강약 8단계 명칭을 하나도 빠짐없이 잡는다", () => {
     assert.ok(kinds(`너는 ${level} 체질이라`).includes("명리용어"), `못 잡았다: ${level}`);
   }
 });
+
+/* ── 치환 스크럽 (실측: 2번 재생성해도 살아남아 그대로 출고됐다) ── */
+
+// probe 실측에서 "아내" 3회, "편인", "일지" 가 재생성 2회를 견디고 유료 리포트로 나갔다.
+// 지우면 문장이 부서지므로 **뜻으로 바꾼다**(펫 궁합의 용어 치환 선례).
+test("혼인 신분어를 중립어로 바꾼다", () => {
+  const r = checkCoupleReport("아내 자리가 흔들려서 남편이 힘들어", { allowedYears: [] });
+  assert.ok(!r.text.includes("아내"), r.text);
+  assert.ok(!r.text.includes("남편"), r.text);
+  assert.ok(r.text.includes("짝"), r.text);
+});
+
+test("명리 용어를 뜻으로 바꾼다", () => {
+  const r = checkCoupleReport("편인의 기운이 일지에 앉아 있어", { allowedYears: [] });
+  assert.ok(!r.text.includes("편인"), r.text);
+  assert.ok(!r.text.includes("일지"), r.text);
+  assert.ok(r.text.length > 10, "문장이 부서졌다: " + r.text);
+});
+
+// 치환해도 위반은 기록한다 — 몇 번 새는지 재야 프롬프트를 고칠 수 있다.
+test("치환해도 위반 기록은 남는다", () => {
+  const r = checkCoupleReport("아내 자리가", { allowedYears: [] });
+  assert.ok(r.violations.some((v) => v.kind === "혼인신분어"));
+});
+
+/* ── 치환이 멀쩡한 단어를 부수면 안 된다 (실측 버그) ── */
+
+// ★probe 실측: /아내/g 가 "녹아내릴"·"쏟아내기" 안의 "아내"를 잡아
+// "녹짝릴"·"쏟짝기" 로 문장을 부순 채 출고했다. 금지어 검사만 보면 0이라 안 보인다.
+test("정상 단어 안의 글자를 치환하지 않는다", () => {
+  for (const t of [
+    "눈이 녹아내릴 즈음에",
+    "속내를 쏟아내기 시작해",
+    "그건 상관없어",
+    "누구와도 비견할 만해",
+    "정신을 차려",
+  ]) {
+    const r = checkCoupleReport(t, { allowedYears: [] });
+    assert.equal(r.text, t, `멀쩡한 문장이 바뀌었다: "${t}" → "${r.text}"`);
+  }
+});
+
+// 치환할 때 조사도 맞춰야 한다 — "아내가" → "짝가" 는 틀린 말이다.
+test("치환 후 조사가 맞는다", () => {
+  const cases: Array<[string, string]> = [
+    ["아내가 힘들어", "짝이 힘들어"],
+    ["아내를 봐", "짝을 봐"],
+    ["아내는 조용해", "짝은 조용해"],
+    ["남편이 그래", "짝이 그래"],
+  ];
+  for (const [input, expected] of cases) {
+    assert.equal(checkCoupleReport(input, { allowedYears: [] }).text, expected, input);
+  }
+});
+
+test("실제 명리 용어 문맥에서는 치환한다", () => {
+  const r = checkCoupleReport("아내 자리가 흔들려", { allowedYears: [] });
+  assert.equal(r.text, "짝 자리가 흔들려");
+  const r2 = checkCoupleReport("편인의 기운", { allowedYears: [] });
+  assert.ok(!r2.text.includes("편인") && r2.text.includes("결"), r2.text);
+});
+
+// ★검출에도 같은 경계 규칙이 필요하다(실측): "쏟아내게"·"휴식처가"·"반대일지는" 이
+// 각각 아내·처가·일지 위반으로 잡혀 매 리포트마다 재생성을 2회씩 태웠다.
+// 치환은 경계를 지켜 문장을 안 부쉈는데(출고물은 깨끗) 검출만 오탐이었다.
+test("정상 단어 안의 글자를 위반으로 잡지 않는다", () => {
+  for (const t of [
+    "속 깊은 이야기를 술술 쏟아내게 돼",
+    "세상에서 가장 안전한 휴식처가 되고",
+    "그 반대일지는 아직 알 수 없어",
+    "그건 상관없어",
+    "비견할 만한 사람이야",
+  ]) {
+    assert.deepEqual(kinds(t), [], `오탐: "${t}"`);
+  }
+});
+
+test("진짜 위반은 여전히 잡는다", () => {
+  assert.ok(kinds("아내 자리가 흔들려").includes("혼인신분어"));
+  assert.ok(kinds("일지에 충이 들어").includes("명리용어"));
+});

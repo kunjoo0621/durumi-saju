@@ -26,7 +26,7 @@ import { parseJson5Loose } from "@/lib/json5Utils";
 import { computePartnerChart } from "@/lib/pair/couple-charts";
 import { decideCouple, type AxisKey } from "@/lib/pair/couple-decision";
 import { isVerdictStale } from "@/lib/pair/couple-input-hash";
-import { applyCoupleGuards, validateCoupleBlocks } from "@/lib/pair/couple-postprocess";
+import { applyCoupleGuards, validateCoupleBlocks, validateCoupleRichness } from "@/lib/pair/couple-postprocess";
 import { buildCouplePrompt } from "@/lib/pair/couple-prompt";
 import { derivePairFacts, type PairFacts, type Sex } from "@/lib/pair/pair-facts";
 import { generateWithQaRegen } from "@/lib/qa-regen";
@@ -262,6 +262,11 @@ export async function POST(request: NextRequest) {
     const prompt = buildCouplePrompt(recomputed.facts, recomputed.decision, names);
     const allowedYears = recomputed.facts.fortuneCross.timingOverlapYears;
 
+    // ★볼 수 없는 축의 블록은 분량 하한을 면제한다. 400자를 요구하면 모델이 필러를 쓰거나
+    //   단정하게 된다 — "못 본 것 ≠ 없는 것" 원칙과 정면 충돌이다.
+    const AXIS_BLOCK: Record<string, string> = { 마음: "mindScene", 생활: "lifeScene", 보완: "complement", 시기: "timing" };
+    const deadBlocks = recomputed.decision.neutralized.map((a) => AXIS_BLOCK[a]).filter(Boolean);
+
     const envModels = (process.env.GEMINI_MODELS || "").split(",").map((m) => m.trim()).filter(Boolean);
     const models = envModels.length > 0 ? envModels : DEFAULT_MODELS;
 
@@ -273,7 +278,8 @@ export async function POST(request: NextRequest) {
       callModel: (model, p, sys, cfg) => callGemini(model, p, sys, cfg),
       shouldFallback,
       parse: (text) => parseJson5Loose<unknown>(text),
-      validateBlocks: (candidate) => validateCoupleBlocks(candidate),
+      validateBlocks: (candidate) => validateCoupleBlocks(candidate, { deadBlocks }),
+      softValidate: (candidate) => validateCoupleRichness(candidate),
       // ★기준 연도도 허용한다. 블록이 그 값을 싣는데 가드가 막으면 LLM 이 규칙을
       //   지켜도 위반이 떠 무의미한 재생성이 돈다(전체 리뷰에서 재현).
       applyGuards: (candidate) => applyCoupleGuards(candidate, { allowedYears, currentYear: storedYear }),
@@ -289,7 +295,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 가드가 문장을 스크럽한 뒤 필수 블록이 비었는지 재검증 — 빈 리포트가 나가면 안 된다.
-    const postIssues = validateCoupleBlocks(gen.blocks);
+    const postIssues = validateCoupleBlocks(gen.blocks, { deadBlocks });
     if (postIssues.length > 0) {
       console.error("[COUPLE_ANALYZE] 가드 후 블록 결손", postIssues);
       await refundAndCleanup();

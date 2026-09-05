@@ -12,6 +12,7 @@
 
 import type { AxisKey, CoupleDecision } from "./couple-decision";
 import type { BranchCell, PairFacts } from "./pair-facts";
+import { withJosa } from "./josa";
 
 /** 궁위를 사람 말로. 명리 용어가 블록에 들어가면 본문으로 새어 나간다. */
 const PILLAR_LABEL: Record<string, string> = {
@@ -46,13 +47,13 @@ function directedStemLine(
   const bFirst = /B가 A를/.test(rel.detail);
 
   if (rel.type === "생") {
-    if (aFirst) return `${nameA}가 ${nameB}를 밀어준다`;
-    if (bFirst) return `${nameB}가 ${nameA}를 밀어준다`;
+    if (aFirst) return `${withJosa(nameA, "이")} ${withJosa(nameB, "을")} 밀어준다`;
+    if (bFirst) return `${withJosa(nameB, "이")} ${withJosa(nameA, "을")} 밀어준다`;
     return "한쪽이 다른 쪽을 밀어준다";
   }
   if (rel.type === "극") {
-    if (aFirst) return `${nameA}가 ${nameB}를 누른다`;
-    if (bFirst) return `${nameB}가 ${nameA}를 누른다`;
+    if (aFirst) return `${withJosa(nameA, "이")} ${withJosa(nameB, "을")} 누른다`;
+    if (bFirst) return `${withJosa(nameB, "이")} ${withJosa(nameA, "을")} 누른다`;
     return "한쪽이 다른 쪽을 누른다";
   }
   return STEM_RELATION_LABEL[rel.type] ?? rel.type;
@@ -124,10 +125,10 @@ export function buildCoupleFactsBlock(
     lines.push(`- ${directedStemLine(f.dayStemRelation, nameA, nameB)}`);
     const aSees = f.tenStarExchange.aSeesB ? TEN_STAR_LABEL[f.tenStarExchange.aSeesB] : null;
     const bSees = f.tenStarExchange.bSeesA ? TEN_STAR_LABEL[f.tenStarExchange.bSeesA] : null;
-    if (aSees) lines.push(`- ${nameA}에게 ${nameB}는 "${aSees}"으로 온다`);
-    if (bSees) lines.push(`- ${nameB}에게 ${nameA}는 "${bSees}"으로 온다`);
-    if (f.spouseStarCross.aHitByB === true) lines.push(`- ${nameB}가 ${nameA}의 짝 자리에 실제로 걸린다`);
-    if (f.spouseStarCross.bHitByA === true) lines.push(`- ${nameA}가 ${nameB}의 짝 자리에 실제로 걸린다`);
+    if (aSees) lines.push(`- ${nameA}에게 ${withJosa(nameB, "은")} "${aSees}"으로 온다`);
+    if (bSees) lines.push(`- ${nameB}에게 ${withJosa(nameA, "은")} "${bSees}"으로 온다`);
+    if (f.spouseStarCross.aHitByB === true) lines.push(`- ${withJosa(nameB, "이")} ${nameA}의 짝 자리에 실제로 걸린다`);
+    if (f.spouseStarCross.bHitByA === true) lines.push(`- ${withJosa(nameA, "이")} ${nameB}의 짝 자리에 실제로 걸린다`);
   }
   lines.push("");
 
@@ -150,10 +151,10 @@ export function buildCoupleFactsBlock(
   } else {
     lines.push(`## ${AXIS_SOURCE.보완}`);
     const y = f.yongshinCompat;
-    if (y.aHelpsB) lines.push(`- ${nameA}가 ${nameB}에게 필요한 기운을 채워준다`);
-    if (y.bHelpsA) lines.push(`- ${nameB}가 ${nameA}에게 필요한 기운을 채워준다`);
-    if (y.aHurtsB) lines.push(`- ${nameA}가 ${nameB}의 아픈 데를 건드린다`);
-    if (y.bHurtsA) lines.push(`- ${nameB}가 ${nameA}의 아픈 데를 건드린다`);
+    if (y.aHelpsB) lines.push(`- ${withJosa(nameA, "이")} ${nameB}에게 필요한 기운을 채워준다`);
+    if (y.bHelpsA) lines.push(`- ${withJosa(nameB, "이")} ${nameA}에게 필요한 기운을 채워준다`);
+    if (y.aHurtsB) lines.push(`- ${withJosa(nameA, "이")} ${nameB}의 아픈 데를 건드린다`);
+    if (y.bHurtsA) lines.push(`- ${withJosa(nameB, "이")} ${nameA}의 아픈 데를 건드린다`);
     if (!y.aHelpsB && !y.bHelpsA && !y.aHurtsB && !y.bHurtsA) {
       lines.push("- 서로 채우지도, 건드리지도 않는다");
     }
@@ -250,6 +251,16 @@ const COUPLE_RULES = `
 - 혼인 신분어(남편·아내·시댁·처가). "짝", "곁에 올 사람"처럼 중립으로.
 - "결혼해라 / 하지 마라" 같은 지시, 이혼·이별 예언, "반드시 ~하게 된다" 같은 확정.
 - 위 사실 블록에 없는 연도.
+
+[★분량 — 여기가 20알짜리인 이유다]
+- headline: 한 문장, 30~60자. 두 사람이 어디서 갈리는지 한 줄로 박아라.
+- mindScene / lifeScene / complement: **각 400~550자.** 한 블록이라도 350자 미만이면 실패다.
+- timing: 300~450자.
+- advice: 3~5개, 각 40~90자.
+- ★분량은 늘려 쓰라는 뜻이 아니라 **끝까지 파라는 뜻**이다. 같은 말을 길게 늘이면
+  검사에서 걸린다. 위 사실에서 아직 안 쓴 것을 찾아 새 장면·새 근거로 채워라.
+- 블록끼리 같은 결론을 반복하지 마라. 한 사실은 한 블록이 주인이다 —
+  마음=바탕의 화학 / 생활=자리별로 붙고 부딪히는 곳 / 보완=기운의 결핍과 충전 / 시기=연도.
 
 [출력]
 JSON 하나만. 키는 정확히 이것들:

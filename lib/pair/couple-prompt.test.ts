@@ -169,7 +169,7 @@ test("출력 블록 키가 프롬프트와 상수에서 일치한다", () => {
 
 /* ── 블록 검증 ── */
 
-import { validateCoupleBlocks, applyCoupleGuards } from "./couple-postprocess";
+import { validateCoupleBlocks, validateCoupleRichness, applyCoupleGuards } from "./couple-postprocess";
 
 test("필수 블록이 없으면 잡는다", () => {
   assert.ok(validateCoupleBlocks({}).length > 0);
@@ -177,10 +177,63 @@ test("필수 블록이 없으면 잡는다", () => {
 });
 
 test("다 있으면 통과한다", () => {
-  const ok: Record<string, unknown> = {};
-  for (const k of COUPLE_BLOCK_KEYS) ok[k] = "가".repeat(80);
-  ok.advice = ["가".repeat(40)];
+  const ok: Record<string, unknown> = {
+    headline: "가".repeat(40),
+    mindScene: "가".repeat(400),
+    lifeScene: "가".repeat(400),
+    complement: "가".repeat(400),
+    timing: "가".repeat(300),
+    advice: ["가".repeat(50), "나".repeat(50), "다".repeat(50)],
+  };
   assert.deepEqual(validateCoupleBlocks(ok), []);
+});
+
+// ★실측에서 나온 문제: 프롬프트는 headline 을 "한 줄"로 지시하는데 초안은 전 블록에
+// 40자 하한을 걸어, 35자짜리 정상 헤드라인이 반려되고 첫 probe 실행이 통째로 실패했다.
+test("headline 은 짧아도 통과한다 (본문 하한과 다르다)", () => {
+  const b = {
+    headline: "끌리는 마음은 자연스러운데 일상은 치열하게 조율해야 하는 사이야.",
+    mindScene: "가".repeat(400), lifeScene: "가".repeat(400),
+    complement: "가".repeat(400), timing: "가".repeat(300),
+    advice: ["가".repeat(50), "나".repeat(50), "다".repeat(50)],
+  };
+  assert.deepEqual(validateCoupleBlocks(b), []);
+});
+
+// ★20알인데 실측 총량이 731~801자였다(marriage 10알의 하한은 1900자).
+test("본문 블록이 얇으면 잡는다", () => {
+  const thin: Record<string, unknown> = {
+    headline: "가".repeat(30),
+    mindScene: "가".repeat(150), lifeScene: "가".repeat(150),
+    complement: "가".repeat(150), timing: "가".repeat(100),
+    advice: ["가".repeat(50), "나".repeat(50), "다".repeat(50)],
+  };
+  const issues = validateCoupleBlocks(thin);
+  assert.ok(issues.some((i) => i.startsWith("mindScene")), JSON.stringify(issues));
+});
+
+// ★볼 수 없는 축에 400자를 요구하면 모델이 필러를 쓰거나 단정하게 된다 —
+// "못 본 것 ≠ 없는 것" 원칙과 정면 충돌이라 하한을 면제한다.
+test("중화된 축의 블록은 분량 하한을 면제한다", () => {
+  const b: Record<string, unknown> = {
+    headline: "가".repeat(30),
+    mindScene: "가".repeat(400),
+    lifeScene: "시간을 몰라 이 자리는 못 봤어.",
+    complement: "가".repeat(400), timing: "가".repeat(300),
+    advice: ["가".repeat(50), "나".repeat(50), "다".repeat(50)],
+  };
+  assert.ok(validateCoupleBlocks(b).length > 0, "면제 없이는 걸려야 한다");
+  assert.deepEqual(validateCoupleBlocks(b, { deadBlocks: ["lifeScene"] }), []);
+});
+
+test("advice 는 3개 이상이어야 한다", () => {
+  const b: Record<string, unknown> = {
+    headline: "가".repeat(30),
+    mindScene: "가".repeat(400), lifeScene: "가".repeat(400),
+    complement: "가".repeat(400), timing: "가".repeat(300),
+    advice: ["가".repeat(50)],
+  };
+  assert.ok(validateCoupleBlocks(b).some((i) => i.includes("advice")));
 });
 
 // ★가드는 문체를 건드리지 않는다 — 재미를 깎으면 안 된다.
@@ -218,4 +271,13 @@ test("일간 생·극은 누가 누구인지 방향까지 실린다", () => {
 test("합·충·비화는 방향이 없으므로 그대로 쓴다", () => {
   assert.match(block(facts({ dayStemRelation: { type: "합", detail: "" } as never })), /서로 끌어당긴다/);
   assert.match(block(facts({ dayStemRelation: { type: "충", detail: "" } as never })), /정면으로 부딪힌다/);
+});
+
+// 총량 soft 검사 — 블록 하한을 아슬아슬하게 넘기며 전체가 얇아지는 걸 막는다.
+test("총량이 얇으면 재생성 노트를 남긴다 (실패시키지는 않는다)", () => {
+  const thin = { a: "가".repeat(500) };
+  assert.ok(validateCoupleRichness(thin).length > 0);
+
+  const fat = { a: "가".repeat(1700) };
+  assert.deepEqual(validateCoupleRichness(fat), []);
 });
